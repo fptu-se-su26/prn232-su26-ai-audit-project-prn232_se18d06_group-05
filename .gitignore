@@ -48,3 +48,17 @@ app.*.map.json
 .env
 .env.local
 .env.*.local
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ASP.NET / .NET build output
+**/bin/
+**/obj/
+
+# ASP.NET secrets
+**/appsettings.Development.json
