@@ -12,7 +12,7 @@ class UserModel extends UserEntity {
     required super.createdAt,
   });
 
-  /// From JSON
+  /// From Supabase JSON (snake_case)
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] as String,
@@ -22,6 +22,21 @@ class UserModel extends UserEntity {
       avatarUrl: json['avatar_url'] as String?,
       role: json['role'] as String? ?? 'traveler',
       createdAt: DateTime.parse(json['created_at'] as String),
+    );
+  }
+
+  /// From ASP.NET Web API JSON (camelCase)
+  factory UserModel.fromApiJson(Map<String, dynamic> json) {
+    return UserModel(
+      id: json['id'] as String,
+      email: json['email'] as String? ?? '',
+      fullName: json['fullName'] as String?,
+      phone: json['phone'] as String?,
+      avatarUrl: json['avatarUrl'] as String?,
+      role: json['role'] as String? ?? 'traveler',
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
     );
   }
 

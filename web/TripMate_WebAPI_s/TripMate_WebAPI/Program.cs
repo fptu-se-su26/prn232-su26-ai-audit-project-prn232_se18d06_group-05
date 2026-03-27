@@ -75,7 +75,11 @@ builder.Services.AddAuthorization();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+        policy
+            .SetIsOriginAllowed(_ => true)  // cho phép mọi origin khi dev
+            .AllowAnyMethod()
+            .AllowAnyHeader()
+            .AllowCredentials());
 });
 
 // ── Swagger + Controllers ─────────────────────────────────────────────────────
@@ -95,7 +99,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowAll");
-app.UseHttpsRedirection();
+
+// Chỉ redirect HTTPS trên production — dev để Flutter Web gọi http được
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseAuthentication();   // phải trước UseAuthorization
 app.UseAuthorization();
 app.MapControllers();
