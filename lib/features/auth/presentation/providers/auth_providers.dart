@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/datasources/api_auth_datasource.dart';
 import '../../data/datasources/auth_remote_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -7,37 +8,36 @@ import '../../domain/usecases/sign_in_usecase.dart';
 import '../../domain/usecases/sign_out_usecase.dart';
 import '../../domain/usecases/sign_up_usecase.dart';
 
-/// Auth remote data source provider
+/// ── Datasource switch ────────────────────────────────────────────────────────
+/// true  → gọi ASP.NET Web API
+/// false → gọi Supabase trực tiếp (legacy)
+const bool _useWebApi = true;
+
 final authRemoteDataSourceProvider = Provider<AuthRemoteDataSource>((ref) {
+  if (_useWebApi) return ApiAuthDataSource();
   return AuthRemoteDataSourceImpl();
 });
 
-/// Auth repository provider
+/// ── Repository & Use Cases ───────────────────────────────────────────────────
+
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
-  final remoteDataSource = ref.watch(authRemoteDataSourceProvider);
-  return AuthRepositoryImpl(remoteDataSource: remoteDataSource);
+  return AuthRepositoryImpl(
+    remoteDataSource: ref.watch(authRemoteDataSourceProvider),
+  );
 });
 
-/// Sign up use case provider
 final signUpUseCaseProvider = Provider<SignUpUseCase>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return SignUpUseCase(repository);
+  return SignUpUseCase(ref.watch(authRepositoryProvider));
 });
 
-/// Sign in use case provider
 final signInUseCaseProvider = Provider<SignInUseCase>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return SignInUseCase(repository);
+  return SignInUseCase(ref.watch(authRepositoryProvider));
 });
 
-/// Sign out use case provider
 final signOutUseCaseProvider = Provider<SignOutUseCase>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return SignOutUseCase(repository);
+  return SignOutUseCase(ref.watch(authRepositoryProvider));
 });
 
-/// Get current user use case provider
 final getCurrentUserUseCaseProvider = Provider<GetCurrentUserUseCase>((ref) {
-  final repository = ref.watch(authRepositoryProvider);
-  return GetCurrentUserUseCase(repository);
+  return GetCurrentUserUseCase(ref.watch(authRepositoryProvider));
 });
