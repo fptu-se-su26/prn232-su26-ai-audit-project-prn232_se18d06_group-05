@@ -1,0 +1,6 @@
+@TripMate_WebAPI_HostAddress = http://localhost:5122
+
+GET {{TripMate_WebAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
