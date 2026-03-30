@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../providers/auth_state_provider.dart';
 import 'signup_screen.dart';
+import '../../../../main.dart' show AuthWrapper;
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -35,8 +36,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
 
     if (success && mounted) {
-      // Navigate to tour list
-      Navigator.of(context).pushReplacementNamed(AppConstants.tourListRoute);
+      // AuthWrapper sẽ tự route đúng theo role
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthWrapper()),
+        (_) => false,
+      );
     }
   }
 

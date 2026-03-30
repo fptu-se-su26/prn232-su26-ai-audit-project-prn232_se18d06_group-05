@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
-import '../../../tour/presentation/screens/tour_list_screen.dart';
 import '../../../tour/presentation/screens/create_tour_screen.dart';
+import '../../../tour/presentation/providers/tour_list_provider.dart';
 
 class GuideDashboardScreen extends ConsumerStatefulWidget {
   const GuideDashboardScreen({super.key});
@@ -51,7 +51,11 @@ class _BottomNav extends StatelessWidget {
 
   static const _items = [
     (icon: Icons.home_outlined, activeIcon: Icons.home, label: 'Trang chủ'),
-    (icon: Icons.explore_outlined, activeIcon: Icons.explore, label: 'Tour'),
+    (
+      icon: Icons.explore_outlined,
+      activeIcon: Icons.explore,
+      label: 'Tour của tôi',
+    ),
     (
       icon: Icons.confirmation_number_outlined,
       activeIcon: Icons.confirmation_number,
@@ -582,10 +586,215 @@ class _QuickAction extends StatelessWidget {
 
 // ── Tab: Tours ────────────────────────────────────────────────────────────────
 
-class _ToursTab extends StatelessWidget {
+class _ToursTab extends ConsumerStatefulWidget {
   const _ToursTab();
+
   @override
-  Widget build(BuildContext context) => const TourListScreen();
+  ConsumerState<_ToursTab> createState() => _ToursTabState();
+}
+
+class _ToursTabState extends ConsumerState<_ToursTab> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(tourListProvider.notifier).loadTours());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = ref.watch(authStateProvider).user;
+    final tourState = ref.watch(tourListProvider);
+    // Chỉ hiển thị tour của guide này
+    final myTours = tourState.tours
+        .where((t) => t.guideId == user?.id)
+        .toList();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFFF8F7),
+      appBar: AppBar(
+        title: const Text(
+          'Tour của tôi',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add, color: Color(0xFFE91E8C)),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const CreateTourScreen()),
+            ).then((_) => ref.read(tourListProvider.notifier).refresh()),
+            tooltip: 'Tạo tour mới',
+          ),
+        ],
+      ),
+      body: tourState.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : myTours.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.explore_off,
+                    size: 64,
+                    color: Colors.grey.shade300,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Bạn chưa có tour nào',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tạo tour đầu tiên của bạn ngay!',
+                    style: TextStyle(color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: () =>
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const CreateTourScreen(),
+                          ),
+                        ).then(
+                          (_) => ref.read(tourListProvider.notifier).refresh(),
+                        ),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Tạo tour mới'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE91E8C),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 14,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: () => ref.read(tourListProvider.notifier).refresh(),
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: myTours.length,
+                itemBuilder: (_, i) {
+                  final tour = myTours[i];
+                  return _GuideTourCard(tour: tour);
+                },
+              ),
+            ),
+    );
+  }
+}
+
+class _GuideTourCard extends StatelessWidget {
+  final tour;
+  const _GuideTourCard({required this.tour});
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: '₫',
+      decimalDigits: 0,
+    );
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8),
+        ],
+      ),
+      child: Row(
+        children: [
+          ClipRRect(
+            borderRadius: const BorderRadius.horizontal(
+              left: Radius.circular(16),
+            ),
+            child: tour.images.isNotEmpty
+                ? Image.network(
+                    tour.images.first,
+                    width: 100,
+                    height: 100,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 100,
+                      height: 100,
+                      color: Colors.grey.shade200,
+                    ),
+                  )
+                : Container(
+                    width: 100,
+                    height: 100,
+                    color: Colors.grey.shade200,
+                    child: const Icon(Icons.image),
+                  ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tour.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    tour.location,
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    fmt.format(tour.price),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFE91E8C),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 20),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CreateTourScreen(tourId: tour.id),
+                    ),
+                  ),
+                  color: Colors.grey.shade600,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Tab: Bookings ─────────────────────────────────────────────────────────────

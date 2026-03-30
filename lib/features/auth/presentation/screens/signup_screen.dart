@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../providers/auth_state_provider.dart';
+import '../../../../main.dart' show AuthWrapper;
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -40,15 +41,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         );
 
     if (success && mounted) {
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Đăng ký thành công!'),
           backgroundColor: Colors.green,
         ),
       );
-      // Navigate to tour list
-      Navigator.of(context).pushReplacementNamed(AppConstants.tourListRoute);
+      // AuthWrapper sẽ tự route đúng theo role
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthWrapper()),
+        (_) => false,
+      );
     }
   }
 

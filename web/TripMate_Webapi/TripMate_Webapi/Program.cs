@@ -33,6 +33,16 @@ builder.Services.AddScoped<TourService>();
 builder.Services.AddHttpClient<BookingService>();
 builder.Services.AddScoped<BookingService>();
 
+// ── Chat & Notification Services ─────────────────────────────────────────────
+builder.Services.AddHttpClient<ChatService>();
+builder.Services.AddScoped<ChatService>();
+builder.Services.AddHttpClient<NotificationService>();
+builder.Services.AddScoped<NotificationService>();
+
+// ── Location (SerpAPI) ────────────────────────────────────────────────────────
+builder.Services.AddHttpClient<LocationService>();
+builder.Services.AddScoped<LocationService>();
+
 // ── JWT Bearer — RS256 via JWKS ──────────────────────────────────────────────
 // Fetch public keys từ Supabase JWKS endpoint khi startup, cache trong memory
 IssuerSigningKeyResolver jwksKeyResolver;

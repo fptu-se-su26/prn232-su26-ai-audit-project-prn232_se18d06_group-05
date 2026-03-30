@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../features/tour/domain/entities/tour_entity.dart';
 import '../providers/booking_provider.dart';
-import 'booking_confirmation_screen.dart';
+import 'mock_payment_screen.dart';
 
 class BookingFormScreen extends ConsumerStatefulWidget {
   final TourEntity tour;
@@ -67,9 +67,7 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
       final booking = ref.read(createBookingProvider).result!;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) => BookingConfirmationScreen(booking: booking),
-        ),
+        MaterialPageRoute(builder: (_) => MockPaymentScreen(booking: booking)),
       );
     } else {
       final err = ref.read(createBookingProvider).error ?? 'Đặt tour thất bại';
