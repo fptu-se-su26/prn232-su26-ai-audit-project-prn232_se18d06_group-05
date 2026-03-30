@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.37111.16 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TripMate_Webapi", "TripMate_Webapi\TripMate_Webapi.csproj", "{DD8E17A9-3E65-4C8C-9E9E-97B242D153D2}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DD8E17A9-3E65-4C8C-9E9E-97B242D153D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD8E17A9-3E65-4C8C-9E9E-97B242D153D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD8E17A9-3E65-4C8C-9E9E-97B242D153D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD8E17A9-3E65-4C8C-9E9E-97B242D153D2}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E6574853-98CA-49AC-B3FA-2560BB83A140}
+	EndGlobalSection
+EndGlobal

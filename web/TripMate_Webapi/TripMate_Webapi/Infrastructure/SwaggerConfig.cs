@@ -1,4 +1,4 @@
-using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace TripMate_WebAPI.Infrastructure;
@@ -11,22 +11,28 @@ public static class SwaggerConfig
     {
         c.SwaggerDoc("v1", new OpenApiInfo { Title = "TripMate API", Version = "v1" });
 
-        // Định nghĩa scheme Bearer
         c.AddSecurityDefinition(SchemeId, new OpenApiSecurityScheme
         {
+            Name = "Authorization",
             Type = SecuritySchemeType.Http,
             Scheme = "bearer",
             BearerFormat = "JWT",
             In = ParameterLocation.Header,
-            Description = "Nhập access_token lấy từ POST /api/auth/login (không cần prefix 'Bearer')",
+            Description = "Nhập access_token từ POST /api/auth/login",
         });
 
-        // Áp dụng cho tất cả endpoint — Swashbuckle 10 dùng Func<OpenApiDocument, ...>
-        c.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+        c.AddSecurityRequirement(new OpenApiSecurityRequirement
         {
             {
-                new OpenApiSecuritySchemeReference(SchemeId),
-                new List<string>()
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id   = SchemeId,
+                    }
+                },
+                Array.Empty<string>()
             }
         });
     }

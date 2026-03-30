@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Supabase;
 using TripMate_WebAPI.Services;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // ── Supabase Client (singleton) ───────────────────────────────────────────────
@@ -25,6 +24,14 @@ builder.Services.AddSingleton(_ =>
 // ── Auth Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SupabaseAuthService>();
 builder.Services.AddScoped<SupabaseAuthService>();
+
+// ── Tour Service ──────────────────────────────────────────────────────────────
+builder.Services.AddHttpClient<TourService>();
+builder.Services.AddScoped<TourService>();
+
+// ── Booking Service ───────────────────────────────────────────────────────────
+builder.Services.AddHttpClient<BookingService>();
+builder.Services.AddScoped<BookingService>();
 
 // ── JWT Bearer — RS256 via JWKS ──────────────────────────────────────────────
 // Fetch public keys từ Supabase JWKS endpoint khi startup, cache trong memory
