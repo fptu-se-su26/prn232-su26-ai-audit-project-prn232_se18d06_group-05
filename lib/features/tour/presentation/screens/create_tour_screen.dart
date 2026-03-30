@@ -135,8 +135,9 @@ class _CreateTourScreenState extends ConsumerState<CreateTourScreen> {
                     keyboardType: TextInputType.number,
                     validator: (v) {
                       if (v!.isEmpty) return 'Nhập giá';
-                      if (double.tryParse(v) == null || double.parse(v) <= 0)
+                      if (double.tryParse(v) == null || double.parse(v) <= 0) {
                         return 'Giá không hợp lệ';
+                      }
                       return null;
                     },
                   ),
@@ -150,8 +151,9 @@ class _CreateTourScreenState extends ConsumerState<CreateTourScreen> {
                     keyboardType: TextInputType.number,
                     validator: (v) {
                       if (v!.isEmpty) return 'Nhập số giờ';
-                      if (int.tryParse(v) == null || int.parse(v) <= 0)
+                      if (int.tryParse(v) == null || int.parse(v) <= 0) {
                         return 'Không hợp lệ';
+                      }
                       return null;
                     },
                   ),
@@ -166,8 +168,9 @@ class _CreateTourScreenState extends ConsumerState<CreateTourScreen> {
               keyboardType: TextInputType.number,
               validator: (v) {
                 if (v!.isEmpty) return 'Nhập số khách';
-                if (int.tryParse(v) == null || int.parse(v) <= 0)
+                if (int.tryParse(v) == null || int.parse(v) <= 0) {
                   return 'Không hợp lệ';
+                }
                 return null;
               },
             ),

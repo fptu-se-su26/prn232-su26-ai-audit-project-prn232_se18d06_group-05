@@ -41,9 +41,7 @@ class BookingDataSource {
         data: {
           'tourId': tourId,
           'tourDate':
-              '${tourDate.year.toString().padLeft(4, '0')}-'
-              '${tourDate.month.toString().padLeft(2, '0')}-'
-              '${tourDate.day.toString().padLeft(2, '0')}',
+              '${tourDate.year.toString().padLeft(4, '0')}-${tourDate.month.toString().padLeft(2, '0')}-${tourDate.day.toString().padLeft(2, '0')}',
           'guests': guests,
           if (note != null) 'note': note,
         },
