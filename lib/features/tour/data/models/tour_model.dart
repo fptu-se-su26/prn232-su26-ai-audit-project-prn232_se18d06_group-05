@@ -19,7 +19,7 @@ class TourModel extends TourEntity {
     required super.updatedAt,
   });
 
-  /// Create TourModel from JSON
+  /// Create TourModel from JSON (Supabase snake_case)
   factory TourModel.fromJson(Map<String, dynamic> json) {
     return TourModel(
       id: json['id'] as String,
@@ -38,6 +38,28 @@ class TourModel extends TourEntity {
       status: json['status'] as String? ?? 'active',
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
+  }
+
+  /// Create TourModel from ASP.NET API JSON (camelCase)
+  factory TourModel.fromApiJson(Map<String, dynamic> json) {
+    return TourModel(
+      id: json['id'] as String,
+      guideId: json['guideId'] as String? ?? '',
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      location: json['location'] as String,
+      price: (json['price'] as num).toDouble(),
+      durationHours: json['durationHours'] as int,
+      maxParticipants: json['maxParticipants'] as int? ?? 10,
+      images: json['images'] != null
+          ? List<String>.from(json['images'] as List)
+          : [],
+      rating: json['rating'] != null ? (json['rating'] as num).toDouble() : 0.0,
+      totalReviews: json['totalReviews'] as int? ?? 0,
+      status: json['status'] as String? ?? 'active',
+      createdAt: DateTime.parse(json['createdAt'] as String),
+      updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
   }
 

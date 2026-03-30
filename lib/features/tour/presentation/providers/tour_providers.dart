@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/datasources/api_tour_datasource.dart';
 import '../../data/datasources/tour_remote_datasource.dart';
 import '../../data/repositories/tour_repository_impl.dart';
 import '../../domain/repositories/tour_repository.dart';
@@ -7,8 +8,13 @@ import '../../domain/usecases/get_tour_by_id_usecase.dart';
 import '../../domain/usecases/get_tours_usecase.dart';
 import '../../domain/usecases/search_tours_usecase.dart';
 
-/// Tour remote data source provider
+/// ── Datasource switch ────────────────────────────────────────────────────────
+/// true  → ASP.NET Web API
+/// false → Supabase trực tiếp (legacy)
+const bool _useWebApi = true;
+
 final tourRemoteDataSourceProvider = Provider<TourRemoteDataSource>((ref) {
+  if (_useWebApi) return ApiTourDataSource();
   return TourRemoteDataSourceImpl();
 });
 

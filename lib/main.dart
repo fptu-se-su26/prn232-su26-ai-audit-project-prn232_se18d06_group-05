@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/config/supabase_config.dart';
 import 'core/config/supabase_test.dart';
@@ -13,6 +14,7 @@ import 'features/auth/presentation/providers/auth_state_provider.dart';
 import 'features/tour/presentation/screens/tour_list_screen.dart';
 import 'features/dashboard/presentation/screens/traveler_dashboard_screen.dart';
 import 'features/dashboard/presentation/screens/guide_dashboard_screen.dart';
+import 'features/dashboard/presentation/screens/admin_dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +64,12 @@ class TripMateApp extends ConsumerWidget {
       title: AppConstants.appName,
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('vi'), Locale('en')],
       home: const AuthWrapper(),
       routes: {
         AppConstants.loginRoute: (context) => const LoginScreen(),
@@ -95,7 +103,7 @@ class AuthWrapper extends ConsumerWidget {
         case UserRole.guide:
           return const GuideDashboardScreen();
         case UserRole.admin:
-          return const GuideDashboardScreen(); // TODO: Create AdminDashboard
+          return const AdminDashboardScreen();
       }
     }
 

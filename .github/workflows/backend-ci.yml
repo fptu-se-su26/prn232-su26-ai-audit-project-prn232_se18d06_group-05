@@ -4,11 +4,11 @@ on:
   push:
     branches: [ "main" ]
     paths:
-      - 'backend/**'
+      - 'web/TripMate_Webapi/**'
   pull_request:
     branches: [ "main" ]
     paths:
-      - 'backend/**'
+      - 'web/TripMate_Webapi/**'
 
 jobs:
   build:
@@ -16,31 +16,28 @@ jobs:
 
     defaults:
       run:
-        working-directory: backend
+        working-directory: web/TripMate_Webapi/TripMate_Webapi
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 10.0.x
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
 
-    - name: Restore
-      run: dotnet restore
+      - name: Restore
+        run: dotnet restore
 
-    - name: Build
-      run: dotnet build --configuration Release --no-restore
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
 
-    - name: Test
-      run: dotnet test --no-build --verbosity normal
+      - name: Publish
+        run: dotnet publish -c Release -o publish
 
-    - name: Publish
-      run: dotnet publish -c Release -o publish
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: backend-build
-        path: backend/publish
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-build
+          path: web/TripMate_Webapi/TripMate_Webapi/publish

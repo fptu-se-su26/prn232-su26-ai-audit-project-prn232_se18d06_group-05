@@ -5,6 +5,7 @@ import '../../../../core/enums/user_role.dart';
 import '../../../../core/widgets/permission_widget.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../domain/entities/tour_entity.dart';
+import '../screens/tour_detail_screen.dart';
 
 class TourCard extends ConsumerWidget {
   final TourEntity tour;
@@ -28,12 +29,10 @@ class TourCard extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: () {
-          // TODO: Navigate to tour detail
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Chi tiết tour: ${tour.title}')),
-          );
-        },
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => TourDetailScreen(tour: tour)),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
