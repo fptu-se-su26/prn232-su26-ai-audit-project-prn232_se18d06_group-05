@@ -46,7 +46,7 @@ jobs:
         run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Build APK (debug — no signing needed)
-        run: flutter build apk --debug
+        run: flutter build apk --debug --no-shrink
 
       - name: Upload APK
         uses: actions/upload-artifact@v4

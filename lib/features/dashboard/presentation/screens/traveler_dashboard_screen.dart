@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
 import '../../../tour/presentation/screens/tour_list_screen.dart';
+import '../../../tour/presentation/providers/tour_list_provider.dart';
+import '../../../tour/domain/entities/tour_entity.dart';
+import '../../../tour/presentation/screens/tour_detail_screen.dart';
 
 class TravelerDashboardScreen extends ConsumerStatefulWidget {
   const TravelerDashboardScreen({super.key});
@@ -118,144 +122,291 @@ class _BottomNav extends StatelessWidget {
 
 // ─── Tab: Trang chủ ──────────────────────────────────────────────────────────
 
-class _HomeTab extends StatelessWidget {
+class _HomeTab extends ConsumerStatefulWidget {
   const _HomeTab();
 
   @override
+  ConsumerState<_HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends ConsumerState<_HomeTab> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(tourListProvider.notifier).loadTours());
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final tourState = ref.watch(tourListProvider);
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Search bar
-                    GestureDetector(
-                      onTap: () {},
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+        child: RefreshIndicator(
+          onRefresh: () => ref.read(tourListProvider.notifier).refresh(),
+          child: CustomScrollView(
+            slivers: [
+              // Search bar + chips
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      GestureDetector(
+                        onTap: () {},
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(32),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.12),
+                                blurRadius: 12,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.search, size: 20),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Bắt đầu tìm kiếm',
+                                style: TextStyle(
+                                  color: Colors.grey.shade600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(32),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.12),
-                              blurRadius: 12,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
-                            const Icon(Icons.search, size: 20),
-                            const SizedBox(width: 10),
-                            Text(
-                              'Bắt đầu tìm kiếm',
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontSize: 14,
-                              ),
-                            ),
+                            _CategoryChip(label: 'Tất cả', selected: true),
+                            _CategoryChip(label: 'Ẩm thực'),
+                            _CategoryChip(label: 'Thiên nhiên'),
+                            _CategoryChip(label: 'Văn hoá'),
+                            _CategoryChip(label: 'Biển'),
                           ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Category chips
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: [
-                          _CategoryChip(label: 'Nội địa', selected: true),
-                          _CategoryChip(label: 'Văn nghệ'),
-                          _CategoryChip(label: 'Ẩm thực'),
-                          _CategoryChip(label: 'Thiên nhiên'),
-                          _CategoryChip(label: 'Biển'),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-            // Sections
-            SliverToBoxAdapter(
-              child: _HomeSection(
-                title: 'Nơi lưu trú ưa chuộng tại Hà Nội',
-                items: const [
-                  _TourItem(
-                    title: 'Phòng tại Quận Tây Hồ',
-                    subtitle: '₫1.200.000 đêm',
-                    rating: '4.90',
-                    imageUrl:
-                        'https://images.unsplash.com/photo-1555400038-63f5ba517a47?w=400',
+              // Loading
+              if (tourState.isLoading)
+                const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              // Error
+              else if (tourState.error != null)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 48,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(tourState.error!, textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () =>
+                              ref.read(tourListProvider.notifier).loadTours(),
+                          child: const Text('Thử lại'),
+                        ),
+                      ],
+                    ),
                   ),
-                  _TourItem(
-                    title: 'Phòng tại Hoàn Kiếm',
-                    subtitle: '₫2.178.606 đêm',
-                    rating: '4.3',
-                    imageUrl:
-                        'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=400',
+                )
+              // Empty
+              else if (tourState.tours.isEmpty)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.explore_off,
+                          size: 64,
+                          color: Colors.grey.shade300,
+                        ),
+                        const SizedBox(height: 16),
+                        const Text(
+                          'Chưa có tour nào',
+                          style: TextStyle(fontSize: 16, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              // Tour list
+              else ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    child: Text(
+                      '${tourState.tours.length} tour đang có',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+                ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  sliver: SliverGrid(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                          childAspectRatio: 0.72,
+                        ),
+                    delegate: SliverChildBuilderDelegate(
+                      (_, i) => _TourGridCard(tour: tourState.tours[i]),
+                      childCount: tourState.tours.length,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _TourGridCard extends StatelessWidget {
+  final TourEntity tour;
+  const _TourGridCard({required this.tour});
+
+  @override
+  Widget build(BuildContext context) {
+    final fmt = NumberFormat.currency(
+      locale: 'vi_VN',
+      symbol: '₫',
+      decimalDigits: 0,
+    );
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => TourDetailScreen(tour: tour)),
+      ),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(14),
+              ),
+              child: tour.images.isNotEmpty
+                  ? Image.network(
+                      tour.images.first,
+                      height: 120,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 120,
+                        color: Colors.grey.shade200,
+                        child: const Icon(Icons.image, size: 32),
+                      ),
+                    )
+                  : Container(
+                      height: 120,
+                      color: Colors.grey.shade200,
+                      child: const Icon(Icons.image, size: 32),
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    tour.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 11,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: Text(
+                          tour.location,
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  if (tour.totalReviews > 0)
+                    Row(
+                      children: [
+                        const Icon(Icons.star, size: 11, color: Colors.amber),
+                        const SizedBox(width: 2),
+                        Text(
+                          '${tour.rating.toStringAsFixed(1)} (${tour.totalReviews})',
+                          style: const TextStyle(fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  const SizedBox(height: 4),
+                  Text(
+                    fmt.format(tour.price),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFE91E8C),
+                    ),
                   ),
                 ],
               ),
             ),
-
-            SliverToBoxAdapter(
-              child: _HomeSection(
-                title: 'Còn phòng tại Đà Lạt vào cuối tuần',
-                items: const [
-                  _TourItem(
-                    title: 'Phòng tại Đà Lạt',
-                    subtitle: '₫800.000 đêm',
-                    rating: '4.8',
-                    imageUrl:
-                        'https://images.unsplash.com/photo-1528127269322-539801943592?w=400',
-                  ),
-                  _TourItem(
-                    title: 'Villa Đà Lạt',
-                    subtitle: '₫1.500.000 đêm',
-                    rating: '4.9',
-                    imageUrl:
-                        'https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=400',
-                  ),
-                ],
-              ),
-            ),
-
-            SliverToBoxAdapter(
-              child: _HomeSection(
-                title: 'Chỗ ở tại Vũng Tàu',
-                items: const [
-                  _TourItem(
-                    title: 'Nhà tại Vũng Tàu',
-                    subtitle: '₫950.000 đêm',
-                    rating: '4.7',
-                    imageUrl:
-                        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400',
-                  ),
-                  _TourItem(
-                    title: 'Resort Vũng Tàu',
-                    subtitle: '₫2.200.000 đêm',
-                    rating: '4.6',
-                    imageUrl:
-                        'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400',
-                  ),
-                ],
-              ),
-            ),
-
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
           ],
         ),
       ),
@@ -263,10 +414,11 @@ class _HomeTab extends StatelessWidget {
   }
 }
 
+// ─── Category Chip ────────────────────────────────────────────────────────────
+
 class _CategoryChip extends StatelessWidget {
   final String label;
   final bool selected;
-
   const _CategoryChip({required this.label, this.selected = false});
 
   @override
@@ -288,134 +440,6 @@ class _CategoryChip extends StatelessWidget {
           fontWeight: FontWeight.w500,
           color: selected ? Colors.white : Colors.black,
         ),
-      ),
-    );
-  }
-}
-
-class _HomeSection extends StatelessWidget {
-  final String title;
-  final List<_TourItem> items;
-
-  const _HomeSection({required this.title, required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 0, 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const Icon(Icons.arrow_forward, size: 18),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 220,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: items.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (_, i) => items[i],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TourItem extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String rating;
-  final String imageUrl;
-
-  const _TourItem({
-    required this.title,
-    required this.subtitle,
-    required this.rating,
-    required this.imageUrl,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 180,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  imageUrl,
-                  height: 150,
-                  width: 180,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 150,
-                    width: 180,
-                    color: Colors.grey.shade200,
-                    child: const Icon(Icons.image, size: 40),
-                  ),
-                ),
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Icon(
-                  Icons.favorite_border,
-                  color: Colors.white,
-                  size: 22,
-                  shadows: const [Shadow(blurRadius: 4)],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 2),
-          Row(
-            children: [
-              const Icon(Icons.star, size: 12, color: Colors.black),
-              const SizedBox(width: 2),
-              Text(
-                rating,
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 12, color: Colors.black87),
-          ),
-        ],
       ),
     );
   }

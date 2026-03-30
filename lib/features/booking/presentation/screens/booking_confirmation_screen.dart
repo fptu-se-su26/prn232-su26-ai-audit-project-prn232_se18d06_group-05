@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/booking_entity.dart';
+import '../../../chat/presentation/screens/chat_screen.dart';
 
 class BookingConfirmationScreen extends StatelessWidget {
   final BookingEntity booking;
@@ -154,6 +155,27 @@ class BookingConfirmationScreen extends StatelessWidget {
                 onPressed: () =>
                     Navigator.of(context).popUntil((r) => r.isFirst),
                 child: const Text('Xem chuyến đi của tôi'),
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ChatScreen(
+                      conversationId:
+                          booking.id, // sẽ được replace bằng conv ID thực
+                      otherUserName: 'Hướng dẫn viên',
+                    ),
+                  ),
+                ),
+                icon: const Icon(
+                  Icons.chat_bubble_outline,
+                  color: Color(0xFFE91E8C),
+                ),
+                label: const Text(
+                  'Nhắn tin với hướng dẫn viên',
+                  style: TextStyle(color: Color(0xFFE91E8C)),
+                ),
               ),
             ],
           ),

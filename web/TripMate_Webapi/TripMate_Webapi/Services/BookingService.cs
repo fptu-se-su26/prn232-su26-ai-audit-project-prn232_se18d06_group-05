@@ -11,6 +11,8 @@ public class BookingService
     private readonly HttpClient _http;
     private readonly string _supabaseUrl;
     private readonly string _anonKey;
+    private readonly NotificationService _notif;
+    private readonly ChatService _chat;
 
     private static readonly JsonSerializerOptions _json = new()
     {
@@ -18,11 +20,14 @@ public class BookingService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    public BookingService(HttpClient http, IConfiguration config)
+    public BookingService(HttpClient http, IConfiguration config,
+        NotificationService notif, ChatService chat)
     {
         _http = http;
         _supabaseUrl = config["Supabase:Url"]!;
         _anonKey = config["Supabase:AnonKey"]!;
+        _notif = notif;
+        _chat = chat;
     }
 
     // ── Create Booking ────────────────────────────────────────────────────────
@@ -68,7 +73,24 @@ public class BookingService
         var rows = JsonSerializer.Deserialize<List<BookingRow>>(content, _json);
         var row  = rows?.FirstOrDefault() ?? throw new Exception("Tạo booking thất bại");
 
-        return MapToDto(row, tour);
+        var dto = MapToDto(row, tour);
+
+        // Gửi notification cho guide
+        _ = _notif.SendAsync(tour.GuideId ?? "", "booking_created",
+            "Có người đặt tour của bạn!",
+            $"{dto.TourTitle} — {dto.Guests} khách ngày {dto.TourDate:dd/MM/yyyy}",
+            new { bookingId = dto.Id, travelerId });
+
+        // Gửi notification cho traveler
+        _ = _notif.SendAsync(travelerId, "booking_confirmed",
+            "Đặt tour thành công!",
+            $"Bạn đã đặt {dto.TourTitle} ngày {dto.TourDate:dd/MM/yyyy}",
+            new { bookingId = dto.Id });
+
+        // Tạo conversation giữa traveler và guide
+        _ = _chat.GetOrCreateConversationAsync(travelerId, tour.GuideId ?? "", dto.Id, userToken);
+
+        return dto;
     }
 
     // ── Get My Bookings ───────────────────────────────────────────────────────
