@@ -152,7 +152,7 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _fmt.format(widget.tour.price) + ' / người',
+                          '${_fmt.format(widget.tour.price)} / người',
                           style: const TextStyle(
                             fontSize: 14,
                             color: Color(0xFFE91E8C),
@@ -299,7 +299,7 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
               child: Column(
                 children: [
                   _PriceLine(
-                    _fmt.format(widget.tour.price) + ' × $_guests người',
+                    '${_fmt.format(widget.tour.price)} × $_guests người',
                     _fmt.format(_total),
                   ),
                   const Divider(height: 20),

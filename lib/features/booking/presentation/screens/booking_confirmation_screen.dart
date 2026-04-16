@@ -1,14 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/booking_entity.dart';
+import '../../../chat/presentation/screens/conversation_list_screen.dart';
 import '../../../chat/presentation/screens/chat_screen.dart';
+import '../../../chat/presentation/providers/chat_provider.dart';
 
-class BookingConfirmationScreen extends StatelessWidget {
+class BookingConfirmationScreen extends ConsumerWidget {
   final BookingEntity booking;
   const BookingConfirmationScreen({super.key, required this.booking});
 
+  Future<void> _startChatWithGuide(BuildContext context, WidgetRef ref) async {
+    final conversationId = await ref
+        .read(createConversationProvider.notifier)
+        .createOrGet(guideId: booking.guideId, bookingId: booking.id);
+
+    if (!context.mounted) return;
+
+    if (conversationId != null) {
+      // Navigate trực tiếp đến chat screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            conversationId: conversationId,
+            otherUserName: 'Hướng dẫn viên',
+          ),
+        ),
+      );
+    } else {
+      // Fallback: mở conversation list
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Không thể tạo cuộc trò chuyện')),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ConversationListScreen()),
+      );
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final fmt = NumberFormat.currency(
       locale: 'vi_VN',
       symbol: '₫',
@@ -158,16 +191,7 @@ class BookingConfirmationScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               TextButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ChatScreen(
-                      conversationId:
-                          booking.id, // sẽ được replace bằng conv ID thực
-                      otherUserName: 'Hướng dẫn viên',
-                    ),
-                  ),
-                ),
+                onPressed: () => _startChatWithGuide(context, ref),
                 icon: const Icon(
                   Icons.chat_bubble_outline,
                   color: Color(0xFFE91E8C),

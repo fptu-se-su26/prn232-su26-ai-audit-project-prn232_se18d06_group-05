@@ -100,20 +100,33 @@ class ApiAuthDataSource implements AuthRemoteDataSource {
   @override
   Future<UserModel?> getCurrentUser() async {
     try {
+      // First check if we have a valid token
       final valid = await TokenStorage.isTokenValid();
       if (!valid) {
-        // Thử refresh
+        Logger.info('[API] Token expired, attempting refresh...');
+        // Try to refresh the token
         final refreshed = await _tryRefresh();
-        if (!refreshed) return null;
+        if (!refreshed) {
+          Logger.info('[API] Token refresh failed, user not authenticated');
+          return null;
+        }
       }
 
       final token = await TokenStorage.getAccessToken();
+      if (token == null) {
+        Logger.info('[API] No access token found');
+        return null;
+      }
+
+      Logger.info('[API] Getting current user with valid token');
       final res = await _dio.get(
         '/auth/me',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
 
       final data = res.data as Map<String, dynamic>;
+      Logger.success('[API] Current user retrieved successfully');
+
       // /me chỉ trả id + email + role, tạo UserModel minimal
       return UserModel(
         id: data['id'] as String,
@@ -123,6 +136,8 @@ class ApiAuthDataSource implements AuthRemoteDataSource {
       );
     } catch (e) {
       Logger.error('[API] getCurrentUser failed', e);
+      // Clear invalid tokens
+      await TokenStorage.clear();
       return null;
     }
   }

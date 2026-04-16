@@ -88,13 +88,26 @@ class AuthWrapper extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
 
+    // Show loading while checking auth status
     if (authState.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Đang kiểm tra trạng thái đăng nhập...'),
+            ],
+          ),
+        ),
+      );
     }
 
-    if (authState.isAuthenticated) {
-      final user = authState.user;
-      final role = UserRole.fromString(user?.role ?? 'traveler');
+    // If authenticated, route to appropriate dashboard
+    if (authState.isAuthenticated && authState.user != null) {
+      final user = authState.user!;
+      final role = UserRole.fromString(user.role);
 
       // Route to dashboard based on role
       switch (role) {
@@ -107,6 +120,7 @@ class AuthWrapper extends ConsumerWidget {
       }
     }
 
+    // Not authenticated, show login screen
     return const LoginScreen();
   }
 }

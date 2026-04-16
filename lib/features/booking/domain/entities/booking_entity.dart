@@ -4,6 +4,7 @@ class BookingEntity {
   final String tourTitle;
   final String tourLocation;
   final String travelerId;
+  final String guideId;
   final DateTime tourDate;
   final int guests;
   final double unitPrice;
@@ -18,6 +19,7 @@ class BookingEntity {
     required this.tourTitle,
     required this.tourLocation,
     required this.travelerId,
+    required this.guideId,
     required this.tourDate,
     required this.guests,
     required this.unitPrice,

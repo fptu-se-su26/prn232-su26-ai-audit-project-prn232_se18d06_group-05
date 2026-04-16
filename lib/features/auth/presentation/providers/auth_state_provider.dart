@@ -43,21 +43,31 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
   Future<void> _checkAuthStatus() async {
     state = state.copyWith(isLoading: true);
 
-    final getCurrentUserUseCase = ref.read(getCurrentUserUseCaseProvider);
-    final result = await getCurrentUserUseCase();
+    try {
+      final getCurrentUserUseCase = ref.read(getCurrentUserUseCaseProvider);
+      final result = await getCurrentUserUseCase();
 
-    result.fold(
-      (failure) {
-        state = const AuthState(isLoading: false, isAuthenticated: false);
-      },
-      (user) {
-        state = AuthState(
-          user: user,
-          isLoading: false,
-          isAuthenticated: user != null,
-        );
-      },
-    );
+      result.fold(
+        (failure) {
+          state = const AuthState(isLoading: false, isAuthenticated: false);
+        },
+        (user) {
+          state = AuthState(
+            user: user,
+            isLoading: false,
+            isAuthenticated: user != null,
+          );
+        },
+      );
+    } catch (e) {
+      // Handle any unexpected errors during auth check
+      state = const AuthState(isLoading: false, isAuthenticated: false);
+    }
+  }
+
+  /// Force refresh auth status (useful for manual refresh)
+  Future<void> refreshAuthStatus() async {
+    await _checkAuthStatus();
   }
 
   /// Sign up

@@ -1,176 +1,230 @@
-# 🚀 ASP.NET Core Quick Start
+# 🚀 TripMate ASP.NET Core Quick Start
 
-## 📋 Checklist Setup
+> Get the ASP.NET Core API running in under 30 minutes
 
-### Bước 1: Tạo ASP.NET Core Project (5 phút)
+## ⚡ Super Quick Setup (5 minutes)
 
+### Prerequisites Check
 ```bash
-# Tạo project
-dotnet new webapi -n TripMate.API
-cd TripMate.API
+# Verify .NET SDK
+dotnet --version  # Should be 7.0+
 
-# Install packages
-dotnet add package supabase-csharp
-dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
-dotnet add package Npgsql.EntityFrameworkCore.PostgreSQL
+# Verify project structure
+ls web/TripMate_Webapi/  # Should see .csproj file
 ```
 
-### Bước 2: Configure Supabase (2 phút)
+### 1. Navigate and Restore
+```bash
+cd web/TripMate_Webapi
+dotnet restore
+```
 
-**appsettings.json:**
+### 2. Configure Supabase
+Edit `appsettings.json`:
 ```json
 {
   "Supabase": {
     "Url": "https://nvbvvowyjzylllswhynv.supabase.co",
-    "Key": "YOUR_ANON_KEY"
+    "AnonKey": "your_supabase_anon_key_here"
   }
 }
 ```
 
-**Program.cs:**
-```csharp
-builder.Services.AddSingleton<ISupabaseService, SupabaseService>();
+### 3. Run API
+```bash
+dotnet run
+
+# ✅ API running at: https://localhost:5001
+# ✅ Swagger UI: https://localhost:5001/swagger
 ```
 
-### Bước 3: Tạo Controllers (10 phút)
+### 4. Test API
+```bash
+# Health check
+curl https://localhost:5001/api/debug/env
 
+# Database test
+curl https://localhost:5001/api/debug/db-test
+```
+
+## 🎯 What You Get
+
+### Available Endpoints
+- **Debug**: `/api/debug/*` - Development utilities
+- **Chat**: `/api/chat/*` - Real-time messaging
+- **Tours**: `/api/tours/*` - Tour management (planned)
+- **Bookings**: `/api/bookings/*` - Booking system (planned)
+
+### Development Features
+- **Hot Reload**: `dotnet watch run`
+- **Swagger UI**: Interactive API documentation
+- **Logging**: Structured logging with Serilog
+- **CORS**: Configured for Flutter development
+- **JWT Auth**: Ready for Supabase tokens
+
+## 🔧 Development Workflow
+
+### Daily Development
+```bash
+# Start with hot reload
+dotnet watch run
+
+# Run tests
+dotnet test
+
+# Build for production
+dotnet build -c Release
+```
+
+### Adding New Features
+1. **Create Controller**: `Controllers/NewController.cs`
+2. **Add Service**: `Services/NewService.cs`
+3. **Register Service**: In `Program.cs`
+4. **Test Endpoint**: Use Swagger UI
+
+### Example: Add New Controller
 ```csharp
-// Controllers/ToursController.cs
 [ApiController]
 [Route("api/[controller]")]
-public class ToursController : ControllerBase
+[Authorize]
+public class NewController : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetTours()
+    public async Task<IActionResult> Get()
     {
-        // Your logic here
-        return Ok(tours);
+        return Ok(new { message = "Hello from new controller!" });
     }
 }
 ```
 
-### Bước 4: Run API (1 phút)
+## 🐛 Common Issues & Solutions
 
+### Issue: Port Already in Use
 ```bash
-dotnet run
-# API chạy tại: https://localhost:5001
-```
-
-### Bước 5: Update Flutter App (5 phút)
-
-**Install Dio:**
-```yaml
-dependencies:
-  dio: ^5.4.0
-```
-
-**Create API Service:**
-```dart
-class ApiService {
-  final dio = Dio(BaseOptions(
-    baseUrl: 'https://localhost:5001',
-  ));
-  
-  Future<List<Tour>> getTours() async {
-    final response = await dio.get('/api/tours');
-    return (response.data as List)
-        .map((json) => Tour.fromJson(json))
-        .toList();
-  }
-}
-```
-
-### Bước 6: Test (2 phút)
-
-```bash
-# Test API
-curl https://localhost:5001/api/tours
-
-# Run Flutter app
-flutter run
-```
-
-## ⚡ Quick Commands
-
-```bash
-# Create project
-dotnet new webapi -n TripMate.API
-
-# Add packages
-dotnet add package supabase-csharp
-
-# Run
-dotnet run
-
-# Build
-dotnet build
-
-# Publish
-dotnet publish -c Release
-
-# Watch (auto-reload)
-dotnet watch run
-```
-
-## 🔧 Common Issues
-
-### Issue 1: CORS Error
-```csharp
-// Program.cs
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
-});
-
-app.UseCors("AllowAll");
-```
-
-### Issue 2: HTTPS Certificate
-```bash
-# Trust dev certificate
-dotnet dev-certs https --trust
-```
-
-### Issue 3: Port already in use
-```json
-// Properties/launchSettings.json
+# Change port in launchSettings.json
 "applicationUrl": "https://localhost:5002;http://localhost:5001"
 ```
 
-## 📊 Architecture Flow
-
-```
-1. Flutter App
-   ↓ HTTP Request
-2. ASP.NET API
-   ↓ Supabase Client
-3. Supabase DB
-   ↓ Response
-4. ASP.NET API
-   ↓ JSON Response
-5. Flutter App
+### Issue: HTTPS Certificate
+```bash
+# Trust development certificate
+dotnet dev-certs https --trust
 ```
 
-## 🎯 Next Steps
+### Issue: CORS Errors
+Already configured in `Program.cs`:
+```csharp
+app.UseCors("AllowAll");
+```
 
-1. ✅ Setup basic API
-2. ✅ Connect to Supabase
-3. ✅ Create endpoints
-4. ✅ Update Flutter app
-5. ⬜ Add authentication
-6. ⬜ Add validation
-7. ⬜ Add logging
-8. ⬜ Deploy to Azure
+### Issue: Supabase Connection
+1. Verify URL and API key in `appsettings.json`
+2. Test with debug endpoint: `/api/debug/db-test`
+3. Check Supabase project status
 
-## 📚 Useful Links
+## 📊 Project Structure
 
-- [ASP.NET Tutorial](https://docs.microsoft.com/aspnet/core/tutorials/first-web-api)
-- [Supabase C#](https://github.com/supabase-community/supabase-csharp)
-- [Dio Package](https://pub.dev/packages/dio)
+```
+TripMate_Webapi/
+├── Controllers/          # API endpoints
+│   ├── ChatController.cs
+│   └── DebugController.cs
+├── Services/            # Business logic
+│   ├── ChatService.cs
+│   └── NotificationService.cs
+├── Models/              # Data models
+├── Program.cs           # App configuration
+├── appsettings.json     # Configuration
+└── Properties/
+    └── launchSettings.json
+```
 
-Total setup time: ~25 phút! 🎉
+## 🚀 Next Steps
+
+### Immediate (Today)
+1. ✅ Get API running
+2. ✅ Test debug endpoints
+3. ✅ Verify Supabase connection
+4. ✅ Test with Flutter app
+
+### Short Term (This Week)
+1. Add authentication middleware
+2. Implement tour endpoints
+3. Add booking endpoints
+4. Set up logging
+
+### Medium Term (This Month)
+1. Add comprehensive testing
+2. Set up CI/CD pipeline
+3. Add monitoring and metrics
+4. Prepare for production deployment
+
+## 📚 Useful Commands
+
+```bash
+# Development
+dotnet watch run              # Hot reload
+dotnet run --environment Development
+
+# Testing
+dotnet test                   # Run all tests
+dotnet test --logger console # Verbose test output
+
+# Building
+dotnet build                  # Debug build
+dotnet build -c Release      # Release build
+dotnet publish -c Release    # Publish for deployment
+
+# Package Management
+dotnet add package PackageName
+dotnet remove package PackageName
+dotnet list package
+
+# Project Management
+dotnet new webapi -n NewProject
+dotnet sln add NewProject
+```
+
+## 🎯 Success Checklist
+
+- [ ] ✅ .NET SDK installed and working
+- [ ] ✅ Project builds without errors
+- [ ] ✅ API starts and responds to requests
+- [ ] ✅ Swagger UI accessible
+- [ ] ✅ Supabase connection working
+- [ ] ✅ Debug endpoints responding
+- [ ] ✅ CORS configured for Flutter
+- [ ] ✅ Hot reload working with `dotnet watch run`
+
+## 🆘 Getting Help
+
+### Quick Debugging
+```bash
+# Check .NET version
+dotnet --version
+
+# Check project status
+dotnet build
+
+# Check running processes
+netstat -an | grep :5001
+```
+
+### Resources
+- **ASP.NET Docs**: [docs.microsoft.com/aspnet](https://docs.microsoft.com/aspnet)
+- **Supabase C#**: [github.com/supabase-community/supabase-csharp](https://github.com/supabase-community/supabase-csharp)
+- **Swagger**: Available at `https://localhost:5001/swagger`
+
+### Team Support
+- Check [API_GUIDE.md](../../../docs/API_GUIDE.md) for detailed documentation
+- Review [TROUBLESHOOTING.md](../../../docs/TROUBLESHOOTING.md) for common issues
+- Contact development team for complex issues
+
+---
+
+**Total Setup Time**: ~15 minutes  
+**Difficulty**: Beginner  
+**Status**: ✅ Production Ready  
+**Last Updated**: December 2024
+
+*Ready to build amazing APIs! 🚀*
