@@ -1,34 +1,284 @@
-# Requirements Document
+# 🎯 TripMate - Requirements Specification
 
-## Introduction
+> Comprehensive requirements for the TripMate travel booking platform
 
-This document specifies the requirements for a production-ready Flutter travel booking platform that enables users to discover, book, and manage tour guide services. The platform will support Android, iOS, and Web platforms, utilizing Supabase for backend services, Riverpod for state management, and Clean Architecture principles for maintainable, scalable code.
+## 📋 Project Overview
 
-## Glossary
+**TripMate** is a production-ready Flutter travel booking platform that connects travelers with local tour guides. The platform supports Android, iOS, and Web platforms, utilizing Supabase for backend services, Riverpod for state management, and Clean Architecture principles.
 
-- **Travel_Platform**: The complete Flutter application system including all features and components
-- **Auth_System**: The authentication and authorization subsystem managing user identity and sessions
-- **Tour_Catalog**: The subsystem responsible for displaying and managing tour listings
-- **Booking_Engine**: The subsystem that handles tour reservations and booking management
-- **Profile_Manager**: The subsystem managing user profile data and preferences
-- **Supabase_Client**: The backend service client providing authentication, database, and realtime capabilities
-- **User**: A person who has registered an account on the platform
-- **Guest**: A person using the platform without authentication
-- **Tour**: A tour guide service offering with details, pricing, and availability
-- **Booking**: A confirmed reservation for a specific tour
-- **Session**: An authenticated user's active connection to the platform
-- **Clean_Architecture**: A software design pattern with three layers: presentation, domain, and data
-- **Repository**: A data access abstraction layer in the Clean Architecture pattern
-- **Use_Case**: A single business operation in the domain layer
-- **DTO**: Data Transfer Object used for API communication
-- **Entity**: A domain model representing core business concepts
-- **State_Provider**: A Riverpod provider managing application state
-- **Navigation_Router**: The go_router instance managing app navigation
-- **Error_Handler**: The centralized error processing and display system
-- **Loading_State**: A UI state indicating an asynchronous operation is in progress
-- **Configuration**: Application settings and constants stored externally
+## 🏗️ System Architecture
 
-## Requirements
+### Technology Stack
+- **Frontend**: Flutter 3.11.3+ with Clean Architecture
+- **State Management**: Riverpod
+- **Navigation**: go_router
+- **Backend**: Supabase + ASP.NET Core API
+- **Database**: PostgreSQL (via Supabase)
+- **Real-time**: Supabase Realtime
+- **Authentication**: Supabase Auth with JWT
+
+### Architecture Layers
+1. **Presentation Layer**: UI widgets, screens, state providers
+2. **Domain Layer**: Business logic, entities, use cases
+3. **Data Layer**: Repositories, data sources, DTOs
+
+## 👥 User Roles & Permissions
+
+### 🧳 Traveler
+- Browse and search tours
+- Book tours with payment
+- Chat with guides
+- View booking history
+- Rate and review tours
+
+### 🗺️ Guide  
+- Create and manage tours
+- Accept/decline bookings
+- Chat with travelers
+- View earnings and analytics
+- Manage availability
+
+### 👨‍💼 Admin
+- Manage all users and tours
+- View platform analytics
+- Handle disputes
+- System configuration
+
+## 🎯 Core Features
+
+### 1. Authentication System
+- **User Registration**: Email/password with validation
+- **User Login**: JWT-based authentication
+- **Session Management**: Persistent sessions with auto-refresh
+- **Role-based Access**: Different permissions per user type
+- **Password Reset**: Email-based password recovery
+
+### 2. Tour Management
+- **Tour Catalog**: Browse available tours with pagination
+- **Tour Details**: Comprehensive tour information
+- **Search & Filter**: By location, price, rating, duration
+- **Tour Creation**: Guides can create and manage tours
+- **Tour Analytics**: Performance metrics for guides
+
+### 3. Booking System
+- **Booking Creation**: Select dates, participants, payment
+- **Booking Confirmation**: Unique reference numbers
+- **Booking History**: Past and upcoming bookings
+- **Booking Cancellation**: With policy enforcement
+- **Payment Integration**: Mock payment for development
+
+### 4. Real-time Chat
+- **Conversation Management**: Between travelers and guides
+- **Message History**: Persistent chat history
+- **Real-time Updates**: Instant message delivery
+- **Conversation Creation**: Auto-created from bookings
+
+### 5. User Profiles
+- **Profile Display**: User information and preferences
+- **Profile Editing**: Update personal information
+- **Preferences**: Language, currency, notifications
+- **Avatar Management**: Profile picture upload
+
+### 6. Dashboard System
+- **Traveler Dashboard**: Bookings, saved tours, recommendations
+- **Guide Dashboard**: Earnings, bookings, tour performance
+- **Admin Dashboard**: Platform analytics and management
+
+## 📱 Platform Support
+
+### Mobile (Primary)
+- **Android**: API level 21+ (Android 5.0+)
+- **iOS**: iOS 12.0+
+- **Features**: Native performance, push notifications, offline capability
+
+### Web (Secondary)
+- **Browsers**: Chrome, Firefox, Safari, Edge
+- **Features**: Responsive design, PWA capabilities
+- **Limitations**: No push notifications, limited offline
+
+## 🔐 Security Requirements
+
+### Authentication & Authorization
+- JWT-based authentication with Supabase
+- Role-based access control (RBAC)
+- Session timeout after 30 minutes of inactivity
+- Secure token storage using platform-specific secure storage
+
+### Data Protection
+- All API communications over HTTPS
+- Input validation and sanitization
+- SQL injection prevention
+- XSS attack prevention
+- Row Level Security (RLS) in database
+
+### Privacy
+- GDPR compliance for EU users
+- Data encryption at rest and in transit
+- User consent for data collection
+- Right to data deletion
+
+## 🎨 UI/UX Requirements
+
+### Design System
+- **Primary Color**: #E91E8C (Pink)
+- **Secondary Color**: #2196F3 (Blue)
+- **Typography**: System fonts with Vietnamese support
+- **Components**: Material 3 design system
+
+### Responsive Design
+- Mobile-first approach
+- Tablet optimization
+- Web responsive breakpoints
+- Accessibility compliance (WCAG 2.1 AA)
+
+### User Experience
+- Intuitive navigation
+- Fast loading times (<2 seconds)
+- Smooth animations and transitions
+- Error handling with user-friendly messages
+- Loading states for all async operations
+
+## 📊 Performance Requirements
+
+### Response Times
+- **App Launch**: <2 seconds
+- **Screen Navigation**: <500ms
+- **API Responses**: <1 second
+- **Image Loading**: Progressive loading with placeholders
+
+### Scalability
+- Support 10,000+ concurrent users
+- Handle 100,000+ tours in database
+- Efficient pagination (20 items per page)
+- Image optimization and caching
+
+### Offline Capability
+- View cached booking data offline
+- Offline indicator when network unavailable
+- Sync data when connection restored
+- Prevent critical operations when offline
+
+## 🔄 Real-time Features
+
+### Chat System
+- Instant message delivery
+- Online/offline status
+- Message read receipts
+- Conversation persistence
+
+### Booking Updates
+- Real-time booking status changes
+- Automatic UI updates
+- Push notifications for important events
+- Fallback to polling if real-time fails
+
+## 🧪 Testing Requirements
+
+### Unit Testing
+- Business logic coverage >80%
+- Repository pattern testing
+- Use case testing
+- Provider state testing
+
+### Integration Testing
+- API endpoint testing
+- Database integration testing
+- Authentication flow testing
+- Real-time feature testing
+
+### UI Testing
+- Widget testing for critical components
+- Screen flow testing
+- Cross-platform compatibility testing
+- Accessibility testing
+
+## 🚀 Deployment Requirements
+
+### Development Environment
+- Local development with hot reload
+- Mock data for testing
+- Debug logging and error reporting
+- Development-specific configurations
+
+### Production Environment
+- Automated CI/CD pipeline
+- Environment-specific configurations
+- Error monitoring and logging
+- Performance monitoring
+- Backup and disaster recovery
+
+## 📈 Analytics & Monitoring
+
+### User Analytics
+- User engagement metrics
+- Feature usage statistics
+- Conversion funnel analysis
+- Retention rate tracking
+
+### Performance Monitoring
+- App performance metrics
+- API response times
+- Error rate monitoring
+- Crash reporting
+
+### Business Metrics
+- Booking conversion rates
+- Revenue tracking
+- User growth metrics
+- Tour popularity analytics
+
+## 🌍 Internationalization
+
+### Language Support
+- **Primary**: Vietnamese
+- **Secondary**: English
+- **Future**: Additional languages as needed
+
+### Localization
+- Date and time formatting
+- Currency formatting
+- Number formatting
+- Cultural adaptations
+
+## 📋 Acceptance Criteria
+
+### Definition of Done
+- [ ] Feature implemented according to requirements
+- [ ] Unit tests written and passing
+- [ ] Integration tests passing
+- [ ] UI/UX review completed
+- [ ] Performance requirements met
+- [ ] Security review completed
+- [ ] Documentation updated
+- [ ] Code review approved
+
+### Quality Gates
+- [ ] No critical bugs
+- [ ] Performance benchmarks met
+- [ ] Accessibility standards met
+- [ ] Security scan passed
+- [ ] Cross-platform compatibility verified
+
+## 🔄 Future Enhancements
+
+### Phase 2 Features
+- Advanced search with AI recommendations
+- Multi-language tour descriptions
+- Video tour previews
+- Social features (follow guides, share tours)
+
+### Phase 3 Features
+- AR/VR tour experiences
+- IoT integration for smart tours
+- Blockchain-based reviews
+- Advanced analytics dashboard
+
+---
+
+**Document Version**: 2.0  
+**Last Updated**: December 2024  
+**Status**: ✅ Approved  
+**Next Review**: March 2025
 
 ### Requirement 1: User Registration
 

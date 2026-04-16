@@ -5,6 +5,8 @@ import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../../auth/presentation/screens/login_screen.dart';
 import '../../../tour/presentation/screens/create_tour_screen.dart';
 import '../../../tour/presentation/providers/tour_list_provider.dart';
+import '../../../tour/domain/entities/tour_entity.dart';
+import '../../../chat/presentation/screens/conversation_list_screen.dart';
 
 class GuideDashboardScreen extends ConsumerStatefulWidget {
   const GuideDashboardScreen({super.key});
@@ -696,7 +698,7 @@ class _ToursTabState extends ConsumerState<_ToursTab> {
 }
 
 class _GuideTourCard extends StatelessWidget {
-  final tour;
+  final TourEntity tour;
   const _GuideTourCard({required this.tour});
 
   @override
@@ -839,36 +841,7 @@ class _BookingsTab extends StatelessWidget {
 class _MessagesTab extends StatelessWidget {
   const _MessagesTab();
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Tin nhắn',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 64,
-              color: Colors.grey.shade300,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Chưa có tin nhắn',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => const ConversationListScreen();
 }
 
 // ── Tab: Profile ──────────────────────────────────────────────────────────────

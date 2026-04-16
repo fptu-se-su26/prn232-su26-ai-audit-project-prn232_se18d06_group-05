@@ -50,6 +50,12 @@ dependencies:
   # HTTP Client
   dio: ^5.7.0
   
+  # Image Picker
+  image_picker: ^1.0.7
+  
+  # File handling
+  path: ^1.9.0
+  
   # Utilities
   freezed_annotation: ^2.4.4
   json_annotation: ^4.9.0

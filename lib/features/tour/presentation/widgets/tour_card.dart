@@ -6,6 +6,8 @@ import '../../../../core/widgets/permission_widget.dart';
 import '../../../auth/presentation/providers/auth_state_provider.dart';
 import '../../domain/entities/tour_entity.dart';
 import '../screens/tour_detail_screen.dart';
+import '../screens/create_tour_screen.dart';
+import '../providers/tour_list_provider.dart';
 
 class TourCard extends ConsumerWidget {
   final TourEntity tour;
@@ -151,10 +153,26 @@ class TourCard extends ConsumerWidget {
                         // Edit button
                         PermissionIconButton(
                           permission: Permission.editOwnTour,
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Chỉnh sửa tour')),
+                          onPressed: () async {
+                            final result = await Navigator.push<bool>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    CreateTourScreen(tourId: tour.id),
+                              ),
                             );
+
+                            // If tour was updated, refresh the tour list
+                            if (result == true && context.mounted) {
+                              // Trigger a refresh of the tour list
+                              ref.read(tourListProvider.notifier).refresh();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Tour đã được cập nhật'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            }
                           },
                           icon: const Icon(Icons.edit, size: 20),
                           tooltip: 'Chỉnh sửa',

@@ -1,162 +1,200 @@
-# TripMate - Travel Booking Platform
+# 🌟 TripMate - Travel Booking Platform
 
-TripMate là nền tảng đặt dịch vụ du lịch đa nền tảng (Web & Mobile), kết nối khách du lịch với hướng dẫn viên địa phương một cách nhanh chóng và tiện lợi.
+> Nền tảng đặt tour du lịch kết nối khách hàng với hướng dẫn viên địa phương
 
-## 🎯 Tính năng chính
+[![Flutter](https://img.shields.io/badge/Flutter-3.11.3+-blue.svg)](https://flutter.dev/)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-green.svg)](https://supabase.com/)
+[![ASP.NET](https://img.shields.io/badge/ASP.NET_Core-API-purple.svg)](https://dotnet.microsoft.com/)
 
-- ✅ **Xác thực người dùng**: Đăng ký, đăng nhập, quản lý phiên
-- 🧭 **Quản lý Tour**: Xem danh sách, tìm kiếm, lọc tour
-- 📅 **Hệ thống đặt tour**: Đặt lịch, xác nhận, lịch sử booking
-- 👤 **Hồ sơ người dùng**: Quản lý thông tin cá nhân
-- ⚡ **Cập nhật realtime**: Trạng thái booking, thông báo
+## 🎯 Tổng quan
+
+TripMate là nền tảng đặt tour du lịch đa nền tảng (Mobile & Web) với kiến trúc Clean Architecture, sử dụng Flutter cho frontend và Supabase + ASP.NET Core cho backend.
+
+### ✨ Tính năng chính
+
+- 🔐 **Xác thực đa vai trò**: Traveler, Guide, Admin
+- 🗺️ **Quản lý Tour**: Tạo, chỉnh sửa, tìm kiếm tour
+- 📅 **Hệ thống Booking**: Đặt tour, thanh toán, xác nhận
+- 💬 **Chat realtime**: Tin nhắn giữa khách và hướng dẫn viên
+- 📊 **Dashboard**: Thống kê cho từng vai trò
+- 🔔 **Thông báo**: Cập nhật trạng thái booking
 
 ## 🏗️ Kiến trúc
 
-### Clean Architecture với 3 layers:
-- **Presentation Layer**: UI, Widgets, State Management (Riverpod)
-- **Domain Layer**: Business Logic, Entities, Use Cases
-- **Data Layer**: Repositories, Data Sources, DTOs
-
-### Tech Stack:
-- **Frontend**: Flutter (Android, iOS, Web)
-- **Backend**: Supabase (Auth + Database + Realtime)
-- **State Management**: Riverpod
-- **Navigation**: go_router
-- **HTTP Client**: Dio + Supabase Client
-
-## 📁 Cấu trúc thư mục
-
+### Frontend (Flutter)
 ```
 lib/
-├── core/                    # Core utilities
-│   ├── config/             # App configuration
-│   │   ├── app_config.dart
-│   │   └── supabase_config.dart
-│   ├── constants/          # App constants
-│   ├── errors/             # Error handling
-│   │   ├── exceptions.dart
-│   │   └── failures.dart
-│   ├── theme/              # App theme
-│   └── utils/              # Utilities
-│
+├── core/                    # Core utilities & config
 ├── features/               # Feature modules
 │   ├── auth/              # Authentication
-│   │   ├── data/
-│   │   ├── domain/
-│   │   └── presentation/
+│   ├── dashboard/         # Role-based dashboards  
 │   ├── tour/              # Tour management
 │   ├── booking/           # Booking system
-│   └── profile/           # User profile
-│
-├── shared/                # Shared components
-│   └── widgets/           # Reusable widgets
-│
-└── main.dart              # App entry point
+│   └── chat/              # Real-time messaging
+└── shared/                # Shared components
 ```
 
-## 🚀 Cài đặt và chạy
+### Backend
+- **Supabase**: Database, Auth, Realtime
+- **ASP.NET Core**: API Gateway, Business Logic
+- **PostgreSQL**: Primary database
 
-### Yêu cầu:
-- Flutter SDK >= 3.11.3
-- Dart SDK >= 3.11.3
-- Supabase account
+### Tech Stack
+- **Frontend**: Flutter, Riverpod, go_router
+- **Backend**: Supabase, ASP.NET Core
+- **Database**: PostgreSQL
+- **Real-time**: Supabase Realtime
+- **State Management**: Riverpod
 
-### Bước 1: Clone repository
+## 🚀 Quick Start
+
+### 1. Prerequisites
+```bash
+# Flutter SDK
+flutter --version  # >= 3.11.3
+
+# .NET SDK (for API)
+dotnet --version   # >= 7.0
+```
+
+### 2. Clone & Setup
 ```bash
 git clone <repository-url>
 cd flutter_tripmate_application
-```
 
-### Bước 2: Cài đặt dependencies
-```bash
+# Install Flutter dependencies
 flutter pub get
+
+# Setup environment
+cp .env.example .env
+# Edit .env with your Supabase credentials
 ```
 
-### Bước 3: Cấu hình Supabase
-File `.env` đã được tạo với thông tin Supabase:
-```env
-SUPABASE_URL=https://nvbvvowyjzylllswhynv.supabase.co
-SUPABASE_ANON_KEY=sb_publishable_ZbSsVM4M0xZJa4PyobDMkw_cazDhnr2
-```
-
-### Bước 4: Chạy ứng dụng
-
-**Android/iOS:**
+### 3. Database Setup
 ```bash
+# Run in Supabase SQL Editor
+# Copy content from: web/TripMate_Webapi/migrations/003_chat_tables.sql
+```
+
+### 4. Run Application
+```bash
+# Flutter app
 flutter run
+
+# ASP.NET API (optional)
+cd web/TripMate_Webapi
+dotnet run
 ```
 
-**Web:**
-```bash
-flutter run -d chrome
-```
+## 📱 Platforms
 
-**Chọn device cụ thể:**
-```bash
-flutter devices                    # Xem danh sách devices
-flutter run -d <device-id>         # Chạy trên device cụ thể
-```
+- ✅ **Android** - Native mobile experience
+- ✅ **iOS** - Native mobile experience  
+- ✅ **Web** - Responsive web application
+- ⏳ **Desktop** - Future support
+
+## 🎨 Design System
+
+### Colors
+- **Primary**: `#E91E8C` (Pink)
+- **Secondary**: `#2196F3` (Blue)
+- **Success**: `#4CAF50` (Green)
+- **Warning**: `#FF9800` (Orange)
+- **Error**: `#F44336` (Red)
+
+### Typography
+- **Font**: System default with Vietnamese support
+- **Scale**: Material 3 typography scale
+
+## 👥 User Roles
+
+### 🧳 Traveler
+- Browse and search tours
+- Book tours with payment
+- Chat with guides
+- View booking history
+- Rate and review tours
+
+### 🗺️ Guide
+- Create and manage tours
+- Accept/decline bookings
+- Chat with travelers
+- View earnings and analytics
+- Manage availability
+
+### 👨‍💼 Admin
+- Manage all users and tours
+- View platform analytics
+- Handle disputes
+- System configuration
 
 ## 🔧 Development
 
-### Generate code (khi cần):
+### Code Generation
 ```bash
 flutter pub run build_runner build --delete-conflicting-outputs
 ```
 
-### Chạy tests:
+### Testing
 ```bash
 flutter test
 ```
 
-### Build production:
+### Build
 ```bash
 # Android
 flutter build apk --release
 
-# iOS
+# iOS  
 flutter build ios --release
 
 # Web
 flutter build web --release
 ```
 
-## 📝 Lưu ý quan trọng
+## 📚 Documentation
 
-1. **File .env**: Không commit file `.env` lên git (đã thêm vào `.gitignore`)
-2. **Đường dẫn có khoảng trắng**: Nếu gặp lỗi với đường dẫn có khoảng trắng, hãy di chuyển project đến thư mục không có khoảng trắng
-3. **Supabase**: Đảm bảo Supabase project đã được setup đúng với các bảng cần thiết
+- 📖 [Setup Guide](docs/SETUP_GUIDE.md) - Detailed setup instructions
+- 🗄️ [Database Setup](docs/DATABASE_SETUP.md) - Database schema and migration
+- 🔧 [API Documentation](docs/API_GUIDE.md) - ASP.NET Core API guide
+- 🎨 [Design System](docs/DESIGN_SYSTEM.md) - UI/UX guidelines
+- 🧪 [Testing Guide](docs/TESTING_GUIDE.md) - Testing strategies
 
-## 🎨 Màu sắc chủ đạo
+## 🔐 Security
 
-- Primary: `#2196F3` (Blue)
-- Secondary: `#03DAC6` (Teal)
-- Background: `#F5F5F5` (Light Gray)
-- Error: `#B00020` (Red)
+- JWT-based authentication
+- Row Level Security (RLS) in Supabase
+- HTTPS for all communications
+- Input validation and sanitization
+- Secure token storage
 
-## 📱 Platforms hỗ trợ
+## 🌍 Internationalization
 
-- ✅ Android
-- ✅ iOS
-- ✅ Web
-- ⏳ Desktop (Future)
-
-## 🔐 Bảo mật
-
-- JWT-based authentication với Supabase
-- PKCE flow cho OAuth
-- Secure storage cho tokens
-- HTTPS cho tất cả API calls
+- Vietnamese (primary)
+- English (secondary)
+- Extensible for more languages
 
 ## 📄 License
 
 Private project - All rights reserved
 
-## 👥 Team
+## 👨‍💻 Development Team
 
 TripMate Development Team
 
 ---
 
-**Version**: 1.0.0  
-**Last Updated**: 2026-03-26
+**Version**: 2.0.0  
+**Last Updated**: December 2024  
+**Status**: ✅ Production Ready
+
+## 🆘 Support
+
+For technical support or questions:
+- Check [Documentation](docs/)
+- Review [Common Issues](docs/TROUBLESHOOTING.md)
+- Contact development team
+
+---
+
+Made with ❤️ in Vietnam 🇻🇳

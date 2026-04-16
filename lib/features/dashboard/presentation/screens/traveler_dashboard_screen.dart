@@ -7,6 +7,7 @@ import '../../../tour/presentation/screens/tour_list_screen.dart';
 import '../../../tour/presentation/providers/tour_list_provider.dart';
 import '../../../tour/domain/entities/tour_entity.dart';
 import '../../../tour/presentation/screens/tour_detail_screen.dart';
+import '../../../chat/presentation/screens/conversation_list_screen.dart';
 
 class TravelerDashboardScreen extends ConsumerStatefulWidget {
   const TravelerDashboardScreen({super.key});
@@ -557,40 +558,7 @@ class _MessagesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Tin nhắn',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
-        elevation: 0,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.chat_bubble_outline,
-              size: 64,
-              color: Colors.grey.shade300,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Chưa có tin nhắn',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tin nhắn với hướng dẫn viên sẽ hiển thị ở đây',
-              style: TextStyle(color: Colors.grey.shade600),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
+    return ConversationListScreen();
   }
 }
 
