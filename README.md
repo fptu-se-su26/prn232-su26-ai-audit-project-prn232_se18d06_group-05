@@ -5,9 +5,9 @@
 | Item | Description |
 |---|---|
 | Course |  |
-| Class |  |
+| Class | SE18D06 |
 | Semester | SU26 |
-| Group |  |
+| Group | Group 5 |
 | Topic |  |
 | Repository |  |
 
@@ -17,11 +17,11 @@
 
 | No | Student ID | Full Name | GitHub Username | Role | Main Responsibility |
 |---:|---|---|---|---|---|
-| 1 |  |  |  | Leader |  |
-| 2 |  |  |  | Member |  |
-| 3 |  |  |  | Member |  |
-| 4 |  |  |  | Member |  |
-| 5 |  |  |  | Member |  |
+| 1 | DE190150 | Lương Minh Phú |  | Leader |  |
+| 2 | DE180845 | Nguyễn Hữu Sơn |  | Member |  |
+| 3 | DE180869 | Dương Khánh Hoà |  | Member |  |
+| 4 | DE190458 | Nguyễn Văn Nhật Nam |  | Member |  |
+| 5 | DE190646 | Lê Xuân Sơn |  | Member |  |
 
 ---
 
