@@ -4,15 +4,16 @@
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học |  |
-| Mã môn học |  |
-| Lớp |  |
-| Học kỳ |  |
-| Tên bài tập / Project |  |
-| Tên sinh viên / Nhóm |  |
-| MSSV / Danh sách MSSV |  |
-| Giảng viên hướng dẫn |  |
-| Ngày hoàn thành reflection |  |
+| Môn học | Building Cross-Platform Back-End Application With .NET |
+| Mã môn học | PRN232 |
+| Lớp | SE18D06 |
+| Học kỳ | Spring 2026 |
+| Tên bài tập / Project | TripMate - Travel Booking Platform |
+| Tên sinh viên / Nhóm | Lương Minh Phú / Dương Khánh Hòa / Nguyễn Hữu Sơn / Nguyễn Văn Nhật Nam / Lê Xuân Sơn - Group 5 |
+| MSSV / Danh sách MSSV | DE190150 / DE180869 / DE180845 / DE190458 / DE190646 |
+| Giảng viên hướng dẫn | QuangLTN3 |
+| Ngày bắt đầu | 11/05/2026 |
+| Ngày hoàn thành reflection | 05/07/2026 |
 
 ---
 
@@ -52,26 +53,26 @@ Gợi ý:
 
 Đánh dấu các công cụ AI đã sử dụng.
 
-- [ ] ChatGPT
-- [ ] Gemini
-- [ ] Claude
-- [ ] GitHub Copilot
+- [x] ChatGPT
+- [x] Gemini
+- [x] Claude
+- [x] GitHub Copilot
 - [ ] Cursor
-- [ ] Antigravity
-- [ ] Microsoft Copilot
+- [x] Antigravity
+- [x] Microsoft Copilot
 - [ ] Perplexity
-- [ ] Công cụ khác: ....................................
+- [x] Công cụ khác: Stitch
 
 ### Công cụ được sử dụng nhiều nhất
 
 ```text
-Viết tại đây...
+ChatGPT, Gemini, Claude, AntiGravity
 ```
 
 ### Lý do sử dụng công cụ đó
 
 ```text
-Viết tại đây...
+Lưu trữ bộ nhớ lớn cho việc xây dựng dự án và đọc context một cách dễ hiểu và thực thi nhanh.
 ```
 
 ---
@@ -80,19 +81,19 @@ Viết tại đây...
 
 Đánh dấu các nội dung phù hợp.
 
-- [ ] Hiểu yêu cầu đề bài
-- [ ] Phân tích bài toán
-- [ ] Tìm ý tưởng giải pháp
-- [ ] Thiết kế database
-- [ ] Thiết kế giao diện
+- [x] Hiểu yêu cầu đề bài
+- [x] Phân tích bài toán
+- [x] Tìm ý tưởng giải pháp
+- [x] Thiết kế database
+- [x] Thiết kế giao diện
 - [ ] Thiết kế kiến trúc hệ thống
-- [ ] Viết code mẫu
-- [ ] Debug lỗi
+- [x] Viết code mẫu
+- [x] Debug lỗi
 - [ ] Viết test case
 - [ ] Review code
 - [ ] Tối ưu code
 - [ ] Kiểm tra bảo mật
-- [ ] Viết báo cáo
+- [x] Viết báo cáo
 - [ ] Chuẩn bị thuyết trình
 - [ ] Tìm hiểu công nghệ mới
 - [ ] Khác: ....................................
@@ -158,8 +159,8 @@ Viết tại đây...
 
 Đánh dấu các cách đã sử dụng.
 
-- [ ] Chạy thử chương trình
-- [ ] Kiểm tra output
+- [x] Chạy thử chương trình
+- [x] Kiểm tra output
 - [ ] Viết test case
 - [ ] So sánh với yêu cầu đề bài
 - [ ] Đối chiếu với tài liệu môn học
