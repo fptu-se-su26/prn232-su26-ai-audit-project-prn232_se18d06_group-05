@@ -19,17 +19,16 @@ Nguyên tắc ghi changelog:
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học |  |
-| Mã môn học |  |
-| Lớp |  |
-| Học kỳ |  |
-| Tên bài tập / Project |  |
-| Tên sinh viên / Nhóm |  |
-| MSSV / Danh sách MSSV |  |
-| Giảng viên hướng dẫn |  |
-| Repository URL |  |
-| Ngày bắt đầu |  |
-| Ngày hoàn thành |  |
+| Môn học | Building Cross-Platform Back-End Application With .NET |
+| Mã môn học | PRN232 |
+| Lớp | SE18D06 |
+| Học kỳ | Spring 2026 |
+| Tên bài tập / Project | TripMate - Travel Booking Platform |
+| Tên sinh viên / Nhóm | Lương Minh Phú / Dương Khánh Hòa / Nguyễn Hữu Sơn / Nguyễn Văn Nhật Nam / Lê Xuân Sơn - Group 5 |
+| MSSV / Danh sách MSSV | DE190150 / DE180869 / DE180845 / DE190458 / DE190646 |
+| Giảng viên hướng dẫn | QuangLTN3 |
+| Ngày bắt đầu | 11/05/2026 |
+| Ngày hoàn thành | 05/07/2026 |
 
 ---
 
@@ -37,7 +36,7 @@ Nguyên tắc ghi changelog:
 
 | Phiên bản/Giai đoạn | Thời gian | Nội dung chính | Trạng thái |
 |---|---|---|---|
-| Phase 01 |  | Khởi tạo project | Not Started / In Progress / Completed |
+| Phase 01 |  | Khởi tạo project | In Progress |
 | Phase 02 |  | Phân tích yêu cầu | Not Started / In Progress / Completed |
 | Phase 03 |  | Thiết kế hệ thống | Not Started / In Progress / Completed |
 | Phase 04 |  | Implementation | Not Started / In Progress / Completed |
@@ -51,22 +50,22 @@ Nguyên tắc ghi changelog:
 ## Ngày thực hiện
 
 ```text
-DD/MM/YYYY
+13/05/2026
 ```
 
 ## Đã hoàn thành
 
-- [ ] Tạo repository
-- [ ] Tạo cấu trúc thư mục project
-- [ ] Tạo file README.md
+- [x] Tạo repository
+- [x] Tạo cấu trúc thư mục project
+- [x] Tạo file README.md
 - [ ] Tạo thư mục `docs/`
 - [ ] Tạo file `AI_AUDIT_LOG.md`
 - [ ] Tạo file `PROMPTS.md`
 - [ ] Tạo file `REFLECTION.md`
 - [ ] Tạo file `CHANGELOG.md`
-- [ ] Khởi tạo source code ban đầu
-- [ ] Cài đặt thư viện/công cụ cần thiết
-- [ ] Cấu hình môi trường chạy project
+- [x] Khởi tạo source code ban đầu
+- [x] Cài đặt thư viện/công cụ cần thiết
+- [x] Cấu hình môi trường chạy project
 
 ## Thay đổi chi tiết
 
