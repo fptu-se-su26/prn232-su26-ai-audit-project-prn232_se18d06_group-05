@@ -106,7 +106,26 @@ feat, fix, docs, test, refactor, style, chore
 ## 8. How to Run
 
 ```text
-Students write project running instructions here.
+1. Prerequisites
+Flutter SDK
+flutter --version
+# >= 3.11.3
+.NET SDK
+dotnet --version
+# >= 7.0
+2. Clone & Setup
+git clone <repository-url>
+cd flutter_tripmate_application
+
+Install dependencies:
+
+flutter pub get
+
+Environment setup:
+
+cp .env.example .env
+
+Update .env with Supabase credentials.
 ```
 
 ---
