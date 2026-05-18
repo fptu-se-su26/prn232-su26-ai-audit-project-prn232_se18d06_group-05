@@ -4,16 +4,16 @@
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học |  |
-| Mã môn học |  |
-| Lớp |  |
-| Học kỳ |  |
-| Tên bài tập / Project |  |
-| Tên sinh viên / Nhóm |  |
-| MSSV / Danh sách MSSV |  |
-| Giảng viên hướng dẫn |  |
-| Ngày bắt đầu |  |
-| Ngày cập nhật gần nhất |  |
+| Môn học | Building Cross-Platform Back-End Application With .NET |
+| Mã môn học | PRN232 |
+| Lớp | SE18D06 |
+| Học kỳ | Spring 2026 |
+| Tên bài tập / Project | TripMate - Travel Booking Platform |
+| Tên sinh viên / Nhóm | Lương Minh Phú / Dương Khánh Hòa / Nguyễn Hữu Sơn / Nguyễn Văn Nhật Nam / Lê Xuân Sơn - Group 5 |
+| MSSV / Danh sách MSSV | DE190150 / DE180869 / DE180845 / DE190458 / DE190646 |
+| Giảng viên hướng dẫn | QuangLTN3 |
+| Ngày bắt đầu | 11/05/2026 |
+| Ngày hoàn thành | 05/07/2026 |
 
 ---
 
@@ -36,15 +36,15 @@ Sinh viên/nhóm cần ghi lại:
 
 Đánh dấu các công cụ AI đã sử dụng.
 
-- [ ] ChatGPT
-- [ ] Gemini
-- [ ] Claude
-- [ ] GitHub Copilot
+- [x] ChatGPT
+- [x] Gemini
+- [x] Claude
+- [x] GitHub Copilot
 - [ ] Cursor
-- [ ] Antigravity
-- [ ] Microsoft Copilot
+- [x] Antigravity
+- [x] Microsoft Copilot
 - [ ] Perplexity
-- [ ] Công cụ khác: ....................................
+- [x] Công cụ khác: Stitch
 
 ---
 
@@ -52,7 +52,7 @@ Sinh viên/nhóm cần ghi lại:
 
 | STT | Ngày | Công cụ AI | Mục đích | Prompt tóm tắt | Kết quả chính | Có sử dụng vào bài không? | Minh chứng |
 |---:|---|---|---|---|---|---|---|
-| 1 |  |  |  |  |  | Có / Không |  |
+| 1 | 13/05/2026 | Claude | Khởi tạo cấu trúc project | Giúp tạo hệ thống áp dụng mô hình Domain-Driven Design (DDD) để nâng cao tính mở rộng, khả năng tái sử dụng và hỗ trợ phát triển cross-platform giữa nhiều nền tảng. |  | Có |  |
 | 2 |  |  |  |  |  | Có / Không |  |
 | 3 |  |  |  |  |  | Có / Không |  |
 | 4 |  |  |  |  |  | Có / Không |  |
@@ -78,8 +78,8 @@ Sinh viên/nhóm cần ghi lại:
 | Ngày sử dụng |  |
 | Công cụ AI | ChatGPT / Gemini / Claude / GitHub Copilot / Cursor / Antigravity / Khác |
 | Mục đích |  |
-| Phần việc liên quan | Requirement / Design / Database / Coding / Testing / Debug / Report / Presentation / Other |
-| Mức độ sử dụng | Hỏi ý tưởng / Hỏi giải thích / Hỏi review / Hỏi debug / Hỏi sinh code / Hỏi tối ưu |
+| Phần việc liên quan | Requirement / Design / Database |
+| Mức độ sử dụng | Hỏi ý tưởng / Hỏi tối ưu |
 
 #### 5.1. Prompt nguyên văn
 
@@ -92,7 +92,7 @@ Dán nguyên văn prompt đã hỏi AI tại đây.
 Mô tả ngắn gọn vì sao sinh viên/nhóm cần dùng prompt này.
 
 ```text
-Viết tại đây...
+Tạo dự án dễ dàng hơn
 ```
 
 #### 5.3. Kết quả AI trả về
