@@ -4,16 +4,16 @@
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học |  |
-| Mã môn học |  |
-| Lớp |  |
-| Học kỳ |  |
-| Tên bài tập / Project |  |
-| Tên sinh viên / Nhóm |  |
-| MSSV / Danh sách MSSV |  |
-| Giảng viên hướng dẫn |  |
-| Ngày bắt đầu |  |
-| Ngày hoàn thành |  |
+| Môn học | Building Cross-Platform Back-End Application With .NET |
+| Mã môn học | PRN232 |
+| Lớp | SE18D06 |
+| Học kỳ | Spring 2026 |
+| Tên bài tập / Project | TripMate - Travel Booking Platform |
+| Tên sinh viên / Nhóm | Lương Minh Phú / Dương Khánh Hòa / Nguyễn Hữu Sơn / Nguyễn Văn Nhật Nam / Lê Xuân Sơn - Group 5 |
+| MSSV / Danh sách MSSV | DE190150 / DE180869 / DE180845 / DE190458 / DE190646 |
+| Giảng viên hướng dẫn | QuangLTN3 |
+| Ngày bắt đầu | 11/05/2026 |
+| Ngày hoàn thành | 05/07/2026 |
 
 ---
 
@@ -21,15 +21,15 @@
 
 Đánh dấu các công cụ AI đã sử dụng trong quá trình thực hiện bài tập/project.
 
-- [ ] ChatGPT
-- [ ] Gemini
-- [ ] Claude
-- [ ] GitHub Copilot
+- [x] ChatGPT
+- [x] Gemini
+- [x] Claude
+- [x] GitHub Copilot
 - [ ] Cursor
-- [ ] Antigravity
+- [x] Antigravity
 - [ ] Perplexity
 - [ ] Microsoft Copilot
-- [ ] Công cụ khác: ....................................
+- [x] Công cụ khác: Stitch
 
 ---
 
@@ -55,7 +55,9 @@ Ví dụ:
 ### Mô tả mục tiêu sử dụng AI
 
 ```text
-Viết tại đây...
+Nhóm dự kiến sử dụng AI để hỗ trợ phân tích yêu cầu, gợi ý thiết kế hệ thống, hỗ trợ viết code, debug lỗi, viết test case, review code và cập nhật tài liệu.
+
+Các prompt, kết quả AI, phần đã áp dụng và phần nhóm tự chỉnh sửa sẽ được ghi chi tiết trong quá trình thực hiện project.
 
 ## 4. Nhật ký sử dụng AI chi tiết
 
@@ -68,11 +70,11 @@ Viết tại đây...
 
 | Nội dung | Thông tin |
 |---|---|
-| Ngày sử dụng |  |
-| Công cụ AI | ChatGPT / Gemini / Claude / GitHub Copilot / Cursor / Antigravity / Khác |
-| Mục đích sử dụng |  |
-| Phần việc liên quan | Requirement / Design / Database / Frontend / Backend / Testing / Debug / Report / Presentation / Other |
-| Mức độ sử dụng | Hỗ trợ ý tưởng / Hỗ trợ một phần / Hỗ trợ nhiều / Sinh chính nội dung |
+| Ngày sử dụng | 13/05/2026 |
+| Công cụ AI | Claude |
+| Mục đích sử dụng | Phân tích yêu cầu, gợi ý thiết kế hệ thống |
+| Phần việc liên quan | Requirement / Design / Database |
+| Mức độ sử dụng | Hỗ trợ ý tưởng |
 
 #### 4.1. Prompt đã sử dụng
 
@@ -85,7 +87,22 @@ Dán nguyên văn prompt đã hỏi AI tại đây.
 Tóm tắt nội dung AI đã trả lời hoặc gợi ý.
 
 ```text
-Viết tại đây...
+You are an AI assistant supporting the development of TripMate – a travel booking platform project.
+
+Your responsibilities include:
+- Assisting with backend development using .NET / ASP.NET Core Web API.
+- Supporting Flutter mobile application development.
+- Providing clean, maintainable, and scalable code following software engineering best practices.
+- Explaining architecture, database design, RESTful API, JWT authentication, and microservice concepts when needed.
+- Helping debug errors, optimize performance, and suggest improvements.
+- Supporting documentation writing, testing, and technical report preparation.
+
+Rules:
+- Always explain technical decisions clearly.
+- Prefer practical and production-ready solutions.
+- Follow clean architecture, SOLID principles, and RESTful standards.
+- When generating code, include explanations and best practices.
+- Ask for missing requirements if implementation details are unclear.
 ```
 
 #### 4.3. Phần sinh viên/nhóm đã sử dụng từ AI
@@ -93,7 +110,7 @@ Viết tại đây...
 Mô tả rõ phần nào được sử dụng lại từ gợi ý của AI.
 
 ```text
-Viết tại đây...
+Hệ thống được thiết kế theo mô hình Domain-Driven Design (DDD) nhằm tăng khả năng mở rộng, bảo trì và tái sử dụng các thành phần trong hệ thống. Kiến trúc này hỗ trợ phát triển theo hướng cross-platform, giúp các dịch vụ có thể được tích hợp và sử dụng linh hoạt trên nhiều nền tảng khác nhau như Web, Mobile và Desktop.
 ```
 
 #### 4.4. Phần sinh viên/nhóm tự chỉnh sửa hoặc cải tiến
