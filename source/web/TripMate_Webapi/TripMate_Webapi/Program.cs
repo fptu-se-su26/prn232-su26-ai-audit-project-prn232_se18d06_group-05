@@ -33,11 +33,19 @@ builder.Services.AddScoped<TourService>();
 builder.Services.AddHttpClient<BookingService>();
 builder.Services.AddScoped<BookingService>();
 
+// ── Guide Approval Service ────────────────────────────────────────────────────
+builder.Services.AddHttpClient<GuideApprovalService>();
+builder.Services.AddScoped<GuideApprovalService>();
+
 // ── Chat & Notification Services ─────────────────────────────────────────────
 builder.Services.AddHttpClient<ChatService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddHttpClient<NotificationService>();
 builder.Services.AddScoped<NotificationService>();
+
+// ── Survey Service ────────────────────────────────────────────────────────────
+builder.Services.AddHttpClient<SurveyService>();
+builder.Services.AddScoped<SurveyService>();
 
 // ── Location (SerpAPI) ────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<LocationService>();

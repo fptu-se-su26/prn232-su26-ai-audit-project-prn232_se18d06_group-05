@@ -65,7 +65,7 @@ namespace TripMate_Webapi.Controllers
         /// POST /api/auth/register
         /// </summary>
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterRequest request)
+        public async Task<IActionResult> Register([FromForm] RegisterRequest request)
         {
             try
             {
@@ -74,7 +74,8 @@ namespace TripMate_Webapi.Controllers
                 // Validate request
                 if (string.IsNullOrWhiteSpace(request.Email) || 
                     string.IsNullOrWhiteSpace(request.Password) ||
-                    string.IsNullOrWhiteSpace(request.FullName))
+                    string.IsNullOrWhiteSpace(request.FullName) ||
+                    string.IsNullOrWhiteSpace(request.PhoneNumber))
                 {
                     return BadRequest(new { message = "Vui lòng điền đầy đủ thông tin" });
                 }
@@ -84,12 +85,72 @@ namespace TripMate_Webapi.Controllers
                     return BadRequest(new { message = "Mật khẩu phải có ít nhất 6 ký tự" });
                 }
 
+                // Validate phone number
+                if (!System.Text.RegularExpressions.Regex.IsMatch(request.PhoneNumber, @"^[0-9]{10,11}$"))
+                {
+                    return BadRequest(new { message = "Số điện thoại không hợp lệ" });
+                }
+
+                // Guide-specific validation
+                if (request.Role == "guide")
+                {
+                    if (string.IsNullOrWhiteSpace(request.Experience) ||
+                        string.IsNullOrWhiteSpace(request.Specialization))
+                    {
+                        return BadRequest(new { message = "Vui lòng điền đầy đủ thông tin hướng dẫn viên" });
+                    }
+
+                    if (request.Certificate == null)
+                    {
+                        return BadRequest(new { message = "Vui lòng tải lên chứng chỉ hướng dẫn viên" });
+                    }
+
+                    // Validate certificate file
+                    if (request.Certificate.ContentType != "application/pdf")
+                    {
+                        return BadRequest(new { message = "Chứng chỉ phải là file PDF" });
+                    }
+
+                    if (request.Certificate.Length > 10 * 1024 * 1024) // 10MB
+                    {
+                        return BadRequest(new { message = "File chứng chỉ quá lớn (tối đa 10MB)" });
+                    }
+                }
+
+                // Handle file upload for guides
+                string certificatePath = null;
+                if (request.Role == "guide" && request.Certificate != null)
+                {
+                    // Create uploads directory if it doesn't exist
+                    var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "certificates");
+                    Directory.CreateDirectory(uploadsDir);
+
+                    // Generate unique filename
+                    var fileName = $"{Guid.NewGuid()}_{request.Certificate.FileName}";
+                    certificatePath = Path.Combine(uploadsDir, fileName);
+
+                    // Save file
+                    using (var stream = new FileStream(certificatePath, FileMode.Create))
+                    {
+                        await request.Certificate.CopyToAsync(stream);
+                    }
+
+                    // Store relative path for database
+                    certificatePath = $"/uploads/certificates/{fileName}";
+                }
+
                 // Register user
                 var result = await _authService.RegisterAsync(
                     request.Email, 
                     request.Password, 
                     request.FullName, 
-                    request.Role ?? "traveler"
+                    request.Role ?? "traveler",
+                    request.PhoneNumber,
+                    request.Experience,
+                    request.Specialization,
+                    request.Languages,
+                    request.Bio,
+                    certificatePath
                 );
 
                 if (result == null)
@@ -100,19 +161,30 @@ namespace TripMate_Webapi.Controllers
 
                 _logger.LogInformation("Registration successful for email: {Email}", request.Email);
 
-                // Return with token for auto-login
-                return Ok(new
+                // Return with token for auto-login (except for guides who need approval)
+                if (request.Role == "guide")
                 {
-                    accessToken = result.AccessToken,
-                    refreshToken = result.RefreshToken,
-                    user = new
+                    return Ok(new
                     {
-                        id = result.User?.Id,
-                        email = result.User?.Email,
-                        role = request.Role ?? "traveler"
-                    },
-                    message = "Đăng ký thành công!"
-                });
+                        message = "Đăng ký thành công! Tài khoản hướng dẫn viên của bạn đang được xem xét.",
+                        requiresApproval = true
+                    });
+                }
+                else
+                {
+                    return Ok(new
+                    {
+                        accessToken = result.AccessToken,
+                        refreshToken = result.RefreshToken,
+                        user = new
+                        {
+                            id = result.User?.Id,
+                            email = result.User?.Email,
+                            role = request.Role ?? "traveler"
+                        },
+                        message = "Đăng ký thành công!"
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -146,6 +218,14 @@ namespace TripMate_Webapi.Controllers
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
         public string? Role { get; set; } = "traveler";
+        
+        // Guide-specific fields
+        public string? Experience { get; set; }
+        public string? Specialization { get; set; }
+        public string? Languages { get; set; }
+        public string? Bio { get; set; }
+        public IFormFile? Certificate { get; set; }
     }
 }

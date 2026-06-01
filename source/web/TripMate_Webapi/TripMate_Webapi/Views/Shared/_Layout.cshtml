@@ -74,10 +74,6 @@
                 <div id="userSection" class="ml-4">
                     <!-- Will be populated by JavaScript -->
                 </div>
-                <button id="logoutBtn" class="hidden ml-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-all flex items-center gap-2" onclick="logout()">
-                    <span class="material-symbols-outlined text-sm">logout</span>
-                    <span>Đăng xuất</span>
-                </button>
             </div>
         </div>
     </header>
@@ -131,7 +127,6 @@
             const userEmail = localStorage.getItem('userEmail');
             const userRole = localStorage.getItem('userRole');
             const userSection = document.getElementById('userSection');
-            const logoutBtn = document.getElementById('logoutBtn');
 
             if (token && userEmail) {
                 // User is logged in
@@ -139,15 +134,41 @@
                 const atIndex = userEmail.indexOf(atChar);
                 const displayName = atIndex > 0 ? userEmail.substring(0, atIndex) : userEmail;
                 userSection.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <span class="text-sm font-medium text-on-surface">${displayName}</span>
-                        <div class="h-10 w-10 rounded-full overflow-hidden border-2 border-primary/20">
-                            <img alt="User avatar" class="w-full h-full object-cover" src="/images/AVATAR.png"/>
+                    <div class="relative group">
+                        <button class="flex items-center gap-3 hover:bg-primary-container px-4 py-2 rounded-full transition-all">
+                            <span class="text-sm font-medium text-on-surface">${displayName}</span>
+                            <div class="h-10 w-10 rounded-full overflow-hidden border-2 border-primary/20 bg-primary-container">
+                                <div class="w-full h-full flex items-center justify-center text-primary font-bold">
+                                    ${displayName.substring(0, 1).toUpperCase()}
+                                </div>
+                            </div>
+                        </button>
+                        <!-- Dropdown Menu -->
+                        <div class="absolute right-0 top-full mt-2 w-56 bg-surface rounded-xl shadow-2xl border border-outline-variant/30 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                            <div class="p-4 border-b border-outline-variant/30">
+                                <p class="font-bold text-on-surface">${displayName}</p>
+                                <p class="text-xs text-on-surface-variant">${userEmail}</p>
+                                <span class="inline-block mt-2 px-3 py-1 bg-primary-container text-primary text-xs font-bold rounded-full">
+                                    ${userRole || 'traveler'}
+                                </span>
+                            </div>
+                            <div class="p-2">
+                                <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                    <span class="material-symbols-outlined text-on-surface-variant">person</span>
+                                    <span class="font-medium">Profile</span>
+                                </a>
+                                <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                    <span class="material-symbols-outlined text-on-surface-variant">settings</span>
+                                    <span class="font-medium">Settings</span>
+                                </a>
+                                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-lg transition-all text-red-600 font-medium">
+                                    <span class="material-symbols-outlined">logout</span>
+                                    <span>Đăng xuất</span>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
-                // Show logout button
-                logoutBtn.classList.remove('hidden');
             } else {
                 // User is not logged in
                 userSection.innerHTML = `
@@ -155,8 +176,6 @@
                         Đăng nhập
                     </a>
                 `;
-                // Hide logout button
-                logoutBtn.classList.add('hidden');
             }
         }
 

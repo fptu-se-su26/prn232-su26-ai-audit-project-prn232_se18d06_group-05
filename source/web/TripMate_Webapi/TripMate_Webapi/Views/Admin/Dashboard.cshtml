@@ -55,6 +55,12 @@
                 <span class="material-symbols-outlined">dashboard</span>
                 <span>Dashboard</span>
             </a>
+            <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200 relative" href="/Admin/GuideApprovals">
+                <span class="material-symbols-outlined">badge</span>
+                <span>Guide Approvals</span>
+                <span id="guideBadge" class="hidden absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                <span id="guideCount" class="hidden absolute top-1 right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"></span>
+            </a>
             <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="#">
                 <span class="material-symbols-outlined">calendar_month</span>
                 <span>Bookings</span>
@@ -94,10 +100,13 @@
                 <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
                     <span class="material-symbols-outlined text-primary">person</span>
                 </div>
-                <div>
+                <div class="flex-1">
                     <p class="font-medium text-gray-900">@Model.AdminName</p>
                     <p class="text-xs text-gray-500">@Model.AdminRole</p>
                 </div>
+                <button onclick="logout()" class="p-2 hover:bg-red-50 rounded-lg transition-all group" title="Đăng xuất">
+                    <span class="material-symbols-outlined text-gray-400 group-hover:text-red-600">logout</span>
+                </button>
             </div>
         </div>
     </aside>
@@ -252,5 +261,46 @@
             </aside>
         </div>
     </main>
+
+    <script>
+        // Logout function
+        function logout() {
+            if (confirm('Bạn có chắc muốn đăng xuất?')) {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('surveyCompleted');
+                localStorage.removeItem('personalityProfile');
+                window.location.href = '/Auth/Login';
+            }
+        }
+
+        // Load pending guide count and update badge
+        async function loadPendingGuideCount() {
+            try {
+                const response = await fetch('/Admin/GetPendingCount');
+                const data = await response.json();
+                
+                if (data.count > 0) {
+                    const badge = document.getElementById('guideBadge');
+                    const countBadge = document.getElementById('guideCount');
+                    
+                    badge.classList.remove('hidden');
+                    countBadge.classList.remove('hidden');
+                    countBadge.textContent = data.count;
+                }
+            } catch (error) {
+                console.error('Error loading pending count:', error);
+            }
+        }
+
+        // Load on page load
+        loadPendingGuideCount();
+
+        // Refresh every 30 seconds
+        setInterval(loadPendingGuideCount, 30000);
+    </script>
 </body>
 </html>

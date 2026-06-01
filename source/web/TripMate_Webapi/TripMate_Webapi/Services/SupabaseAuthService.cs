@@ -48,7 +48,9 @@ public class SupabaseAuthService
 
     // ── Register ──────────────────────────────────────────────────────────────
 
-    public async Task<AuthResponse> RegisterAsync(string email, string password, string fullName, string role = "traveler")
+    public async Task<AuthResponse> RegisterAsync(string email, string password, string fullName, string role = "traveler", 
+        string? phoneNumber = null, string? experience = null, string? specialization = null, 
+        string? languages = null, string? bio = null, string? certificatePath = null)
     {
         // 1. Tạo tài khoản Supabase Auth
         var body = JsonSerializer.Serialize(new
@@ -65,8 +67,9 @@ public class SupabaseAuthService
         if (session.User?.Id == null)
             throw new Exception("Đăng ký thất bại");
 
-        // 2. Upsert profile vào bảng profiles với role
-        await UpsertProfileAsync(session.AccessToken, session.User.Id, email, fullName, role);
+        // 2. Upsert profile vào bảng profiles với thông tin mở rộng
+        await UpsertProfileAsync(session.AccessToken, session.User.Id, email, fullName, role, 
+            phoneNumber, experience, specialization, languages, bio, certificatePath);
 
         var user = await GetProfileAsync(session.AccessToken, session.User.Id);
         return MapToAuthResponse(session, user);
@@ -181,14 +184,23 @@ public class SupabaseAuthService
         };
     }
 
-    private async Task UpsertProfileAsync(string accessToken, string userId, string email, string fullName, string role = "traveler")
+    private async Task UpsertProfileAsync(string accessToken, string userId, string email, string fullName, string role = "traveler",
+        string? phoneNumber = null, string? experience = null, string? specialization = null, 
+        string? languages = null, string? bio = null, string? certificatePath = null)
     {
         var profile = new
         {
             id = userId,
             email,
             full_name = fullName,
+            phone_number = phoneNumber,
             role = role,
+            experience = experience,
+            specialization = specialization,
+            languages = languages,
+            bio = bio,
+            certificate_path = certificatePath,
+            status = role == "guide" ? "pending" : "active", // Guides need approval
             created_at = DateTime.UtcNow,
             updated_at = DateTime.UtcNow,
         };

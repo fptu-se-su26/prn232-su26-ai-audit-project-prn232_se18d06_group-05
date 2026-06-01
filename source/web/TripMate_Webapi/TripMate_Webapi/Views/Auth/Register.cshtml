@@ -4,9 +4,12 @@
 }
 
 <section class="min-h-screen flex items-center justify-center py-16 px-4 bg-gradient-to-br from-primary/5 via-surface to-primary-container/20">
-    <div class="w-full max-w-md">
-        <!-- Glass Card -->
-        <div class="bg-surface/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden">
+    <div class="w-full max-w-6xl">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Main Registration Form -->
+            <div class="w-full">
+                <!-- Glass Card -->
+                <div class="bg-surface/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden">
             <!-- Header -->
             <div class="bg-gradient-to-r from-primary to-primary/80 p-8 text-center">
                 <div class="flex justify-center mb-4">
@@ -47,6 +50,23 @@
                                 placeholder="your@email.com"
                             />
                         </div>
+                    </div>
+
+                    <!-- Phone Number -->
+                    <div class="relative">
+                        <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">SỐ ĐIỆN THOẠI</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">phone</span>
+                            <input 
+                                type="tel" 
+                                id="phoneNumber" 
+                                required
+                                pattern="[0-9]{10,11}"
+                                class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50"
+                                placeholder="0901234567"
+                            />
+                        </div>
+                        <p class="text-xs text-on-surface-variant mt-1 ml-1">10-11 chữ số</p>
                     </div>
 
                     <!-- Password -->
@@ -93,7 +113,7 @@
                         <label class="block text-sm font-bold text-on-surface-variant mb-3 tracking-wide">VAI TRÒ</label>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="relative cursor-pointer">
-                                <input type="radio" name="role" value="traveler" checked class="peer sr-only"/>
+                                <input type="radio" name="role" value="traveler" checked class="peer sr-only" onchange="toggleGuideForm()"/>
                                 <div class="p-4 bg-surface-variant border-2 border-outline-variant rounded-lg peer-checked:border-primary peer-checked:bg-primary-container transition-all">
                                     <div class="flex flex-col items-center gap-2">
                                         <span class="material-symbols-outlined text-2xl text-on-surface-variant peer-checked:text-primary">luggage</span>
@@ -102,7 +122,7 @@
                                 </div>
                             </label>
                             <label class="relative cursor-pointer">
-                                <input type="radio" name="role" value="guide" class="peer sr-only"/>
+                                <input type="radio" name="role" value="guide" class="peer sr-only" onchange="toggleGuideForm()"/>
                                 <div class="p-4 bg-surface-variant border-2 border-outline-variant rounded-lg peer-checked:border-primary peer-checked:bg-primary-container transition-all">
                                     <div class="flex flex-col items-center gap-2">
                                         <span class="material-symbols-outlined text-2xl text-on-surface-variant peer-checked:text-primary">badge</span>
@@ -176,6 +196,159 @@
                     </p>
                 </div>
             </div>
+
+            <!-- Guide Additional Information Form -->
+            <div id="guideForm" class="w-full hidden">
+                <div class="bg-surface/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-gradient-to-r from-secondary to-secondary/80 p-6 text-center">
+                        <div class="flex justify-center mb-3">
+                            <span class="material-symbols-outlined text-4xl text-white">verified</span>
+                        </div>
+                        <h2 class="text-2xl font-extrabold text-white mb-1">Thông tin hướng dẫn viên</h2>
+                        <p class="text-white/90 text-sm">Cung cấp thêm thông tin để xác minh</p>
+                    </div>
+
+                    <!-- Form -->
+                    <div class="p-6">
+                        <!-- Experience -->
+                        <div class="relative mb-6">
+                            <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">KINH NGHIỆM (NĂM)</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">work_history</span>
+                                <select 
+                                    id="experience" 
+                                    class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
+                                >
+                                    <option value="">Chọn kinh nghiệm</option>
+                                    <option value="0-1">Dưới 1 năm</option>
+                                    <option value="1-3">1-3 năm</option>
+                                    <option value="3-5">3-5 năm</option>
+                                    <option value="5-10">5-10 năm</option>
+                                    <option value="10+">Trên 10 năm</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Specialization -->
+                        <div class="relative mb-6">
+                            <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">CHUYÊN MÔN</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">category</span>
+                                <select 
+                                    id="specialization" 
+                                    class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
+                                >
+                                    <option value="">Chọn chuyên môn</option>
+                                    <option value="cultural">Du lịch văn hóa</option>
+                                    <option value="adventure">Du lịch mạo hiểm</option>
+                                    <option value="nature">Du lịch sinh thái</option>
+                                    <option value="food">Du lịch ẩm thực</option>
+                                    <option value="historical">Du lịch lịch sử</option>
+                                    <option value="beach">Du lịch biển</option>
+                                    <option value="mountain">Du lịch núi</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Languages -->
+                        <div class="relative mb-6">
+                            <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">NGÔN NGỮ</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">translate</span>
+                                <input 
+                                    type="text" 
+                                    id="languages" 
+                                    class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50"
+                                    placeholder="Tiếng Việt, English, 中文"
+                                />
+                            </div>
+                            <p class="text-xs text-on-surface-variant mt-1 ml-1">Các ngôn ngữ bạn có thể giao tiếp</p>
+                        </div>
+
+                        <!-- Certificate Upload -->
+                        <div class="relative mb-6">
+                            <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">CHỨNG CHỈ HƯỚNG DẪN VIÊN</label>
+                            <div class="relative">
+                                <input 
+                                    type="file" 
+                                    id="certificateFile" 
+                                    accept=".pdf"
+                                    class="hidden"
+                                    onchange="handleFileUpload(this)"
+                                />
+                                <div 
+                                    id="uploadArea"
+                                    class="w-full p-6 bg-surface-variant border-2 border-dashed border-outline-variant rounded-lg hover:border-primary transition-all cursor-pointer text-center"
+                                    onclick="document.getElementById('certificateFile').click()"
+                                >
+                                    <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">cloud_upload</span>
+                                    <p class="text-on-surface font-medium mb-1">Nhấp để tải lên chứng chỉ</p>
+                                    <p class="text-xs text-on-surface-variant">PDF, tối đa 10MB</p>
+                                </div>
+                            </div>
+                            
+                            <!-- File Preview -->
+                            <div id="filePreview" class="hidden mt-4 p-4 bg-primary-container rounded-lg">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex-shrink-0">
+                                        <span class="material-symbols-outlined text-2xl text-primary">picture_as_pdf</span>
+                                    </div>
+                                    <div class="flex-1 min-w-0">
+                                        <p id="fileName" class="text-sm font-medium text-on-primary-container truncate"></p>
+                                        <p id="fileSize" class="text-xs text-on-primary-container/70"></p>
+                                    </div>
+                                    <button 
+                                        type="button" 
+                                        onclick="removeFile()" 
+                                        class="flex-shrink-0 p-1 hover:bg-primary/20 rounded-full transition-colors"
+                                    >
+                                        <span class="material-symbols-outlined text-primary">close</span>
+                                    </button>
+                                </div>
+                                
+                                <!-- PDF Thumbnail -->
+                                <div id="pdfThumbnail" class="mt-3 p-3 bg-surface rounded-lg border border-outline-variant/30">
+                                    <div class="flex items-center justify-center h-32 bg-surface-variant rounded border-2 border-dashed border-outline-variant">
+                                        <div class="text-center">
+                                            <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">description</span>
+                                            <p class="text-sm text-on-surface-variant">PDF Preview</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bio -->
+                        <div class="relative mb-6">
+                            <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">GIỚI THIỆU BẢN THÂN</label>
+                            <div class="relative">
+                                <textarea 
+                                    id="bio" 
+                                    rows="4"
+                                    class="w-full p-4 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50 resize-none"
+                                    placeholder="Chia sẻ về kinh nghiệm và đam mê của bạn trong lĩnh vực du lịch..."
+                                ></textarea>
+                            </div>
+                            <p class="text-xs text-on-surface-variant mt-1 ml-1">Tối đa 500 ký tự</p>
+                        </div>
+
+                        <!-- Verification Note -->
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-blue-500 mt-0.5">info</span>
+                                <div>
+                                    <p class="text-sm text-blue-700 font-medium mb-1">Xác minh tài khoản</p>
+                                    <p class="text-xs text-blue-600">
+                                        Thông tin của bạn sẽ được xem xét và xác minh trong vòng 24-48 giờ. 
+                                        Bạn sẽ nhận được email thông báo kết quả.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -195,6 +368,103 @@
 </div>
 
 <script>
+    // Toggle Guide Form
+    function toggleGuideForm() {
+        const guideForm = document.getElementById('guideForm');
+        const selectedRole = document.querySelector('input[name="role"]:checked').value;
+        
+        if (selectedRole === 'guide') {
+            guideForm.classList.remove('hidden');
+            guideForm.classList.add('animate-fade-in');
+        } else {
+            guideForm.classList.add('hidden');
+            guideForm.classList.remove('animate-fade-in');
+        }
+    }
+
+    // Handle File Upload
+    function handleFileUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Validate file type
+        if (file.type !== 'application/pdf') {
+            alert('Vui lòng chọn file PDF!');
+            input.value = '';
+            return;
+        }
+
+        // Validate file size (10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.size > maxSize) {
+            alert('File quá lớn! Vui lòng chọn file dưới 10MB.');
+            input.value = '';
+            return;
+        }
+
+        // Show file preview
+        showFilePreview(file);
+    }
+
+    // Show File Preview
+    function showFilePreview(file) {
+        const uploadArea = document.getElementById('uploadArea');
+        const filePreview = document.getElementById('filePreview');
+        const fileName = document.getElementById('fileName');
+        const fileSize = document.getElementById('fileSize');
+
+        // Hide upload area and show preview
+        uploadArea.classList.add('hidden');
+        filePreview.classList.remove('hidden');
+
+        // Set file info
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+
+        // Generate PDF thumbnail (simplified)
+        generatePDFThumbnail(file);
+    }
+
+    // Remove File
+    function removeFile() {
+        const uploadArea = document.getElementById('uploadArea');
+        const filePreview = document.getElementById('filePreview');
+        const certificateFile = document.getElementById('certificateFile');
+
+        // Reset file input
+        certificateFile.value = '';
+
+        // Show upload area and hide preview
+        uploadArea.classList.remove('hidden');
+        filePreview.classList.add('hidden');
+    }
+
+    // Format File Size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Generate PDF Thumbnail (simplified version)
+    function generatePDFThumbnail(file) {
+        const thumbnail = document.getElementById('pdfThumbnail');
+        
+        // For now, just show a PDF icon with file info
+        // In a real implementation, you would use PDF.js to render the first page
+        thumbnail.innerHTML = `
+            <div class="flex items-center justify-center h-32 bg-surface-variant rounded border-2 border-dashed border-outline-variant">
+                <div class="text-center">
+                    <span class="material-symbols-outlined text-4xl text-red-500 mb-2 block">picture_as_pdf</span>
+                    <p class="text-sm font-medium text-on-surface">${file.name}</p>
+                    <p class="text-xs text-on-surface-variant">${formatFileSize(file.size)}</p>
+                </div>
+            </div>
+        `;
+    }
+
     // Toggle password visibility
     function togglePassword(fieldId) {
         const passwordInput = document.getElementById(fieldId);
@@ -237,6 +507,7 @@
         
         const fullName = document.getElementById('fullName').value;
         const email = document.getElementById('email').value;
+        const phoneNumber = document.getElementById('phoneNumber').value;
         const password = document.getElementById('password').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
         const role = document.querySelector('input[name="role"]:checked').value;
@@ -253,20 +524,58 @@
             return;
         }
 
+        // Phone number validation
+        const phoneRegex = /^[0-9]{10,11}$/;
+        if (!phoneRegex.test(phoneNumber)) {
+            showError('Số điện thoại không hợp lệ! Vui lòng nhập 10-11 chữ số.');
+            return;
+        }
+
+        // Guide-specific validation
+        if (role === 'guide') {
+            const experience = document.getElementById('experience').value;
+            const specialization = document.getElementById('specialization').value;
+            const certificateFile = document.getElementById('certificateFile').files[0];
+
+            if (!experience) {
+                showError('Vui lòng chọn kinh nghiệm làm việc!');
+                return;
+            }
+
+            if (!specialization) {
+                showError('Vui lòng chọn chuyên môn!');
+                return;
+            }
+
+            if (!certificateFile) {
+                showError('Vui lòng tải lên chứng chỉ hướng dẫn viên!');
+                return;
+            }
+        }
+
         showSpinner();
 
         try {
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('email', email);
+            formData.append('password', password);
+            formData.append('fullName', fullName);
+            formData.append('phoneNumber', phoneNumber);
+            formData.append('role', role);
+
+            // Add guide-specific data
+            if (role === 'guide') {
+                formData.append('experience', document.getElementById('experience').value);
+                formData.append('specialization', document.getElementById('specialization').value);
+                formData.append('languages', document.getElementById('languages').value);
+                formData.append('bio', document.getElementById('bio').value);
+                formData.append('certificate', document.getElementById('certificateFile').files[0]);
+            }
+
             const response = await fetch('/api/auth/register', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    email, 
-                    password,
-                    fullName,
-                    role 
-                })
+                body: formData
             });
 
             const data = await response.json();
@@ -286,7 +595,9 @@
                             // Travelers go to personality survey first
                             window.location.href = '/Survey/Personality';
                         } else if (role === 'guide') {
-                            window.location.href = '/Guide/Dashboard';
+                            // Show success message for guides (pending approval)
+                            alert('Đăng ký thành công! Tài khoản của bạn đang được xem xét và sẽ được kích hoạt trong 24-48 giờ.');
+                            window.location.href = '/Auth/Login';
                         } else if (role === 'admin') {
                             window.location.href = '/Admin/Dashboard';
                         } else {
@@ -310,3 +621,38 @@
         }
     });
 </script>
+
+<style>
+    .animate-fade-in {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    /* Custom scrollbar for textarea */
+    textarea::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    textarea::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    textarea::-webkit-scrollbar-thumb {
+        background: #d3c4b9;
+        border-radius: 3px;
+    }
+
+    textarea::-webkit-scrollbar-thumb:hover {
+        background: #81756c;
+    }
+</style>

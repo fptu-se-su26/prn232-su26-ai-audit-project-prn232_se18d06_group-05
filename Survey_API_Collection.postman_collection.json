@@ -1,0 +1,223 @@
+{
+  "info": {
+    "name": "TripMate Survey API",
+    "description": "API endpoints for Survey/Review functionality in TripMate platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "your_user_id_here",
+      "type": "string"
+    },
+    {
+      "key": "tour_id",
+      "value": "your_tour_id_here",
+      "type": "string"
+    },
+    {
+      "key": "booking_id",
+      "value": "your_booking_id_here",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Submit Survey",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "{{user_id}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tourId\": \"{{tour_id}}\",\n  \"bookingId\": \"{{booking_id}}\",\n  \"rating\": 5,\n  \"comment\": \"Great tour! The guide was very knowledgeable and friendly. I learned a lot about the local culture and history.\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/surveys",
+          "host": ["{{base_url}}"],
+          "path": ["api", "surveys"]
+        },
+        "description": "Submit a review for a completed tour booking.\n\n**Requirements:**\n- Rating: 1-5 stars\n- Comment: 10-500 characters\n- Booking must be completed\n- No duplicate surveys\n\n**Response includes:**\n- Survey data\n- Discount voucher (for first-time reviewers)"
+      },
+      "response": []
+    },
+    {
+      "name": "Submit Survey - Invalid Rating",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "{{user_id}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tourId\": \"{{tour_id}}\",\n  \"bookingId\": \"{{booking_id}}\",\n  \"rating\": 6,\n  \"comment\": \"This should fail because rating is out of range.\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/surveys",
+          "host": ["{{base_url}}"],
+          "path": ["api", "surveys"]
+        },
+        "description": "Test validation: Rating must be between 1 and 5"
+      },
+      "response": []
+    },
+    {
+      "name": "Submit Survey - Short Comment",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "{{user_id}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tourId\": \"{{tour_id}}\",\n  \"bookingId\": \"{{booking_id}}\",\n  \"rating\": 5,\n  \"comment\": \"Too short\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/surveys",
+          "host": ["{{base_url}}"],
+          "path": ["api", "surveys"]
+        },
+        "description": "Test validation: Comment must be at least 10 characters"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Tour Surveys",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/surveys/tour/{{tour_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "surveys", "tour", "{{tour_id}}"]
+        },
+        "description": "Get all published surveys for a specific tour.\n\n**Response includes:**\n- List of surveys (sorted by date, newest first)\n- Total count\n- Average rating"
+      },
+      "response": []
+    },
+    {
+      "name": "Get My Surveys",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          },
+          {
+            "key": "X-User-Id",
+            "value": "{{user_id}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/surveys/my-surveys",
+          "host": ["{{base_url}}"],
+          "path": ["api", "surveys", "my-surveys"]
+        },
+        "description": "Get the authenticated traveler's survey history.\n\n**Response includes:**\n- List of surveys with tour information\n- Total count"
+      },
+      "response": []
+    },
+    {
+      "name": "Get Survey Analytics",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/surveys/analytics",
+          "host": ["{{base_url}}"],
+          "path": ["api", "surveys", "analytics"]
+        },
+        "description": "Get survey analytics for admin dashboard.\n\n**Response includes:**\n- Total surveys\n- Average rating\n- Submission rate\n- Highest/lowest rated tours\n- Rating distribution"
+      },
+      "response": []
+    },
+    {
+      "name": "Check Survey Exists",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwt_token}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/surveys/check/{{booking_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["api", "surveys", "check", "{{booking_id}}"]
+        },
+        "description": "Check if a survey already exists for a booking.\n\nNote: This is a placeholder endpoint. Use GET /api/surveys/tour/{tourId} to check if user has already submitted."
+      },
+      "response": []
+    }
+  ]
+}
