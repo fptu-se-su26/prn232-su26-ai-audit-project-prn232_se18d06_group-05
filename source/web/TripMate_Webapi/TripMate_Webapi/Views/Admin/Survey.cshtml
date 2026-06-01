@@ -1,0 +1,274 @@
+@{
+    ViewData["Title"] = "Personality Survey";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Khảo Sát Tính Cách - TripMate</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-side-nav {
+            border-left: 4px solid #FF6B35;
+            background-color: rgba(255, 107, 53, 0.1);
+            color: #FF6B35;
+            font-weight: 600;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 1);
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: #FF6B35;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
+            border: 2px solid white;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans text-gray-900 min-h-screen">
+    <!-- SideNavBar -->
+    <nav class="w-[280px] h-screen fixed left-0 top-0 bg-white flex flex-col py-8 shadow-md z-50">
+        <div class="px-6 mb-10">
+            <div class="flex items-center gap-3 mb-2">
+                <img src="/images/logo.svg" alt="TripMate" class="w-10 h-10">
+                <h1 class="text-2xl font-bold text-primary">TripMate</h1>
+            </div>
+            <p class="text-sm text-gray-600">Admin Portal</p>
+        </div>
+        <div class="flex-grow flex flex-col gap-1">
+            <a class="flex items-center px-6 py-4 text-gray-600 hover:bg-gray-100 transition-all" href="/Admin/Dashboard">
+                <span class="material-symbols-outlined mr-4">dashboard</span>
+                <span class="font-medium">Dashboard</span>
+            </a>
+            <a class="flex items-center px-6 py-4 text-gray-600 hover:bg-gray-100 transition-all" href="#">
+                <span class="material-symbols-outlined mr-4">psychology</span>
+                <span class="font-medium">Matches</span>
+            </a>
+            <a class="flex items-center px-6 py-4 active-side-nav transition-all" href="/Admin/Survey">
+                <span class="material-symbols-outlined mr-4">quiz</span>
+                <span class="font-medium">Survey</span>
+            </a>
+            <a class="flex items-center px-6 py-4 text-gray-600 hover:bg-gray-100 transition-all" href="#">
+                <span class="material-symbols-outlined mr-4">calendar_today</span>
+                <span class="font-medium">Schedule</span>
+            </a>
+            <a class="flex items-center px-6 py-4 text-gray-600 hover:bg-gray-100 transition-all" href="#">
+                <span class="material-symbols-outlined mr-4">chat_bubble</span>
+                <span class="font-medium">Messages</span>
+            </a>
+        </div>
+        <div class="px-6 py-6 border-t border-gray-200 flex flex-col gap-2">
+            <button class="bg-primary text-white py-3 px-4 rounded-xl font-medium shadow-sm hover:bg-primary-dark transition-all">
+                Review Matches
+            </button>
+            <a class="flex items-center px-0 py-2 text-gray-600 hover:text-primary transition-colors" href="#">
+                <span class="material-symbols-outlined mr-3">settings</span>
+                <span class="font-medium">Settings</span>
+            </a>
+            <a class="flex items-center px-0 py-2 text-gray-600 hover:text-primary transition-colors" href="/index.html">
+                <span class="material-symbols-outlined mr-3">home</span>
+                <span class="font-medium">Back to Home</span>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="ml-[280px] p-12 max-w-[1440px]">
+        <!-- Header -->
+        <header class="mb-12">
+            <h2 class="text-5xl font-bold text-gray-900 mb-4">Hoàn tất hồ sơ tính cách của bạn</h2>
+            <p class="text-lg text-gray-600 max-w-2xl">
+                Tại TripMate, chúng tôi tin rằng những chuyến đi tuyệt vời nhất bắt đầu từ sự kết nối thực sự. 
+                Khảo sát MBTI này giúp chúng tôi ghép nối bạn với những khách hàng có cùng tần số năng lượng.
+            </p>
+        </header>
+
+        <!-- Bento Grid Layout -->
+        <div class="grid grid-cols-12 gap-8">
+            <!-- Personality Spectrum Card -->
+            <div class="col-span-8 bg-white p-8 rounded-2xl shadow-sm border border-gray-200">
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-primary">
+                        <span class="material-symbols-outlined">analytics</span>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-bold">Quang phổ tính cách</h3>
+                        <p class="text-gray-600">Di chuyển các thanh trượt để phản ánh phong cách của bạn</p>
+                    </div>
+                </div>
+                <div class="space-y-8">
+                    <!-- Slider 1 -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between font-medium">
+                            <span class="text-primary font-bold">Hướng Nội (I)</span>
+                            <span class="text-gray-600 font-bold">Hướng Ngoại (E)</span>
+                        </div>
+                        <input class="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-primary" type="range" value="50"/>
+                        <p class="text-sm text-gray-600 italic">Bạn nạp năng lượng bằng cách ở một mình hay tương tác với đám đông?</p>
+                    </div>
+                    <!-- Slider 2 -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between font-medium">
+                            <span class="text-primary font-bold">Giác Quan (S)</span>
+                            <span class="text-gray-600 font-bold">Trực Giác (N)</span>
+                        </div>
+                        <input class="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-primary" type="range" value="70"/>
+                        <p class="text-sm text-gray-600 italic">Bạn chú trọng vào chi tiết thực tế hay những khả năng trong tương lai?</p>
+                    </div>
+                    <!-- Slider 3 -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between font-medium">
+                            <span class="text-primary font-bold">Lý Trí (T)</span>
+                            <span class="text-gray-600 font-bold">Cảm Xúc (F)</span>
+                        </div>
+                        <input class="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-primary" type="range" value="30"/>
+                        <p class="text-sm text-gray-600 italic">Bạn ra quyết định dựa trên logic khách quan hay giá trị cá nhân?</p>
+                    </div>
+                    <!-- Slider 4 -->
+                    <div class="space-y-4">
+                        <div class="flex justify-between font-medium">
+                            <span class="text-primary font-bold">Nguyên Tắc (J)</span>
+                            <span class="text-gray-600 font-bold">Linh Hoạt (P)</span>
+                        </div>
+                        <input class="w-full h-2 bg-gray-200 rounded-full appearance-none cursor-pointer accent-primary" type="range" value="80"/>
+                        <p class="text-sm text-gray-600 italic">Bạn thích lập kế hoạch chi tiết hay để mọi thứ diễn ra tự nhiên?</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Matching Insight Card -->
+            <div class="col-span-4 space-y-8">
+                <div class="bg-primary text-white p-8 rounded-2xl shadow-lg relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h4 class="text-2xl font-bold mb-4">Tại sao điều này quan trọng?</h4>
+                        <p class="opacity-90 leading-relaxed">
+                            Dữ liệu này giúp thuật toán "TripMate Match" của chúng tôi lọc ra những vị khách đánh giá cao phong cách hướng dẫn cụ thể của bạn.
+                        </p>
+                        <div class="mt-6 flex items-center gap-2">
+                            <span class="material-symbols-outlined">verified_user</span>
+                            <span class="font-bold">Tỷ lệ hài lòng +40%</span>
+                        </div>
+                    </div>
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                </div>
+                <div class="bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
+                    <h4 class="text-sm text-gray-600 uppercase tracking-widest mb-4">Phân loại hiện tại</h4>
+                    <div class="flex items-center gap-4">
+                        <div class="text-5xl font-bold text-primary">ENFJ</div>
+                        <div class="h-12 w-[2px] bg-gray-300"></div>
+                        <p class="font-medium text-gray-900">Người Chỉ Huy Tâm Huyết</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preference Grid -->
+            <div class="col-span-12">
+                <h3 class="text-2xl font-bold mb-6">Phong cách dẫn tour ưa thích</h3>
+                <div class="grid grid-cols-4 gap-6">
+                    <!-- Option 1 -->
+                    <div class="glass-card p-6 rounded-xl cursor-pointer hover:border-primary group transition-all">
+                        <div class="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mb-4 transition-colors">
+                            <span class="material-symbols-outlined text-gray-600 group-hover:text-primary">history_edu</span>
+                        </div>
+                        <h5 class="font-medium mb-2">Người Kể Chuyện</h5>
+                        <p class="text-sm text-gray-600">Tập trung vào lịch sử, văn hóa và những giai thoại sâu sắc.</p>
+                    </div>
+                    <!-- Option 2 (Selected) -->
+                    <div class="border-2 border-primary bg-orange-50 p-6 rounded-xl cursor-pointer transition-all">
+                        <div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center mb-4">
+                            <span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">explore</span>
+                        </div>
+                        <h5 class="font-medium mb-2 text-primary">Nhà Thám Hiểm</h5>
+                        <p class="text-sm text-gray-700">Ưu tiên trải nghiệm thực tế, vận động và những cung đường lạ.</p>
+                    </div>
+                    <!-- Option 3 -->
+                    <div class="glass-card p-6 rounded-xl cursor-pointer hover:border-primary group transition-all">
+                        <div class="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mb-4 transition-colors">
+                            <span class="material-symbols-outlined text-gray-600 group-hover:text-primary">restaurant</span>
+                        </div>
+                        <h5 class="font-medium mb-2">Chuyên Gia Ẩm Thực</h5>
+                        <p class="text-sm text-gray-600">Khám phá bản sắc địa phương thông qua hương vị và bếp núc.</p>
+                    </div>
+                    <!-- Option 4 -->
+                    <div class="glass-card p-6 rounded-xl cursor-pointer hover:border-primary group transition-all">
+                        <div class="w-10 h-10 rounded-lg bg-gray-100 group-hover:bg-orange-100 flex items-center justify-center mb-4 transition-colors">
+                            <span class="material-symbols-outlined text-gray-600 group-hover:text-primary">camera</span>
+                        </div>
+                        <h5 class="font-medium mb-2">Người Săn Ảnh</h5>
+                        <p class="text-sm text-gray-600">Dẫn khách đến những góc chụp tuyệt mỹ và bí mật nhất.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Call to Action -->
+            <div class="col-span-12 mt-8 flex justify-between items-center p-8 bg-white rounded-2xl shadow-sm">
+                <div class="flex items-center gap-6">
+                    <div class="relative">
+                        <div class="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary text-3xl">person</span>
+                        </div>
+                        <div class="absolute bottom-0 right-0 w-5 h-5 bg-primary border-2 border-white rounded-full flex items-center justify-center">
+                            <span class="material-symbols-outlined text-[12px] text-white" style="font-variation-settings: 'wght' 700;">check</span>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="font-bold">Hồ sơ của bạn đã hoàn thành 85%</p>
+                        <div class="w-48 h-2 bg-gray-200 rounded-full mt-1 overflow-hidden">
+                            <div class="w-[85%] h-full bg-primary"></div>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">Cập nhật MBTI sẽ giúp bạn hiển thị ưu tiên với khách hàng phù hợp.</p>
+                    </div>
+                </div>
+                <div class="flex gap-4">
+                    <button class="px-8 py-3 rounded-xl border border-gray-300 text-gray-900 font-medium hover:bg-gray-100 transition-colors">
+                        Lưu bản nháp
+                    </button>
+                    <button class="px-10 py-3 rounded-xl bg-primary text-white font-medium shadow-lg hover:bg-primary-dark transition-all">
+                        Xác nhận & Hoàn tất
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Range slider styling
+        const sliders = document.querySelectorAll('input[type="range"]');
+        sliders.forEach(slider => {
+            slider.addEventListener('input', function() {
+                this.style.background = `linear-gradient(to right, #FF6B35 0%, #FF6B35 ${this.value}%, #e5e7eb ${this.value}%, #e5e7eb 100%)`;
+            });
+            slider.dispatchEvent(new Event('input'));
+        });
+
+        // Toggle preference cards
+        const prefCards = document.querySelectorAll('.glass-card');
+        prefCards.forEach(card => {
+            card.addEventListener('click', function() {
+                // Remove selection from all cards
+                prefCards.forEach(c => {
+                    c.classList.remove('border-2', 'border-primary', 'bg-orange-50');
+                    c.classList.add('border', 'border-gray-200');
+                });
+                // Add selection to clicked card
+                this.classList.remove('border', 'border-gray-200');
+                this.classList.add('border-2', 'border-primary', 'bg-orange-50');
+            });
+        });
+    </script>
+</body>
+</html>

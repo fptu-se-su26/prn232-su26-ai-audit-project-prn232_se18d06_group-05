@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>@ViewData["Title"] - TripMate</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#ff7a00",
+                        "on-primary": "#ffffff",
+                        "primary-container": "#ffebd9",
+                        "on-primary-container": "#331800",
+                        secondary: "#705d4e",
+                        "on-secondary": "#ffffff",
+                        surface: "#fbf9f8",
+                        "on-surface": "#1f1b18",
+                        "surface-variant": "#f0ebe8",
+                        "on-surface-variant": "#4f453e",
+                        outline: "#81756c",
+                        "outline-variant": "#d3c4b9",
+                        background: "#fbf9f8",
+                        "on-background": "#1f1b18"
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hero-gradient {
+            background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.5) 100%);
+        }
+        .tonal-elevation {
+            box-shadow: 0 12px 30px -10px rgba(255, 122, 0, 0.12), 0 4px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .glass-search {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background">
+    <!-- TopNavBar -->
+    <header class="sticky top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm border-b border-outline-variant/30">
+        <div class="flex justify-between items-center h-20 px-12 max-w-[1440px] mx-auto">
+            <div class="flex items-center gap-8">
+                <a href="/" class="flex items-center gap-3">
+                    <img alt="TripMate Logo" class="h-10 w-10 rounded-full object-cover" src="/images/AVATAR.png"/>
+                    <span class="text-2xl font-extrabold tracking-tight text-on-surface">TRIPMATE</span>
+                </a>
+            </div>
+            <nav class="hidden md:flex items-center gap-8 text-base font-medium">
+                <a class="text-primary border-b-2 border-primary pb-1 font-bold" href="/">Destinations</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Experiences</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Adventures</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Concierge</a>
+            </nav>
+            <div class="flex items-center gap-4">
+                <button class="p-2 hover:bg-primary-container transition-all rounded-full">
+                    <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+                </button>
+                <button class="p-2 hover:bg-primary-container transition-all rounded-full">
+                    <span class="material-symbols-outlined text-on-surface-variant">favorite</span>
+                </button>
+                <div id="userSection" class="ml-4">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+                <button id="logoutBtn" class="hidden ml-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-all flex items-center gap-2" onclick="logout()">
+                    <span class="material-symbols-outlined text-sm">logout</span>
+                    <span>Đăng xuất</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        @RenderBody()
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full mt-16 bg-surface-variant border-t border-outline-variant/50">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8 px-12 py-16 max-w-[1440px] mx-auto">
+            <div class="col-span-1">
+                <div class="flex items-center gap-3 mb-4">
+                    <img alt="TripMate Logo" class="h-8 w-8 rounded-full object-cover" src="/images/AVATAR.png"/>
+                    <span class="text-xl font-extrabold text-on-surface">TRIPMATE</span>
+                </div>
+                <p class="text-on-surface-variant leading-relaxed font-medium">
+                    Khám phá Việt Nam theo cách của bạn với những hướng dẫn viên địa phương tận tâm.
+                </p>
+            </div>
+            <div class="flex flex-col gap-3">
+                <h5 class="text-sm font-bold text-on-surface tracking-widest uppercase">Khám Phá</h5>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Điểm đến</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Trải nghiệm</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Hướng dẫn viên</a>
+            </div>
+            <div class="flex flex-col gap-3">
+                <h5 class="text-sm font-bold text-on-surface tracking-widest uppercase">Công Ty</h5>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Về chúng tôi</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Tuyển dụng</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Liên hệ</a>
+            </div>
+            <div class="flex flex-col gap-3">
+                <h5 class="text-sm font-bold text-on-surface tracking-widest uppercase">Pháp Lý</h5>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Chính sách bảo mật</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Điều khoản</a>
+            </div>
+        </div>
+        <div class="px-12 py-6 border-t border-outline-variant/20 max-w-[1440px] mx-auto text-center">
+            <span class="text-sm text-on-surface-variant font-bold tracking-widest uppercase">
+                © 2024 TRIPMATE. KHÁM PHÁ VIỆT NAM THEO CÁCH CỦA BẠN.
+            </span>
+        </div>
+    </footer>
+
+    <script>
+        // Check authentication and display user section
+        function checkAuth() {
+            const token = localStorage.getItem('accessToken');
+            const userEmail = localStorage.getItem('userEmail');
+            const userRole = localStorage.getItem('userRole');
+            const userSection = document.getElementById('userSection');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            if (token && userEmail) {
+                // User is logged in
+                const atChar = String.fromCharCode(64); // at symbol
+                const atIndex = userEmail.indexOf(atChar);
+                const displayName = atIndex > 0 ? userEmail.substring(0, atIndex) : userEmail;
+                userSection.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm font-medium text-on-surface">${displayName}</span>
+                        <div class="h-10 w-10 rounded-full overflow-hidden border-2 border-primary/20">
+                            <img alt="User avatar" class="w-full h-full object-cover" src="/images/AVATAR.png"/>
+                        </div>
+                    </div>
+                `;
+                // Show logout button
+                logoutBtn.classList.remove('hidden');
+            } else {
+                // User is not logged in
+                userSection.innerHTML = `
+                    <a href="/Auth/Login" class="px-6 py-2 bg-primary text-on-primary rounded-lg font-medium hover:bg-primary/90 transition-all">
+                        Đăng nhập
+                    </a>
+                `;
+                // Hide logout button
+                logoutBtn.classList.add('hidden');
+            }
+        }
+
+        // Logout function
+        function logout() {
+            // Clear all localStorage
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('surveyCompleted');
+            localStorage.removeItem('personalityProfile');
+            
+            // Redirect to login
+            window.location.href = '/Auth/Login';
+        }
+
+        // Run on page load
+        checkAuth();
+    </script>
+</body>
+</html>

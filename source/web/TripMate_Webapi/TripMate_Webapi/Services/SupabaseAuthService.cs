@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TripMate_WebAPI.Extensions;
 using TripMate_WebAPI.Models;
 
 namespace TripMate_WebAPI.Services;
@@ -47,14 +48,14 @@ public class SupabaseAuthService
 
     // ── Register ──────────────────────────────────────────────────────────────
 
-    public async Task<AuthResponse> RegisterAsync(string email, string password, string fullName)
+    public async Task<AuthResponse> RegisterAsync(string email, string password, string fullName, string role = "traveler")
     {
         // 1. Tạo tài khoản Supabase Auth
         var body = JsonSerializer.Serialize(new
         {
             email,
             password,
-            data = new { full_name = fullName }
+            data = new { full_name = fullName, role = role }
         });
         var response = await PostGoTrueAsync("/auth/v1/signup", body);
 
@@ -64,8 +65,8 @@ public class SupabaseAuthService
         if (session.User?.Id == null)
             throw new Exception("Đăng ký thất bại");
 
-        // 2. Upsert profile vào bảng profiles
-        await UpsertProfileAsync(session.AccessToken, session.User.Id, email, fullName);
+        // 2. Upsert profile vào bảng profiles với role
+        await UpsertProfileAsync(session.AccessToken, session.User.Id, email, fullName, role);
 
         var user = await GetProfileAsync(session.AccessToken, session.User.Id);
         return MapToAuthResponse(session, user);
@@ -118,8 +119,61 @@ public class SupabaseAuthService
         var response = await _http.SendAsync(request);
         var content = await response.Content.ReadAsStringAsync();
 
-        var rows = JsonSerializer.Deserialize<List<ProfileRow>>(content, _json);
-        return rows?.FirstOrDefault() ?? new ProfileRow
+        // Debug logging
+        Console.WriteLine($"Profile API Response Status: {response.StatusCode}");
+        Console.WriteLine($"Profile API Response Content: {content}");
+
+        if (!response.IsSuccessStatusCode)
+        {
+            Console.WriteLine($"Profile API Error: {response.StatusCode} - {content}");
+            return CreateDefaultProfile(userId);
+        }
+
+        // Handle empty response
+        if (string.IsNullOrWhiteSpace(content) || content.Trim() == "[]")
+        {
+            Console.WriteLine("Empty profile response, creating default profile");
+            return CreateDefaultProfile(userId);
+        }
+
+        try
+        {
+            // Validate JSON format first
+            if (!content.Trim().StartsWith("[") && !content.Trim().StartsWith("{"))
+            {
+                Console.WriteLine($"Invalid JSON format: {content}");
+                return CreateDefaultProfile(userId);
+            }
+
+            // Try to deserialize as array first
+            if (content.Trim().StartsWith("["))
+            {
+                var rows = JsonSerializer.Deserialize<List<ProfileRow>>(content, _json);
+                return rows?.FirstOrDefault() ?? CreateDefaultProfile(userId);
+            }
+            else
+            {
+                // Try as single object
+                var singleRow = JsonSerializer.Deserialize<ProfileRow>(content, _json);
+                return singleRow ?? CreateDefaultProfile(userId);
+            }
+        }
+        catch (JsonException ex)
+        {
+            Console.WriteLine($"JSON Deserialization Error: {ex.Message}");
+            Console.WriteLine($"Content that failed: {content}");
+            return CreateDefaultProfile(userId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Unexpected error in GetProfileAsync: {ex.Message}");
+            return CreateDefaultProfile(userId);
+        }
+    }
+
+    private static ProfileRow CreateDefaultProfile(string userId)
+    {
+        return new ProfileRow
         {
             Id = userId,
             Role = "traveler",
@@ -127,14 +181,14 @@ public class SupabaseAuthService
         };
     }
 
-    private async Task UpsertProfileAsync(string accessToken, string userId, string email, string fullName)
+    private async Task UpsertProfileAsync(string accessToken, string userId, string email, string fullName, string role = "traveler")
     {
         var profile = new
         {
             id = userId,
             email,
             full_name = fullName,
-            role = "traveler",
+            role = role,
             created_at = DateTime.UtcNow,
             updated_at = DateTime.UtcNow,
         };
@@ -214,7 +268,7 @@ internal class GoTrueError
     public string? ErrorDescription { get; set; }
 }
 
-internal class ProfileRow
+public class ProfileRow
 {
     [JsonPropertyName("id")]
     public string? Id { get; set; }

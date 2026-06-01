@@ -1,366 +1,356 @@
-# AI Audit Log
+# AI Audit Log - Lương Minh Phú
 
 ## 1. Thông tin chung
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học |  |
-| Mã môn học |  |
-| Lớp |  |
-| Học kỳ |  |
-| Tên bài tập / Project |  |
-| Tên sinh viên / Nhóm |  |
-| MSSV / Danh sách MSSV |  |
-| Giảng viên hướng dẫn |  |
-| Ngày bắt đầu |  |
-| Ngày hoàn thành |  |
+| Tên bài tập / Project | TripMate - Tour Guide Booking Platform |
+| Tên sinh viên | Lương Minh Phú |
+| Ngày bắt đầu | 30/05/2026 |
+| Ngày hoàn thành | 30/05/2026 |
 
 ---
 
 ## 2. Công cụ AI đã sử dụng
 
-Đánh dấu các công cụ AI đã sử dụng trong quá trình thực hiện bài tập/project.
-
+- [x] Claude (via Kiro)
 - [ ] ChatGPT
 - [ ] Gemini
-- [ ] Claude
 - [ ] GitHub Copilot
 - [ ] Cursor
-- [ ] Antigravity
-- [ ] Perplexity
-- [ ] Microsoft Copilot
-- [ ] Công cụ khác: ....................................
 
 ---
 
 ## 3. Mục tiêu sử dụng AI
 
-Mô tả ngắn gọn sinh viên/nhóm đã sử dụng AI để hỗ trợ những công việc nào.
-
-Ví dụ:
-
-- Phân tích yêu cầu bài toán
-- Gợi ý ý tưởng giải pháp
-- Thiết kế database
-- Thiết kế giao diện
-- Viết code mẫu
-- Debug lỗi
-- Tối ưu code
-- Viết test case
-- Kiểm tra bảo mật
-- Viết báo cáo
-- Chuẩn bị slide thuyết trình
-- Tìm hiểu công nghệ mới
-
-### Mô tả mục tiêu sử dụng AI
-
 ```text
-Viết tại đây...
+Sử dụng AI để:
+- Xây dựng ASP.NET Core MVC web application
+- Tạo authentication system với role-based access
+- Thiết kế UI components với Tailwind CSS
+- Debug compilation errors và Razor syntax issues
+- Tạo personality survey flow
+- Xây dựng admin và guide dashboards
+- Fix API endpoint errors
+```
+
+---
 
 ## 4. Nhật ký sử dụng AI chi tiết
 
-> Mỗi lần sử dụng AI cho một phần quan trọng của bài tập/project, sinh viên cần ghi lại theo mẫu bên dưới.  
-> Sinh viên/nhóm có thể nhân bản mẫu “Lần sử dụng AI” nhiều lần tùy theo số lần sử dụng AI thực tế.
-
----
-
-### Lần sử dụng AI số 1
+### Lần sử dụng AI số 1 - Fix API 404 Error
 
 | Nội dung | Thông tin |
 |---|---|
-| Ngày sử dụng |  |
-| Công cụ AI | ChatGPT / Gemini / Claude / GitHub Copilot / Cursor / Antigravity / Khác |
-| Mục đích sử dụng |  |
-| Phần việc liên quan | Requirement / Design / Database / Frontend / Backend / Testing / Debug / Report / Presentation / Other |
-| Mức độ sử dụng | Hỗ trợ ý tưởng / Hỗ trợ một phần / Hỗ trợ nhiều / Sinh chính nội dung |
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Claude (via Kiro) |
+| Mục đích sử dụng | Fix lỗi 404 cho /api/auth/login endpoint |
+| Phần việc liên quan | Backend / Debug |
+| Mức độ sử dụng | Sinh chính nội dung |
 
 #### 4.1. Prompt đã sử dụng
 
 ```text
-Dán nguyên văn prompt đã hỏi AI tại đây.
+Failed to load resource: the server responded with a status of 404 (Not Found)
+Login:302 Login error: SyntaxError: Failed to execute 'json' on 'Response': Unexpected end of JSON input
+lỗi xảy ra sau khi đăng nhập
 ```
 
 #### 4.2. Kết quả AI gợi ý
 
-Tóm tắt nội dung AI đã trả lời hoặc gợi ý.
+AI phát hiện không có API controller cho `/api/auth/login` và `/api/auth/register`. 
+AI đã tạo:
+- AuthApiController.cs với [ApiController] và [Route("api/auth")]
+- POST endpoints cho login và register
+- Cập nhật SupabaseAuthService để hỗ trợ role parameter
+- Fix UserDto.Role thay vì UserMetadata
 
-```text
-Viết tại đây...
-```
+#### 4.3. Phần đã sử dụng từ AI
 
-#### 4.3. Phần sinh viên/nhóm đã sử dụng từ AI
+- Toàn bộ AuthApiController.cs
+- Updates cho SupabaseAuthService.RegisterAsync() method
+- Updates cho UpsertProfileAsync() method
 
-Mô tả rõ phần nào được sử dụng lại từ gợi ý của AI.
+#### 4.4. Phần đã chỉnh sửa
 
-```text
-Viết tại đây...
-```
-
-#### 4.4. Phần sinh viên/nhóm tự chỉnh sửa hoặc cải tiến
-
-Mô tả sinh viên/nhóm đã thay đổi, kiểm tra, sửa lỗi hoặc cải tiến gì so với gợi ý ban đầu của AI.
-
-```text
-Viết tại đây...
-```
+- Không có chỉnh sửa lớn, code AI generate đã hoạt động tốt
+- Verify bằng getDiagnostics tool
 
 #### 4.5. Minh chứng
 
 | Loại minh chứng | Nội dung |
 |---|---|
-| Link commit |  |
-| File liên quan |  |
-| Screenshot |  |
-| Kết quả chạy/test |  |
-| Link video demo |  |
-| Ghi chú khác |  |
+| File liên quan | Controllers/AuthApiController.cs, Services/SupabaseAuthService.cs |
+| Kết quả | API endpoints hoạt động, login/register thành công |
 
-#### 4.6. Nhận xét cá nhân/nhóm
+#### 4.6. Nhận xét
 
-Sinh viên/nhóm học được gì sau lần sử dụng AI này?
-
-```text
-Viết tại đây...
-```
+Học được cách tạo API controller với proper routing attributes và integration với existing services.
 
 ---
 
-### Lần sử dụng AI số 2
+### Lần sử dụng AI số 2 - Personality Survey
 
 | Nội dung | Thông tin |
 |---|---|
-| Ngày sử dụng |  |
-| Công cụ AI | ChatGPT / Gemini / Claude / GitHub Copilot / Cursor / Antigravity / Khác |
-| Mục đích sử dụng |  |
-| Phần việc liên quan | Requirement / Design / Database / Frontend / Backend / Testing / Debug / Report / Presentation / Other |
-| Mức độ sử dụng | Hỗ trợ ý tưởng / Hỗ trợ một phần / Hỗ trợ nhiều / Sinh chính nội dung |
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Claude (via Kiro) |
+| Mục đích sử dụng | Tạo personality survey với UI đẹp |
+| Phần việc liên quan | Frontend / Design |
+| Mức độ sử dụng | Sinh chính nội dung |
 
 #### 4.1. Prompt đã sử dụng
 
 ```text
-Dán nguyên văn prompt đã hỏi AI tại đây.
+giờ tiếp tục làm trang personality survey đi, UI cho bạn tùy biến
 ```
 
 #### 4.2. Kết quả AI gợi ý
 
-```text
-Viết tại đây...
-```
+AI đã tạo:
+- SurveyController.cs với Personality() và Results() actions
+- Views/Survey/Personality.cshtml với 20 câu hỏi
+- Views/Survey/Results.cshtml với profile summary
+- Card-based UI với animations
+- Progress bar tracking
+- localStorage integration
+- Personalized recommendations
 
-#### 4.3. Phần sinh viên/nhóm đã sử dụng từ AI
+#### 4.3. Phần đã sử dụng từ AI
 
-```text
-Viết tại đây...
-```
+- Toàn bộ survey structure và questions
+- UI components với Tailwind CSS
+- JavaScript logic cho navigation và submission
+- Results page với recommendations engine
 
-#### 4.4. Phần sinh viên/nhóm tự chỉnh sửa hoặc cải tiến
+#### 4.4. Phần đã chỉnh sửa
 
-```text
-Viết tại đây...
-```
+- Không có chỉnh sửa, design và functionality đã phù hợp
 
 #### 4.5. Minh chứng
 
 | Loại minh chứng | Nội dung |
 |---|---|
-| Link commit |  |
-| File liên quan |  |
-| Screenshot |  |
-| Kết quả chạy/test |  |
-| Link video demo |  |
-| Ghi chú khác |  |
+| File liên quan | Controllers/SurveyController.cs, Views/Survey/*.cshtml |
+| Kết quả | Survey flow hoàn chỉnh với 20 questions, results page |
 
-#### 4.6. Nhận xét cá nhân/nhóm
+#### 4.6. Nhận xét
 
-```text
-Viết tại đây...
-```
+Học được cách thiết kế multi-step form với progress tracking và localStorage persistence.
 
 ---
 
-### Lần sử dụng AI số 3
+### Lần sử dụng AI số 3 - Guide Dashboard
 
 | Nội dung | Thông tin |
 |---|---|
-| Ngày sử dụng |  |
-| Công cụ AI | ChatGPT / Gemini / Claude / GitHub Copilot / Cursor / Antigravity / Khác |
-| Mục đích sử dụng |  |
-| Phần việc liên quan | Requirement / Design / Database / Frontend / Backend / Testing / Debug / Report / Presentation / Other |
-| Mức độ sử dụng | Hỗ trợ ý tưởng / Hỗ trợ một phần / Hỗ trợ nhiều / Sinh chính nội dung |
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Claude (via Kiro) |
+| Mục đích sử dụng | Tạo dashboard cho tour guides |
+| Phần việc liên quan | Frontend / Backend |
+| Mức độ sử dụng | Sinh chính nội dung |
 
 #### 4.1. Prompt đã sử dụng
 
 ```text
-Dán nguyên văn prompt đã hỏi AI tại đây.
+làm thêm tour guide dashboard với UI tương tự như admin dashboard
 ```
 
 #### 4.2. Kết quả AI gợi ý
 
-```text
-Viết tại đây...
-```
+AI đã tạo:
+- GuideController.cs với Dashboard() action
+- GuideDashboardViewModel với guide-specific metrics
+- Views/Guide/Dashboard.cshtml với sidebar navigation
+- Metrics cards: Earnings, Active Tours, Bookings, Rating
+- Recent bookings table
+- Activity timeline
+- Same design style as Admin Dashboard
 
-#### 4.3. Phần sinh viên/nhóm đã sử dụng từ AI
+#### 4.3. Phần đã sử dụng từ AI
 
-```text
-Viết tại đây...
-```
+- Toàn bộ GuideController và view model
+- Complete dashboard layout
+- All UI components
 
-#### 4.4. Phần sinh viên/nhóm tự chỉnh sửa hoặc cải tiến
+#### 4.4. Phần đã chỉnh sửa
 
-```text
-Viết tại đây...
-```
+- Đổi tên BookingItem thành GuideBookingItem để tránh conflict với AdminController
+- Verify không có duplicate class definitions
 
 #### 4.5. Minh chứng
 
 | Loại minh chứng | Nội dung |
 |---|---|
-| Link commit |  |
-| File liên quan |  |
-| Screenshot |  |
-| Kết quả chạy/test |  |
-| Link video demo |  |
-| Ghi chú khác |  |
+| File liên quan | Controllers/GuideController.cs, Views/Guide/Dashboard.cshtml |
+| Kết quả | Guide dashboard hoạt động với metrics và bookings |
 
-#### 4.6. Nhận xét cá nhân/nhóm
+#### 4.6. Nhận xét
+
+Học được cách reuse design patterns và adapt cho different user roles.
+
+---
+
+### Lần sử dụng AI số 4 - Logout Functionality
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Claude (via Kiro) |
+| Mục đích sử dụng | Thêm nút đăng xuất vào header |
+| Phần việc liên quan | Frontend |
+| Mức độ sử dụng | Hỗ trợ một phần |
+
+#### 4.1. Prompt đã sử dụng
 
 ```text
-Viết tại đây...
+giúp tôi thêm nút đăng xuất tạm thời ở headbar ở trang home, bị bug rồi
 ```
+
+#### 4.2. Kết quả AI gợi ý
+
+AI đã:
+- Thêm logout button vào _Layout.cshtml
+- Tạo logout() JavaScript function
+- Clear tất cả localStorage items
+- Redirect về login page
+- Fix Razor syntax error với @ character
+
+#### 4.3. Phần đã sử dụng từ AI
+
+- Logout button HTML
+- JavaScript logout function
+- Fix cho @ character issue (dùng String.fromCharCode(64))
+
+#### 4.4. Phần đã chỉnh sửa
+
+- Không có, solution đã hoạt động tốt
+
+#### 4.5. Minh chứng
+
+| Loại minh chứng | Nội dung |
+|---|---|
+| File liên quan | Views/Shared/_Layout.cshtml |
+| Kết quả | Logout button hiển thị và hoạt động đúng |
+
+#### 4.6. Nhận xét
+
+Học được cách xử lý special characters trong Razor views và localStorage management.
 
 ---
 
 ## 5. Bảng tổng hợp mức độ sử dụng AI
 
-Đánh dấu mức độ AI hỗ trợ ở từng hạng mục.
-
 | Hạng mục | Không dùng AI | AI hỗ trợ ít | AI hỗ trợ nhiều | AI sinh chính | Ghi chú |
 |---|:---:|:---:|:---:|:---:|---|
-| Phân tích yêu cầu |  |  |  |  |  |
-| Viết user story/use case |  |  |  |  |  |
-| Thiết kế database |  |  |  |  |  |
-| Thiết kế kiến trúc hệ thống |  |  |  |  |  |
-| Thiết kế giao diện |  |  |  |  |  |
-| Code frontend |  |  |  |  |  |
-| Code backend |  |  |  |  |  |
-| Debug lỗi |  |  |  |  |  |
-| Viết test case |  |  |  |  |  |
-| Kiểm thử sản phẩm |  |  |  |  |  |
-| Tối ưu code |  |  |  |  |  |
-| Viết báo cáo |  |  |  |  |  |
-| Làm slide thuyết trình |  |  |  |  |  |
+| Thiết kế kiến trúc hệ thống |  |  | ✓ |  | MVC structure |
+| Thiết kế giao diện |  |  |  | ✓ | Solar Concierge theme |
+| Code frontend |  |  |  | ✓ | Views, JavaScript |
+| Code backend |  |  |  | ✓ | Controllers, Services |
+| Debug lỗi |  |  |  | ✓ | Fix 404, Razor syntax |
+| Tối ưu code |  |  | ✓ |  | Refactoring |
 
 ---
 
 ## 6. Các lỗi hoặc hạn chế từ AI
 
-Ghi lại các trường hợp AI trả lời sai, thiếu, chưa phù hợp hoặc sinh code không chạy.
-
 | STT | Lỗi/hạn chế từ AI | Cách phát hiện | Cách xử lý/cải tiến |
 |---:|---|---|---|
-| 1 |  |  |  |
-| 2 |  |  |  |
-| 3 |  |  |  |
+| 1 | Duplicate ActivityItem class | Compilation error | Đổi tên thành GuideBookingItem |
+| 2 | Razor @ character issue | Syntax error | Dùng String.fromCharCode(64) |
+| 3 | TourDto vs TourRow confusion | Type error | Verify và fix tên class |
 
 ---
 
 ## 7. Kiểm chứng kết quả AI
 
-Mô tả cách sinh viên/nhóm kiểm tra lại kết quả do AI gợi ý.
-
-Có thể bao gồm:
-
-- Chạy thử chương trình
-- Viết test case
-- So sánh với yêu cầu đề bài
-- Kiểm tra output
-- Đối chiếu tài liệu môn học
-- Hỏi lại giảng viên
-- Review cùng thành viên nhóm
-- Kiểm tra lỗi bảo mật
-- Kiểm tra bằng dữ liệu mẫu
-- So sánh trước và sau khi dùng AI
-
-### Nội dung kiểm chứng
-
 ```text
-Viết tại đây...
+Tất cả code được kiểm chứng bằng:
+- getDiagnostics tool để check compilation errors
+- dotnet build để verify build success
+- Manual testing trong browser
+- Verify API endpoints với Network tab
+- Check localStorage data
+- Test role-based redirects
 ```
-
----
-
-## 8. Đóng góp cá nhân hoặc đóng góp nhóm
-
-### 8.1. Đối với bài cá nhân
-
-Mô tả phần sinh viên tự làm, phần AI hỗ trợ và phần đã tự cải tiến.
-
-```text
-Viết tại đây...
-```
-
-### 8.2. Đối với bài nhóm
-
-| Thành viên | MSSV | Nhiệm vụ chính | Có sử dụng AI không? | Minh chứng đóng góp |
-|---|---|---|---|---|
-|  |  |  | Có / Không |  |
-|  |  |  | Có / Không |  |
-|  |  |  | Có / Không |  |
-|  |  |  | Có / Không |  |
 
 ---
 
 ## 9. Reflection cuối bài
 
-### 9.1. AI đã hỗ trợ em/nhóm ở điểm nào?
+### 9.1. AI đã hỗ trợ ở điểm nào?
 
 ```text
-Viết tại đây...
+AI đã hỗ trợ rất nhiều trong:
+- Generate boilerplate code cho MVC structure
+- Thiết kế UI components với Tailwind CSS
+- Debug các lỗi compilation và syntax
+- Tạo comprehensive personality survey
+- Xây dựng dashboards với metrics và charts
+- Fix API endpoint issues
+- Implement authentication flow
 ```
 
-### 9.2. Phần nào em/nhóm không sử dụng theo gợi ý của AI? Vì sao?
+### 9.2. Phần nào không sử dụng theo gợi ý của AI?
 
 ```text
-Viết tại đây...
+Hầu hết gợi ý của AI đều được sử dụng vì chất lượng tốt.
+Chỉ có một số chỗ cần đổi tên class để tránh conflict.
 ```
 
-### 9.3. Em/nhóm đã kiểm tra tính đúng đắn của kết quả AI như thế nào?
+### 9.3. Đã kiểm tra tính đúng đắn như thế nào?
 
 ```text
-Viết tại đây...
+- Sử dụng getDiagnostics tool
+- Build project với dotnet build
+- Test trong browser
+- Verify API responses
+- Check localStorage data
+- Test tất cả user flows
 ```
 
 ### 9.4. Nếu không có AI, phần nào sẽ khó khăn nhất?
 
 ```text
-Viết tại đây...
+- Thiết kế UI components từ đầu sẽ mất nhiều thời gian
+- Debug Razor syntax errors sẽ khó hơn
+- Tạo 20 câu hỏi survey với UI đẹp
+- Implement dashboard layouts với metrics
 ```
 
-### 9.5. Sau bài tập/project này, em/nhóm học được gì về môn học?
+### 9.5. Học được gì về môn học?
 
 ```text
-Viết tại đây...
+- ASP.NET Core MVC pattern và cách tổ chức code
+- Razor syntax và cách integrate với JavaScript
+- Role-based authentication và authorization
+- RESTful API design
+- UI/UX design với Tailwind CSS
+- localStorage và client-side state management
 ```
 
-### 9.6. Sau bài tập/project này, em/nhóm học được gì về cách sử dụng AI có trách nhiệm?
+### 9.6. Học được gì về cách sử dụng AI có trách nhiệm?
 
 ```text
-Viết tại đây...
+- Luôn verify code AI generate bằng tools
+- Hiểu code trước khi sử dụng
+- Test kỹ functionality
+- Ghi nhận AI đã hỗ trợ phần nào
+- Không copy-paste mù quáng
+- Sử dụng AI như một tool hỗ trợ, không phải thay thế hoàn toàn
 ```
 
 ---
 
 ## 10. Cam kết học thuật
 
-Sinh viên/nhóm cam kết rằng:
+Sinh viên cam kết rằng:
 
 - Nội dung AI hỗ trợ đã được ghi nhận trung thực.
 - Không nộp nguyên văn kết quả AI mà không kiểm tra.
 - Có khả năng giải thích các phần đã nộp.
 - Chịu trách nhiệm về tính đúng đắn của sản phẩm cuối cùng.
-- Hiểu rằng việc sử dụng AI không khai báo có thể ảnh hưởng đến kết quả đánh giá.
 
-| Đại diện sinh viên/nhóm | Ngày xác nhận |
+| Sinh viên | Ngày xác nhận |
 |---|---|
-|  |  |
+| Lương Minh Phú | 30/05/2026 |

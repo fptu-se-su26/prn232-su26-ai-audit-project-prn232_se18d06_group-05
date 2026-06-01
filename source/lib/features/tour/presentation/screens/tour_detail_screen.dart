@@ -32,7 +32,7 @@ class TourDetailScreen extends ConsumerWidget {
                   ? Image.network(
                       tour.images.first,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder(),
+                      errorBuilder: (_, _, _) => _placeholder(),
                     )
                   : _placeholder(),
             ),
@@ -178,7 +178,7 @@ class TourDetailScreen extends ConsumerWidget {
                         const Icon(Icons.star, size: 16, color: Colors.amber),
                         const SizedBox(width: 4),
                         Text(
-                          '${tour.rating.toStringAsFixed(1)}',
+                          tour.rating.toStringAsFixed(1),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         Text(

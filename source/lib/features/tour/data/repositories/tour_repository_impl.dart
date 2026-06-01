@@ -147,4 +147,47 @@ class TourRepositoryImpl implements TourRepository {
       return Left(ServerFailure(message: 'Lỗi không xác định'));
     }
   }
+
+  @override
+  Future<Either<Failure, List<TourTemplateEntity>>> getTourTemplates() async {
+    try {
+      final templates = await remoteDataSource.getTourTemplates();
+      return Right(templates);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      Logger.error('Unexpected error in getTourTemplates', e);
+      return Left(ServerFailure(message: 'Lỗi không xác định'));
+    }
+  }
+
+  @override
+  Future<Either<Failure, TourEntity>> createTourFromTemplate({
+    required String templateId,
+    required double price,
+    required int durationHours,
+    int maxParticipants = 10,
+  }) async {
+    try {
+      // Get current user ID
+      final userId = SupabaseConfig.client.auth.currentUser?.id;
+      if (userId == null) {
+        return Left(AuthFailure(message: 'Bạn cần đăng nhập'));
+      }
+
+      final tour = await remoteDataSource.createTourFromTemplate(
+        guideId: userId,
+        templateId: templateId,
+        price: price,
+        durationHours: durationHours,
+        maxParticipants: maxParticipants,
+      );
+      return Right(tour);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      Logger.error('Unexpected error in createTourFromTemplate', e);
+      return Left(ServerFailure(message: 'Lỗi không xác định'));
+    }
+  }
 }

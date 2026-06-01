@@ -1,32 +1,30 @@
 class BookingEntity {
   final String id;
-  final String tourId;
-  final String tourTitle;
-  final String tourLocation;
+  final String guideTourId;
   final String travelerId;
-  final String guideId;
   final DateTime tourDate;
   final int guests;
-  final double unitPrice;
   final double totalPrice;
-  final String? note;
   final String status; // pending | confirmed | completed | cancelled
   final DateTime createdAt;
 
+  // Populated from joins
+  final String? tourTitle;
+  final String? tourLocation;
+  final String? guideId;
+
   const BookingEntity({
     required this.id,
-    required this.tourId,
-    required this.tourTitle,
-    required this.tourLocation,
+    required this.guideTourId,
     required this.travelerId,
-    required this.guideId,
     required this.tourDate,
     required this.guests,
-    required this.unitPrice,
     required this.totalPrice,
-    this.note,
     required this.status,
     required this.createdAt,
+    this.tourTitle,
+    this.tourLocation,
+    this.guideId,
   });
 
   bool get isPending => status == 'pending';

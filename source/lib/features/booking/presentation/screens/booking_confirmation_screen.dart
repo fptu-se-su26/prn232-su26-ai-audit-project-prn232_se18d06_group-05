@@ -11,9 +11,19 @@ class BookingConfirmationScreen extends ConsumerWidget {
   const BookingConfirmationScreen({super.key, required this.booking});
 
   Future<void> _startChatWithGuide(BuildContext context, WidgetRef ref) async {
+    final guideId = booking.guideId;
+    if (guideId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không thể tìm thấy thông tin hướng dẫn viên'),
+        ),
+      );
+      return;
+    }
+
     final conversationId = await ref
         .read(createConversationProvider.notifier)
-        .createOrGet(guideId: booking.guideId, bookingId: booking.id);
+        .createOrGet(guideId: guideId, bookingId: booking.id);
 
     if (!context.mounted) return;
 
@@ -98,12 +108,16 @@ class BookingConfirmationScreen extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _DetailRow(Icons.tour, 'Tour', booking.tourTitle),
+                    _DetailRow(
+                      Icons.tour,
+                      'Tour',
+                      booking.tourTitle ?? 'Không xác định',
+                    ),
                     const SizedBox(height: 12),
                     _DetailRow(
                       Icons.location_on,
                       'Địa điểm',
-                      booking.tourLocation,
+                      booking.tourLocation ?? 'Không xác định',
                     ),
                     const SizedBox(height: 12),
                     _DetailRow(

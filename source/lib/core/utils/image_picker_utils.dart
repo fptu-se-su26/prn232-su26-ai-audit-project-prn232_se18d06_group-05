@@ -109,7 +109,7 @@ class ImagePickerWidget extends StatelessWidget {
                                 width: 80,
                                 height: 80,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
+                                errorBuilder: (_, _, _) => Container(
                                   color: Colors.grey.shade200,
                                   child: const Icon(Icons.broken_image),
                                 ),

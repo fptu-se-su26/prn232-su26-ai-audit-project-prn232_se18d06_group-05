@@ -419,7 +419,7 @@ class _UpcomingTourCard extends StatelessWidget {
                   height: 130,
                   width: double.infinity,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
+                  errorBuilder: (_, _, _) =>
                       Container(height: 130, color: Colors.grey.shade200),
                 ),
               ),
@@ -729,7 +729,7 @@ class _GuideTourCard extends StatelessWidget {
                     width: 100,
                     height: 100,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       width: 100,
                       height: 100,
                       color: Colors.grey.shade200,

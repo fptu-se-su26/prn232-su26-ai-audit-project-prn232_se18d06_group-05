@@ -1,0 +1,500 @@
+@{
+    ViewData["Title"] = "Khảo sát tính cách du lịch";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .survey-container {
+        min-height: calc(100vh - 80px);
+        background: linear-gradient(135deg, #ffebd9 0%, #fbf9f8 50%, #ffebd9 100%);
+    }
+    
+    .question-card {
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.5s ease forwards;
+    }
+    
+    @@keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .option-card {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        cursor: pointer;
+    }
+    
+    .option-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px -10px rgba(255, 122, 0, 0.2);
+    }
+    
+    .option-card.selected {
+        background: linear-gradient(135deg, #ff7a00 0%, #ff9933 100%);
+        border-color: #ff7a00;
+        transform: scale(1.02);
+    }
+    
+    .option-card.selected .option-text {
+        color: white;
+        font-weight: 700;
+    }
+    
+    .option-card.selected .option-icon {
+        color: white;
+    }
+    
+    .progress-bar {
+        transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    
+    @@keyframes pulse {
+        0%, 100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: .7;
+        }
+    }
+</style>
+
+<div class="survey-container py-12 px-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <div class="inline-flex items-center justify-center w-20 h-20 bg-primary rounded-full mb-6 shadow-lg">
+                <span class="material-symbols-outlined text-4xl text-white" style="font-variation-settings: 'FILL' 1;">psychology</span>
+            </div>
+            <h1 class="text-5xl font-extrabold text-on-surface mb-4">Khám Phá Phong Cách Du Lịch</h1>
+            <p class="text-xl text-on-surface-variant max-w-2xl mx-auto">
+                Trả lời 20 câu hỏi để chúng tôi hiểu rõ hơn về sở thích du lịch của bạn và gợi ý những tour phù hợp nhất.
+            </p>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="bg-surface rounded-xl p-6 mb-8 shadow-lg border border-outline-variant/30">
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-sm font-bold text-on-surface-variant tracking-wide">TIẾN TRÌNH</span>
+                <span class="text-sm font-bold text-primary" id="progressText">0/20</span>
+            </div>
+            <div class="w-full bg-outline-variant/30 rounded-full h-3 overflow-hidden">
+                <div id="progressBar" class="progress-bar bg-gradient-to-r from-primary to-primary/80 h-3 rounded-full" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Question Container -->
+        <div id="questionContainer" class="space-y-8">
+            <!-- Questions will be rendered here by JavaScript -->
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex justify-between items-center mt-12">
+            <button 
+                id="prevBtn" 
+                class="px-8 py-3 bg-surface-variant hover:bg-outline-variant/30 text-on-surface font-bold rounded-lg transition-all shadow-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled
+            >
+                <span class="material-symbols-outlined">arrow_back</span>
+                <span>Quay lại</span>
+            </button>
+            
+            <button 
+                id="nextBtn" 
+                class="px-8 py-3 bg-primary hover:bg-primary/90 text-on-primary font-bold rounded-lg transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled
+            >
+                <span>Tiếp theo</span>
+                <span class="material-symbols-outlined">arrow_forward</span>
+            </button>
+            
+            <button 
+                id="submitBtn" 
+                class="hidden px-8 py-3 bg-gradient-to-r from-primary to-primary/80 hover:shadow-xl text-on-primary font-bold rounded-lg transition-all shadow-lg flex items-center gap-2"
+            >
+                <span>Hoàn thành</span>
+                <span class="material-symbols-outlined">check_circle</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<link rel="stylesheet" href="/spinner.css">
+<div id="loadingSpinner" class="spinner-overlay" style="display: none;">
+    <div class="spinner-container">
+        <div class="spinner">
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+            <div class="spinner-ring"></div>
+        </div>
+        <p class="spinner-text">Đang phân tích kết quả...</p>
+    </div>
+</div>
+
+<script>
+    // Survey questions
+    const questions = [
+        {
+            id: 1,
+            text: "Bạn thích loại hình du lịch nào nhất?",
+            options: [
+                { value: "adventure", text: "Phiêu lưu mạo hiểm", icon: "hiking" },
+                { value: "relaxation", text: "Nghỉ dưỡng thư giãn", icon: "spa" },
+                { value: "cultural", text: "Khám phá văn hóa", icon: "museum" },
+                { value: "nature", text: "Gần gũi thiên nhiên", icon: "forest" }
+            ]
+        },
+        {
+            id: 2,
+            text: "Bạn thường đi du lịch với ai?",
+            options: [
+                { value: "solo", text: "Một mình", icon: "person" },
+                { value: "couple", text: "Cặp đôi", icon: "favorite" },
+                { value: "family", text: "Gia đình", icon: "family_restroom" },
+                { value: "friends", text: "Bạn bè", icon: "groups" }
+            ]
+        },
+        {
+            id: 3,
+            text: "Ngân sách cho một chuyến đi của bạn thường là?",
+            options: [
+                { value: "budget", text: "Tiết kiệm (< 5 triệu)", icon: "savings" },
+                { value: "moderate", text: "Trung bình (5-10 triệu)", icon: "account_balance_wallet" },
+                { value: "comfortable", text: "Thoải mái (10-20 triệu)", icon: "credit_card" },
+                { value: "luxury", text: "Sang trọng (> 20 triệu)", icon: "diamond" }
+            ]
+        },
+        {
+            id: 4,
+            text: "Bạn thích khám phá địa điểm nào?",
+            options: [
+                { value: "beach", text: "Biển đảo", icon: "beach_access" },
+                { value: "mountain", text: "Núi rừng", icon: "landscape" },
+                { value: "city", text: "Thành phố", icon: "location_city" },
+                { value: "countryside", text: "Nông thôn", icon: "agriculture" }
+            ]
+        },
+        {
+            id: 5,
+            text: "Thời gian lý tưởng cho một chuyến đi?",
+            options: [
+                { value: "weekend", text: "Cuối tuần (2-3 ngày)", icon: "event" },
+                { value: "short", text: "Ngắn ngày (4-5 ngày)", icon: "calendar_today" },
+                { value: "week", text: "Một tuần (6-7 ngày)", icon: "date_range" },
+                { value: "long", text: "Dài ngày (> 7 ngày)", icon: "calendar_month" }
+            ]
+        },
+        {
+            id: 6,
+            text: "Bạn thích hoạt động nào trong chuyến đi?",
+            options: [
+                { value: "sports", text: "Thể thao mạo hiểm", icon: "kayaking" },
+                { value: "sightseeing", text: "Tham quan danh lắm", icon: "photo_camera" },
+                { value: "food", text: "Ẩm thực địa phương", icon: "restaurant" },
+                { value: "shopping", text: "Mua sắm", icon: "shopping_bag" }
+            ]
+        },
+        {
+            id: 7,
+            text: "Phong cách lưu trú bạn ưa thích?",
+            options: [
+                { value: "hotel", text: "Khách sạn cao cấp", icon: "hotel" },
+                { value: "resort", text: "Resort nghỉ dưỡng", icon: "villa" },
+                { value: "homestay", text: "Homestay địa phương", icon: "home" },
+                { value: "hostel", text: "Hostel/Nhà trọ", icon: "bed" }
+            ]
+        },
+        {
+            id: 8,
+            text: "Bạn thích di chuyển bằng phương tiện nào?",
+            options: [
+                { value: "plane", text: "Máy bay", icon: "flight" },
+                { value: "train", text: "Tàu hỏa", icon: "train" },
+                { value: "car", text: "Ô tô/Xe máy", icon: "directions_car" },
+                { value: "bus", text: "Xe khách", icon: "directions_bus" }
+            ]
+        },
+        {
+            id: 9,
+            text: "Mức độ lên kế hoạch trước của bạn?",
+            options: [
+                { value: "detailed", text: "Chi tiết từng giờ", icon: "checklist" },
+                { value: "outline", text: "Khung chính", icon: "list" },
+                { value: "flexible", text: "Linh hoạt", icon: "shuffle" },
+                { value: "spontaneous", text: "Tự phát hoàn toàn", icon: "explore" }
+            ]
+        },
+        {
+            id: 10,
+            text: "Bạn thích khám phá ẩm thực như thế nào?",
+            options: [
+                { value: "street", text: "Ẩm thực đường phố", icon: "food_bank" },
+                { value: "local", text: "Nhà hàng địa phương", icon: "restaurant_menu" },
+                { value: "fine", text: "Nhà hàng cao cấp", icon: "dinner_dining" },
+                { value: "cook", text: "Tự nấu ăn", icon: "cooking" }
+            ]
+        },
+        {
+            id: 11,
+            text: "Thời điểm trong ngày bạn thích hoạt động nhất?",
+            options: [
+                { value: "early", text: "Sáng sớm", icon: "wb_twilight" },
+                { value: "morning", text: "Buổi sáng", icon: "wb_sunny" },
+                { value: "afternoon", text: "Buổi chiều", icon: "wb_cloudy" },
+                { value: "night", text: "Buổi tối", icon: "nightlight" }
+            ]
+        },
+        {
+            id: 12,
+            text: "Mức độ tương tác với người địa phương?",
+            options: [
+                { value: "high", text: "Rất thích giao lưu", icon: "groups" },
+                { value: "moderate", text: "Vừa phải", icon: "people" },
+                { value: "low", text: "Ít giao lưu", icon: "person" },
+                { value: "minimal", text: "Tối thiểu", icon: "person_off" }
+            ]
+        },
+        {
+            id: 13,
+            text: "Bạn thích chụp ảnh như thế nào?",
+            options: [
+                { value: "professional", text: "Chuyên nghiệp", icon: "photo_camera" },
+                { value: "casual", text: "Bình thường", icon: "camera_alt" },
+                { value: "selfie", text: "Selfie nhiều", icon: "photo_camera_front" },
+                { value: "minimal", text: "Ít chụp", icon: "no_photography" }
+            ]
+        },
+        {
+            id: 14,
+            text: "Mức độ quan tâm đến lịch sử văn hóa?",
+            options: [
+                { value: "very", text: "Rất quan tâm", icon: "history_edu" },
+                { value: "interested", text: "Quan tâm", icon: "book" },
+                { value: "somewhat", text: "Hơi quan tâm", icon: "menu_book" },
+                { value: "not", text: "Không quan tâm", icon: "close" }
+            ]
+        },
+        {
+            id: 15,
+            text: "Bạn thích mua quà lưu niệm không?",
+            options: [
+                { value: "always", text: "Luôn luôn", icon: "shopping_cart" },
+                { value: "often", text: "Thường xuyên", icon: "shopping_bag" },
+                { value: "sometimes", text: "Thỉnh thoảng", icon: "local_mall" },
+                { value: "never", text: "Không bao giờ", icon: "remove_shopping_cart" }
+            ]
+        },
+        {
+            id: 16,
+            text: "Mức độ thích thú với hoạt động ngoài trời?",
+            options: [
+                { value: "extreme", text: "Cực kỳ thích", icon: "terrain" },
+                { value: "like", text: "Thích", icon: "park" },
+                { value: "neutral", text: "Bình thường", icon: "nature" },
+                { value: "prefer_indoor", text: "Thích trong nhà hơn", icon: "home" }
+            ]
+        },
+        {
+            id: 17,
+            text: "Bạn thích tìm hiểu về địa điểm trước khi đi?",
+            options: [
+                { value: "extensive", text: "Nghiên cứu kỹ", icon: "search" },
+                { value: "moderate", text: "Tìm hiểu cơ bản", icon: "info" },
+                { value: "minimal", text: "Ít tìm hiểu", icon: "help" },
+                { value: "none", text: "Không tìm hiểu", icon: "block" }
+            ]
+        },
+        {
+            id: 18,
+            text: "Mức độ quan tâm đến môi trường khi du lịch?",
+            options: [
+                { value: "very", text: "Rất quan tâm", icon: "eco" },
+                { value: "concerned", text: "Quan tâm", icon: "recycling" },
+                { value: "somewhat", text: "Hơi quan tâm", icon: "energy_savings_leaf" },
+                { value: "not", text: "Không quan tâm", icon: "close" }
+            ]
+        },
+        {
+            id: 19,
+            text: "Bạn thích trải nghiệm mới lạ đến mức nào?",
+            options: [
+                { value: "very", text: "Rất thích mạo hiểm", icon: "rocket_launch" },
+                { value: "open", text: "Sẵn sàng thử", icon: "explore" },
+                { value: "cautious", text: "Thận trọng", icon: "warning" },
+                { value: "prefer_familiar", text: "Thích quen thuộc", icon: "home" }
+            ]
+        },
+        {
+            id: 20,
+            text: "Mục đích chính khi đi du lịch?",
+            options: [
+                { value: "relax", text: "Thư giãn nghỉ ngơi", icon: "self_improvement" },
+                { value: "explore", text: "Khám phá trải nghiệm", icon: "explore" },
+                { value: "learn", text: "Học hỏi văn hóa", icon: "school" },
+                { value: "social", text: "Gặp gỡ kết nối", icon: "diversity_3" }
+            ]
+        }
+    ];
+
+    let currentQuestion = 0;
+    let answers = {};
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        // Check if user is logged in
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/Auth/Login';
+            return;
+        }
+
+        renderQuestion();
+        updateProgress();
+    });
+
+    function renderQuestion() {
+        const container = document.getElementById('questionContainer');
+        const question = questions[currentQuestion];
+        
+        container.innerHTML = `
+            <div class="question-card bg-surface rounded-2xl p-8 shadow-xl border border-outline-variant/30">
+                <div class="flex items-start gap-4 mb-8">
+                    <div class="flex-shrink-0 w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
+                        <span class="text-xl font-extrabold text-primary">${question.id}</span>
+                    </div>
+                    <h2 class="text-2xl font-bold text-on-surface flex-1">${question.text}</h2>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    ${question.options.map(option => `
+                        <div class="option-card bg-surface-variant border-2 border-outline-variant rounded-xl p-6 ${answers[question.id] === option.value ? 'selected' : ''}"
+                             onclick="selectOption(${question.id}, '${option.value}')">
+                            <div class="flex items-center gap-4">
+                                <span class="material-symbols-outlined text-3xl option-icon text-primary" style="font-variation-settings: 'FILL' 1;">
+                                    ${option.icon}
+                                </span>
+                                <span class="option-text text-lg font-semibold text-on-surface">${option.text}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+
+        updateButtons();
+    }
+
+    function selectOption(questionId, value) {
+        answers[questionId] = value;
+        renderQuestion();
+        updateProgress();
+    }
+
+    function updateProgress() {
+        const answered = Object.keys(answers).length;
+        const total = questions.length;
+        const percentage = (answered / total) * 100;
+        
+        document.getElementById('progressBar').style.width = percentage + '%';
+        document.getElementById('progressText').textContent = `${answered}/${total}`;
+    }
+
+    function updateButtons() {
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const submitBtn = document.getElementById('submitBtn');
+        
+        // Previous button
+        prevBtn.disabled = currentQuestion === 0;
+        
+        // Next/Submit button
+        const isAnswered = answers[questions[currentQuestion].id] !== undefined;
+        
+        if (currentQuestion === questions.length - 1) {
+            nextBtn.classList.add('hidden');
+            submitBtn.classList.remove('hidden');
+            submitBtn.disabled = !isAnswered;
+        } else {
+            nextBtn.classList.remove('hidden');
+            submitBtn.classList.add('hidden');
+            nextBtn.disabled = !isAnswered;
+        }
+    }
+
+    // Navigation
+    document.getElementById('prevBtn').addEventListener('click', () => {
+        if (currentQuestion > 0) {
+            currentQuestion--;
+            renderQuestion();
+        }
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+        if (currentQuestion < questions.length - 1) {
+            currentQuestion++;
+            renderQuestion();
+        }
+    });
+
+    document.getElementById('submitBtn').addEventListener('click', () => {
+        submitSurvey();
+    });
+
+    function submitSurvey() {
+        // Show spinner
+        document.getElementById('loadingSpinner').style.display = 'flex';
+        
+        // Calculate personality profile
+        const profile = calculateProfile();
+        
+        // Save to localStorage
+        localStorage.setItem('surveyCompleted', 'true');
+        localStorage.setItem('personalityProfile', JSON.stringify(profile));
+        
+        // Simulate API call
+        setTimeout(() => {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            
+            // Redirect to results or home
+            window.location.href = '/Survey/Results';
+        }, 2000);
+    }
+
+    function calculateProfile() {
+        // Simple personality profiling based on answers
+        const profile = {
+            travelStyle: getTravelStyle(),
+            budget: answers[3] || 'moderate',
+            destination: answers[4] || 'beach',
+            duration: answers[5] || 'short',
+            activities: answers[6] || 'sightseeing',
+            accommodation: answers[7] || 'hotel',
+            planning: answers[9] || 'flexible',
+            social: answers[12] || 'moderate',
+            adventure: answers[19] || 'open',
+            purpose: answers[20] || 'explore',
+            completedAt: new Date().toISOString()
+        };
+        
+        return profile;
+    }
+
+    function getTravelStyle() {
+        const style = answers[1];
+        const styles = {
+            'adventure': 'Phiêu lưu mạo hiểm',
+            'relaxation': 'Nghỉ dưỡng thư giãn',
+            'cultural': 'Khám phá văn hóa',
+            'nature': 'Gần gũi thiên nhiên'
+        };
+        return styles[style] || 'Khám phá trải nghiệm';
+    }
+</script>

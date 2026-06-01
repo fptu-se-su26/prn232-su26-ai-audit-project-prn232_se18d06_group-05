@@ -1,0 +1,159 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Trang chủ";
+}
+
+<!-- Hero Section -->
+<div class="hero-section bg-primary text-white py-5 mb-5 rounded">
+    <div class="container text-center">
+        <h1 class="display-4 fw-bold mb-3">
+            <i class="bi bi-compass me-3"></i>Khám phá Việt Nam cùng TripMate
+        </h1>
+        <p class="lead mb-4">Kết nối với hướng dẫn viên địa phương để có những trải nghiệm du lịch tuyệt vời</p>
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <form method="get" asp-page="/Tours/Index" class="d-flex">
+                    <input class="form-control me-2" type="search" name="search" placeholder="Tìm kiếm điểm đến..." aria-label="Search">
+                    <button class="btn btn-light" type="submit">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics -->
+<div class="row mb-5">
+    <div class="col-md-3 text-center">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <i class="bi bi-people-fill text-primary" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">@Model.TotalGuides</h4>
+                <p class="text-muted">Hướng dẫn viên</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 text-center">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <i class="bi bi-map-fill text-success" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">@Model.TotalTours</h4>
+                <p class="text-muted">Tours có sẵn</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 text-center">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <i class="bi bi-calendar-check-fill text-warning" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">@Model.TotalBookings</h4>
+                <p class="text-muted">Đặt chỗ thành công</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 text-center">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <i class="bi bi-star-fill text-info" style="font-size: 2rem;"></i>
+                <h4 class="mt-2">@Model.AverageRating.ToString("F1")</h4>
+                <p class="text-muted">Đánh giá trung bình</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Featured Tours -->
+<div class="row mb-5">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-star me-2"></i>Tours nổi bật
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    @foreach (var tour in Model.FeaturedTours)
+    {
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                @if (tour.TourTemplate.Images.Any())
+                {
+                    <img src="@tour.TourTemplate.Images.First()" class="card-img-top" alt="@tour.TourTemplate.Title" style="height: 200px; object-fit: cover;">
+                }
+                else
+                {
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                    </div>
+                }
+                <div class="card-body">
+                    <h5 class="card-title">@tour.TourTemplate.Title</h5>
+                    <p class="card-text text-muted">
+                        <i class="bi bi-geo-alt me-1"></i>@tour.TourTemplate.Location
+                    </p>
+                    <p class="card-text">
+                        @if (!string.IsNullOrEmpty(tour.TourTemplate.Description))
+                        {
+                            @(tour.TourTemplate.Description.Length > 100 ? 
+                              tour.TourTemplate.Description.Substring(0, 100) + "..." : 
+                              tour.TourTemplate.Description)
+                        }
+                    </p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <span class="h5 text-primary">@tour.Price.ToString("C0", new System.Globalization.CultureInfo("vi-VN"))</span>
+                            <small class="text-muted">/@tour.DurationHours giờ</small>
+                        </div>
+                        <div class="text-end">
+                            @if (tour.Rating > 0)
+                            {
+                                <div class="text-warning">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="bi @(i <= tour.Rating ? "bi-star-fill" : "bi-star")"></i>
+                                    }
+                                </div>
+                                <small class="text-muted">(@tour.TotalReviews đánh giá)</small>
+                            }
+                            else
+                            {
+                                <small class="text-muted">Chưa có đánh giá</small>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-transparent">
+                    <a asp-page="/Tours/Details" asp-route-id="@tour.Id" class="btn btn-primary w-100">
+                        <i class="bi bi-eye me-2"></i>Xem chi tiết
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (!Model.FeaturedTours.Any())
+{
+    <div class="text-center py-5">
+        <i class="bi bi-map text-muted" style="font-size: 4rem;"></i>
+        <h4 class="text-muted mt-3">Chưa có tours nào</h4>
+        <p class="text-muted">Hãy quay lại sau để khám phá những tours tuyệt vời!</p>
+    </div>
+}
+
+<!-- Call to Action -->
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card bg-light border-0">
+            <div class="card-body text-center py-5">
+                <h3 class="mb-3">Bạn là hướng dẫn viên địa phương?</h3>
+                <p class="lead mb-4">Tham gia TripMate để chia sẻ kiến thức và kiếm thêm thu nhập</p>
+                <a asp-page="/Auth/Register" class="btn btn-primary btn-lg">
+                    <i class="bi bi-person-plus me-2"></i>Đăng ký ngay
+                </a>
+            </div>
+        </div>
+    </div>
+</div>

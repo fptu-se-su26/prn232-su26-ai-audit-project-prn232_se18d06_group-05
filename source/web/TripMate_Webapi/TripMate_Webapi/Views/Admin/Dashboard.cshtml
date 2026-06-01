@@ -1,0 +1,256 @@
+@model TripMate_Webapi.Controllers.DashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TripMate | Admin Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',
+                        'primary-dark': '#E55A2B',
+                        secondary: '#004E89',
+                        accent: '#F7B801',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Side Navigation Bar -->
+    <aside class="fixed left-0 top-0 h-screen w-[280px] bg-white border-r border-gray-200 flex flex-col py-8 pr-4 z-50">
+        <div class="px-6 mb-10">
+            <div class="flex items-center gap-3 mb-2">
+                <img src="/images/logo.svg" alt="TripMate" class="w-10 h-10">
+                <h1 class="text-2xl font-bold text-primary">TripMate</h1>
+            </div>
+            <p class="text-sm text-gray-600">Admin Portal</p>
+        </div>
+
+        <nav class="flex-grow flex flex-col gap-1">
+            <a class="flex items-center gap-4 px-6 py-3 bg-orange-100 text-primary border-l-4 border-primary rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Dashboard">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span>Dashboard</span>
+            </a>
+            <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="#">
+                <span class="material-symbols-outlined">calendar_month</span>
+                <span>Bookings</span>
+            </a>
+            <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="#">
+                <span class="material-symbols-outlined">tour</span>
+                <span>Tours</span>
+            </a>
+            <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="#">
+                <span class="material-symbols-outlined">group</span>
+                <span>Guides</span>
+            </a>
+            <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="#">
+                <span class="material-symbols-outlined">insights</span>
+                <span>Analytics</span>
+            </a>
+        </nav>
+
+        <div class="px-4 mt-auto">
+            <button class="w-full bg-primary text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2 shadow-lg hover:bg-primary-dark transition-all">
+                <span class="material-symbols-outlined">add</span>
+                New Tour
+            </button>
+
+            <div class="mt-6 flex flex-col gap-1">
+                <a class="flex items-center gap-4 px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-r-full font-medium" href="#">
+                    <span class="material-symbols-outlined">settings</span>
+                    <span>Settings</span>
+                </a>
+                <a class="flex items-center gap-4 px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-r-full font-medium" href="/index.html">
+                    <span class="material-symbols-outlined">home</span>
+                    <span>Back to Home</span>
+                </a>
+            </div>
+
+            <div class="mt-6 px-4 py-4 flex items-center gap-3 border-t border-gray-200">
+                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">person</span>
+                </div>
+                <div>
+                    <p class="font-medium text-gray-900">@Model.AdminName</p>
+                    <p class="text-xs text-gray-500">@Model.AdminRole</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="ml-[280px] min-h-screen p-12 bg-gray-50">
+        <!-- Header Section -->
+        <header class="flex justify-between items-end mb-12">
+            <div>
+                <h2 class="text-5xl font-bold text-gray-900 mb-2">Platform Overview</h2>
+                <p class="text-lg text-gray-600">Real-time performance and operational metrics for TripMate.</p>
+            </div>
+            <div class="flex gap-4">
+                <div class="glass-panel px-4 py-2 rounded-lg flex items-center gap-2 text-gray-600">
+                    <span class="material-symbols-outlined text-primary">calendar_today</span>
+                    <span class="text-sm font-medium">@Model.DateRange</span>
+                </div>
+                <button class="bg-white text-gray-900 px-6 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors border border-gray-200">
+                    Export Report
+                </button>
+            </div>
+        </header>
+
+        <!-- Metrics Grid -->
+        <div class="grid grid-cols-12 gap-8 mb-12">
+            <!-- Total Revenue Card -->
+            <div class="col-span-12 lg:col-span-6 bg-white rounded-2xl p-8 shadow-sm hover:-translate-y-1 transition-transform duration-300">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-sm text-gray-600 mb-2">Total Revenue</p>
+                        <h3 class="text-5xl font-bold text-primary mb-2">$@Model.TotalRevenue.ToString("N0")</h3>
+                        <p class="text-green-600 font-medium flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">trending_up</span>
+                            +@Model.RevenueGrowth% from last month
+                        </p>
+                    </div>
+                    <div class="w-48 h-24 bg-orange-50 rounded-lg relative overflow-hidden">
+                        <svg class="absolute bottom-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 40">
+                            <path d="M0,35 C10,30 20,38 30,25 C40,12 50,20 60,10 C70,0 80,15 90,5 L100,2" fill="none" stroke="#FF6B35" stroke-width="2"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Bookings -->
+            <div class="col-span-12 md:col-span-6 lg:col-span-3 bg-white rounded-2xl p-6 shadow-sm hover:-translate-y-1 transition-transform duration-300">
+                <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
+                    <span class="material-symbols-outlined">auto_awesome</span>
+                </div>
+                <p class="text-sm text-gray-600">New Bookings</p>
+                <h3 class="text-4xl font-bold text-gray-900 mt-2">@Model.NewBookings</h3>
+                <div class="mt-4 w-full bg-gray-200 rounded-full h-2">
+                    <div class="bg-blue-500 h-2 rounded-full" style="width: @Model.BookingProgress%"></div>
+                </div>
+                <p class="text-xs mt-2 text-gray-600">@Model.BookingProgress% of monthly goal</p>
+            </div>
+
+            <!-- Active Users -->
+            <div class="col-span-12 md:col-span-6 lg:col-span-3 bg-white rounded-2xl p-6 shadow-sm hover:-translate-y-1 transition-transform duration-300">
+                <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 mb-4">
+                    <span class="material-symbols-outlined">person_play</span>
+                </div>
+                <p class="text-sm text-gray-600">Active Users</p>
+                <h3 class="text-4xl font-bold text-gray-900 mt-2">@Model.ActiveUsers</h3>
+                <div class="flex -space-x-2 mt-4">
+                    <div class="w-8 h-8 rounded-full bg-orange-200 border-2 border-white"></div>
+                    <div class="w-8 h-8 rounded-full bg-blue-200 border-2 border-white"></div>
+                    <div class="w-8 h-8 rounded-full bg-green-200 border-2 border-white"></div>
+                    <div class="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs font-bold">+2k</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-12 gap-8">
+            <!-- Pending Approvals List -->
+            <section class="col-span-12 lg:col-span-8">
+                <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
+                    <div class="px-8 py-6 border-b border-gray-200 flex justify-between items-center">
+                        <h4 class="text-2xl font-bold text-gray-900">Pending Approvals</h4>
+                        <span class="bg-orange-100 text-primary px-4 py-1 rounded-full font-medium text-sm">@Model.PendingCount Actions Required</span>
+                    </div>
+                    <div class="p-0">
+                        @if (Model.PendingTours != null && Model.PendingTours.Any())
+                        {
+                            @foreach (var tour in Model.PendingTours)
+                            {
+                                <div class="flex items-center px-8 py-6 border-b border-gray-100 hover:bg-gray-50 transition-colors group">
+                                    <div class="w-20 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
+                                        <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                                             src="@(tour.Images?.FirstOrDefault() ?? "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800")" 
+                                             alt="@tour.Title">
+                                    </div>
+                                    <div class="ml-6 flex-grow">
+                                        <p class="font-medium text-gray-900">@tour.Title</p>
+                                        <p class="text-sm text-gray-600">@tour.Location</p>
+                                    </div>
+                                    <div class="hidden md:block px-6">
+                                        <p class="text-xs text-gray-600 mb-1">Price</p>
+                                        <p class="font-medium">@tour.Price.ToString("N0")₫</p>
+                                    </div>
+                                    <div class="flex gap-3">
+                                        <button class="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors">
+                                            <span class="material-symbols-outlined">close</span>
+                                        </button>
+                                        <button class="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark shadow-md transition-all">
+                                            Approve
+                                        </button>
+                                    </div>
+                                </div>
+                            }
+                        }
+                        else
+                        {
+                            <div class="text-center py-12 text-gray-600">No pending approvals</div>
+                        }
+                    </div>
+                    <div class="p-4 bg-gray-50 text-center">
+                        <button class="text-primary font-medium hover:underline transition-all">View All Pending Requests</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recent Activity Timeline -->
+            <aside class="col-span-12 lg:col-span-4">
+                <div class="bg-white rounded-2xl p-8 shadow-sm sticky top-12">
+                    <h4 class="text-2xl font-bold text-gray-900 mb-8">Recent Activity</h4>
+                    <div class="space-y-8 relative">
+                        <div class="absolute left-3.5 top-2 bottom-2 w-0.5 bg-gray-200"></div>
+
+                        @foreach (var activity in Model.RecentActivities)
+                        {
+                            <div class="relative flex gap-6">
+                                <div class="w-8 h-8 rounded-full @activity.IconBgClass flex items-center justify-center @activity.IconTextClass z-10">
+                                    <span class="material-symbols-outlined text-sm">@activity.Icon</span>
+                                </div>
+                                <div>
+                                    <p class="font-medium text-gray-900">@activity.Title</p>
+                                    <p class="text-sm text-gray-600 mb-1">@activity.Description</p>
+                                    <p class="text-xs text-gray-500">@activity.TimeAgo</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="mt-10 p-6 bg-orange-50 rounded-xl border border-orange-200">
+                        <p class="font-medium text-primary mb-2">Admin Tip</p>
+                        <p class="text-sm text-gray-700 leading-relaxed">
+                            Peak season for Northern Vietnam starts next week. Ensure all tours in Hanoi and Ha Long are verified.
+                        </p>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+</body>
+</html>

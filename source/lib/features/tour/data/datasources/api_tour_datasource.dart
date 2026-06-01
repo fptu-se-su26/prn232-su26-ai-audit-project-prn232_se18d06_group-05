@@ -3,6 +3,7 @@ import '../../../../core/config/api_config.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/services/token_storage.dart';
 import '../../../../core/utils/logger.dart';
+import '../../domain/entities/tour_entity.dart';
 import '../models/tour_model.dart';
 import 'tour_remote_datasource.dart';
 
@@ -156,14 +157,14 @@ class ApiTourDataSource implements TourRemoteDataSource {
         '/tours/$tourId',
         options: opts,
         data: {
-          if (title != null) 'title': title,
-          if (description != null) 'description': description,
-          if (location != null) 'location': location,
-          if (price != null) 'price': price,
-          if (durationHours != null) 'durationHours': durationHours,
-          if (maxParticipants != null) 'maxParticipants': maxParticipants,
-          if (images != null) 'images': images,
-          if (status != null) 'status': status,
+          'title': ?title,
+          'description': ?description,
+          'location': ?location,
+          'price': ?price,
+          'durationHours': ?durationHours,
+          'maxParticipants': ?maxParticipants,
+          'images': ?images,
+          'status': ?status,
         },
       );
       return TourModel.fromApiJson(res.data as Map<String, dynamic>);
@@ -179,6 +180,62 @@ class ApiTourDataSource implements TourRemoteDataSource {
     try {
       final opts = await _authOptions();
       await _dio.delete('/tours/$tourId', options: opts);
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  // ── Get Tour Templates ─────────────────────────────────────────────────────
+
+  @override
+  Future<List<TourTemplateEntity>> getTourTemplates() async {
+    try {
+      final res = await _dio.get('/tour-templates');
+      final data = res.data as Map<String, dynamic>;
+      final list = data['templates'] as List;
+
+      return list
+          .map(
+            (json) => TourTemplateEntity(
+              id: json['id'] as String,
+              title: json['title'] as String,
+              description: json['description'] as String?,
+              location: json['location'] as String,
+              images: json['images'] != null
+                  ? List<String>.from(json['images'] as List)
+                  : [],
+              createdAt: DateTime.parse(json['createdAt'] as String),
+            ),
+          )
+          .toList();
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
+  // ── Create Tour From Template ──────────────────────────────────────────────
+
+  @override
+  Future<TourModel> createTourFromTemplate({
+    required String guideId,
+    required String templateId,
+    required double price,
+    required int durationHours,
+    int maxParticipants = 10,
+  }) async {
+    try {
+      final opts = await _authOptions();
+      final res = await _dio.post(
+        '/tours/from-template',
+        options: opts,
+        data: {
+          'templateId': templateId,
+          'price': price,
+          'durationHours': durationHours,
+          'maxParticipants': maxParticipants,
+        },
+      );
+      return TourModel.fromApiJson(res.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw _mapError(e);
     }

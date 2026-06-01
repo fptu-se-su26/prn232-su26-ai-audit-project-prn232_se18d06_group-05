@@ -99,8 +99,8 @@ builder.Services.AddCors(options =>
             .AllowCredentials());
 });
 
-// ── Swagger + Controllers ─────────────────────────────────────────────────────
-builder.Services.AddControllers();
+// ── Swagger + Controllers + MVC Views ────────────────────────────────────────
+builder.Services.AddControllersWithViews(); // Add MVC with Views support
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(TripMate_WebAPI.Infrastructure.SwaggerConfig.AddJwtSecurity);
 builder.Services.AddOpenApi();
@@ -115,6 +115,10 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+// Enable static files (HTML, CSS, JS)
+app.UseDefaultFiles();  // Serve index.html as default
+app.UseStaticFiles();   // Serve files from wwwroot
+
 app.UseCors("AllowAll");
 
 // Chỉ redirect HTTPS trên production — dev để Flutter Web gọi http được
@@ -125,6 +129,9 @@ if (!app.Environment.IsDevelopment())
 
 app.UseAuthentication();   // phải trước UseAuthorization
 app.UseAuthorization();
-app.MapControllers();
+app.MapControllers(); // Map API controllers
+app.MapControllerRoute( // Map MVC routes
+    name: "default",
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();

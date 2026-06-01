@@ -115,7 +115,7 @@ class _BookingFormScreenState extends ConsumerState<BookingFormScreen> {
                             width: 72,
                             height: 72,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                            errorBuilder: (_, _, _) => Container(
                               width: 72,
                               height: 72,
                               color: Colors.grey.shade200,

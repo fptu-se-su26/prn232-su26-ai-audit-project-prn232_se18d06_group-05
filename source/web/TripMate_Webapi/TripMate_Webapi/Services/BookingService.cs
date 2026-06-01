@@ -51,7 +51,7 @@ public class BookingService
         // 2. Insert booking
         var body = new
         {
-            tour_id     = req.TourId,
+            guide_tour_id = req.TourId,  // Updated to use guide_tour_id
             traveler_id = travelerId,
             tour_date   = req.TourDate.ToString("yyyy-MM-dd"),
             guests      = req.Guests,
@@ -153,9 +153,11 @@ public class BookingService
 
     private async Task<TourRow?> GetTourAsync(string tourId)
     {
-        var url = $"{_supabaseUrl}/rest/v1/tours?id=eq.{tourId}&select=*";
-        var rows = await GetAsync<List<TourRow>>(url);
-        return rows?.FirstOrDefault();
+        // Updated to use guide_tours joined with tour_templates
+        var url = $"{_supabaseUrl}/rest/v1/guide_tours?id=eq.{tourId}&select=*,tour_templates(title,description,location,images,created_at),profiles(full_name)";
+        var rows = await GetAsync<List<GuideTourRow>>(url);
+        var guideTour = rows?.FirstOrDefault();
+        return guideTour != null ? MapGuideTourToTourRow(guideTour) : null;
     }
 
     private async Task<T?> GetAsync<T>(string url)
@@ -183,6 +185,29 @@ public class BookingService
             throw new Exception($"Supabase {r.StatusCode}: {content}");
     }
 
+    // ── Mapping methods ───────────────────────────────────────────────────────
+
+    private static TourRow MapGuideTourToTourRow(GuideTourRow guideTour)
+    {
+        return new TourRow
+        {
+            Id = guideTour.Id,
+            GuideId = guideTour.GuideId,
+            Title = guideTour.TourTemplate?.Title,
+            Description = guideTour.TourTemplate?.Description,
+            Location = guideTour.TourTemplate?.Location,
+            Price = guideTour.Price,
+            DurationHours = guideTour.DurationHours,
+            MaxParticipants = guideTour.MaxParticipants,
+            Images = guideTour.TourTemplate?.Images,
+            Rating = guideTour.Rating,
+            TotalReviews = guideTour.TotalReviews,
+            Status = guideTour.Status,
+            CreatedAt = guideTour.TourTemplate?.CreatedAt ?? DateTime.UtcNow,
+            UpdatedAt = guideTour.TourTemplate?.CreatedAt ?? DateTime.UtcNow
+        };
+    }
+
     private static BookingDto MapToDto(BookingRow row, TourRow? tour) => new(
         Id:           row.Id ?? "",
         TourId:       row.TourId ?? "",
@@ -203,14 +228,14 @@ public class BookingService
 
 internal class BookingRow
 {
-    [JsonPropertyName("id")]          public string? Id { get; set; }
-    [JsonPropertyName("tour_id")]     public string? TourId { get; set; }
-    [JsonPropertyName("traveler_id")] public string? TravelerId { get; set; }
-    [JsonPropertyName("tour_date")]   public string? TourDate { get; set; }
-    [JsonPropertyName("guests")]      public int Guests { get; set; }
-    [JsonPropertyName("unit_price")]  public double UnitPrice { get; set; }
-    [JsonPropertyName("total_price")] public double TotalPrice { get; set; }
-    [JsonPropertyName("note")]        public string? Note { get; set; }
-    [JsonPropertyName("status")]      public string? Status { get; set; }
-    [JsonPropertyName("created_at")]  public DateTime CreatedAt { get; set; }
+    [JsonPropertyName("id")]              public string? Id { get; set; }
+    [JsonPropertyName("guide_tour_id")]   public string? TourId { get; set; }  // Updated to guide_tour_id
+    [JsonPropertyName("traveler_id")]     public string? TravelerId { get; set; }
+    [JsonPropertyName("tour_date")]       public string? TourDate { get; set; }
+    [JsonPropertyName("guests")]          public int Guests { get; set; }
+    [JsonPropertyName("unit_price")]      public double UnitPrice { get; set; }
+    [JsonPropertyName("total_price")]     public double TotalPrice { get; set; }
+    [JsonPropertyName("note")]            public string? Note { get; set; }
+    [JsonPropertyName("status")]          public string? Status { get; set; }
+    [JsonPropertyName("created_at")]      public DateTime CreatedAt { get; set; }
 }

@@ -1,0 +1,176 @@
+@page
+@model TripMateWeb.Pages.Tours.IndexModel
+@{
+    ViewData["Title"] = "Danh sách Tours";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-map me-2"></i>Danh sách Tours</h1>
+    @{
+        var currentUserRole = Context.Session.GetString("CurrentUserRole");
+    }
+    @if (currentUserRole == "guide" || currentUserRole == "admin")
+    {
+        <a asp-page="Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Tạo tour mới
+        </a>
+    }
+</div>
+
+<!-- Search and Filter -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Tìm kiếm</label>
+                    <input type="text" class="form-control" name="search" value="@Model.SearchTerm" placeholder="Tên tour, địa điểm...">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Địa điểm</label>
+                    <select class="form-select" name="location">
+                        <option value="">Tất cả địa điểm</option>
+                        @foreach (var location in Model.Locations)
+                        {
+                            <option value="@location" selected="@(location == Model.SelectedLocation)">@location</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Giá tối đa</label>
+                    <input type="number" class="form-control" name="maxPrice" value="@Model.MaxPrice" placeholder="VNĐ">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Thời gian</label>
+                    <select class="form-select" name="duration">
+                        <option value="">Tất cả</option>
+                        <option value="1-4" selected="@(Model.DurationFilter == "1-4")">1-4 giờ</option>
+                        <option value="5-8" selected="@(Model.DurationFilter == "5-8")">5-8 giờ</option>
+                        <option value="9+" selected="@(Model.DurationFilter == "9+")">Trên 8 giờ</option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results -->
+<div class="row">
+    <div class="col-12 mb-3">
+        <p class="text-muted">
+            Tìm thấy <strong>@Model.Tours.Count</strong> tours
+            @if (!string.IsNullOrEmpty(Model.SearchTerm))
+            {
+                <span>cho "<strong>@Model.SearchTerm</strong>"</span>
+            }
+        </p>
+    </div>
+</div>
+
+<div class="row">
+    @foreach (var tour in Model.Tours)
+    {
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 shadow-sm">
+                @if (tour.TourTemplate.Images.Any())
+                {
+                    <img src="@tour.TourTemplate.Images.First()" class="card-img-top" alt="@tour.TourTemplate.Title" style="height: 200px; object-fit: cover;">
+                }
+                else
+                {
+                    <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                        <i class="bi bi-image text-muted" style="font-size: 3rem;"></i>
+                    </div>
+                }
+                
+                <div class="card-body">
+                    <h5 class="card-title">@tour.TourTemplate.Title</h5>
+                    <p class="card-text text-muted mb-2">
+                        <i class="bi bi-geo-alt me-1"></i>@tour.TourTemplate.Location
+                    </p>
+                    <p class="card-text text-muted mb-2">
+                        <i class="bi bi-clock me-1"></i>@tour.DurationHours giờ
+                        <span class="ms-3">
+                            <i class="bi bi-people me-1"></i>Tối đa @tour.MaxParticipants người
+                        </span>
+                    </p>
+                    
+                    @if (!string.IsNullOrEmpty(tour.TourTemplate.Description))
+                    {
+                        <p class="card-text">
+                            @(tour.TourTemplate.Description.Length > 80 ? 
+                              tour.TourTemplate.Description.Substring(0, 80) + "..." : 
+                              tour.TourTemplate.Description)
+                        </p>
+                    }
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            <span class="h5 text-primary mb-0">@tour.Price.ToString("C0", new System.Globalization.CultureInfo("vi-VN"))</span>
+                            <small class="text-muted">/người</small>
+                        </div>
+                        <div class="text-end">
+                            @if (tour.Rating > 0)
+                            {
+                                <div class="text-warning">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="bi @(i <= tour.Rating ? "bi-star-fill" : "bi-star")"></i>
+                                    }
+                                    <span class="text-dark ms-1">@tour.Rating.ToString("F1")</span>
+                                </div>
+                                <small class="text-muted">(@tour.TotalReviews đánh giá)</small>
+                            }
+                            else
+                            {
+                                <small class="text-muted">Chưa có đánh giá</small>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <small class="text-muted">
+                            <i class="bi bi-person me-1"></i>Hướng dẫn: @tour.Guide.FullName
+                        </small>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-transparent">
+                    <div class="d-grid gap-2">
+                        <a asp-page="Details" asp-route-id="@tour.Id" class="btn btn-primary">
+                            <i class="bi bi-eye me-2"></i>Xem chi tiết
+                        </a>
+                        @if (currentUserRole == "guide" && tour.GuideId.ToString() == Context.Session.GetString("CurrentUserId"))
+                        {
+                            <div class="btn-group" role="group">
+                                <a asp-page="Edit" asp-route-id="@tour.Id" class="btn btn-outline-secondary btn-sm">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a asp-page="Delete" asp-route-id="@tour.Id" class="btn btn-outline-danger btn-sm">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (!Model.Tours.Any())
+{
+    <div class="text-center py-5">
+        <i class="bi bi-search text-muted" style="font-size: 4rem;"></i>
+        <h4 class="text-muted mt-3">Không tìm thấy tours nào</h4>
+        <p class="text-muted">Hãy thử thay đổi bộ lọc tìm kiếm của bạn</p>
+        <a asp-page="/Index" class="btn btn-primary">
+            <i class="bi bi-arrow-left me-2"></i>Về trang chủ
+        </a>
+    </div>
+}

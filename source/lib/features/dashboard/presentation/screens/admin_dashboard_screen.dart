@@ -496,7 +496,7 @@ class _ApprovalsTabState extends State<_ApprovalsTab> {
           : ListView.separated(
               padding: const EdgeInsets.all(16),
               itemCount: _pending.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              separatorBuilder: (_, _) => const SizedBox(height: 12),
               itemBuilder: (_, i) {
                 final item = _pending[i];
                 return Container(
@@ -520,7 +520,7 @@ class _ApprovalsTabState extends State<_ApprovalsTab> {
                           width: 80,
                           height: 80,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
+                          errorBuilder: (_, _, _) => Container(
                             width: 80,
                             height: 80,
                             color: Colors.grey.shade200,
@@ -661,7 +661,7 @@ class _ReportsTab extends StatelessWidget {
       body: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: _reports.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 10),
+        separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (_, i) {
           final r = _reports[i];
           final isHigh = r['severity'] == 'high';

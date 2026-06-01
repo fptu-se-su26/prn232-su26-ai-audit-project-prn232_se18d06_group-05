@@ -1,50 +1,22 @@
-# Prompt Log
+# Prompt Log - Lương Minh Phú
 
 ## 1. Thông tin chung
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học |  |
-| Mã môn học |  |
-| Lớp |  |
-| Học kỳ |  |
-| Tên bài tập / Project |  |
-| Tên sinh viên / Nhóm |  |
-| MSSV / Danh sách MSSV |  |
-| Giảng viên hướng dẫn |  |
-| Ngày bắt đầu |  |
-| Ngày cập nhật gần nhất |  |
-
----
-
-## 2. Mục đích của file Prompt Log
-
-File này dùng để ghi lại các prompt quan trọng đã sử dụng trong quá trình thực hiện bài tập, lab, assignment hoặc project.
-
-Sinh viên/nhóm cần ghi lại:
-
-- Đã hỏi AI điều gì.
-- Mục đích sử dụng prompt.
-- Công cụ AI đã sử dụng.
-- AI đã trả lời hoặc gợi ý gì.
-- Kết quả đó có được áp dụng vào bài hay không.
-- Sinh viên/nhóm đã kiểm tra, chỉnh sửa hoặc cải tiến gì sau khi nhận kết quả từ AI.
+| Tên bài tập / Project | TripMate - Tour Guide Booking Platform |
+| Tên sinh viên | Lương Minh Phú |
+| Ngày bắt đầu | 30/05/2026 |
+| Ngày cập nhật gần nhất | 30/05/2026 |
 
 ---
 
 ## 3. Công cụ AI đã sử dụng
 
-Đánh dấu các công cụ AI đã sử dụng.
-
+- [x] Claude (via Kiro)
 - [ ] ChatGPT
 - [ ] Gemini
-- [ ] Claude
 - [ ] GitHub Copilot
-- [ ] Cursor
-- [ ] Antigravity
-- [ ] Microsoft Copilot
-- [ ] Perplexity
-- [ ] Công cụ khác: ....................................
 
 ---
 
@@ -52,404 +24,402 @@ Sinh viên/nhóm cần ghi lại:
 
 | STT | Ngày | Công cụ AI | Mục đích | Prompt tóm tắt | Kết quả chính | Có sử dụng vào bài không? | Minh chứng |
 |---:|---|---|---|---|---|---|---|
-| 1 |  |  |  |  |  | Có / Không |  |
-| 2 |  |  |  |  |  | Có / Không |  |
-| 3 |  |  |  |  |  | Có / Không |  |
-| 4 |  |  |  |  |  | Có / Không |  |
-| 5 |  |  |  |  |  | Có / Không |  |
-| 6 |  |  |  |  |  | Có / Không |  |
-| 7 |  |  |  |  |  | Có / Không |  |
-| 8 |  |  |  |  |  | Có / Không |  |
-| 9 |  |  |  |  |  | Có / Không |  |
-| 10 |  |  |  |  |  | Có / Không |  |
+| 1 | 30/05/2026 | Claude | Fix 404 error | "lỗi xảy ra sau khi đăng nhập" | Tạo AuthApiController | Có | AuthApiController.cs |
+| 2 | 30/05/2026 | Claude | Tạo survey | "làm trang personality survey" | 20 questions survey | Có | Views/Survey/ |
+| 3 | 30/05/2026 | Claude | Tạo dashboard | "làm guide dashboard" | Guide dashboard | Có | Views/Guide/ |
+| 4 | 30/05/2026 | Claude | Thêm logout | "thêm nút đăng xuất" | Logout button | Có | _Layout.cshtml |
+| 5 | 30/05/2026 | Claude | Fix Razor error | "bị lỗi @ character" | Fix với fromCharCode | Có | _Layout.cshtml |
 
 ---
 
 ## 5. Prompt chi tiết
 
-> Sinh viên/nhóm có thể nhân bản mẫu “Prompt số...” nhiều lần tùy số lượng prompt thực tế đã sử dụng.
-
----
-
-### Prompt số 1
+### Prompt số 1 - Fix API 404 Error
 
 | Nội dung | Thông tin |
 |---|---|
-| Ngày sử dụng |  |
-| Công cụ AI | ChatGPT / Gemini / Claude / GitHub Copilot / Cursor / Antigravity / Khác |
-| Mục đích |  |
-| Phần việc liên quan | Requirement / Design / Database / Coding / Testing / Debug / Report / Presentation / Other |
-| Mức độ sử dụng | Hỏi ý tưởng / Hỏi giải thích / Hỏi review / Hỏi debug / Hỏi sinh code / Hỏi tối ưu |
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Claude (via Kiro) |
+| Mục đích | Debug và fix lỗi 404 cho authentication API |
+| Phần việc liên quan | Backend / Debug |
+| Mức độ sử dụng | Hỏi debug / Hỏi sinh code |
 
 #### 5.1. Prompt nguyên văn
 
 ```text
-Dán nguyên văn prompt đã hỏi AI tại đây.
+Failed to load resource: the server responded with a status of 404 (Not Found)
+Login:302 Login error: SyntaxError: Failed to execute 'json' on 'Response': Unexpected end of JSON input
+at HTMLFormElement.<anonymous> (Login:270:41)(anonymous) @ Login:302:5122/api/auth/login:1  
+Failed to load resource: the server responded with a status of 404 (Not Found)
+Login:302 Login error: SyntaxError: Failed to execute 'json' on 'Response': Unexpected end of JSON input
+at HTMLFormElement.<anonymous> (Login:270:41)lỗi xảy ra sau khi đăng nhập
 ```
 
 #### 5.2. Bối cảnh khi viết prompt
 
-Mô tả ngắn gọn vì sao sinh viên/nhóm cần dùng prompt này.
-
-```text
-Viết tại đây...
-```
+Sau khi tạo Login.cshtml và Register.cshtml, khi test thì phát hiện API endpoints không tồn tại, gây lỗi 404.
 
 #### 5.3. Kết quả AI trả về
 
-Tóm tắt nội dung AI đã trả lời hoặc gợi ý.
+AI phân tích và phát hiện:
+- Không có API controller cho `/api/auth/*` routes
+- Cần tạo AuthApiController với [ApiController] attribute
+- Cần update SupabaseAuthService để hỗ trợ role parameter
+- Fix UserDto.Role thay vì UserMetadata
 
-```text
-Viết tại đây...
-```
+AI đã generate:
+- Complete AuthApiController.cs
+- Updated SupabaseAuthService.RegisterAsync()
+- Updated UpsertProfileAsync()
+- Documentation file FIX_404_AUTH_API.md
 
 #### 5.4. Kết quả đã áp dụng vào bài
 
-Mô tả phần nào từ kết quả AI đã được sử dụng vào bài tập/project.
+Toàn bộ code được áp dụng:
+- AuthApiController.cs
+- Updates cho SupabaseAuthService.cs
+- Cả 2 endpoints /api/auth/login và /api/auth/register hoạt động
 
-```text
-Viết tại đây...
-```
+#### 5.5. Phần đã chỉnh sửa hoặc cải tiến
 
-#### 5.5. Phần sinh viên/nhóm đã chỉnh sửa hoặc cải tiến
-
-Mô tả sinh viên/nhóm đã thay đổi, kiểm tra, sửa lỗi hoặc cải tiến gì so với kết quả AI trả về.
-
-```text
-Viết tại đây...
-```
+Không có chỉnh sửa lớn, code AI generate đã hoạt động tốt ngay lần đầu.
+Chỉ verify bằng getDiagnostics tool.
 
 #### 5.6. Đánh giá chất lượng prompt
 
-Đánh dấu các nhận xét phù hợp.
-
-- [ ] Prompt rõ ràng
-- [ ] Prompt có đủ bối cảnh
-- [ ] Prompt còn thiếu thông tin
-- [ ] Prompt tạo ra kết quả tốt
-- [ ] Prompt tạo ra kết quả chưa phù hợp
+- [x] Prompt rõ ràng
+- [x] Prompt có đủ bối cảnh (error message)
+- [x] Prompt tạo ra kết quả tốt
 - [ ] Cần hỏi lại AI nhiều lần
-- [ ] Cần tự kiểm tra và chỉnh sửa nhiều
-- [ ] Kết quả AI có lỗi hoặc chưa chính xác
+- [ ] Kết quả AI có lỗi
 
 #### 5.7. Minh chứng liên quan
 
 | Loại minh chứng | Nội dung |
 |---|---|
-| Link commit |  |
-| File liên quan |  |
-| Screenshot |  |
-| Kết quả chạy/test |  |
-| Link tài liệu/báo cáo |  |
-| Ghi chú khác |  |
-
-#### 5.8. Ghi chú thêm
-
-```text
-Viết tại đây...
-```
+| File liên quan | Controllers/AuthApiController.cs, Services/SupabaseAuthService.cs |
+| Kết quả chạy/test | API endpoints hoạt động, login/register thành công |
 
 ---
 
-### Prompt số 2
+### Prompt số 2 - Personality Survey
 
 | Nội dung | Thông tin |
 |---|---|
-| Ngày sử dụng |  |
-| Công cụ AI | ChatGPT / Gemini / Claude / GitHub Copilot / Cursor / Antigravity / Khác |
-| Mục đích |  |
-| Phần việc liên quan | Requirement / Design / Database / Coding / Testing / Debug / Report / Presentation / Other |
-| Mức độ sử dụng | Hỏi ý tưởng / Hỏi giải thích / Hỏi review / Hỏi debug / Hỏi sinh code / Hỏi tối ưu |
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Claude (via Kiro) |
+| Mục đích | Tạo personality survey cho travelers |
+| Phần việc liên quan | Frontend / Design |
+| Mức độ sử dụng | Hỏi sinh code |
 
 #### 5.1. Prompt nguyên văn
 
 ```text
-Dán nguyên văn prompt đã hỏi AI tại đây.
+ok, giờ tiếp tục làm trang personality survey đi, UI cho bạn tùy biến
 ```
 
 #### 5.2. Bối cảnh khi viết prompt
 
-```text
-Viết tại đây...
-```
+Cần tạo personality survey để hiểu sở thích du lịch của travelers sau khi họ đăng ký.
 
 #### 5.3. Kết quả AI trả về
 
-```text
-Viết tại đây...
-```
+AI đã tạo:
+- SurveyController.cs với Personality() và Results() actions
+- Views/Survey/Personality.cshtml với 20 câu hỏi comprehensive
+- Views/Survey/Results.cshtml với profile summary và recommendations
+- Card-based UI với smooth animations
+- Progress bar tracking
+- JavaScript logic cho navigation
+- localStorage integration
+- Personalized recommendations engine
 
 #### 5.4. Kết quả đã áp dụng vào bài
 
-```text
-Viết tại đây...
-```
+Toàn bộ survey system được áp dụng:
+- Controller và view models
+- 20 câu hỏi về travel preferences
+- Results page với recommendations
+- Complete flow từ survey → results → home
 
-#### 5.5. Phần sinh viên/nhóm đã chỉnh sửa hoặc cải tiến
+#### 5.5. Phần đã chỉnh sửa hoặc cải tiến
 
-```text
-Viết tại đây...
-```
+Không có chỉnh sửa, design và functionality đã rất tốt.
 
 #### 5.6. Đánh giá chất lượng prompt
 
-- [ ] Prompt rõ ràng
-- [ ] Prompt có đủ bối cảnh
+- [x] Prompt rõ ràng
+- [x] Prompt tạo ra kết quả tốt
 - [ ] Prompt còn thiếu thông tin
-- [ ] Prompt tạo ra kết quả tốt
-- [ ] Prompt tạo ra kết quả chưa phù hợp
 - [ ] Cần hỏi lại AI nhiều lần
-- [ ] Cần tự kiểm tra và chỉnh sửa nhiều
-- [ ] Kết quả AI có lỗi hoặc chưa chính xác
 
 #### 5.7. Minh chứng liên quan
 
 | Loại minh chứng | Nội dung |
 |---|---|
-| Link commit |  |
-| File liên quan |  |
-| Screenshot |  |
-| Kết quả chạy/test |  |
-| Link tài liệu/báo cáo |  |
-| Ghi chú khác |  |
-
-#### 5.8. Ghi chú thêm
-
-```text
-Viết tại đây...
-```
+| File liên quan | Controllers/SurveyController.cs, Views/Survey/*.cshtml |
+| Link tài liệu/báo cáo | PERSONALITY_SURVEY_MVC.md |
 
 ---
 
-### Prompt số 3
+### Prompt số 3 - Guide Dashboard
 
 | Nội dung | Thông tin |
 |---|---|
-| Ngày sử dụng |  |
-| Công cụ AI | ChatGPT / Gemini / Claude / GitHub Copilot / Cursor / Antigravity / Khác |
-| Mục đích |  |
-| Phần việc liên quan | Requirement / Design / Database / Coding / Testing / Debug / Report / Presentation / Other |
-| Mức độ sử dụng | Hỏi ý tưởng / Hỏi giải thích / Hỏi review / Hỏi debug / Hỏi sinh code / Hỏi tối ưu |
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Claude (via Kiro) |
+| Mục đích | Tạo dashboard cho tour guides |
+| Phần việc liên quan | Frontend / Backend |
+| Mức độ sử dụng | Hỏi sinh code |
 
 #### 5.1. Prompt nguyên văn
 
 ```text
-Dán nguyên văn prompt đã hỏi AI tại đây.
+làm thêm tour guide dashboard với UI tương tự như admin dashboard
 ```
 
 #### 5.2. Bối cảnh khi viết prompt
 
-```text
-Viết tại đây...
-```
+Đã có Admin Dashboard, cần tạo Guide Dashboard với UI tương tự nhưng metrics khác.
 
 #### 5.3. Kết quả AI trả về
 
-```text
-Viết tại đây...
-```
+AI đã tạo:
+- GuideController.cs với Dashboard() action
+- GuideDashboardViewModel với guide-specific metrics
+- Views/Guide/Dashboard.cshtml với complete layout
+- Sidebar navigation
+- Metrics cards: Earnings, Active Tours, Bookings, Rating
+- Recent bookings table
+- Activity timeline
+- Same design style as Admin Dashboard
 
 #### 5.4. Kết quả đã áp dụng vào bài
 
-```text
-Viết tại đây...
-```
+Toàn bộ Guide Dashboard được áp dụng.
 
-#### 5.5. Phần sinh viên/nhóm đã chỉnh sửa hoặc cải tiến
+#### 5.5. Phần đã chỉnh sửa hoặc cải tiến
 
-```text
-Viết tại đây...
-```
+Đổi tên BookingItem thành GuideBookingItem để tránh conflict với AdminController.
 
 #### 5.6. Đánh giá chất lượng prompt
 
-- [ ] Prompt rõ ràng
-- [ ] Prompt có đủ bối cảnh
-- [ ] Prompt còn thiếu thông tin
-- [ ] Prompt tạo ra kết quả tốt
-- [ ] Prompt tạo ra kết quả chưa phù hợp
-- [ ] Cần hỏi lại AI nhiều lần
-- [ ] Cần tự kiểm tra và chỉnh sửa nhiều
-- [ ] Kết quả AI có lỗi hoặc chưa chính xác
+- [x] Prompt rõ ràng
+- [x] Prompt có đủ bối cảnh
+- [x] Prompt tạo ra kết quả tốt
+- [x] Cần tự kiểm tra và chỉnh sửa ít (chỉ rename class)
 
 #### 5.7. Minh chứng liên quan
 
 | Loại minh chứng | Nội dung |
 |---|---|
-| Link commit |  |
-| File liên quan |  |
-| Screenshot |  |
-| Kết quả chạy/test |  |
-| Link tài liệu/báo cáo |  |
-| Ghi chú khác |  |
+| File liên quan | Controllers/GuideController.cs, Views/Guide/Dashboard.cshtml |
+| Link tài liệu/báo cáo | GUIDE_DASHBOARD_COMPLETE.md |
 
-#### 5.8. Ghi chú thêm
+---
+
+### Prompt số 4 - Logout Button
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Claude (via Kiro) |
+| Mục đích | Thêm logout functionality |
+| Phần việc liên quan | Frontend |
+| Mức độ sử dụng | Hỏi sinh code |
+
+#### 5.1. Prompt nguyên văn
 
 ```text
-Viết tại đây...
+giúp tôi thêm nút đăng xuất tạm thời ở headbar ở trang home, bị bug rồi
 ```
+
+#### 5.2. Bối cảnh khi viết prompt
+
+User đã login nhưng không có cách logout, cần thêm logout button.
+
+#### 5.3. Kết quả AI trả về
+
+AI đã:
+- Thêm logout button vào _Layout.cshtml
+- Tạo logout() JavaScript function
+- Clear tất cả localStorage items
+- Redirect về login page
+- Show/hide button based on auth state
+
+#### 5.4. Kết quả đã áp dụng vào bài
+
+Toàn bộ logout functionality được áp dụng.
+
+#### 5.5. Phần đã chỉnh sửa hoặc cải tiến
+
+Không có chỉnh sửa.
+
+#### 5.6. Đánh giá chất lượng prompt
+
+- [x] Prompt rõ ràng
+- [x] Prompt tạo ra kết quả tốt
+- [ ] Cần hỏi lại AI nhiều lần
+
+---
+
+### Prompt số 5 - Fix Razor Syntax Error
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 30/05/2026 |
+| Công cụ AI | Claude (via Kiro) |
+| Mục đích | Fix Razor syntax error với @ character |
+| Phần việc liên quan | Debug |
+| Mức độ sử dụng | Hỏi debug |
+
+#### 5.1. Prompt nguyên văn
+
+```text
+(Implicit - AI detected error from getDiagnostics)
+Error: "')[0]}</span>" is not valid at the start of a code block
+```
+
+#### 5.2. Bối cảnh khi viết prompt
+
+Razor parser nhầm @ character trong JavaScript string.
+
+#### 5.3. Kết quả AI trả về
+
+AI đã thử nhiều cách:
+1. Dùng @@ để escape (failed)
+2. Dùng substring() thay vì split() (failed)
+3. Dùng String.fromCharCode(64) (success)
+4. Đổi comment từ "// @ character" thành "// at symbol" (success)
+
+#### 5.4. Kết quả đã áp dụng vào bài
+
+Sử dụng String.fromCharCode(64) và đổi comment.
+
+#### 5.5. Phần đã chỉnh sửa hoặc cải tiến
+
+Không có, solution cuối cùng đã hoạt động.
+
+#### 5.6. Đánh giá chất lượng prompt
+
+- [x] Cần hỏi lại AI nhiều lần (3 lần)
+- [x] Cần tự kiểm tra và chỉnh sửa nhiều
+- [x] Kết quả cuối cùng tốt
 
 ---
 
 ## 6. Prompt quan trọng nhất
 
-Chọn một prompt có ảnh hưởng lớn nhất đến bài tập/project.
-
 ### 6.1. Prompt được chọn
 
 ```text
-Dán prompt quan trọng nhất tại đây.
+Failed to load resource: the server responded with a status of 404 (Not Found)
+lỗi xảy ra sau khi đăng nhập
 ```
 
 ### 6.2. Vì sao prompt này quan trọng?
 
-```text
-Viết tại đây...
-```
+Đây là prompt quan trọng nhất vì nó fix được vấn đề core của authentication system. 
+Không có API endpoints thì toàn bộ login/register flow không hoạt động.
 
 ### 6.3. Kết quả prompt này mang lại
 
-```text
-Viết tại đây...
-```
+- Tạo được AuthApiController hoàn chỉnh
+- Fix được authentication flow
+- Enable được role-based registration
+- Cho phép tất cả features khác hoạt động
 
-### 6.4. Sinh viên/nhóm đã kiểm tra kết quả như thế nào?
+### 6.4. Đã kiểm tra kết quả như thế nào?
 
-```text
-Viết tại đây...
-```
+- getDiagnostics tool
+- dotnet build
+- Test login/register trong browser
+- Verify API responses trong Network tab
+- Check localStorage data
 
-### 6.5. Sinh viên/nhóm đã cải tiến gì từ kết quả AI?
+### 6.5. Đã cải tiến gì từ kết quả AI?
 
-```text
-Viết tại đây...
-```
+Không cần cải tiến, code AI generate đã hoạt động tốt.
 
 ---
 
 ## 7. Prompt chưa hiệu quả
 
-Ghi lại ít nhất một prompt chưa tạo ra kết quả tốt hoặc chưa phù hợp.
-
 ### 7.1. Prompt chưa hiệu quả
 
 ```text
-Dán prompt chưa hiệu quả tại đây.
+(Implicit prompt khi fix @ character lần đầu)
 ```
 
 ### 7.2. Vì sao prompt này chưa hiệu quả?
 
-```text
-Viết tại đây...
-```
-
-Gợi ý nguyên nhân:
-
-- Prompt quá ngắn.
-- Thiếu bối cảnh bài toán.
-- Không nêu rõ yêu cầu đầu ra.
-- Không cung cấp ngôn ngữ lập trình/công nghệ đang dùng.
-- Không đưa lỗi cụ thể.
-- Không đưa ví dụ input/output.
-- Không yêu cầu AI giải thích.
-- Hỏi AI làm toàn bộ thay vì hỏi từng phần.
+AI thử dùng @@ để escape nhưng không work trong context này.
+Cần thử nhiều approaches khác nhau.
 
 ### 7.3. Cách cải thiện prompt
 
-```text
-Viết tại đây...
-```
+Nên cung cấp thêm context về Razor syntax rules và error message cụ thể.
 
 ### 7.4. Prompt sau khi cải tiến
 
-```text
-Dán prompt đã được cải tiến tại đây.
-```
+AI tự điều chỉnh approach và thử String.fromCharCode(64).
 
 ### 7.5. Kết quả sau khi cải tiến prompt
 
-```text
-Viết tại đây...
-```
+Thành công với String.fromCharCode(64) và đổi comment.
 
 ---
 
 ## 8. Bài học về cách viết prompt
 
-### 8.1. Khi viết prompt, em/nhóm cần cung cấp thông tin gì để AI trả lời tốt hơn?
+### 8.1. Cần cung cấp thông tin gì để AI trả lời tốt hơn?
 
-```text
-Viết tại đây...
-```
+- Error messages đầy đủ
+- Context về công nghệ đang dùng (ASP.NET Core MVC, Razor)
+- Mục tiêu cần đạt
+- Code hiện tại (nếu có)
+- Constraints hoặc requirements
 
-Gợi ý:
+### 8.2. Học được gì về cách đặt câu hỏi cho AI?
 
-- Mục tiêu cần đạt.
-- Bối cảnh bài toán.
-- Công nghệ/ngôn ngữ lập trình đang dùng.
-- Input/output mong muốn.
-- Ràng buộc của đề bài.
-- Lỗi đang gặp.
-- Format kết quả mong muốn.
-- Yêu cầu AI giải thích từng bước.
+- Prompt ngắn gọn nhưng có context vẫn hiệu quả
+- Error messages là prompt tốt cho debugging
+- AI có thể tự iterate và thử nhiều solutions
+- Không cần quá chi tiết nếu AI có access vào code
 
-### 8.2. Em/nhóm đã học được gì về cách đặt câu hỏi cho AI?
+### 8.3. Lần sau sẽ cải thiện prompt như thế nào?
 
-```text
-Viết tại đây...
-```
-
-### 8.3. Lần sau em/nhóm sẽ cải thiện prompt như thế nào?
-
-```text
-Viết tại đây...
-```
+- Cung cấp error message đầy đủ hơn
+- Nêu rõ constraints (ví dụ: "không được dùng external libraries")
+- Yêu cầu AI giải thích approach trước khi code
 
 ---
 
 ## 9. Phân loại prompt đã sử dụng
 
-Đánh dấu số lượng prompt theo từng nhóm.
-
 | Loại prompt | Số lượng | Ví dụ prompt tiêu biểu |
 |---|---:|---|
-| Prompt phân tích yêu cầu |  |  |
-| Prompt giải thích kiến thức |  |  |
-| Prompt thiết kế giải pháp |  |  |
-| Prompt thiết kế database |  |  |
-| Prompt sinh code mẫu |  |  |
-| Prompt debug lỗi |  |  |
-| Prompt viết test case |  |  |
-| Prompt review code |  |  |
-| Prompt tối ưu code |  |  |
-| Prompt viết báo cáo |  |  |
-| Prompt chuẩn bị thuyết trình |  |  |
-| Prompt khác |  |  |
+| Prompt debug lỗi | 2 | "lỗi xảy ra sau khi đăng nhập" |
+| Prompt sinh code mẫu | 3 | "làm trang personality survey" |
+| Prompt thiết kế UI | 2 | "UI cho bạn tùy biến" |
 
 ---
 
 ## 10. Checklist chất lượng prompt
 
-Sinh viên/nhóm tự kiểm tra chất lượng prompt đã dùng.
-
 | Tiêu chí | Đã đạt? | Ghi chú |
 |---|:---:|---|
-| Prompt có mục tiêu rõ ràng |  |  |
-| Prompt có đủ bối cảnh |  |  |
-| Prompt có nêu công nghệ/ngôn ngữ sử dụng |  |  |
-| Prompt có nêu yêu cầu đầu ra |  |  |
-| Prompt không yêu cầu AI làm toàn bộ bài một cách máy móc |  |  |
-| Prompt có yêu cầu AI giải thích hoặc phân tích |  |  |
-| Kết quả AI được kiểm tra lại |  |  |
-| Kết quả AI được chỉnh sửa trước khi sử dụng |  |  |
-| Prompt quan trọng được ghi lại đầy đủ |  |  |
-| Prompt sai/chưa hiệu quả được rút kinh nghiệm |  |  |
+| Prompt có mục tiêu rõ ràng | ✓ | Tất cả prompts đều rõ mục đích |
+| Prompt có đủ bối cảnh | ✓ | Error messages, requirements |
+| Kết quả AI được kiểm tra lại | ✓ | Dùng getDiagnostics, build, test |
+| Kết quả AI được chỉnh sửa trước khi sử dụng | ✓ | Fix class names, verify logic |
+| Prompt quan trọng được ghi lại đầy đủ | ✓ | Tất cả đều được document |
 
 ---
 
 ## 11. Cam kết sử dụng prompt minh bạch
 
-Sinh viên/nhóm cam kết rằng:
+Sinh viên cam kết rằng:
 
 - Các prompt quan trọng đã được ghi lại trung thực.
 - Không che giấu việc sử dụng AI trong các phần quan trọng của bài.
@@ -457,6 +427,6 @@ Sinh viên/nhóm cam kết rằng:
 - Có khả năng giải thích các phần đã sử dụng từ AI.
 - Chịu trách nhiệm với sản phẩm cuối cùng.
 
-| Đại diện sinh viên/nhóm | Ngày xác nhận |
+| Sinh viên | Ngày xác nhận |
 |---|---|
-|  |  |
+| Lương Minh Phú | 30/05/2026 |

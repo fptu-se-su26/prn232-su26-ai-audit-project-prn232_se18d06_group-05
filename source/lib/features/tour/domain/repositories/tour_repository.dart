@@ -4,7 +4,7 @@ import '../entities/tour_entity.dart';
 
 /// Tour repository interface
 abstract class TourRepository {
-  /// Get all active tours
+  /// Get all active tours (guide_tours joined with tour_templates)
   Future<Either<Failure, List<TourEntity>>> getTours();
 
   /// Get tour by ID
@@ -16,7 +16,7 @@ abstract class TourRepository {
   /// Search tours by location or title
   Future<Either<Failure, List<TourEntity>>> searchTours(String query);
 
-  /// Create a new tour (guide only)
+  /// Create a new tour (creates template if needed, then guide_tour)
   Future<Either<Failure, TourEntity>> createTour({
     required String title,
     String? description,
@@ -42,4 +42,15 @@ abstract class TourRepository {
 
   /// Delete tour (guide only)
   Future<Either<Failure, void>> deleteTour(String tourId);
+
+  /// Get tour templates
+  Future<Either<Failure, List<TourTemplateEntity>>> getTourTemplates();
+
+  /// Create tour from existing template
+  Future<Either<Failure, TourEntity>> createTourFromTemplate({
+    required String templateId,
+    required double price,
+    required int durationHours,
+    int maxParticipants = 10,
+  });
 }

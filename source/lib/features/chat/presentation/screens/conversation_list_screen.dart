@@ -118,7 +118,7 @@ class _ConversationListScreenState
                   ref.read(conversationsProvider.notifier).load(),
               child: ListView.separated(
                 itemCount: state.conversations.length,
-                separatorBuilder: (_, __) =>
+                separatorBuilder: (_, _) =>
                     Divider(height: 1, color: Colors.grey.shade100),
                 itemBuilder: (_, i) {
                   final conv = state.conversations[i];

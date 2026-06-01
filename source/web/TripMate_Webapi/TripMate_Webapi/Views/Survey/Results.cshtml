@@ -1,0 +1,312 @@
+@{
+    ViewData["Title"] = "Kết quả khảo sát";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .results-container {
+        min-height: calc(100vh - 80px);
+        background: linear-gradient(135deg, #ffebd9 0%, #fbf9f8 50%, #ffebd9 100%);
+    }
+    
+    .result-card {
+        opacity: 0;
+        transform: translateY(20px);
+        animation: fadeInUp 0.6s ease forwards;
+    }
+    
+    .result-card:nth-child(2) { animation-delay: 0.1s; }
+    .result-card:nth-child(3) { animation-delay: 0.2s; }
+    .result-card:nth-child(4) { animation-delay: 0.3s; }
+    
+    @@keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .confetti {
+        position: fixed;
+        width: 10px;
+        height: 10px;
+        background: #ff7a00;
+        position: absolute;
+        animation: confetti-fall 3s linear infinite;
+    }
+    
+    @@keyframes confetti-fall {
+        to {
+            transform: translateY(100vh) rotate(360deg);
+            opacity: 0;
+        }
+    }
+</style>
+
+<div class="results-container py-12 px-4">
+    <div class="max-w-4xl mx-auto">
+        <!-- Success Header -->
+        <div class="text-center mb-12">
+            <div class="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-primary to-primary/80 rounded-full mb-6 shadow-2xl animate-bounce">
+                <span class="material-symbols-outlined text-5xl text-white" style="font-variation-settings: 'FILL' 1;">celebration</span>
+            </div>
+            <h1 class="text-5xl font-extrabold text-on-surface mb-4">Hoàn Thành!</h1>
+            <p class="text-xl text-on-surface-variant max-w-2xl mx-auto">
+                Cảm ơn bạn đã hoàn thành khảo sát. Dưới đây là phân tích về phong cách du lịch của bạn.
+            </p>
+        </div>
+
+        <!-- Profile Summary -->
+        <div class="result-card bg-gradient-to-br from-primary to-primary/80 rounded-2xl p-8 mb-8 shadow-2xl text-white">
+            <div class="flex items-center gap-4 mb-6">
+                <span class="material-symbols-outlined text-5xl" style="font-variation-settings: 'FILL' 1;">person</span>
+                <div>
+                    <h2 class="text-3xl font-extrabold">Hồ Sơ Du Lịch Của Bạn</h2>
+                    <p class="text-white/90" id="userEmail"></p>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <span class="material-symbols-outlined text-3xl mb-2" style="font-variation-settings: 'FILL' 1;">explore</span>
+                    <p class="text-sm font-medium">Phong cách</p>
+                    <p class="text-lg font-bold" id="travelStyle">-</p>
+                </div>
+                <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <span class="material-symbols-outlined text-3xl mb-2" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+                    <p class="text-sm font-medium">Ngân sách</p>
+                    <p class="text-lg font-bold" id="budget">-</p>
+                </div>
+                <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <span class="material-symbols-outlined text-3xl mb-2" style="font-variation-settings: 'FILL' 1;">location_on</span>
+                    <p class="text-sm font-medium">Địa điểm</p>
+                    <p class="text-lg font-bold" id="destination">-</p>
+                </div>
+                <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center">
+                    <span class="material-symbols-outlined text-3xl mb-2" style="font-variation-settings: 'FILL' 1;">event</span>
+                    <p class="text-sm font-medium">Thời gian</p>
+                    <p class="text-lg font-bold" id="duration">-</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Results -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Activities -->
+            <div class="result-card bg-surface rounded-2xl p-6 shadow-xl border border-outline-variant/30">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="material-symbols-outlined text-3xl text-primary" style="font-variation-settings: 'FILL' 1;">sports_tennis</span>
+                    <h3 class="text-xl font-bold text-on-surface">Hoạt động yêu thích</h3>
+                </div>
+                <p class="text-on-surface-variant text-lg" id="activities">-</p>
+            </div>
+
+            <!-- Accommodation -->
+            <div class="result-card bg-surface rounded-2xl p-6 shadow-xl border border-outline-variant/30">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="material-symbols-outlined text-3xl text-primary" style="font-variation-settings: 'FILL' 1;">hotel</span>
+                    <h3 class="text-xl font-bold text-on-surface">Lưu trú ưa thích</h3>
+                </div>
+                <p class="text-on-surface-variant text-lg" id="accommodation">-</p>
+            </div>
+
+            <!-- Planning Style -->
+            <div class="result-card bg-surface rounded-2xl p-6 shadow-xl border border-outline-variant/30">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="material-symbols-outlined text-3xl text-primary" style="font-variation-settings: 'FILL' 1;">checklist</span>
+                    <h3 class="text-xl font-bold text-on-surface">Phong cách lên kế hoạch</h3>
+                </div>
+                <p class="text-on-surface-variant text-lg" id="planning">-</p>
+            </div>
+
+            <!-- Social Level -->
+            <div class="result-card bg-surface rounded-2xl p-6 shadow-xl border border-outline-variant/30">
+                <div class="flex items-center gap-3 mb-4">
+                    <span class="material-symbols-outlined text-3xl text-primary" style="font-variation-settings: 'FILL' 1;">groups</span>
+                    <h3 class="text-xl font-bold text-on-surface">Mức độ giao lưu</h3>
+                </div>
+                <p class="text-on-surface-variant text-lg" id="social">-</p>
+            </div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="result-card bg-surface rounded-2xl p-8 shadow-xl border border-outline-variant/30 mb-8">
+            <div class="flex items-center gap-3 mb-6">
+                <span class="material-symbols-outlined text-4xl text-primary" style="font-variation-settings: 'FILL' 1;">recommend</span>
+                <h3 class="text-2xl font-bold text-on-surface">Gợi ý cho bạn</h3>
+            </div>
+            <div class="space-y-4" id="recommendations">
+                <div class="flex items-start gap-4 p-4 bg-primary-container rounded-xl">
+                    <span class="material-symbols-outlined text-2xl text-primary">check_circle</span>
+                    <p class="text-on-primary-container">Đang phân tích sở thích của bạn...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/" class="px-8 py-4 bg-primary hover:bg-primary/90 text-on-primary font-bold rounded-lg transition-all shadow-lg flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">home</span>
+                <span>Khám phá tour</span>
+            </a>
+            <a href="/Survey/Personality" class="px-8 py-4 bg-surface-variant hover:bg-outline-variant/30 text-on-surface font-bold rounded-lg transition-all shadow-md flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">refresh</span>
+                <span>Làm lại khảo sát</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Load and display results
+    document.addEventListener('DOMContentLoaded', () => {
+        const profile = JSON.parse(localStorage.getItem('personalityProfile') || '{}');
+        const userEmail = localStorage.getItem('userEmail') || 'User';
+        
+        // Display user email
+        document.getElementById('userEmail').textContent = userEmail;
+        
+        // Display profile data
+        displayProfile(profile);
+        
+        // Generate recommendations
+        generateRecommendations(profile);
+    });
+
+    function displayProfile(profile) {
+        // Travel Style
+        document.getElementById('travelStyle').textContent = profile.travelStyle || 'Khám phá';
+        
+        // Budget
+        const budgetMap = {
+            'budget': 'Tiết kiệm',
+            'moderate': 'Trung bình',
+            'comfortable': 'Thoải mái',
+            'luxury': 'Sang trọng'
+        };
+        document.getElementById('budget').textContent = budgetMap[profile.budget] || 'Trung bình';
+        
+        // Destination
+        const destinationMap = {
+            'beach': 'Biển đảo',
+            'mountain': 'Núi rừng',
+            'city': 'Thành phố',
+            'countryside': 'Nông thôn'
+        };
+        document.getElementById('destination').textContent = destinationMap[profile.destination] || 'Biển đảo';
+        
+        // Duration
+        const durationMap = {
+            'weekend': '2-3 ngày',
+            'short': '4-5 ngày',
+            'week': '6-7 ngày',
+            'long': '> 7 ngày'
+        };
+        document.getElementById('duration').textContent = durationMap[profile.duration] || '4-5 ngày';
+        
+        // Activities
+        const activitiesMap = {
+            'sports': 'Thể thao mạo hiểm',
+            'sightseeing': 'Tham quan danh lắm',
+            'food': 'Ẩm thực địa phương',
+            'shopping': 'Mua sắm'
+        };
+        document.getElementById('activities').textContent = activitiesMap[profile.activities] || 'Tham quan danh lắm';
+        
+        // Accommodation
+        const accommodationMap = {
+            'hotel': 'Khách sạn cao cấp',
+            'resort': 'Resort nghỉ dưỡng',
+            'homestay': 'Homestay địa phương',
+            'hostel': 'Hostel/Nhà trọ'
+        };
+        document.getElementById('accommodation').textContent = accommodationMap[profile.accommodation] || 'Khách sạn';
+        
+        // Planning
+        const planningMap = {
+            'detailed': 'Chi tiết từng giờ',
+            'outline': 'Khung chính',
+            'flexible': 'Linh hoạt',
+            'spontaneous': 'Tự phát'
+        };
+        document.getElementById('planning').textContent = planningMap[profile.planning] || 'Linh hoạt';
+        
+        // Social
+        const socialMap = {
+            'high': 'Rất thích giao lưu',
+            'moderate': 'Vừa phải',
+            'low': 'Ít giao lưu',
+            'minimal': 'Tối thiểu'
+        };
+        document.getElementById('social').textContent = socialMap[profile.social] || 'Vừa phải';
+    }
+
+    function generateRecommendations(profile) {
+        const recommendations = [];
+        
+        // Based on travel style
+        if (profile.travelStyle?.includes('Phiêu lưu')) {
+            recommendations.push({
+                icon: 'hiking',
+                text: 'Thử các tour leo núi, trekking hoặc thể thao mạo hiểm tại Sapa, Đà Lạt'
+            });
+        } else if (profile.travelStyle?.includes('Nghỉ dưỡng')) {
+            recommendations.push({
+                icon: 'spa',
+                text: 'Khám phá các resort nghỉ dưỡng cao cấp tại Phú Quốc, Nha Trang'
+            });
+        } else if (profile.travelStyle?.includes('Văn hóa')) {
+            recommendations.push({
+                icon: 'museum',
+                text: 'Tham quan các di sản văn hóa tại Huế, Hội An, Hà Nội'
+            });
+        } else {
+            recommendations.push({
+                icon: 'forest',
+                text: 'Khám phá thiên nhiên hoang dã tại Tây Nguyên, Miền Bắc'
+            });
+        }
+        
+        // Based on budget
+        if (profile.budget === 'luxury') {
+            recommendations.push({
+                icon: 'diamond',
+                text: 'Trải nghiệm các tour cao cấp với dịch vụ 5 sao và hướng dẫn viên riêng'
+            });
+        } else if (profile.budget === 'budget') {
+            recommendations.push({
+                icon: 'savings',
+                text: 'Tham gia các tour nhóm tiết kiệm với homestay địa phương'
+            });
+        }
+        
+        // Based on destination
+        if (profile.destination === 'beach') {
+            recommendations.push({
+                icon: 'beach_access',
+                text: 'Khám phá các bãi biển đẹp: Phú Quốc, Côn Đảo, Quy Nhơn'
+            });
+        } else if (profile.destination === 'mountain') {
+            recommendations.push({
+                icon: 'landscape',
+                text: 'Chinh phục các đỉnh núi: Fansipan, Bạch Mộc Lương Tử'
+            });
+        }
+        
+        // Based on activities
+        if (profile.activities === 'food') {
+            recommendations.push({
+                icon: 'restaurant',
+                text: 'Tham gia tour ẩm thực đường phố tại Sài Gòn, Hà Nội'
+            });
+        }
+        
+        // Render recommendations
+        const container = document.getElementById('recommendations');
+        container.innerHTML = recommendations.map(rec => `
+            <div class="flex items-start gap-4 p-4 bg-primary-container rounded-xl">
+                <span class="material-symbols-outlined text-2xl text-primary" style="font-variation-settings: 'FILL' 1;">${rec.icon}</span>
+                <p class="text-on-primary-container font-medium">${rec.text}</p>
+            </div>
+        `).join('');
+    }
+</script>

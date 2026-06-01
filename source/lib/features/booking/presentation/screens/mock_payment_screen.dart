@@ -81,9 +81,15 @@ class _MockPaymentScreenState extends ConsumerState<MockPaymentScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _SummaryRow('Tour', widget.booking.tourTitle),
+                  _SummaryRow(
+                    'Tour',
+                    widget.booking.tourTitle ?? 'Không xác định',
+                  ),
                   const SizedBox(height: 8),
-                  _SummaryRow('Địa điểm', widget.booking.tourLocation),
+                  _SummaryRow(
+                    'Địa điểm',
+                    widget.booking.tourLocation ?? 'Không xác định',
+                  ),
                   const SizedBox(height: 8),
                   _SummaryRow(
                     'Ngày',
