@@ -1,0 +1,62 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# Render Configuration - TripMate Web API
+# Infrastructure as Code for Render deployment
+# ═══════════════════════════════════════════════════════════════════════════
+
+services:
+  # ── TripMate Web API Service ──────────────────────────────────────────────
+  - type: web
+    name: tripmate-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    
+    # Build settings
+    buildCommand: ""
+    
+    # Environment
+    region: oregon
+    plan: free
+    
+    # Health check
+    healthCheckPath: /health
+    
+    # Environment variables (configure in Render dashboard)
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      
+      - key: ASPNETCORE_URLS
+        value: http://+:5000
+      
+      # Supabase config (set in Render dashboard as secrets)
+      - key: Supabase__Url
+        sync: false
+      
+      - key: Supabase__AnonKey
+        sync: false
+      
+      - key: Supabase__JwksUri
+        sync: false
+      
+      - key: Supabase__Issuer
+        sync: false
+      
+      # Optional
+      - key: SerpApi__Key
+        sync: false
+    
+    # Auto-deploy settings
+    autoDeploy: true
+    
+    # Branch to deploy from
+    branch: main
+
+# ── Notes ──────────────────────────────────────────────────────────────────
+# 1. Set secret environment variables in Render dashboard
+# 2. Render will automatically use PORT environment variable
+# 3. Free tier limitations:
+#    - Service spins down after 15 minutes of inactivity
+#    - 750 hours/month free (enough for 1 service 24/7)
+#    - Shared CPU and 512MB RAM
+# 4. For production, upgrade to Starter ($7/month) or higher
