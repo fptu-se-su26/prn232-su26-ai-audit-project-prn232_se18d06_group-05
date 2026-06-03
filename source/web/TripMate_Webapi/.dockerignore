@@ -1,0 +1,97 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# .dockerignore - Exclude files from Docker build context
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Build artifacts
+**/bin/
+**/obj/
+**/out/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Rider
+.idea/
+*.sln.iml
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# NuGet
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+*.nuget.props
+*.nuget.targets
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Test results
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.trx
+*.coverage
+*.coveragexml
+
+# Files that shouldn't be in Docker image
+**/*.md
+LICENSE
+.gitignore
+.gitattributes
+.editorconfig
+
+# Documentation
+**/docs/
+**/*.txt
+!**/requirements.txt
+
+# Uploads (these should come from volumes)
+**/wwwroot/uploads/
+
+# Environment files (will be provided at runtime)
+**/.env
+**/.env.*
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docker
+**/Dockerfile*
+**/docker-compose*
+**/.dockerignore
+
+# CI/CD
+.github/
+**/*.yml
+**/*.yaml
+
+# Misc
+**/*.log
+**/node_modules/
+**/.DS_Store
+**/Thumbs.db

@@ -1,0 +1,69 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# TripMate Web API - Docker Compose Configuration
+# ═══════════════════════════════════════════════════════════════════════════
+
+version: '3.8'
+
+services:
+  # ── TripMate Web API ─────────────────────────────────────────────────────
+  tripmate-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tripmate-webapi:latest
+    container_name: tripmate-api
+    restart: unless-stopped
+    
+    ports:
+      - "5000:5000"
+    
+    environment:
+      # ASP.NET Core settings
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+      
+      # Supabase configuration (override with .env file)
+      - Supabase__Url=${SUPABASE_URL}
+      - Supabase__AnonKey=${SUPABASE_ANON_KEY}
+      - Supabase__JwksUri=${SUPABASE_JWKS_URI}
+      - Supabase__Issuer=${SUPABASE_ISSUER}
+      
+      # Optional: SerpAPI for location search
+      - SerpApi__Key=${SERPAPI_KEY:-}
+    
+    volumes:
+      # Persist uploaded files
+      - uploads-data:/app/wwwroot/uploads
+      
+      # Optional: Mount logs directory
+      - ./logs:/app/logs
+    
+    networks:
+      - tripmate-network
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Resource limits (adjust based on your needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+# ── Volumes ────────────────────────────────────────────────────────────────
+volumes:
+  uploads-data:
+    driver: local
+
+# ── Networks ───────────────────────────────────────────────────────────────
+networks:
+  tripmate-network:
+    driver: bridge
