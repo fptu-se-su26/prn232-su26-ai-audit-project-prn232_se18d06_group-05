@@ -69,7 +69,7 @@ jobs:
         run: |
           echo "## Docker Build Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "✅ **Image built and pushed successfully**" >> $GITHUB_STEP_SUMMARY
+          echo " **Image built and pushed successfully**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
