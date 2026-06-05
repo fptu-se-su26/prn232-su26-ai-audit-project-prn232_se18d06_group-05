@@ -14,6 +14,12 @@ namespace TripMate_Webapi.Controllers
             _logger = logger;
         }
 
+        // GET: /Survey
+        public IActionResult Index()
+        {
+            return View();
+        }
+
         // GET: /Survey/Personality
         public IActionResult Personality()
         {
@@ -24,6 +30,12 @@ namespace TripMate_Webapi.Controllers
 
         // GET: /Survey/Results
         public IActionResult Results()
+        {
+            return View();
+        }
+
+        // GET: /Survey/Matches
+        public IActionResult Matches()
         {
             return View();
         }
