@@ -43,7 +43,7 @@ class BookingDataSource {
           'tourDate':
               '${tourDate.year.toString().padLeft(4, '0')}-${tourDate.month.toString().padLeft(2, '0')}-${tourDate.day.toString().padLeft(2, '0')}',
           'guests': guests,
-          'note': ?note,
+          if (note != null) 'note': note,
         },
       );
       return BookingModel.fromJson(res.data as Map<String, dynamic>);

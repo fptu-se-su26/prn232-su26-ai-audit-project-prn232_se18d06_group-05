@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/file_picker_utils.dart';
 import '../../../../core/utils/logger.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -17,12 +18,14 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
     required String fullName,
+    String? phoneNumber,
   }) async {
     try {
       final user = await remoteDataSource.signUp(
         email: email,
         password: password,
         fullName: fullName,
+        phoneNumber: phoneNumber,
       );
       return Right(user.toEntity());
     } on AppAuthException catch (e) {
@@ -38,6 +41,48 @@ class AuthRepositoryImpl implements AuthRepository {
       Logger.error('Unexpected error in repository', e);
       return const Left(
         ServerFailure(message: 'Đã xảy ra lỗi không mong muốn'),
+      );
+    }
+  }
+
+  @override
+  Future<Either<Failure, UserEntity>> signUpGuide({
+    required String email,
+    required String password,
+    required String fullName,
+    required String phoneNumber,
+    String? experience,
+    String? specialization,
+    String? languages,
+    String? bio,
+    PickedFile? certificatePickedFile,
+  }) async {
+    try {
+      final user = await remoteDataSource.signUpGuide(
+        email: email,
+        password: password,
+        fullName: fullName,
+        phoneNumber: phoneNumber,
+        experience: experience,
+        specialization: specialization,
+        languages: languages,
+        bio: bio,
+        certificatePickedFile: certificatePickedFile,
+      );
+      return Right(user.toEntity());
+    } on AppAuthException catch (e) {
+      Logger.error('Auth exception in repository', e);
+      return Left(AuthFailure(message: e.message, code: e.code));
+    } on NetworkException catch (e) {
+      Logger.error('Network exception in repository', e);
+      return Left(NetworkFailure(message: e.message));
+    } on ServerException catch (e) {
+      Logger.error('Server exception in repository', e);
+      return Left(ServerFailure(message: e.message));
+    } catch (e) {
+      Logger.error('Unexpected error in guide sign up', e);
+      return const Left(
+        ServerFailure(message: 'Đã xảy ra lỗi khi đăng ký hướng dẫn viên'),
       );
     }
   }

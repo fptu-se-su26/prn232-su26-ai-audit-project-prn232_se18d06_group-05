@@ -7,6 +7,7 @@ import '../../domain/usecases/get_current_user_usecase.dart';
 import '../../domain/usecases/sign_in_usecase.dart';
 import '../../domain/usecases/sign_out_usecase.dart';
 import '../../domain/usecases/sign_up_usecase.dart';
+import '../../domain/usecases/sign_up_guide_usecase.dart';
 
 /// ── Datasource switch ────────────────────────────────────────────────────────
 /// true  → gọi ASP.NET Web API
@@ -28,6 +29,10 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
 
 final signUpUseCaseProvider = Provider<SignUpUseCase>((ref) {
   return SignUpUseCase(ref.watch(authRepositoryProvider));
+});
+
+final signUpGuideUseCaseProvider = Provider<SignUpGuideUseCase>((ref) {
+  return SignUpGuideUseCase(ref.watch(authRepositoryProvider));
 });
 
 final signInUseCaseProvider = Provider<SignInUseCase>((ref) {

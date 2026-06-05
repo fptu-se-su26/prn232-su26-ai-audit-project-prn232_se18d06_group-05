@@ -8,6 +8,9 @@ import '../models/tour_model.dart';
 import 'tour_remote_datasource.dart';
 
 /// Tour datasource gọi ASP.NET Web API
+/// baseUrl = 'http://localhost:5122/api'
+/// Backend route: [Route("api/[controller]")] → /api/tours
+/// Nên path chỉ cần '/tours' (không thêm /api/ nữa)
 class ApiTourDataSource implements TourRemoteDataSource {
   late final Dio _dio;
 
@@ -45,9 +48,10 @@ class ApiTourDataSource implements TourRemoteDataSource {
   @override
   Future<List<TourModel>> getTours() async {
     try {
+      Logger.info('[API Tour] GET /tours');
       final res = await _dio.get('/tours');
       final data = res.data as Map<String, dynamic>;
-      final list = data['tours'] as List;
+      final list = data['tours'] as List? ?? [];
       return list
           .map((e) => TourModel.fromApiJson(e as Map<String, dynamic>))
           .toList();
@@ -61,6 +65,7 @@ class ApiTourDataSource implements TourRemoteDataSource {
   @override
   Future<TourModel> getTourById(String tourId) async {
     try {
+      Logger.info('[API Tour] GET /tours/$tourId');
       final res = await _dio.get('/tours/$tourId');
       return TourModel.fromApiJson(res.data as Map<String, dynamic>);
     } on DioException catch (e) {
@@ -73,9 +78,10 @@ class ApiTourDataSource implements TourRemoteDataSource {
   @override
   Future<List<TourModel>> searchTours(String query) async {
     try {
+      Logger.info('[API Tour] GET /tours?search=$query');
       final res = await _dio.get('/tours', queryParameters: {'search': query});
       final data = res.data as Map<String, dynamic>;
-      final list = data['tours'] as List;
+      final list = data['tours'] as List? ?? [];
       return list
           .map((e) => TourModel.fromApiJson(e as Map<String, dynamic>))
           .toList();
@@ -85,19 +91,20 @@ class ApiTourDataSource implements TourRemoteDataSource {
   }
 
   // ── Get Tours By Guide ─────────────────────────────────────────────────────
+  // Backend không có filter guideId qua query — lấy tất cả rồi filter client-side
 
   @override
   Future<List<TourModel>> getToursByGuide(String guideId) async {
     try {
-      final res = await _dio.get(
-        '/tours',
-        queryParameters: {'guideId': guideId},
-      );
+      Logger.info('[API Tour] GET /tours (filter by guideId=$guideId)');
+      final res = await _dio.get('/tours');
       final data = res.data as Map<String, dynamic>;
-      final list = data['tours'] as List;
-      return list
+      final list = data['tours'] as List? ?? [];
+      final all = list
           .map((e) => TourModel.fromApiJson(e as Map<String, dynamic>))
           .toList();
+      // Filter client-side theo guideId
+      return all.where((t) => t.guideId == guideId).toList();
     } on DioException catch (e) {
       throw _mapError(e);
     }
@@ -117,18 +124,19 @@ class ApiTourDataSource implements TourRemoteDataSource {
     List<String> images = const [],
   }) async {
     try {
+      Logger.info('[API Tour] POST /tours (guide=$guideId, title=$title)');
       final opts = await _authOptions();
       final res = await _dio.post(
         '/tours',
         options: opts,
         data: {
           'title': title,
-          'description': description,
+          if (description != null) 'description': description,
           'location': location,
           'price': price,
           'durationHours': durationHours,
           'maxParticipants': maxParticipants,
-          'images': images,
+          if (images.isNotEmpty) 'images': images,
         },
       );
       return TourModel.fromApiJson(res.data as Map<String, dynamic>);
@@ -152,20 +160,24 @@ class ApiTourDataSource implements TourRemoteDataSource {
     String? status,
   }) async {
     try {
+      Logger.info('[API Tour] PATCH /tours/$tourId');
       final opts = await _authOptions();
+
+      // Chỉ gửi các field được truyền vào (không null)
+      final body = <String, dynamic>{};
+      if (title != null) body['title'] = title;
+      if (description != null) body['description'] = description;
+      if (location != null) body['location'] = location;
+      if (price != null) body['price'] = price;
+      if (durationHours != null) body['durationHours'] = durationHours;
+      if (maxParticipants != null) body['maxParticipants'] = maxParticipants;
+      if (images != null) body['images'] = images;
+      if (status != null) body['status'] = status;
+
       final res = await _dio.patch(
         '/tours/$tourId',
         options: opts,
-        data: {
-          'title': ?title,
-          'description': ?description,
-          'location': ?location,
-          'price': ?price,
-          'durationHours': ?durationHours,
-          'maxParticipants': ?maxParticipants,
-          'images': ?images,
-          'status': ?status,
-        },
+        data: body,
       );
       return TourModel.fromApiJson(res.data as Map<String, dynamic>);
     } on DioException catch (e) {
@@ -178,6 +190,7 @@ class ApiTourDataSource implements TourRemoteDataSource {
   @override
   Future<void> deleteTour(String tourId) async {
     try {
+      Logger.info('[API Tour] DELETE /tours/$tourId');
       final opts = await _authOptions();
       await _dio.delete('/tours/$tourId', options: opts);
     } on DioException catch (e) {
@@ -186,34 +199,16 @@ class ApiTourDataSource implements TourRemoteDataSource {
   }
 
   // ── Get Tour Templates ─────────────────────────────────────────────────────
+  // Endpoint /tour-templates chưa có trên backend → trả list rỗng
 
   @override
   Future<List<TourTemplateEntity>> getTourTemplates() async {
-    try {
-      final res = await _dio.get('/tour-templates');
-      final data = res.data as Map<String, dynamic>;
-      final list = data['templates'] as List;
-
-      return list
-          .map(
-            (json) => TourTemplateEntity(
-              id: json['id'] as String,
-              title: json['title'] as String,
-              description: json['description'] as String?,
-              location: json['location'] as String,
-              images: json['images'] != null
-                  ? List<String>.from(json['images'] as List)
-                  : [],
-              createdAt: DateTime.parse(json['createdAt'] as String),
-            ),
-          )
-          .toList();
-    } on DioException catch (e) {
-      throw _mapError(e);
-    }
+    Logger.info('[API Tour] getTourTemplates — endpoint chưa implement, trả rỗng');
+    return [];
   }
 
   // ── Create Tour From Template ──────────────────────────────────────────────
+  // Endpoint /tours/from-template chưa có trên backend → throw NotImplemented
 
   @override
   Future<TourModel> createTourFromTemplate({
@@ -223,34 +218,29 @@ class ApiTourDataSource implements TourRemoteDataSource {
     required int durationHours,
     int maxParticipants = 10,
   }) async {
-    try {
-      final opts = await _authOptions();
-      final res = await _dio.post(
-        '/tours/from-template',
-        options: opts,
-        data: {
-          'templateId': templateId,
-          'price': price,
-          'durationHours': durationHours,
-          'maxParticipants': maxParticipants,
-        },
-      );
-      return TourModel.fromApiJson(res.data as Map<String, dynamic>);
-    } on DioException catch (e) {
-      throw _mapError(e);
-    }
+    throw ServerException(
+      message: 'Tính năng tạo tour từ template chưa được hỗ trợ',
+    );
   }
 
   // ── Error mapping ──────────────────────────────────────────────────────────
 
   AppException _mapError(DioException e) {
+    final statusCode = e.response?.statusCode;
     final body = e.response?.data;
     String msg = 'Lỗi kết nối tới server';
-    if (body is Map && body['message'] != null) msg = body['message'] as String;
-    if (e.type == DioExceptionType.connectionError) {
-      msg = 'Không thể kết nối tới server';
+
+    if (body is Map && body['message'] != null) {
+      msg = body['message'] as String;
+    } else if (e.type == DioExceptionType.connectionError) {
+      msg = 'Không thể kết nối tới server. Kiểm tra API đang chạy.';
+    } else if (e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      msg = 'Kết nối quá thời gian.';
     }
-    Logger.error('[API Tour] ${e.response?.statusCode} — $msg');
+
+    Logger.error('[API Tour] HTTP $statusCode — $msg');
+    if (statusCode == 401) return AppAuthException(message: msg);
     return ServerException(message: msg);
   }
 }

@@ -70,8 +70,9 @@ class TripMateApp extends ConsumerWidget {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('vi'), Locale('en')],
-      home: const AuthWrapper(),
+      initialRoute: '/',
       routes: {
+        '/': (context) => const AuthWrapper(),
         AppConstants.loginRoute: (context) => const LoginScreen(),
         AppConstants.homeRoute: (context) => const HomeScreen(),
         AppConstants.tourListRoute: (context) => const TourListScreen(),

@@ -1,16 +1,29 @@
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
 import '../../../../core/config/supabase_config.dart';
 import '../../../../core/errors/exceptions.dart';
+import '../../../../core/services/storage_service.dart';
+import '../../../../core/utils/file_picker_utils.dart';
 import '../../../../core/utils/logger.dart';
 import '../models/user_model.dart';
 
-/// Authentication remote data source
-/// Handles all Supabase authentication operations
 abstract class AuthRemoteDataSource {
   Future<UserModel> signUp({
     required String email,
     required String password,
     required String fullName,
+    String? phoneNumber,
+  });
+
+  Future<UserModel> signUpGuide({
+    required String email,
+    required String password,
+    required String fullName,
+    required String phoneNumber,
+    String? experience,
+    String? specialization,
+    String? languages,
+    String? bio,
+    PickedFile? certificatePickedFile,
   });
 
   Future<UserModel> signIn({required String email, required String password});
@@ -33,15 +46,20 @@ abstract class AuthRemoteDataSource {
 
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final SupabaseClient client;
+  final StorageService _storageService;
 
-  AuthRemoteDataSourceImpl({SupabaseClient? client})
-    : client = client ?? SupabaseConfig.client;
+  AuthRemoteDataSourceImpl({
+    SupabaseClient? client,
+    StorageService? storageService,
+  }) : client = client ?? SupabaseConfig.client,
+       _storageService = storageService ?? StorageService();
 
   @override
   Future<UserModel> signUp({
     required String email,
     required String password,
     required String fullName,
+    String? phoneNumber,
   }) async {
     try {
       Logger.info('Signing up user: $email');
@@ -82,6 +100,74 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       // Handle Supabase auth errors
       final errorMessage = e.toString();
       throw AppAuthException(message: _getAuthErrorMessage(errorMessage));
+    }
+  }
+
+  @override
+  Future<UserModel> signUpGuide({
+    required String email,
+    required String password,
+    required String fullName,
+    required String phoneNumber,
+    String? experience,
+    String? specialization,
+    String? languages,
+    String? bio,
+    PickedFile? certificatePickedFile,
+  }) async {
+    try {
+      Logger.info('Signing up guide: $email');
+
+      final response = await client.auth.signUp(
+        email: email,
+        password: password,
+        data: {'full_name': fullName},
+      );
+
+      if (response.user == null) {
+        throw AppAuthException(message: 'Đăng ký thất bại');
+      }
+
+      final userId = response.user!.id;
+      Logger.success('Guide user created: $userId');
+
+      String? certificateUrl;
+
+      // Upload certificate if provided (cross-platform)
+      if (certificatePickedFile != null) {
+        try {
+          Logger.info('Uploading certificate for user: $userId');
+          certificateUrl = await _storageService.uploadPickedCertificate(
+            pickedFile: certificatePickedFile,
+            userId: userId,
+          );
+          Logger.success('Certificate uploaded: $certificateUrl');
+        } catch (e) {
+          Logger.error('Error uploading certificate (non-fatal)', e);
+        }
+      }
+
+      await _createGuideProfile(
+        userId: userId,
+        email: email,
+        fullName: fullName,
+        phoneNumber: phoneNumber,
+        experience: experience,
+        specialization: specialization,
+        languages: languages,
+        bio: bio,
+        certificateUrl: certificateUrl,
+      );
+
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      final profile = await _getUserProfile(userId);
+      return profile;
+    } catch (e) {
+      Logger.error('Auth error during guide sign up', e);
+      if (e is AppAuthException) rethrow;
+      if (e is ServerException) rethrow;
+      throw AppAuthException(message: _getAuthErrorMessage(e.toString()));
     }
   }
 
@@ -236,6 +322,67 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
       throw ServerException(
         message: 'Không thể tạo hồ sơ người dùng: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Create guide profile in profiles table
+  Future<void> _createGuideProfile({
+    required String userId,
+    required String email,
+    required String fullName,
+    required String phoneNumber,
+    String? experience,
+    String? specialization,
+    String? languages,
+    String? bio,
+    String? certificateUrl,
+  }) async {
+    try {
+      Logger.info('Creating guide profile for user: $userId');
+
+      final profileData = {
+        'id': userId,
+        'email': email,
+        'full_name': fullName,
+        'phone_number': phoneNumber,
+        'role': 'guide',
+        'status': 'pending', // Awaiting admin approval
+        'created_at': DateTime.now().toIso8601String(),
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+
+      // Add optional fields if provided
+      if (experience != null) profileData['experience'] = experience;
+      if (specialization != null) {
+        profileData['specialization'] = specialization;
+      }
+      if (languages != null) profileData['languages'] = languages;
+      if (bio != null) profileData['bio'] = bio;
+      if (certificateUrl != null) {
+        profileData['certificate_url'] = certificateUrl;
+      }
+
+      final response = await client
+          .from('profiles')
+          .upsert(profileData, onConflict: 'id')
+          .select();
+
+      Logger.success('Guide profile created successfully');
+      Logger.info('Profile response: $response');
+    } catch (e, stackTrace) {
+      Logger.error('Error creating guide profile', e);
+      Logger.error('Stack trace', stackTrace);
+
+      if (e is PostgrestException) {
+        Logger.error('Postgrest error code: ${e.code}');
+        Logger.error('Postgrest error message: ${e.message}');
+        Logger.error('Postgrest error details: ${e.details}');
+        Logger.error('Postgrest error hint: ${e.hint}');
+      }
+
+      throw ServerException(
+        message: 'Không thể tạo hồ sơ hướng dẫn viên: ${e.toString()}',
       );
     }
   }

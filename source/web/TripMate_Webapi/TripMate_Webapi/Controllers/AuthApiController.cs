@@ -55,8 +55,9 @@ namespace TripMate_Webapi.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during login for email: {Email}", request.Email);
-                return StatusCode(500, new { message = "Có lỗi xảy ra. Vui lòng thử lại sau." });
+                _logger.LogWarning(ex, "Login error for email: {Email}", request.Email);
+                // Trả message cụ thể từ Supabase/GoTrue thay vì generic 500
+                return Unauthorized(new { message = ex.Message });
             }
         }
 
@@ -188,8 +189,9 @@ namespace TripMate_Webapi.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during registration for email: {Email}", request.Email);
-                return StatusCode(500, new { message = "Có lỗi xảy ra. Vui lòng thử lại sau." });
+                _logger.LogWarning(ex, "Error during registration for email: {Email}", request.Email);
+                // Trả message cụ thể từ Supabase/GoTrue thay vì generic 500
+                return BadRequest(new { message = ex.Message });
             }
         }
 

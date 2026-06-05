@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import '../../../../core/errors/failures.dart';
+import '../../../../core/utils/file_picker_utils.dart';
 import '../entities/user_entity.dart';
 
 /// Authentication repository interface
@@ -10,6 +11,20 @@ abstract class AuthRepository {
     required String email,
     required String password,
     required String fullName,
+    String? phoneNumber,
+  });
+
+  /// Sign up as guide with additional information and certificate
+  Future<Either<Failure, UserEntity>> signUpGuide({
+    required String email,
+    required String password,
+    required String fullName,
+    required String phoneNumber,
+    String? experience,
+    String? specialization,
+    String? languages,
+    String? bio,
+    PickedFile? certificatePickedFile,
   });
 
   /// Sign in with email and password

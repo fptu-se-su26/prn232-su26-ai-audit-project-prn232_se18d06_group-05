@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/utils/file_picker_utils.dart';
 import '../../domain/entities/user_entity.dart';
 import 'auth_providers.dart';
 
@@ -75,6 +76,7 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
     required String email,
     required String password,
     required String fullName,
+    String? phoneNumber,
   }) async {
     state = state.copyWith(isLoading: true, error: null);
 
@@ -83,6 +85,7 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
       email: email,
       password: password,
       fullName: fullName,
+      phoneNumber: phoneNumber,
     );
 
     return result.fold(
@@ -92,6 +95,51 @@ class AuthStateNotifier extends StateNotifier<AuthState> {
       },
       (user) {
         state = AuthState(user: user, isLoading: false, isAuthenticated: true);
+        return true;
+      },
+    );
+  }
+
+  /// Sign up as guide with certificate upload
+  Future<bool> signUpGuide({
+    required String email,
+    required String password,
+    required String fullName,
+    required String phoneNumber,
+    String? experience,
+    String? specialization,
+    String? languages,
+    String? bio,
+    PickedFile? certificatePickedFile,
+  }) async {
+    state = state.copyWith(isLoading: true, error: null);
+
+    final signUpGuideUseCase = ref.read(signUpGuideUseCaseProvider);
+    final result = await signUpGuideUseCase(
+      email: email,
+      password: password,
+      fullName: fullName,
+      phoneNumber: phoneNumber,
+      experience: experience,
+      specialization: specialization,
+      languages: languages,
+      bio: bio,
+      certificatePickedFile: certificatePickedFile,
+    );
+
+    return result.fold(
+      (failure) {
+        state = state.copyWith(isLoading: false, error: failure.message);
+        return false;
+      },
+      (user) {
+        // Hướng dẫn viên cần admin duyệt nên chưa authenticate ngay
+        final isGuide = user.role == 'guide';
+        state = AuthState(
+          user: user,
+          isLoading: false,
+          isAuthenticated: !isGuide,
+        );
         return true;
       },
     );

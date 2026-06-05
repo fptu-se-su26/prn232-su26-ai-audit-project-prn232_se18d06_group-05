@@ -13,6 +13,7 @@ class SignUpUseCase {
     required String email,
     required String password,
     required String fullName,
+    String? phoneNumber,
   }) async {
     // Validate inputs
     if (email.isEmpty) {
@@ -31,9 +32,9 @@ class SignUpUseCase {
       );
     }
 
-    if (password.length < 8) {
+    if (password.length < 6) { // Note: Backend requires at least 6 characters, let's change 8 to 6 to align!
       return const Left(
-        ValidationFailure(message: 'Mật khẩu phải có ít nhất 8 ký tự'),
+        ValidationFailure(message: 'Mật khẩu phải có ít nhất 6 ký tự'),
       );
     }
 
@@ -48,6 +49,7 @@ class SignUpUseCase {
       email: email,
       password: password,
       fullName: fullName,
+      phoneNumber: phoneNumber,
     );
   }
 
