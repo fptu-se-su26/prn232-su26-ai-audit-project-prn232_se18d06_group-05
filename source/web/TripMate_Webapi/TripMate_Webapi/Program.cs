@@ -25,6 +25,7 @@ builder.Services.AddSingleton(_ =>
 builder.Services.AddHttpClient<SupabaseAuthService>();
 builder.Services.AddScoped<SupabaseAuthService>();
 builder.Services.AddScoped<DatabaseSeeder>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // ── Tour Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<TourService>();
@@ -42,7 +43,7 @@ builder.Services.AddScoped<GuideApprovalService>();
 builder.Services.AddHttpClient<ChatService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddHttpClient<NotificationService>();
-builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // ── Survey Service ────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SurveyService>();

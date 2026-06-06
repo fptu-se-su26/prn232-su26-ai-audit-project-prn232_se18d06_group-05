@@ -15,6 +15,7 @@ public class SupabaseAuthService
 {
     private readonly HttpClient _http;
     private readonly Supabase.Client _supabase;
+    private readonly INotificationService _notificationService;
     private readonly string _supabaseUrl;
     private readonly string _anonKey;
 
@@ -24,10 +25,11 @@ public class SupabaseAuthService
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
-    public SupabaseAuthService(HttpClient http, Supabase.Client supabase, IConfiguration config)
+    public SupabaseAuthService(HttpClient http, Supabase.Client supabase, INotificationService notificationService, IConfiguration config)
     {
         _http = http;
         _supabase = supabase;
+        _notificationService = notificationService;
         _supabaseUrl = config["Supabase:Url"]!;
         _anonKey = config["Supabase:AnonKey"]!;
     }
@@ -70,6 +72,12 @@ public class SupabaseAuthService
         // 2. Upsert profile vào bảng profiles với thông tin mở rộng
         await UpsertProfileAsync(session.AccessToken, session.User.Id, email, fullName, role, 
             phoneNumber, experience, specialization, languages, bio, certificatePath);
+
+        // 3. Notify admin if it's a guide registration
+        if (role == "guide")
+        {
+            await _notificationService.NotifyAdminNewGuideApplicationAsync(session.User.Id, fullName, email);
+        }
 
         var user = await GetProfileAsync(session.AccessToken, session.User.Id);
         return MapToAuthResponse(session, user);
@@ -180,6 +188,7 @@ public class SupabaseAuthService
         {
             Id = userId,
             Role = "traveler",
+            Status = "active",
             CreatedAt = DateTime.UtcNow
         };
     }
@@ -188,33 +197,79 @@ public class SupabaseAuthService
         string? phoneNumber = null, string? experience = null, string? specialization = null, 
         string? languages = null, string? bio = null, string? certificatePath = null)
     {
-        var profile = new
+        try
         {
-            id = userId,
-            email,
-            full_name = fullName,
-            phone = phoneNumber,         // schema mới dùng 'phone'
-            role = role,
-            experience = experience,
-            specialization = specialization,
-            languages = languages,
-            bio = bio,
-            status = role == "guide" ? "active" : "active",
-            created_at = DateTime.UtcNow,
-            updated_at = DateTime.UtcNow,
-        };
+            var profile = new
+            {
+                id = userId,
+                email,
+                full_name = fullName,
+                phone = phoneNumber,         // schema mới dùng 'phone'
+                role = role,
+                experience = experience,
+                specialization = specialization,
+                languages = languages,
+                bio = bio,
+                certificate_url = certificatePath,
+                status = role == "guide" ? "pending" : "active",
+                created_at = DateTime.UtcNow,
+                updated_at = DateTime.UtcNow,
+            };
 
-        var request = new HttpRequestMessage(
-            HttpMethod.Post,
-            $"{_supabaseUrl}/rest/v1/profiles");
+            // Try INSERT first (for new users)
+            var insertRequest = new HttpRequestMessage(
+                HttpMethod.Post,
+                $"{_supabaseUrl}/rest/v1/profiles");
 
-        request.Headers.Add("apikey", _anonKey);
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-        request.Headers.Add("Prefer", "resolution=merge-duplicates");
-        request.Content = new StringContent(
-            JsonSerializer.Serialize(profile), Encoding.UTF8, "application/json");
+            insertRequest.Headers.Add("apikey", _anonKey);
+            insertRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            insertRequest.Headers.Add("Prefer", "resolution=merge-duplicates");
+            insertRequest.Content = new StringContent(
+                JsonSerializer.Serialize(profile), Encoding.UTF8, "application/json");
 
-        await _http.SendAsync(request);
+            var insertResponse = await _http.SendAsync(insertRequest);
+            
+            // If INSERT succeeds, we're done
+            if (insertResponse.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+            // If INSERT fails (user exists), try UPDATE
+            var updateRequest = new HttpRequestMessage(
+                HttpMethod.Patch,
+                $"{_supabaseUrl}/rest/v1/profiles?id=eq.{userId}");
+
+            updateRequest.Headers.Add("apikey", _anonKey);
+            updateRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            updateRequest.Content = new StringContent(
+                JsonSerializer.Serialize(new {
+                    full_name = fullName,
+                    phone = phoneNumber,
+                    role = role,
+                    experience = experience,
+                    specialization = specialization,
+                    languages = languages,
+                    bio = bio,
+                    certificate_url = certificatePath,
+                    status = role == "guide" ? "pending" : "active",
+                    updated_at = DateTime.UtcNow,
+                }), Encoding.UTF8, "application/json");
+
+            var updateResponse = await _http.SendAsync(updateRequest);
+            
+            if (!updateResponse.IsSuccessStatusCode)
+            {
+                var err = await updateResponse.Content.ReadAsStringAsync();
+                Console.WriteLine($"[ERROR] UpsertProfileAsync failed: {updateResponse.StatusCode} - {err}");
+                throw new Exception($"Không thể lưu thông tin hồ sơ: {err}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] UpsertProfileAsync exception: {ex.Message}");
+            throw new Exception($"Không thể lưu thông tin hồ sơ: {ex.Message}");
+        }
     }
 
     private static AuthResponse MapToAuthResponse(GoTrueSession session, ProfileRow profile)
@@ -230,6 +285,7 @@ public class SupabaseAuthService
                 Phone: profile.Phone,
                 AvatarUrl: profile.AvatarUrl,
                 Role: profile.Role ?? "traveler",
+                Status: profile.Status ?? "active",
                 CreatedAt: profile.CreatedAt
             )
         );
@@ -316,6 +372,9 @@ public class ProfileRow
 
     [JsonPropertyName("role")]
     public string? Role { get; set; }
+
+    [JsonPropertyName("status")]
+    public string? Status { get; set; }
 
     [JsonPropertyName("created_at")]
     public DateTime CreatedAt { get; set; }

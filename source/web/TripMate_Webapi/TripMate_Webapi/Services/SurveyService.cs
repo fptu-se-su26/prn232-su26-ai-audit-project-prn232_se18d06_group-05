@@ -11,13 +11,13 @@ public class SurveyService
     private readonly HttpClient _http;
     private readonly string _supabaseUrl;
     private readonly string _anonKey;
-    private readonly NotificationService _notificationService;
+    private readonly INotificationService _notificationService;
     private readonly ILogger<SurveyService> _logger;
 
     public SurveyService(
         HttpClient http,
         IConfiguration config,
-        NotificationService notificationService,
+        INotificationService notificationService,
         ILogger<SurveyService> logger)
     {
         _http = http;

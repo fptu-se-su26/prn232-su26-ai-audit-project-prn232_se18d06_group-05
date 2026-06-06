@@ -15,7 +15,7 @@ public class BookingService
     private readonly HttpClient _http;
     private readonly string _supabaseUrl;
     private readonly string _anonKey;
-    private readonly NotificationService _notif;
+    private readonly INotificationService _notif;
     private readonly ChatService _chat;
 
     private static readonly JsonSerializerOptions _json = new()
@@ -25,7 +25,7 @@ public class BookingService
     };
 
     public BookingService(HttpClient http, IConfiguration config,
-        NotificationService notif, ChatService chat)
+        INotificationService notif, ChatService chat)
     {
         _http = http;
         _supabaseUrl = config["Supabase:Url"]!;

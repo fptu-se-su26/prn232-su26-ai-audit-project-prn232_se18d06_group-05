@@ -158,6 +158,22 @@ CREATE TABLE public.messages (
   CONSTRAINT messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.profiles(id) ON DELETE CASCADE
 );
 
+-- Bảng Thông báo cho Admin
+CREATE TABLE public.admin_notifications (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  type text NOT NULL DEFAULT 'guide_application',
+  title text NOT NULL,
+  message text NOT NULL,
+  guide_id uuid,
+  guide_name text,
+  guide_email text,
+  is_read boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  read_at timestamp with time zone,
+  CONSTRAINT admin_notifications_pkey PRIMARY KEY (id),
+  CONSTRAINT admin_notifications_guide_id_fkey FOREIGN KEY (guide_id) REFERENCES public.profiles(id) ON DELETE CASCADE
+);
+
 -- Bảng Khảo sát: Câu hỏi
 CREATE TABLE public.survey_questions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
@@ -222,11 +238,18 @@ BEGIN
     new.raw_user_meta_data->>'full_name', 
     new.raw_user_meta_data->>'avatar_url', 
     coalesce(new.raw_user_meta_data->>'role', 'traveler'), 
-    'active'
+    CASE 
+      WHEN coalesce(new.raw_user_meta_data->>'role', 'traveler') = 'guide' THEN 'pending'
+      ELSE 'active'
+    END
   )
   ON CONFLICT (id) DO UPDATE SET
     full_name = EXCLUDED.full_name,
-    role = EXCLUDED.role;
+    role = EXCLUDED.role,
+    status = CASE 
+      WHEN EXCLUDED.role = 'guide' THEN 'pending'
+      ELSE 'active'
+    END;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -256,6 +279,7 @@ ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.survey_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.survey_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_personalities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_notifications ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------
 -- POLICIES CHO BẢNG PROFILES
@@ -265,6 +289,10 @@ CREATE POLICY "Cho phép tất cả mọi người đọc profile của nhau"
 
 CREATE POLICY "Chính chủ mới được cập nhật profile của mình" 
   ON public.profiles FOR UPDATE USING (auth.uid() = id);
+
+CREATE POLICY "Cho phép tạo profile mới khi đăng ký"
+  ON public.profiles FOR INSERT 
+  WITH CHECK (auth.uid() = id);
 
 -- ------------------------------------------
 -- POLICIES CHO BẢNG TOUR & AVAILABILITY (CÔNG KHAI)
@@ -350,6 +378,21 @@ CREATE POLICY "User được xem kết quả tính cách của mình và ngườ
 CREATE POLICY "User chỉ được điền/cập nhật kết quả tính cách của chính họ" 
   ON public.user_personalities FOR ALL USING (auth.uid() = user_id);
 
+-- ------------------------------------------
+-- POLICIES CHO ADMIN NOTIFICATIONS
+-- ------------------------------------------
+CREATE POLICY "Chỉ admin mới được xem thông báo admin"
+  ON public.admin_notifications FOR SELECT 
+  USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Chỉ admin mới được cập nhật thông báo admin"
+  ON public.admin_notifications FOR UPDATE
+  USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
 -- ==========================================
 -- 5. GRANT PERMISSIONS (QUAN TRỌNG)
 -- RLS chỉ kiểm soát row-level, cần grant table-level permissions riêng
@@ -386,3 +429,6 @@ GRANT SELECT, INSERT ON public.guide_certificates TO authenticated;
 
 -- Survey/personality (authenticated only)
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_personalities TO authenticated;
+
+-- Admin notifications (authenticated only - restricted by RLS)
+GRANT SELECT, INSERT, UPDATE ON public.admin_notifications TO authenticated;

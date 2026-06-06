@@ -6,6 +6,18 @@ public record LoginRequest(string Email, string Password);
 
 public record RegisterRequest(string Email, string Password, string FullName);
 
+public record GuideRegisterRequest(
+    string Email, 
+    string Password, 
+    string FullName, 
+    string? Phone, 
+    string? Experience, 
+    string? Specialization, 
+    string? Languages, 
+    string? Bio,
+    string? CertificateUrl
+);
+
 public record RefreshTokenRequest(string RefreshToken);
 
 // ── Response DTOs ─────────────────────────────────────────────────────────────
@@ -24,5 +36,6 @@ public record UserDto(
     string? Phone,
     string? AvatarUrl,
     string Role,
+    string? Status,
     DateTime CreatedAt
 );
