@@ -213,7 +213,7 @@ public class SurveyApiController : ControllerBase
     [HttpGet("check/{bookingId}")]
     [ProducesResponseType(typeof(object), 200)]
     [ProducesResponseType(401)]
-    public async Task<IActionResult> CheckSurveyExists(string bookingId)
+    public IActionResult CheckSurveyExists(string bookingId)
     {
         var userToken = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "");
 

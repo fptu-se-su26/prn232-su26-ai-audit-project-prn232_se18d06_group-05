@@ -1,0 +1,455 @@
+@model TripMate_Webapi.Controllers.HomeViewModel
+@{
+    ViewData["Title"] = "Home";
+    Layout = "~/Views/Shared/_LandingLayout.cshtml";
+}
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&display=swap');
+
+    .font-serif-custom {
+        font-family: 'Playfair Display', serif;
+    }
+    
+    .bg-cream {
+        background-color: #f7f3ec;
+    }
+    
+    .text-brand-dark {
+        color: #2a221b;
+    }
+    
+    .text-brand-orange {
+        color: #c25317;
+    }
+    
+    .bg-brand-orange {
+        background-color: #c25317;
+    }
+    
+    .border-brand-orange {
+        border-color: #c25317;
+    }
+    
+    .border-cream-dark {
+        border-color: #e5dacd;
+    }
+
+    .hero-bg {
+        background: radial-gradient(circle at 80% 20%, #d89670 0%, #f7f3ec 50%, #f7f3ec 100%);
+    }
+
+    .newsletter-bg {
+        background-color: #b55018;
+    }
+
+    @@keyframes crossfade {
+        0% { opacity: 1; }
+        25% { opacity: 1; }
+        33% { opacity: 0; }
+        92% { opacity: 0; }
+        100% { opacity: 1; }
+    }
+    
+    .slide-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 1s ease, filter 0.5s ease;
+    }
+    
+    .group:hover .slide-img {
+        transform: scale(1.1);
+        filter: blur(4px);
+    }
+
+    .slide-1 { animation: crossfade 12s infinite; }
+    .slide-2 { animation: crossfade 12s infinite -8s; }
+    .slide-3 { animation: crossfade 12s infinite -4s; }
+</style>
+
+<div class="bg-cream text-brand-dark overflow-hidden">
+
+    <!-- Hero Section with Parallax Background & Vibe Search -->
+    <section class="relative pt-40 pb-32 px-8 md:px-16 min-h-[90vh] flex flex-col justify-center overflow-hidden bg-[url('https://images.unsplash.com/photo-1528127269322-539801943592?w=1920')] bg-cover bg-center bg-fixed">
+        
+        <!-- Gradient Overlay for Text Readability -->
+        <div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-black/30 z-0"></div>
+
+        <div class="max-w-[1440px] mx-auto w-full relative z-10 flex flex-col items-start">
+            <span class="text-brand-orange font-bold text-xs tracking-[0.2em] uppercase mb-4 block">TRIPMATE VIETNAM</span>
+            <h1 class="font-serif-custom text-5xl md:text-7xl font-semibold leading-[1.1] mb-6 text-white text-shadow-lg">
+                Discover the Soul<br/>of Authentic<br/>Vietnam
+            </h1>
+            <p class="text-lg md:text-xl mb-12 max-w-xl text-white/90 leading-relaxed font-serif-custom italic drop-shadow-md">
+                "Go beyond the guidebooks. Connect with local artisans, historians, and storytellers who bring the true spirit of our heritage to life."
+            </p>
+            
+            <!-- Premium CTA -->
+            <div class="mt-8 flex flex-wrap items-center gap-6 animate-fade-in-up">
+                <a href="/Survey/Index" class="bg-brand-orange hover:bg-white hover:text-brand-dark text-white px-10 py-4 text-xs md:text-sm font-bold tracking-[0.2em] uppercase transition-all duration-300 shadow-lg">
+                    Find Your Local Guide
+                </a>
+                <a href="/Stories" class="text-white border border-white/30 hover:border-white hover:bg-white/10 px-8 py-4 text-xs md:text-sm font-bold tracking-[0.2em] uppercase transition-all duration-300 flex items-center gap-2">
+                    Discover Stories
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="border-y border-cream-dark bg-[#fbf8f4]">
+        <div class="max-w-[1440px] mx-auto px-8 md:px-16 py-6 flex flex-wrap justify-between items-center text-sm font-bold">
+            <div class="flex gap-24">
+                <div>
+                    <span class="text-brand-orange text-xl block mb-1">500</span>
+                    <span class="text-brand-dark/60 tracking-wider uppercase text-xs">Local Guides</span>
+                </div>
+                <div>
+                    <span class="text-brand-orange text-xl block mb-1">20+</span>
+                    <span class="text-brand-dark/60 tracking-wider uppercase text-xs">Destinations</span>
+                </div>
+                <div>
+                    <span class="text-brand-orange text-xl block mb-1">1M+</span>
+                    <span class="text-brand-dark/60 tracking-wider uppercase text-xs">Happy Travelers</span>
+                </div>
+            </div>
+            <div>
+                <a href="/Survey" class="flex items-center gap-2 text-brand-dark hover:text-brand-orange transition-colors">
+                    <span class="material-symbols-outlined text-brand-orange" style="font-variation-settings: &quot;FILL&quot; 1;">psychology</span>
+                    <span class="tracking-widest uppercase text-xs">Find your Soulmate</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- The Artisan Approach -->
+    <section class="py-32 px-8 md:px-16 max-w-[1440px] mx-auto text-center">
+        <h2 class="font-serif-custom text-4xl text-brand-dark mb-4">The Artisan Approach</h2>
+        <p class="text-brand-dark/70 max-w-xl mx-auto mb-20 text-sm leading-relaxed">
+            We believe travel is an art form. Let us connect you with local experts who will personally craft an immersive experience just for you.
+        </p>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-16 max-w-5xl mx-auto">
+            <div class="flex flex-col items-center">
+                <div class="w-16 h-16 bg-brand-orange text-white flex items-center justify-center rounded-lg mb-8 shadow-sm">
+                    <span class="material-symbols-outlined text-2xl">stylus_note</span>
+                </div>
+                <h3 class="font-serif-custom text-2xl mb-3">Tell Us Your Vibe</h3>
+                <p class="text-sm text-brand-dark/70 leading-relaxed">
+                    Answer a few profound questions about your personality, aesthetic preferences, and what moves you.
+                </p>
+            </div>
+            <div class="flex flex-col items-center">
+                <div class="w-16 h-16 bg-brand-orange text-white flex items-center justify-center rounded-lg mb-8 shadow-sm">
+                    <span class="material-symbols-outlined text-2xl">compare_arrows</span>
+                </div>
+                <h3 class="font-serif-custom text-2xl mb-3">We Match You</h3>
+                <p class="text-sm text-brand-dark/70 leading-relaxed">
+                    Our psychological matching algorithm pairs you with a local artisan guide whose soul resonates with yours.
+                </p>
+            </div>
+            <div class="flex flex-col items-center">
+                <div class="w-16 h-16 bg-brand-orange text-white flex items-center justify-center rounded-lg mb-8 shadow-sm">
+                    <span class="material-symbols-outlined text-2xl">luggage</span>
+                </div>
+                <h3 class="font-serif-custom text-2xl mb-3">You Travel Local</h3>
+                <p class="text-sm text-brand-dark/70 leading-relaxed">
+                    Meet your guide for a coffee, craft your bespoke itinerary together, and experience Vietnam through their eyes.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Journal Selection: Top Guides -->
+    <section class="py-24 px-8 md:px-16 max-w-[1440px] mx-auto bg-[#f6f2ec] border-y border-cream-dark">
+        <div class="flex justify-between items-end mb-12">
+            <div>
+                <span class="text-brand-orange font-bold text-xs tracking-[0.2em] uppercase mb-2 block">Curated Talent</span>
+                <h2 class="font-serif-custom text-4xl text-brand-dark">Journal Selection: Top Guides</h2>
+            </div>
+            <a href="/Guide" class="text-brand-orange text-xs font-bold tracking-widest uppercase hover:underline">
+                View All Guides →
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Guide 1 -->
+            <div class="bg-white p-4 border border-cream-dark transition-all hover:shadow-lg">
+                <div class="relative h-64 mb-4 overflow-hidden bg-gray-200">
+                    <div class="absolute top-2 left-2 bg-brand-dark text-white text-[10px] uppercase tracking-wider px-2 py-1 z-10">Culture</div>
+                    <div class="absolute top-2 right-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-white/20 z-10">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        <span class="text-[9px] text-white uppercase tracking-wider font-bold">Avail Tmrw</span>
+                    </div>
+                    <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=500" alt="Minh Nguyen" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"/>
+                </div>
+                <h4 class="font-serif-custom text-xl mb-1">Minh Nguyen</h4>
+                <p class="text-brand-orange text-xs font-bold uppercase tracking-wider mb-2">Heritage & Architecture</p>
+                <div class="flex items-center gap-1 mb-6 text-xs text-brand-dark/70">
+                    <span class="material-symbols-outlined text-brand-orange text-sm" style="font-variation-settings: 'FILL' 1;">star</span> 4.9 (124 reviews)
+                </div>
+                <a href="/Guide/Profile/1" class="block w-full text-center border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white py-2.5 text-xs font-bold tracking-widest uppercase transition-colors">
+                    Meet Minh
+                </a>
+            </div>
+
+            <!-- Guide 2 -->
+            <div class="bg-white p-4 border border-cream-dark transition-all hover:shadow-lg">
+                <div class="relative h-64 mb-4 overflow-hidden bg-gray-200">
+                    <div class="absolute top-2 left-2 bg-brand-dark text-white text-[10px] uppercase tracking-wider px-2 py-1 z-10">Art</div>
+                    <div class="absolute top-2 right-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-white/20 z-10">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                        <span class="text-[9px] text-white uppercase tracking-wider font-bold">Booked soon</span>
+                    </div>
+                    <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=500" alt="Linh Tran" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"/>
+                </div>
+                <h4 class="font-serif-custom text-xl mb-1">Linh Tran</h4>
+                <p class="text-brand-orange text-xs font-bold uppercase tracking-wider mb-2">Contemporary Art Guide</p>
+                <div class="flex items-center gap-1 mb-6 text-xs text-brand-dark/70">
+                    <span class="material-symbols-outlined text-brand-orange text-sm" style="font-variation-settings: 'FILL' 1;">star</span> 5.0 (89 reviews)
+                </div>
+                <a href="/Guide/Profile/2" class="block w-full text-center border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white py-2.5 text-xs font-bold tracking-widest uppercase transition-colors">
+                    Meet Linh
+                </a>
+            </div>
+
+            <!-- Guide 3 -->
+            <div class="bg-white p-4 border border-cream-dark transition-all hover:shadow-lg">
+                <div class="relative h-64 mb-4 overflow-hidden bg-gray-200">
+                    <div class="absolute top-2 left-2 bg-brand-dark text-white text-[10px] uppercase tracking-wider px-2 py-1 z-10">History</div>
+                    <div class="absolute top-2 right-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-white/20 z-10">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        <span class="text-[9px] text-white uppercase tracking-wider font-bold">Avail Today</span>
+                    </div>
+                    <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=500" alt="Bao Le" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"/>
+                </div>
+                <h4 class="font-serif-custom text-xl mb-1">Bao Le</h4>
+                <p class="text-brand-orange text-xs font-bold uppercase tracking-wider mb-2">Historical Storyteller</p>
+                <div class="flex items-center gap-1 mb-6 text-xs text-brand-dark/70">
+                    <span class="material-symbols-outlined text-brand-orange text-sm" style="font-variation-settings: 'FILL' 1;">star</span> 4.8 (210 reviews)
+                </div>
+                <a href="/Guide/Profile/3" class="block w-full text-center border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white py-2.5 text-xs font-bold tracking-widest uppercase transition-colors">
+                    Meet Bao
+                </a>
+            </div>
+
+            <!-- Guide 4 -->
+            <div class="bg-white p-4 border border-cream-dark transition-all hover:shadow-lg">
+                <div class="relative h-64 mb-4 overflow-hidden bg-gray-200">
+                    <div class="absolute top-2 left-2 bg-brand-dark text-white text-[10px] uppercase tracking-wider px-2 py-1 z-10">Food</div>
+                    <div class="absolute top-2 right-2 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-2 py-1 rounded-full border border-white/20 z-10">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                        <span class="text-[9px] text-white uppercase tracking-wider font-bold">Avail Tmrw</span>
+                    </div>
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=500" alt="Anh Vu" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-700"/>
+                </div>
+                <h4 class="font-serif-custom text-xl mb-1">Anh Vu</h4>
+                <p class="text-brand-orange text-xs font-bold uppercase tracking-wider mb-2">Culinary Artisan</p>
+                <div class="flex items-center gap-1 mb-6 text-xs text-brand-dark/70">
+                    <span class="material-symbols-outlined text-brand-orange text-sm" style="font-variation-settings: 'FILL' 1;">star</span> 4.9 (156 reviews)
+                </div>
+                <a href="/Guide/Profile/4" class="block w-full text-center border border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white py-2.5 text-xs font-bold tracking-widest uppercase transition-colors">
+                    Meet Anh
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- The Geography of Heritage -->
+    <section class="py-32 px-8 md:px-16 max-w-[1440px] mx-auto text-center">
+        <h2 class="font-serif-custom text-4xl text-brand-dark mb-16">
+            The Geography <span class="italic text-brand-orange">of</span> Heritage
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 h-[500px]">
+            <div class="relative group overflow-hidden cursor-pointer rounded-xl shadow-lg">
+                <!-- Image Slideshow -->
+                <img src="https://loremflickr.com/800/600/hanoi,street/all?lock=1" alt="Hanoi 1" class="slide-img slide-1"/>
+                <img src="https://loremflickr.com/800/600/hanoi,food/all?lock=2" alt="Hanoi 2" class="slide-img slide-2"/>
+                <img src="https://loremflickr.com/800/600/hanoi,temple/all?lock=3" alt="Hanoi 3" class="slide-img slide-3"/>
+                
+                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent group-hover:bg-black/60 transition-colors duration-500"></div>
+                
+                <!-- Default State -->
+                <div class="absolute bottom-8 left-8 text-left transition-all duration-500 group-hover:-translate-y-8 group-hover:opacity-0">
+                    <h3 class="font-serif-custom text-4xl text-white mb-2">Hanoi</h3>
+                    <div class="flex gap-2">
+                        <span class="text-[10px] border border-white/50 text-white uppercase tracking-widest px-2 py-1 backdrop-blur-sm">Old Quarter</span>
+                        <span class="text-[10px] border border-white/50 text-white uppercase tracking-widest px-2 py-1 backdrop-blur-sm">Street Food</span>
+                    </div>
+                </div>
+
+                <!-- Hover State (Interactive Exploration) -->
+                <div class="absolute inset-0 flex flex-col justify-center items-center text-white p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 translate-y-8 group-hover:translate-y-0">
+                    <span class="material-symbols-outlined text-brand-orange text-5xl mb-4 transform scale-50 group-hover:scale-100 transition-transform duration-500 delay-100">travel_explore</span>
+                    <p class="font-serif-custom text-3xl mb-3 text-center">Explore Hanoi</p>
+                    <p class="text-sm text-center text-white/80 mb-8 max-w-[250px]">Connect with artists and historians deeply rooted in the capital's 1000-year history.</p>
+                    
+                    <div class="flex flex-col items-center">
+                        <div class="flex justify-center">
+                            <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100" class="w-10 h-10 rounded-full border-2 border-brand-dark z-30 object-cover shadow-lg" alt="Guide 1"/>
+                            <img src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100" class="w-10 h-10 rounded-full border-2 border-brand-dark -ml-3 z-20 object-cover shadow-lg" alt="Guide 2"/>
+                            <img src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100" class="w-10 h-10 rounded-full border-2 border-brand-dark -ml-3 z-10 object-cover shadow-lg" alt="Guide 3"/>
+                        </div>
+                        <div class="flex items-center gap-2 mt-4 bg-brand-orange/20 px-4 py-2 rounded-full border border-brand-orange/50 backdrop-blur-md">
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-brand-orange">12 Artisans Online</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="relative group overflow-hidden cursor-pointer rounded-xl shadow-lg">
+                <!-- Image Slideshow -->
+                <img src="https://loremflickr.com/800/600/hoian,lanterns/all?lock=4" alt="Hoi An 1" class="slide-img slide-1"/>
+                <img src="https://loremflickr.com/800/600/hoian,boat/all?lock=5" alt="Hoi An 2" class="slide-img slide-2"/>
+                <img src="https://loremflickr.com/800/600/hoian,oldhouse/all?lock=6" alt="Hoi An 3" class="slide-img slide-3"/>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent group-hover:bg-black/60 transition-colors duration-500"></div>
+                
+                <!-- Default State -->
+                <div class="absolute bottom-8 left-8 text-left transition-all duration-500 group-hover:-translate-y-8 group-hover:opacity-0">
+                    <h3 class="font-serif-custom text-4xl text-white mb-2">Hoi An</h3>
+                    <div class="flex gap-2">
+                        <span class="text-[10px] border border-white/50 text-white uppercase tracking-widest px-2 py-1 backdrop-blur-sm">Lanterns</span>
+                        <span class="text-[10px] border border-white/50 text-white uppercase tracking-widest px-2 py-1 backdrop-blur-sm">Tailoring</span>
+                    </div>
+                </div>
+
+                <!-- Hover State (Interactive Exploration) -->
+                <div class="absolute inset-0 flex flex-col justify-center items-center text-white p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 translate-y-8 group-hover:translate-y-0">
+                    <span class="material-symbols-outlined text-brand-orange text-5xl mb-4 transform scale-50 group-hover:scale-100 transition-transform duration-500 delay-100">directions_boat</span>
+                    <p class="font-serif-custom text-3xl mb-3 text-center">Explore Hoi An</p>
+                    <p class="text-sm text-center text-white/80 mb-8 max-w-[250px]">Wander through mustard-yellow alleys with local tailors and chefs.</p>
+                    
+                    <div class="flex flex-col items-center">
+                        <div class="flex justify-center">
+                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" class="w-10 h-10 rounded-full border-2 border-brand-dark z-30 object-cover shadow-lg" alt="Guide 1"/>
+                            <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=100" class="w-10 h-10 rounded-full border-2 border-brand-dark -ml-3 z-20 object-cover shadow-lg" alt="Guide 2"/>
+                        </div>
+                        <div class="flex items-center gap-2 mt-4 bg-brand-orange/20 px-4 py-2 rounded-full border border-brand-orange/50 backdrop-blur-md">
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-brand-orange">8 Artisans Online</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative group overflow-hidden cursor-pointer rounded-xl shadow-lg">
+                <!-- Image Slideshow -->
+                <img src="https://loremflickr.com/800/600/saigon,night/all?lock=7" alt="Saigon 1" class="slide-img slide-1"/>
+                <img src="https://loremflickr.com/800/600/saigon,coffee/all?lock=8" alt="Saigon 2" class="slide-img slide-2"/>
+                <img src="https://loremflickr.com/800/600/saigon,market/all?lock=9" alt="Saigon 3" class="slide-img slide-3"/>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent group-hover:bg-black/60 transition-colors duration-500"></div>
+                
+                <!-- Default State -->
+                <div class="absolute bottom-8 left-8 text-left transition-all duration-500 group-hover:-translate-y-8 group-hover:opacity-0">
+                    <h3 class="font-serif-custom text-4xl text-white mb-2">Saigon</h3>
+                    <div class="flex gap-2">
+                        <span class="text-[10px] border border-white/50 text-white uppercase tracking-widest px-2 py-1 backdrop-blur-sm">Modern Culture</span>
+                        <span class="text-[10px] border border-white/50 text-white uppercase tracking-widest px-2 py-1 backdrop-blur-sm">Nightlife</span>
+                    </div>
+                </div>
+
+                <!-- Hover State (Interactive Exploration) -->
+                <div class="absolute inset-0 flex flex-col justify-center items-center text-white p-8 opacity-0 group-hover:opacity-100 transition-opacity duration-500 translate-y-8 group-hover:translate-y-0">
+                    <span class="material-symbols-outlined text-brand-orange text-5xl mb-4 transform scale-50 group-hover:scale-100 transition-transform duration-500 delay-100">local_cafe</span>
+                    <p class="font-serif-custom text-3xl mb-3 text-center">Explore Saigon</p>
+                    <p class="text-sm text-center text-white/80 mb-8 max-w-[250px]">Dive into the pulsating heart of Vietnam's most dynamic metropolis.</p>
+                    
+                    <div class="flex flex-col items-center">
+                        <div class="flex justify-center">
+                            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100" class="w-10 h-10 rounded-full border-2 border-brand-dark z-30 object-cover shadow-lg" alt="Guide 1"/>
+                            <img src="https://images.unsplash.com/photo-1524250502761-1ac6f2e30d43?w=100" class="w-10 h-10 rounded-full border-2 border-brand-dark -ml-3 z-20 object-cover shadow-lg" alt="Guide 2"/>
+                            <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100" class="w-10 h-10 rounded-full border-2 border-brand-dark -ml-3 z-10 object-cover shadow-lg" alt="Guide 3"/>
+                        </div>
+                        <div class="flex items-center gap-2 mt-4 bg-brand-orange/20 px-4 py-2 rounded-full border border-brand-orange/50 backdrop-blur-md">
+                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-brand-orange">15 Artisans Online</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trust & Safety Section -->
+    <section class="py-24 px-8 md:px-16 bg-[#fbf8f4]">
+        <div class="max-w-[1200px] mx-auto text-center">
+            <span class="text-brand-orange font-bold text-xs tracking-[0.2em] uppercase mb-4 block">TRUST & SAFETY</span>
+            <h2 class="text-4xl md:text-5xl font-serif-custom font-semibold mb-16 text-brand-dark">Travel with Peace of Mind</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                <div class="flex flex-col items-center">
+                    <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-md mb-6 border border-cream-dark">
+                        <span class="material-symbols-outlined text-4xl text-[#2c6e1c]">verified_user</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4 text-brand-dark">Vetted Local Guides</h3>
+                    <p class="text-brand-dark/70 text-center">Every guide undergoes a strict 3-step verification process, including in-person interviews and trial tours.</p>
+                </div>
+
+                <div class="flex flex-col items-center">
+                    <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-md mb-6 border border-cream-dark">
+                        <span class="material-symbols-outlined text-4xl text-brand-orange">payments</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4 text-brand-dark">Secure Escrow Payments</h3>
+                    <p class="text-brand-dark/70 text-center">Your money is held securely and only released to the guide after your tour is successfully completed.</p>
+                </div>
+
+                <div class="flex flex-col items-center">
+                    <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-md mb-6 border border-cream-dark">
+                        <span class="material-symbols-outlined text-4xl text-[#bf360c]">support_agent</span>
+                    </div>
+                    <h3 class="text-xl font-bold mb-4 text-brand-dark">24/7 Local Support</h3>
+                    <p class="text-brand-dark/70 text-center">Our dedicated team in Vietnam is always available via chat or phone for any emergencies or questions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonial -->
+    <section class="py-24 px-8 md:px-16 bg-[#eae4db] border-y border-cream-dark">
+        <div class="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center gap-16">
+            <div class="md:w-1/2 relative">
+                <img src="https://images.unsplash.com/photo-1528181304800-259b08848526?w=800" alt="Traveler experience" class="w-full aspect-square object-cover shadow-2xl"/>
+                <div class="absolute -bottom-6 -right-6 w-16 h-16 bg-brand-orange flex items-center justify-center text-white text-4xl font-serif-custom shadow-lg">
+                    "
+                </div>
+            </div>
+            <div class="md:w-1/2">
+                <p class="font-serif-custom text-3xl md:text-4xl text-brand-dark leading-tight mb-8">
+                    "TripMate didn't just show me Vietnam; they gave me a seat at the table. My guide, Hieu, took me to a 300-year-old home where I learned more about life than any museum could ever teach."
+                </p>
+                <div>
+                    <h5 class="text-brand-orange font-bold tracking-widest uppercase text-sm mb-1">Sarah Jenkins</h5>
+                    <p class="text-brand-dark/60 text-xs tracking-wider uppercase">Traveler from Australia</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Newsletter -->
+    <section class="newsletter-bg py-24 px-8 md:px-16 text-center">
+        <div class="max-w-3xl mx-auto flex flex-col md:flex-row items-center gap-12">
+            <div class="text-left md:w-1/2">
+                <h2 class="font-serif-custom text-4xl text-white mb-4">Join the Journal</h2>
+                <p class="text-white/80 text-sm leading-relaxed">
+                    Subscribe to our curated dispatch of hidden gems, artisan interviews, and authentic travel inspiration. Delivered monthly.
+                </p>
+            </div>
+            <div class="md:w-1/2 w-full">
+                <form class="flex flex-col gap-3">
+                    <input type="email" placeholder="Email Address" class="w-full bg-white/10 border border-white/30 text-white placeholder:text-white/50 px-6 py-4 focus:outline-none focus:border-white transition-colors">
+                    <button type="submit" class="w-full bg-white text-brand-orange font-bold uppercase tracking-widest text-xs px-6 py-4 hover:bg-gray-100 transition-colors">
+                        Subscribe
+                    </button>
+                    <p class="text-white/50 text-[10px] text-left mt-2 uppercase tracking-wider">By subscribing, you agree to our privacy policy.</p>
+                </form>
+            </div>
+        </div>
+    </section>
+
+</div>

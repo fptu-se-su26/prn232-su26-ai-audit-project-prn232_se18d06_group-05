@@ -1,0 +1,268 @@
+@{
+    ViewData["Title"] = "Become a Guide";
+    Layout = "~/Views/Shared/_LandingLayout.cshtml";
+}
+
+<div class="bg-[#fbf8f4] text-brand-dark min-h-screen font-sans">
+    
+    <!-- Hero Section -->
+    <section class="relative pt-24 pb-32 px-8 md:px-16 flex flex-col md:flex-row items-center justify-between max-w-[1440px] mx-auto gap-12">
+        <div class="md:w-1/2 z-10 relative">
+            <span class="inline-block bg-[#eaf4e6] text-[#2c6e1c] font-bold text-xs tracking-[0.2em] uppercase px-4 py-1.5 rounded-full mb-6">
+                BECOME A TRIPMATE GUIDE
+            </span>
+            <h1 class="font-serif-custom text-6xl md:text-7xl font-semibold leading-[1.1] mb-6 text-brand-dark">
+                Turn your <br/><span class="text-brand-orange italic font-serif-custom">passion</span> into a <br/>lifestyle.
+            </h1>
+            <p class="text-lg text-brand-dark/70 max-w-md mb-10 leading-relaxed">
+                Share the authentic side of your city, connect with global travelers, and earn money doing what you love on your own schedule.
+            </p>
+            <div class="flex flex-wrap gap-4">
+                <a href="#application-form" class="bg-brand-orange hover:bg-[#e65100] text-white px-8 py-4 rounded-full text-sm font-bold transition-all shadow-lg">
+                    Start your application
+                </a>
+                <a href="#stories" class="bg-white border border-outline-variant/30 text-brand-dark hover:border-brand-dark px-8 py-4 rounded-full text-sm font-bold transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">play_circle</span>
+                    View Guide Stories
+                </a>
+            </div>
+        </div>
+        
+        <div class="md:w-1/2 relative z-0">
+            <!-- Decorative blobs/shapes -->
+            <div class="absolute -top-10 -right-10 w-64 h-64 bg-[#eaf4e6] rounded-full blur-3xl opacity-60"></div>
+            <div class="absolute -bottom-10 -left-10 w-64 h-64 bg-brand-orange/20 rounded-full blur-3xl opacity-60"></div>
+            
+            <!-- Main Image -->
+            <div class="relative rounded-[2rem] overflow-hidden shadow-2xl rotate-2 hover:rotate-0 transition-transform duration-500">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800" alt="Hoi An River" class="w-full h-[600px] object-cover" />
+                
+                <!-- Floating Badge -->
+                <div class="absolute bottom-8 left-8 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-lg flex items-center gap-4 max-w-xs">
+                    <div class="w-12 h-12 rounded-full bg-brand-orange flex items-center justify-center text-white">
+                        <span class="material-symbols-outlined">stars</span>
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-sm">Top Rated</h4>
+                        <p class="text-xs text-brand-dark/60">Average rating of TripMate guides is 4.9/5</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Why guide with us? -->
+    <section class="py-24 px-8 md:px-16 max-w-[1440px] mx-auto">
+        <div class="mb-16">
+            <h2 class="text-4xl font-serif-custom font-semibold mb-4">Why guide with us?</h2>
+            <p class="text-brand-dark/60 text-lg">Beyond a marketplace, we are a collective of storytellers.</p>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Card 1 -->
+            <div class="bg-[#f5ece3] p-10 rounded-3xl lg:col-span-1 border border-[#ebd8c5]">
+                <span class="material-symbols-outlined text-brand-orange text-3xl mb-6">schedule</span>
+                <h3 class="text-2xl font-bold mb-4">Complete Autonomy</h3>
+                <p class="text-brand-dark/70">Design your own tours, set your own prices, and choose your schedule. You are your own boss.</p>
+            </div>
+            
+            <!-- Aesthetic Image 1 -->
+            <div class="rounded-3xl overflow-hidden hidden lg:block border border-outline-variant/20">
+                <img src="https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=600" alt="Watch" class="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"/>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="bg-[#ffcc80] p-10 rounded-3xl lg:col-span-1 shadow-inner border border-[#f5b041]">
+                <span class="material-symbols-outlined text-[#d84315] text-3xl mb-6">payments</span>
+                <h3 class="text-2xl font-bold mb-4 text-[#bf360c]">Weekly Payouts</h3>
+                <p class="text-[#d84315]/80 font-medium">Direct transfers to your bank account every Thursday for the tours completed in the previous 7 days.</p>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="bg-white p-10 rounded-3xl lg:col-span-1 shadow-sm border border-outline-variant/30">
+                <span class="material-symbols-outlined text-brand-orange text-3xl mb-6">workspace_premium</span>
+                <h3 class="text-2xl font-bold mb-4">Pro Certification</h3>
+                <p class="text-brand-dark/70">Gain access to our exclusive storytelling framework, professional photography training, and quality standards.</p>
+            </div>
+
+            <!-- Card 4 (Spans 2 cols) -->
+            <div class="bg-[#f5ece3] p-10 rounded-3xl lg:col-span-2 border border-[#ebd8c5] flex flex-col md:flex-row gap-8 items-center">
+                <div class="flex-1">
+                    <span class="material-symbols-outlined text-[#2c6e1c] text-3xl mb-6">public</span>
+                    <h3 class="text-2xl font-bold mb-4">Global Network</h3>
+                    <p class="text-brand-dark/70">Join a private community of guides. Share insights, attend regional meetups, and get access to premium tips from top earners.</p>
+                </div>
+                <div class="w-full md:w-1/3 h-40 rounded-2xl overflow-hidden">
+                    <img src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=600" alt="Community" class="w-full h-full object-cover opacity-80" />
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Estimate your potential -->
+    <section class="py-24 px-8 md:px-16 max-w-[1440px] mx-auto flex flex-col lg:flex-row items-center gap-16">
+        <div class="lg:w-1/2">
+            <h2 class="text-5xl font-serif-custom font-semibold mb-6">Estimate your potential.</h2>
+            <p class="text-brand-dark/70 text-lg mb-12 max-w-md leading-relaxed">
+                Find out what you could earn by guiding just a few days a week. Your income grows as your reputation builds.
+            </p>
+            
+            <div class="space-y-8">
+                <div>
+                    <div class="flex justify-between mb-2">
+                        <label class="text-xs font-bold tracking-widest uppercase">Hours guiding per week</label>
+                        <span class="font-bold text-brand-orange">24h</span>
+                    </div>
+                    <input type="range" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-orange" value="24" min="0" max="40">
+                </div>
+                
+                <div>
+                    <div class="flex justify-between mb-2">
+                        <label class="text-xs font-bold tracking-widest uppercase">Price per traveler</label>
+                        <span class="font-bold text-brand-orange">$40</span>
+                    </div>
+                    <input type="range" class="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-brand-orange" value="40" min="10" max="150">
+                </div>
+            </div>
+        </div>
+        
+        <div class="lg:w-1/2 w-full">
+            <div class="bg-white rounded-[2.5rem] p-12 text-center shadow-xl border border-outline-variant/20 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-[#ffcc80] to-brand-orange"></div>
+                <span class="text-xs font-bold tracking-[0.2em] uppercase text-brand-dark/50 block mb-4">ESTIMATED MONTHLY EARNINGS</span>
+                <h3 class="text-7xl font-serif-custom font-bold text-[#bf360c] mb-6">$1,920</h3>
+                <p class="text-sm text-brand-dark/60 max-w-sm mx-auto mb-8">
+                    Based on 3 days a week at the standard tier matching $40/traveler. Actual earnings may vary.
+                </p>
+                <div class="bg-[#f5ece3] text-[#bf360c] px-4 py-2 rounded-full inline-flex items-center gap-2 text-sm font-bold">
+                    <span class="material-symbols-outlined text-sm">trending_up</span> Top 10% earn > $3,500
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonial -->
+    <section class="py-24 px-8 md:px-16 max-w-[1200px] mx-auto flex flex-col md:flex-row items-center gap-12 bg-white rounded-[3rem] shadow-sm border border-outline-variant/20 my-16">
+        <div class="md:w-2/5 flex justify-center">
+            <!-- Simulated cartoon avatar / graphic -->
+            <div class="w-64 h-64 rounded-full bg-[#fbf8f4] border-8 border-white shadow-xl overflow-hidden relative">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400" alt="Minh Hoang" class="w-full h-full object-cover" />
+            </div>
+        </div>
+        <div class="md:w-3/5">
+            <span class="text-6xl text-brand-orange/30 font-serif-custom leading-none block mb-4">"</span>
+            <h3 class="text-3xl font-serif-custom font-medium leading-relaxed mb-8 text-brand-dark">
+                I used to walk these streets alone. Now, I walk them with friends from all over the world, showing them the Vietnam I love. TripMate gave me the platform to turn my hobby into a legacy.
+            </h3>
+            <div>
+                <p class="font-bold text-lg">Minh Hoang</p>
+                <p class="text-brand-dark/60 text-sm">Top Guide since 2023</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- The Journey & Form -->
+    <section id="application-form" class="py-24 px-8 md:px-16 bg-[#ede6df]">
+        <div class="max-w-[1440px] mx-auto flex flex-col lg:flex-row gap-16">
+            
+            <div class="lg:w-2/5">
+                <h2 class="text-5xl font-serif-custom font-semibold mb-12">The Journey to<br/>becoming a Guide.</h2>
+                <p class="text-brand-dark/70 text-lg mb-12">
+                    We review every application manually to ensure the best quality. The process usually takes 1-2 weeks from start to finish.
+                </p>
+                
+                <div class="space-y-8">
+                    <div class="flex gap-4 items-start">
+                        <div class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white mt-1 shrink-0">
+                            <span class="material-symbols-outlined text-sm font-bold">check</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-1">Apply in under 5 minutes</h4>
+                            <p class="text-brand-dark/60 text-sm">Tell us about yourself and your local expertise.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-4 items-start">
+                        <div class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white mt-1 shrink-0">
+                            <span class="material-symbols-outlined text-sm font-bold">check</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-1">Interview & Screening</h4>
+                            <p class="text-brand-dark/60 text-sm">A brief video call to verify identity and evaluate communication skills.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4 items-start">
+                        <div class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white mt-1 shrink-0">
+                            <span class="material-symbols-outlined text-sm font-bold">check</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-1">Welcome & Onboarding</h4>
+                            <p class="text-brand-dark/60 text-sm">Learn the TripMate standard and set up your dynamic profile.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-4 items-start">
+                        <div class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center text-white mt-1 shrink-0">
+                            <span class="material-symbols-outlined text-sm font-bold">check</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg mb-1">Lead your first tour</h4>
+                            <p class="text-brand-dark/60 text-sm">Start accepting bookings and earning money guiding travelers.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="lg:w-3/5">
+                <div class="bg-white rounded-[2rem] p-10 md:p-14 shadow-2xl">
+                    <h3 class="text-2xl font-bold mb-8">1. Tell us about yourself</h3>
+                    <form action="/Auth/Register" method="GET" class="space-y-6">
+                        <!-- We pass role=guide automatically via hidden input or standard GET params -->
+                        <input type="hidden" name="role" value="guide" />
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-xs font-bold tracking-widest uppercase mb-2 text-brand-dark/70">First Name</label>
+                                <input type="text" placeholder="John" class="w-full bg-[#fbf8f4] border border-outline-variant/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-orange outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold tracking-widest uppercase mb-2 text-brand-dark/70">Last Name</label>
+                                <input type="text" placeholder="Doe" class="w-full bg-[#fbf8f4] border border-outline-variant/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-orange outline-none">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold tracking-widest uppercase mb-2 text-brand-dark/70">Email Address</label>
+                            <input type="email" placeholder="john@example.com" class="w-full bg-[#fbf8f4] border border-outline-variant/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-orange outline-none">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold tracking-widest uppercase mb-2 text-brand-dark/70">City you want to guide in</label>
+                            <select class="w-full bg-[#fbf8f4] border border-outline-variant/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-orange outline-none appearance-none">
+                                <option>Hanoi</option>
+                                <option>Ho Chi Minh City</option>
+                                <option>Da Nang</option>
+                                <option>Hoi An</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-bold tracking-widest uppercase mb-2 text-brand-dark/70">Why do you want to be a local guide?</label>
+                            <textarea rows="3" placeholder="Tell us about your passion for your city..." class="w-full bg-[#fbf8f4] border border-outline-variant/30 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-orange outline-none"></textarea>
+                        </div>
+
+                        <div class="pt-4">
+                            <button type="submit" class="w-full bg-brand-orange hover:bg-[#e65100] text-white px-8 py-4 rounded-full font-bold transition-all shadow-lg text-lg">
+                                Save and Continue
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+        </div>
+    </section>
+
+</div>

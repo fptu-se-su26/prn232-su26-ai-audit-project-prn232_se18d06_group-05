@@ -64,15 +64,24 @@
             <!-- Step 3: Dates -->
             <div x-show="step === 3" x-transition.opacity class="space-y-6" style="display: none;">
                 <div class="bg-gray-50 p-6 rounded-xl border border-outline-variant/30">
-                    <label class="block text-sm font-bold text-on-surface mb-2">When are you traveling?</label>
-                    <input type="date" x-model="answers.date" class="w-full bg-white border-outline-variant/50 rounded-lg p-3 text-on-surface focus:ring-primary focus:border-primary">
+                    <label class="block text-sm font-bold text-on-surface mb-4">When are you traveling?</label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Start Date</label>
+                            <input type="date" x-model="answers.startDate" class="w-full bg-white border-outline-variant/50 rounded-lg p-3 text-on-surface focus:ring-primary focus:border-primary">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">End Date</label>
+                            <input type="date" x-model="answers.endDate" :min="answers.startDate" class="w-full bg-white border-outline-variant/50 rounded-lg p-3 text-on-surface focus:ring-primary focus:border-primary">
+                        </div>
+                    </div>
                 </div>
                 <div class="bg-gray-50 p-6 rounded-xl border border-outline-variant/30">
                     <label class="block text-sm font-bold text-on-surface mb-2">How many people?</label>
                     <div class="flex items-center gap-4">
-                        <button type="button" @@click="if(answers.guests > 1) answers.guests--" class="w-10 h-10 rounded-full border border-primary text-primary flex items-center justify-center hover:bg-primary-container">-</button>
+                        <button type="button" x-on:click="if(answers.guests > 1) answers.guests--" class="w-10 h-10 rounded-full border border-primary text-primary flex items-center justify-center hover:bg-primary-container">-</button>
                         <span class="text-xl font-bold w-8 text-center" x-text="answers.guests"></span>
-                        <button type="button" @@click="answers.guests++" class="w-10 h-10 rounded-full border border-primary text-primary flex items-center justify-center hover:bg-primary-container">+</button>
+                        <button type="button" x-on:click="answers.guests++" class="w-10 h-10 rounded-full border border-primary text-primary flex items-center justify-center hover:bg-primary-container">+</button>
                     </div>
                 </div>
             </div>
@@ -96,7 +105,7 @@
             <div class="mt-12 flex justify-between items-center">
                 <button 
                     x-show="step > 1" 
-                    @@click="step--"
+                    x-on:click="step--"
                     class="px-6 py-3 rounded-full font-bold text-on-surface-variant hover:bg-gray-100 transition-all flex items-center gap-2">
                     <span class="material-symbols-outlined">arrow_back</span>
                     Back
@@ -105,7 +114,7 @@
 
                 <button 
                     x-show="step < totalSteps" 
-                    @@click="nextStep()"
+                    x-on:click="nextStep()"
                     :disabled="!canProceed()"
                     class="px-8 py-3 rounded-full font-bold text-on-primary bg-primary hover:bg-primary/90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                     Next
@@ -114,7 +123,7 @@
 
                 <button 
                     x-show="step === totalSteps" 
-                    @@click="submitSurvey()"
+                    x-on:click="submitSurvey()"
                     :disabled="!canProceed()"
                     class="px-8 py-3 rounded-full font-bold text-on-primary bg-primary hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                     Find My Guide
@@ -125,8 +134,7 @@
     </div>
 </div>
 
-<!-- Add Alpine.js for the multi-step logic -->
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<!-- Alpine.js is included in _Layout.cshtml -->
 
 <script>
     document.addEventListener('alpine:init', () => {
@@ -138,7 +146,8 @@
                 customDestination: '',
                 vibe: '',
                 customVibe: '',
-                date: '',
+                startDate: '',
+                endDate: '',
                 guests: 1,
                 budget: ''
             },
@@ -185,7 +194,7 @@
                     if (this.answers.vibe === 'Other') return this.answers.customVibe.trim() !== '';
                     return this.answers.vibe !== '';
                 }
-                if (this.step === 3) return this.answers.date !== '';
+                if (this.step === 3) return this.answers.startDate !== '' && this.answers.endDate !== '';
                 if (this.step === 4) return this.answers.budget !== '';
                 return true;
             },

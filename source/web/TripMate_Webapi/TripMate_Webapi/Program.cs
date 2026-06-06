@@ -140,6 +140,6 @@ app.UseAuthorization();
 app.MapControllers(); // Map API controllers
 app.MapControllerRoute( // Map MVC routes
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=LandingPage}/{action=LandingPage}/{id?}");
 
 app.Run();

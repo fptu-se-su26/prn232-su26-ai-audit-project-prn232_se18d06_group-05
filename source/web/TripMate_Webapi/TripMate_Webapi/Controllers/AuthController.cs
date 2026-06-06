@@ -35,7 +35,7 @@ namespace TripMate_Webapi.Controllers
         {
             // Clear any server-side session if needed
             // Client-side will clear localStorage
-            return RedirectToAction("Index", "Home");
+            return RedirectToAction("LandingPage", "LandingPage");
         }
     }
 }

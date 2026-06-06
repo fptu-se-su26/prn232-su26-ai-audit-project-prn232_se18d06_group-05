@@ -67,13 +67,13 @@
                     </div>
 
                     <div class="flex items-center gap-4 mt-auto">
-                        <button class="bg-primary hover:bg-primary/90 text-on-primary px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
+                        <button onclick="handleConnect(event, '/Guide/Profile/1')" class="bg-primary hover:bg-primary/90 text-on-primary px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
                             Connect Now
                             <span class="material-symbols-outlined">send</span>
                         </button>
-                        <button class="text-on-surface-variant hover:text-primary font-bold px-6 py-4 rounded-xl hover:bg-primary-container transition-all">
+                        <a href="/Guide/Profile/1" class="text-on-surface-variant hover:text-primary font-bold px-6 py-4 rounded-xl hover:bg-primary-container transition-all">
                             View Profile
-                        </button>
+                        </a>
                     </div>
                 </div>
             </div>
@@ -134,7 +134,7 @@
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+<!-- Alpine.js is included in _Layout.cshtml -->
 
 <script>
     document.addEventListener('alpine:init', () => {
@@ -158,4 +158,23 @@
             }
         }))
     })
+</script>
+
+<!-- Authentication Script -->
+<script>
+    function handleConnect(event, redirectUrl) {
+        const token = localStorage.getItem('accessToken');
+        const userEmail = localStorage.getItem('userEmail');
+        
+        if (!token || !userEmail) {
+            event.preventDefault();
+            // Save destination URL to redirect back after login
+            localStorage.setItem('redirectAfterLogin', redirectUrl);
+            // Redirect to Login page
+            window.location.href = '/Auth/Login';
+        } else {
+            // Already logged in, go to profile to book
+            window.location.href = redirectUrl;
+        }
+    }
 </script>
