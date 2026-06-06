@@ -24,8 +24,14 @@ builder.Services.AddSingleton(_ =>
 // ── Auth Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SupabaseAuthService>();
 builder.Services.AddScoped<SupabaseAuthService>();
+builder.Services.AddHttpClient<GoogleAuthService>();
+builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+builder.Services.AddHttpClient<SupabasePasswordResetService>();
+builder.Services.AddScoped<ISupabasePasswordResetService, SupabasePasswordResetService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpClient<PasswordResetService>();
+builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 
 // ── Tour Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<TourService>();
@@ -130,6 +136,13 @@ app.UseDefaultFiles();  // Serve index.html as default
 app.UseStaticFiles();   // Serve files from wwwroot
 
 app.UseCors("AllowAll");
+
+// Allow Google Sign-In popups to communicate with the main window
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups";
+    await next();
+});
 
 // Chỉ redirect HTTPS trên production — dev để Flutter Web gọi http được
 if (!app.Environment.IsDevelopment())

@@ -4,6 +4,8 @@ namespace TripMate_WebAPI.Models;
 
 public record LoginRequest(string Email, string Password);
 
+public record GoogleLoginRequest(string IdToken, string AccessToken);
+
 public record RegisterRequest(string Email, string Password, string FullName);
 
 public record GuideRegisterRequest(
@@ -17,6 +19,10 @@ public record GuideRegisterRequest(
     string? Bio,
     string? CertificateUrl
 );
+
+public record ForgotPasswordRequest(string Email, string CaptchaToken);
+
+public record ResetPasswordRequest(string Email, string Token, string NewPassword);
 
 public record RefreshTokenRequest(string RefreshToken);
 
@@ -39,3 +45,5 @@ public record UserDto(
     string? Status,
     DateTime CreatedAt
 );
+
+public record ForgotPasswordResponse(string Message, bool Success);

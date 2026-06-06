@@ -117,7 +117,7 @@ public class SupabaseAuthService
         return content;
     }
 
-    private async Task<ProfileRow> GetProfileAsync(string accessToken, string userId)
+    public async Task<ProfileRow> GetProfileAsync(string accessToken, string userId)
     {
         var request = new HttpRequestMessage(
             HttpMethod.Get,
