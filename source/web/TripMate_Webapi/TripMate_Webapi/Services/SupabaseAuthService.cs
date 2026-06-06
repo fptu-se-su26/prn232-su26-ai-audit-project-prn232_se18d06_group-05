@@ -103,7 +103,7 @@ public class SupabaseAuthService
         if (!response.IsSuccessStatusCode)
         {
             var err = JsonSerializer.Deserialize<GoTrueError>(content, _json);
-            throw new Exception(MapGoTrueError(err?.ErrorDescription ?? err?.Msg ?? content));
+            throw new Exception(MapGoTrueError(err?.GetMessage() ?? content));
         }
 
         return content;
@@ -184,7 +184,7 @@ public class SupabaseAuthService
         };
     }
 
-    private async Task UpsertProfileAsync(string accessToken, string userId, string email, string fullName, string role = "traveler",
+    public async Task UpsertProfileAsync(string accessToken, string userId, string email, string fullName, string role = "traveler",
         string? phoneNumber = null, string? experience = null, string? specialization = null, 
         string? languages = null, string? bio = null, string? certificatePath = null)
     {
@@ -193,14 +193,13 @@ public class SupabaseAuthService
             id = userId,
             email,
             full_name = fullName,
-            phone_number = phoneNumber,
+            phone = phoneNumber,         // schema mới dùng 'phone'
             role = role,
             experience = experience,
             specialization = specialization,
             languages = languages,
             bio = bio,
-            certificate_path = certificatePath,
-            status = role == "guide" ? "pending" : "active", // Guides need approval
+            status = role == "guide" ? "active" : "active",
             created_at = DateTime.UtcNow,
             updated_at = DateTime.UtcNow,
         };
@@ -239,9 +238,12 @@ public class SupabaseAuthService
     private static string MapGoTrueError(string msg) => msg switch
     {
         "Invalid login credentials" => "Email hoặc mật khẩu không đúng",
-        "User already registered" => "Email đã được đăng ký",
-        "Email not confirmed" => "Vui lòng xác nhận email trước khi đăng nhập",
-        _ => msg
+        "User already registered"   => "Email đã được đăng ký",
+        "Email not confirmed"       => "Vui lòng xác nhận email trước khi đăng nhập",
+        "invalid_credentials"       => "Email hoặc mật khẩu không đúng",
+        "email_not_confirmed"       => "Vui lòng xác nhận email trước khi đăng nhập",
+        "user_already_exists"       => "Email đã được đăng ký",
+        _                           => msg
     };
 }
 
@@ -273,11 +275,26 @@ internal class GoTrueUser
 
 internal class GoTrueError
 {
-    [JsonPropertyName("error")]
+    // Supabase GoTrue v2 format: {"code":400,"error_code":"invalid_credentials","msg":"..."}
+    [JsonPropertyName("msg")]
     public string? Msg { get; set; }
+
+    [JsonPropertyName("error_code")]
+    public string? ErrorCode { get; set; }
+
+    [JsonPropertyName("code")]
+    public int? Code { get; set; }
+
+    // Legacy format: {"error":"...", "error_description":"..."}
+    [JsonPropertyName("error")]
+    public string? Error { get; set; }
 
     [JsonPropertyName("error_description")]
     public string? ErrorDescription { get; set; }
+
+    // Helper to get most meaningful message
+    public string GetMessage() =>
+        ErrorDescription ?? Msg ?? Error ?? "Lỗi xác thực";
 }
 
 public class ProfileRow
@@ -291,7 +308,7 @@ public class ProfileRow
     [JsonPropertyName("full_name")]
     public string? FullName { get; set; }
 
-    [JsonPropertyName("phone")]
+    [JsonPropertyName("phone")]          // schema mới: phone (không phải phone_number)
     public string? Phone { get; set; }
 
     [JsonPropertyName("avatar_url")]

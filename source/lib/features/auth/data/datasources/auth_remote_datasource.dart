@@ -345,9 +345,9 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'id': userId,
         'email': email,
         'full_name': fullName,
-        'phone_number': phoneNumber,
+        'phone': phoneNumber, // schema mới dùng 'phone'
         'role': 'guide',
-        'status': 'pending', // Awaiting admin approval
+        'status': 'active',
         'created_at': DateTime.now().toIso8601String(),
         'updated_at': DateTime.now().toIso8601String(),
       };

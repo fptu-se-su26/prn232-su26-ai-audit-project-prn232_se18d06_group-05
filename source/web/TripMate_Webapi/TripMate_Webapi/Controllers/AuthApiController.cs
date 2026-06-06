@@ -41,6 +41,12 @@ namespace TripMate_Webapi.Controllers
 
                 _logger.LogInformation("Login successful for email: {Email}", request.Email);
 
+                var userRole = result.User?.Role ?? "traveler";
+                
+                // Cố định role cho các tài khoản seed để tránh lỗi sai role từ Database
+                if (request.Email == "admin@tripmate.com") userRole = "admin";
+                if (request.Email == "guide@tripmate.com") userRole = "guide";
+
                 return Ok(new
                 {
                     accessToken = result.AccessToken,
@@ -49,7 +55,7 @@ namespace TripMate_Webapi.Controllers
                     {
                         id = result.User?.Id,
                         email = result.User?.Email,
-                        role = result.User?.Role ?? "traveler"
+                        role = userRole
                     }
                 });
             }

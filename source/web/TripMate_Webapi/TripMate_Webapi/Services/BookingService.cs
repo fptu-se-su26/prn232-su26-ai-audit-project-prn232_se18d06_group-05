@@ -6,6 +6,10 @@ using TripMate_WebAPI.Models;
 
 namespace TripMate_WebAPI.Services;
 
+/// <summary>
+/// BookingService — cập nhật theo schema mới:
+/// bookings.tour_availability_id → tour_availability → guide_tours → tour_templates
+/// </summary>
 public class BookingService
 {
     private readonly HttpClient _http;
@@ -35,30 +39,31 @@ public class BookingService
     public async Task<BookingDto> CreateBookingAsync(
         string travelerId, CreateBookingRequest req, string userToken)
     {
-        // 1. Lấy thông tin tour để tính giá
-        var tour = await GetTourAsync(req.TourId)
-            ?? throw new Exception("Không tìm thấy tour");
+        // 1. Lấy thông tin tour_availability để xác minh và tính giá
+        var availability = await GetAvailabilityAsync(req.TourAvailabilityId)
+            ?? throw new Exception("Không tìm thấy lịch trống cho tour này");
 
-        if (req.Guests < 1 || req.Guests > tour.MaxParticipants)
-            throw new Exception($"Số khách phải từ 1 đến {tour.MaxParticipants}");
+        if (availability.RemainingSlots < req.Guests)
+            throw new Exception($"Chỉ còn {availability.RemainingSlots} chỗ trống, không đủ cho {req.Guests} khách");
 
-        if (req.TourDate < DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)))
-            throw new Exception("Ngày tour phải từ ngày mai trở đi");
+        if (req.Guests < 1)
+            throw new Exception("Số khách phải ít nhất là 1");
 
-        var unitPrice  = tour.Price;
-        var totalPrice = unitPrice * req.Guests;
+        // 2. Lấy thông tin guide_tour để tính giá
+        var guideTour = await GetGuideTourAsync(availability.GuideTourId)
+            ?? throw new Exception("Không tìm thấy thông tin tour");
 
-        // 2. Insert booking
+        var totalPrice = guideTour.Price * req.Guests;
+
+        // 3. Insert booking
         var body = new
         {
-            guide_tour_id = req.TourId,  // Updated to use guide_tour_id
+            tour_availability_id = req.TourAvailabilityId,
             traveler_id = travelerId,
-            tour_date   = req.TourDate.ToString("yyyy-MM-dd"),
-            guests      = req.Guests,
-            unit_price  = unitPrice,
+            guests = req.Guests,
             total_price = totalPrice,
-            note        = req.Note,
-            status      = "pending",
+            note = req.Note,
+            status = "pending",
         };
 
         var request = BuildRequest(HttpMethod.Post, $"{_supabaseUrl}/rest/v1/bookings", userToken);
@@ -67,28 +72,29 @@ public class BookingService
             JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
         var response = await _http.SendAsync(request);
-        var content  = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync();
         EnsureSuccess(response, content);
 
         var rows = JsonSerializer.Deserialize<List<BookingRow>>(content, _json);
-        var row  = rows?.FirstOrDefault() ?? throw new Exception("Tạo booking thất bại");
+        var row = rows?.FirstOrDefault() ?? throw new Exception("Tạo booking thất bại");
 
-        var dto = MapToDto(row, tour);
+        // 4. Giảm remaining_slots
+        await DecrementSlotsAsync(req.TourAvailabilityId, req.Guests, userToken);
 
-        // Gửi notification cho guide
-        _ = _notif.SendAsync(tour.GuideId ?? "", "booking_created",
+        var dto = MapToDto(row, availability, guideTour);
+
+        // 5. Gửi notification và tạo conversation
+        _ = _notif.SendAsync(guideTour.GuideId ?? "", "booking_created",
             "Có người đặt tour của bạn!",
             $"{dto.TourTitle} — {dto.Guests} khách ngày {dto.TourDate:dd/MM/yyyy}",
             new { bookingId = dto.Id, travelerId });
 
-        // Gửi notification cho traveler
         _ = _notif.SendAsync(travelerId, "booking_confirmed",
             "Đặt tour thành công!",
             $"Bạn đã đặt {dto.TourTitle} ngày {dto.TourDate:dd/MM/yyyy}",
             new { bookingId = dto.Id });
 
-        // Tạo conversation giữa traveler và guide
-        _ = _chat.GetOrCreateConversationAsync(travelerId, tour.GuideId ?? "", dto.Id, userToken);
+        _ = _chat.GetOrCreateConversationAsync(travelerId, guideTour.GuideId ?? "", dto.Id, userToken);
 
         return dto;
     }
@@ -97,39 +103,38 @@ public class BookingService
 
     public async Task<List<BookingDto>> GetMyBookingsAsync(string travelerId)
     {
+        // Join bookings → tour_availability → guide_tours → tour_templates
         var url = $"{_supabaseUrl}/rest/v1/bookings" +
-                  $"?traveler_id=eq.{travelerId}&order=created_at.desc&select=*";
+                  $"?traveler_id=eq.{travelerId}" +
+                  $"&order=created_at.desc" +
+                  $"&select=*,tour_availability(id,date,remaining_slots,guide_tour_id," +
+                  $"guide_tours(id,guide_id,price,duration_hours,max_participants,status,rating," +
+                  $"tour_templates(title,location,images)))";
 
-        var rows = await GetAsync<List<BookingRow>>(url) ?? [];
+        var rows = await GetAsync<List<BookingRowJoined>>(url) ?? [];
 
-        // Lấy tour info cho từng booking
-        var result = new List<BookingDto>();
-        foreach (var row in rows)
-        {
-            var tour = await GetTourAsync(row.TourId ?? "");
-            result.Add(MapToDto(row, tour));
-        }
-        return result;
+        return rows.Select(MapJoinedToDto).ToList();
     }
 
     // ── Get Booking By Id ─────────────────────────────────────────────────────
 
     public async Task<BookingDto?> GetBookingByIdAsync(string bookingId)
     {
-        var url = $"{_supabaseUrl}/rest/v1/bookings?id=eq.{bookingId}&select=*";
-        var rows = await GetAsync<List<BookingRow>>(url);
-        var row  = rows?.FirstOrDefault();
-        if (row == null) return null;
+        var url = $"{_supabaseUrl}/rest/v1/bookings" +
+                  $"?id=eq.{bookingId}" +
+                  $"&select=*,tour_availability(id,date,remaining_slots,guide_tour_id," +
+                  $"guide_tours(id,guide_id,price,duration_hours,max_participants,status,rating," +
+                  $"tour_templates(title,location,images)))";
 
-        var tour = await GetTourAsync(row.TourId ?? "");
-        return MapToDto(row, tour);
+        var rows = await GetAsync<List<BookingRowJoined>>(url);
+        var row = rows?.FirstOrDefault();
+        return row == null ? null : MapJoinedToDto(row);
     }
 
     // ── Cancel Booking ────────────────────────────────────────────────────────
 
     public async Task CancelBookingAsync(string bookingId, string travelerId)
     {
-        // Verify ownership
         var booking = await GetBookingByIdAsync(bookingId)
             ?? throw new Exception("Không tìm thấy booking");
 
@@ -139,7 +144,8 @@ public class BookingService
         if (booking.Status == "completed")
             throw new Exception("Không thể hủy booking đã hoàn thành");
 
-        var updates = new { status = "cancelled", updated_at = DateTime.UtcNow };
+        // Update status
+        var updates = new { status = "cancelled" };
         var request = BuildRequest(HttpMethod.Patch,
             $"{_supabaseUrl}/rest/v1/bookings?id=eq.{bookingId}");
         request.Content = new StringContent(
@@ -147,24 +153,75 @@ public class BookingService
 
         var response = await _http.SendAsync(request);
         EnsureSuccess(response, await response.Content.ReadAsStringAsync());
+
+        // Hoàn trả remaining_slots
+        await IncrementSlotsAsync(booking.TourAvailabilityId, booking.Guests);
+    }
+
+    // ── Get Tour Availability ─────────────────────────────────────────────────
+
+    public async Task<List<TourAvailabilityDto>> GetAvailabilityByGuideTourAsync(string guideTourId)
+    {
+        var url = $"{_supabaseUrl}/rest/v1/tour_availability" +
+                  $"?guide_tour_id=eq.{guideTourId}" +
+                  $"&remaining_slots=gt.0" +
+                  $"&order=date.asc";
+
+        var rows = await GetAsync<List<AvailabilityRow>>(url) ?? [];
+
+        return rows.Select(r => new TourAvailabilityDto(
+            Id: r.Id ?? "",
+            GuideTourId: r.GuideTourId ?? "",
+            Date: DateOnly.Parse(r.Date ?? DateTime.UtcNow.ToString("yyyy-MM-dd")),
+            RemainingSlots: r.RemainingSlots
+        )).ToList();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private async Task<TourRow?> GetTourAsync(string tourId)
+    private async Task<AvailabilityRow?> GetAvailabilityAsync(string availabilityId)
     {
-        // Updated to use guide_tours joined with tour_templates
-        var url = $"{_supabaseUrl}/rest/v1/guide_tours?id=eq.{tourId}&select=*,tour_templates(title,description,location,images,created_at),profiles(full_name)";
-        var rows = await GetAsync<List<GuideTourRow>>(url);
-        var guideTour = rows?.FirstOrDefault();
-        return guideTour != null ? MapGuideTourToTourRow(guideTour) : null;
+        var url = $"{_supabaseUrl}/rest/v1/tour_availability?id=eq.{availabilityId}&select=*";
+        var rows = await GetAsync<List<AvailabilityRow>>(url);
+        return rows?.FirstOrDefault();
+    }
+
+    private async Task<GuideTourDetailRow?> GetGuideTourAsync(string guideTourId)
+    {
+        var url = $"{_supabaseUrl}/rest/v1/guide_tours" +
+                  $"?id=eq.{guideTourId}" +
+                  $"&select=*,tour_templates(title,description,location,images)";
+        var rows = await GetAsync<List<GuideTourDetailRow>>(url);
+        return rows?.FirstOrDefault();
+    }
+
+    private async Task DecrementSlotsAsync(string availabilityId, int guests, string userToken)
+    {
+        // RPC call or raw update
+        var url = $"{_supabaseUrl}/rest/v1/tour_availability?id=eq.{availabilityId}";
+        var request = BuildRequest(HttpMethod.Patch, url, userToken);
+        // Use Postgres expression via RPC
+        request.Content = new StringContent(
+            $"{{\"remaining_slots\":\"remaining_slots - {guests}\"}}",
+            Encoding.UTF8, "application/json");
+        await _http.SendAsync(request);
+    }
+
+    private async Task IncrementSlotsAsync(string availabilityId, int guests)
+    {
+        var url = $"{_supabaseUrl}/rest/v1/tour_availability?id=eq.{availabilityId}";
+        var request = BuildRequest(HttpMethod.Patch, url);
+        request.Content = new StringContent(
+            $"{{\"remaining_slots\":\"remaining_slots + {guests}\"}}",
+            Encoding.UTF8, "application/json");
+        await _http.SendAsync(request);
     }
 
     private async Task<T?> GetAsync<T>(string url)
     {
         var request = BuildRequest(HttpMethod.Get, url);
         var response = await _http.SendAsync(request);
-        var content  = await response.Content.ReadAsStringAsync();
+        var content = await response.Content.ReadAsStringAsync();
         EnsureSuccess(response, content);
         return JsonSerializer.Deserialize<T>(content, _json);
     }
@@ -185,57 +242,91 @@ public class BookingService
             throw new Exception($"Supabase {r.StatusCode}: {content}");
     }
 
-    // ── Mapping methods ───────────────────────────────────────────────────────
+    // ── Mapping ───────────────────────────────────────────────────────────────
 
-    private static TourRow MapGuideTourToTourRow(GuideTourRow guideTour)
+    private static BookingDto MapToDto(BookingRow row, AvailabilityRow availability, GuideTourDetailRow guideTour)
     {
-        return new TourRow
-        {
-            Id = guideTour.Id,
-            GuideId = guideTour.GuideId,
-            Title = guideTour.TourTemplate?.Title,
-            Description = guideTour.TourTemplate?.Description,
-            Location = guideTour.TourTemplate?.Location,
-            Price = guideTour.Price,
-            DurationHours = guideTour.DurationHours,
-            MaxParticipants = guideTour.MaxParticipants,
-            Images = guideTour.TourTemplate?.Images,
-            Rating = guideTour.Rating,
-            TotalReviews = guideTour.TotalReviews,
-            Status = guideTour.Status,
-            CreatedAt = guideTour.TourTemplate?.CreatedAt ?? DateTime.UtcNow,
-            UpdatedAt = guideTour.TourTemplate?.CreatedAt ?? DateTime.UtcNow
-        };
+        return new BookingDto(
+            Id: row.Id ?? "",
+            TourAvailabilityId: row.TourAvailabilityId ?? "",
+            GuideTourId: availability.GuideTourId ?? "",
+            TourTitle: guideTour.TourTemplate?.Title ?? "",
+            TourLocation: guideTour.TourTemplate?.Location ?? "",
+            TravelerId: row.TravelerId ?? "",
+            TourDate: DateOnly.Parse(availability.Date ?? DateTime.UtcNow.ToString("yyyy-MM-dd")),
+            Guests: row.Guests,
+            TotalPrice: (double)row.TotalPrice,
+            Note: row.Note,
+            Status: row.Status ?? "pending",
+            CreatedAt: row.CreatedAt,
+            RemainingSlots: availability.RemainingSlots - row.Guests
+        );
     }
 
-    private static BookingDto MapToDto(BookingRow row, TourRow? tour) => new(
-        Id:           row.Id ?? "",
-        TourId:       row.TourId ?? "",
-        TourTitle:    tour?.Title ?? "",
-        TourLocation: tour?.Location ?? "",
-        TravelerId:   row.TravelerId ?? "",
-        TourDate:     DateOnly.Parse(row.TourDate ?? DateTime.UtcNow.ToString("yyyy-MM-dd")),
-        Guests:       row.Guests,
-        UnitPrice:    row.UnitPrice,
-        TotalPrice:   row.TotalPrice,
-        Note:         row.Note,
-        Status:       row.Status ?? "pending",
-        CreatedAt:    row.CreatedAt
-    );
+    private static BookingDto MapJoinedToDto(BookingRowJoined row)
+    {
+        var av = row.TourAvailability;
+        var gt = av?.GuideTour;
+        var tmpl = gt?.TourTemplate;
+
+        return new BookingDto(
+            Id: row.Id ?? "",
+            TourAvailabilityId: row.TourAvailabilityId ?? "",
+            GuideTourId: av?.GuideTourId ?? "",
+            TourTitle: tmpl?.Title ?? "",
+            TourLocation: tmpl?.Location ?? "",
+            TravelerId: row.TravelerId ?? "",
+            TourDate: DateOnly.Parse(av?.Date ?? DateTime.UtcNow.ToString("yyyy-MM-dd")),
+            Guests: row.Guests,
+            TotalPrice: (double)row.TotalPrice,
+            Note: row.Note,
+            Status: row.Status ?? "pending",
+            CreatedAt: row.CreatedAt,
+            RemainingSlots: av?.RemainingSlots
+        );
+    }
 }
 
 // ── Row models ────────────────────────────────────────────────────────────────
 
 internal class BookingRow
 {
-    [JsonPropertyName("id")]              public string? Id { get; set; }
-    [JsonPropertyName("guide_tour_id")]   public string? TourId { get; set; }  // Updated to guide_tour_id
-    [JsonPropertyName("traveler_id")]     public string? TravelerId { get; set; }
-    [JsonPropertyName("tour_date")]       public string? TourDate { get; set; }
-    [JsonPropertyName("guests")]          public int Guests { get; set; }
-    [JsonPropertyName("unit_price")]      public double UnitPrice { get; set; }
-    [JsonPropertyName("total_price")]     public double TotalPrice { get; set; }
-    [JsonPropertyName("note")]            public string? Note { get; set; }
-    [JsonPropertyName("status")]          public string? Status { get; set; }
-    [JsonPropertyName("created_at")]      public DateTime CreatedAt { get; set; }
+    [JsonPropertyName("id")]                    public string? Id { get; set; }
+    [JsonPropertyName("tour_availability_id")]  public string? TourAvailabilityId { get; set; }
+    [JsonPropertyName("traveler_id")]           public string? TravelerId { get; set; }
+    [JsonPropertyName("guests")]                public int Guests { get; set; }
+    [JsonPropertyName("total_price")]           public decimal TotalPrice { get; set; }
+    [JsonPropertyName("note")]                  public string? Note { get; set; }
+    [JsonPropertyName("status")]                public string? Status { get; set; }
+    [JsonPropertyName("created_at")]            public DateTime CreatedAt { get; set; }
+}
+
+internal class BookingRowJoined : BookingRow
+{
+    [JsonPropertyName("tour_availability")] public AvailabilityRowJoined? TourAvailability { get; set; }
+}
+
+internal class AvailabilityRow
+{
+    [JsonPropertyName("id")]                public string? Id { get; set; }
+    [JsonPropertyName("guide_tour_id")]     public string? GuideTourId { get; set; }
+    [JsonPropertyName("date")]              public string? Date { get; set; }
+    [JsonPropertyName("remaining_slots")]   public int RemainingSlots { get; set; }
+}
+
+internal class AvailabilityRowJoined : AvailabilityRow
+{
+    [JsonPropertyName("guide_tours")] public GuideTourDetailRow? GuideTour { get; set; }
+}
+
+internal class GuideTourDetailRow
+{
+    [JsonPropertyName("id")]                public string? Id { get; set; }
+    [JsonPropertyName("guide_id")]          public string? GuideId { get; set; }
+    [JsonPropertyName("price")]             public decimal Price { get; set; }
+    [JsonPropertyName("duration_hours")]    public int DurationHours { get; set; }
+    [JsonPropertyName("max_participants")]  public int MaxParticipants { get; set; }
+    [JsonPropertyName("status")]            public string? Status { get; set; }
+    [JsonPropertyName("rating")]            public double Rating { get; set; }
+    [JsonPropertyName("tour_templates")]    public TourTemplateRow? TourTemplate { get; set; }
 }

@@ -24,6 +24,7 @@ builder.Services.AddSingleton(_ =>
 // ── Auth Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SupabaseAuthService>();
 builder.Services.AddScoped<SupabaseAuthService>();
+builder.Services.AddScoped<DatabaseSeeder>();
 
 // ── Tour Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<TourService>();
@@ -141,5 +142,12 @@ app.MapControllers(); // Map API controllers
 app.MapControllerRoute( // Map MVC routes
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
+
+// Seed database
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
+    await seeder.SeedAsync();
+}
 
 app.Run();
