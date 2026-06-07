@@ -13,11 +13,13 @@ namespace TripMate_Webapi.Controllers
     {
         private readonly SupabaseAuthService _authService;
         private readonly ILogger<AuthApiController> _logger;
+        private readonly IConfiguration _configuration;
 
-        public AuthApiController(SupabaseAuthService authService, ILogger<AuthApiController> logger)
+        public AuthApiController(SupabaseAuthService authService, ILogger<AuthApiController> logger, IConfiguration configuration)
         {
             _authService = authService;
             _logger = logger;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -41,6 +43,28 @@ namespace TripMate_Webapi.Controllers
 
                 _logger.LogInformation("Login successful for email: {Email}", request.Email);
 
+                var userRole = result.User?.Role ?? "traveler";
+                var userStatus = result.User?.Status ?? "active";
+                
+                // Cố định role cho các tài khoản seed để tránh lỗi sai role từ Database
+                if (request.Email == "admin@tripmate.com") userRole = "admin";
+                if (request.Email == "guide@tripmate.com") {
+                    userRole = "guide";
+                    userStatus = "active";
+                }
+
+                if (userRole == "guide" && userStatus == "pending")
+                {
+                    _logger.LogWarning("Pending guide login attempt for email: {Email}", request.Email);
+                    return Unauthorized(new { message = "Tài khoản của bạn đang chờ Admin phê duyệt. Vui lòng quay lại sau." });
+                }
+                
+                if (userRole == "guide" && userStatus == "rejected")
+                {
+                    _logger.LogWarning("Rejected guide login attempt for email: {Email}", request.Email);
+                    return Unauthorized(new { message = "Tài khoản hướng dẫn viên của bạn đã bị từ chối." });
+                }
+
                 return Ok(new
                 {
                     accessToken = result.AccessToken,
@@ -49,14 +73,15 @@ namespace TripMate_Webapi.Controllers
                     {
                         id = result.User?.Id,
                         email = result.User?.Email,
-                        role = result.User?.Role ?? "traveler"
+                        role = userRole
                     }
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during login for email: {Email}", request.Email);
-                return StatusCode(500, new { message = "Có lỗi xảy ra. Vui lòng thử lại sau." });
+                _logger.LogWarning(ex, "Login error for email: {Email}", request.Email);
+                // Trả message cụ thể từ Supabase/GoTrue thay vì generic 500
+                return Unauthorized(new { message = ex.Message });
             }
         }
 
@@ -65,7 +90,7 @@ namespace TripMate_Webapi.Controllers
         /// POST /api/auth/register
         /// </summary>
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromForm] RegisterRequest request)
+        public async Task<IActionResult> Register([FromForm] AuthApiRegisterRequest request)
         {
             try
             {
@@ -121,22 +146,31 @@ namespace TripMate_Webapi.Controllers
                 string? certificatePath = null;
                 if (request.Role == "guide" && request.Certificate != null)
                 {
-                    // Create uploads directory if it doesn't exist
-                    var uploadsDir = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "certificates");
-                    Directory.CreateDirectory(uploadsDir);
-
-                    // Generate unique filename
-                    var fileName = $"{Guid.NewGuid()}_{request.Certificate.FileName}";
-                    certificatePath = Path.Combine(uploadsDir, fileName);
-
-                    // Save file
-                    using (var stream = new FileStream(certificatePath, FileMode.Create))
+                    var cloudName = _configuration["Cloudinary:CloudName"];
+                    var apiKey = _configuration["Cloudinary:ApiKey"];
+                    var apiSecret = _configuration["Cloudinary:ApiSecret"];
+                    
+                    var account = new CloudinaryDotNet.Account(cloudName, apiKey, apiSecret);
+                    var cloudinary = new CloudinaryDotNet.Cloudinary(account);
+                    
+                    using (var stream = request.Certificate.OpenReadStream())
                     {
-                        await request.Certificate.CopyToAsync(stream);
+                        // Upload PDF as a raw file
+                        var uploadParams = new CloudinaryDotNet.Actions.RawUploadParams()
+                        {
+                            File = new CloudinaryDotNet.FileDescription(request.Certificate.FileName, stream),
+                            Folder = "tripmate_certificates"
+                        };
+                        
+                        var uploadResult = await cloudinary.UploadAsync(uploadParams);
+                        
+                        if (uploadResult.Error != null)
+                        {
+                            return BadRequest(new { message = $"Lỗi upload file: {uploadResult.Error.Message}" });
+                        }
+                        
+                        certificatePath = uploadResult.SecureUrl.ToString();
                     }
-
-                    // Store relative path for database
-                    certificatePath = $"/uploads/certificates/{fileName}";
                 }
 
                 // Register user
@@ -188,8 +222,9 @@ namespace TripMate_Webapi.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during registration for email: {Email}", request.Email);
-                return StatusCode(500, new { message = "Có lỗi xảy ra. Vui lòng thử lại sau." });
+                _logger.LogWarning(ex, "Error during registration for email: {Email}", request.Email);
+                // Trả message cụ thể từ Supabase/GoTrue thay vì generic 500
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -213,19 +248,29 @@ namespace TripMate_Webapi.Controllers
         public string Password { get; set; } = string.Empty;
     }
 
-    public class RegisterRequest
+    public class AuthApiRegisterRequest
     {
+        [FromForm(Name = "email")]
         public string Email { get; set; } = string.Empty;
+        [FromForm(Name = "password")]
         public string Password { get; set; } = string.Empty;
+        [FromForm(Name = "fullName")]
         public string FullName { get; set; } = string.Empty;
+        [FromForm(Name = "phoneNumber")]
         public string PhoneNumber { get; set; } = string.Empty;
+        [FromForm(Name = "role")]
         public string? Role { get; set; } = "traveler";
         
         // Guide-specific fields
+        [FromForm(Name = "experience")]
         public string? Experience { get; set; }
+        [FromForm(Name = "specialization")]
         public string? Specialization { get; set; }
+        [FromForm(Name = "languages")]
         public string? Languages { get; set; }
+        [FromForm(Name = "bio")]
         public string? Bio { get; set; }
+        [FromForm(Name = "certificate")]
         public IFormFile? Certificate { get; set; }
     }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/datasources/booking_datasource.dart';
 import '../../domain/entities/booking_entity.dart';
+import '../../domain/entities/tour_availability_entity.dart';
 
 // ── My Bookings ───────────────────────────────────────────────────────────────
 
@@ -8,11 +9,13 @@ class MyBookingsState {
   final List<BookingEntity> bookings;
   final bool isLoading;
   final String? error;
+
   const MyBookingsState({
     this.bookings = const [],
     this.isLoading = false,
     this.error,
   });
+
   MyBookingsState copyWith({
     List<BookingEntity>? bookings,
     bool? isLoading,
@@ -26,6 +29,7 @@ class MyBookingsState {
 
 class MyBookingsNotifier extends StateNotifier<MyBookingsState> {
   final BookingDataSource _ds;
+
   MyBookingsNotifier(this._ds) : super(const MyBookingsState());
 
   Future<void> load() async {
@@ -55,13 +59,60 @@ final myBookingsProvider =
       return MyBookingsNotifier(ref.watch(bookingDataSourceProvider));
     });
 
+// ── Tour Availability ─────────────────────────────────────────────────────────
+
+class AvailabilityState {
+  final List<TourAvailabilityEntity> slots;
+  final bool isLoading;
+  final String? error;
+
+  const AvailabilityState({
+    this.slots = const [],
+    this.isLoading = false,
+    this.error,
+  });
+
+  AvailabilityState copyWith({
+    List<TourAvailabilityEntity>? slots,
+    bool? isLoading,
+    String? error,
+  }) => AvailabilityState(
+    slots: slots ?? this.slots,
+    isLoading: isLoading ?? this.isLoading,
+    error: error,
+  );
+}
+
+class AvailabilityNotifier extends StateNotifier<AvailabilityState> {
+  final BookingDataSource _ds;
+
+  AvailabilityNotifier(this._ds) : super(const AvailabilityState());
+
+  Future<void> load(String guideTourId) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final list = await _ds.getAvailability(guideTourId);
+      state = state.copyWith(slots: list, isLoading: false);
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+}
+
+final availabilityProvider =
+    StateNotifierProvider.autoDispose<AvailabilityNotifier, AvailabilityState>(
+      (ref) => AvailabilityNotifier(ref.watch(bookingDataSourceProvider)),
+    );
+
 // ── Create Booking ────────────────────────────────────────────────────────────
 
 class CreateBookingState {
   final bool isLoading;
   final BookingEntity? result;
   final String? error;
+
   const CreateBookingState({this.isLoading = false, this.result, this.error});
+
   CreateBookingState copyWith({
     bool? isLoading,
     BookingEntity? result,
@@ -75,19 +126,19 @@ class CreateBookingState {
 
 class CreateBookingNotifier extends StateNotifier<CreateBookingState> {
   final BookingDataSource _ds;
+
   CreateBookingNotifier(this._ds) : super(const CreateBookingState());
 
+  /// Tạo booking mới — schema mới dùng tourAvailabilityId
   Future<bool> create({
-    required String tourId,
-    required DateTime tourDate,
+    required String tourAvailabilityId,
     required int guests,
     String? note,
   }) async {
     state = const CreateBookingState(isLoading: true);
     try {
       final booking = await _ds.createBooking(
-        tourId: tourId,
-        tourDate: tourDate,
+        tourAvailabilityId: tourAvailabilityId,
         guests: guests,
         note: note,
       );

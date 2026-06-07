@@ -48,7 +48,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final token = await TokenStorage.getAccessToken();
       final dio = Dio(BaseOptions(baseUrl: ApiConfig.baseUrl));
       final res = await dio.get(
-        '/chat/conversations/${widget.conversationId}/messages',
+        '/api/chat/conversations/${widget.conversationId}/messages',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       final list = (res.data['messages'] as List)
@@ -107,7 +107,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       final token = await TokenStorage.getAccessToken();
       final dio = Dio(BaseOptions(baseUrl: ApiConfig.baseUrl));
       await dio.post(
-        '/chat/conversations/${widget.conversationId}/messages',
+        '/api/chat/conversations/${widget.conversationId}/messages',
         data: {'content': text},
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );

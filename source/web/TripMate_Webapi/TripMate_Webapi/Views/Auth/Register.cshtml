@@ -357,13 +357,36 @@
 <link rel="stylesheet" href="/spinner.css">
 <div id="loadingSpinner" class="spinner-overlay" style="display: none;">
     <div class="spinner-container">
-        <div class="spinner">
-            <div class="spinner-ring"></div>
-            <div class="spinner-ring"></div>
-            <div class="spinner-ring"></div>
-            <div class="spinner-ring"></div>
-        </div>
+        <svg class="pl" width="240" height="240" viewBox="0 0 240 240">
+            <circle class="pl__ring pl__ring--a" cx="120" cy="120" r="105" fill="none" stroke="#000" stroke-width="20"
+                stroke-dasharray="0 660" stroke-dashoffset="-330" stroke-linecap="round"></circle>
+            <circle class="pl__ring pl__ring--b" cx="120" cy="120" r="35" fill="none" stroke="#000" stroke-width="20"
+                stroke-dasharray="0 220" stroke-dashoffset="-110" stroke-linecap="round"></circle>
+            <circle class="pl__ring pl__ring--c" cx="85" cy="120" r="70" fill="none" stroke="#000" stroke-width="20"
+                stroke-dasharray="0 440" stroke-linecap="round"></circle>
+            <circle class="pl__ring pl__ring--d" cx="155" cy="120" r="70" fill="none" stroke="#000" stroke-width="20"
+                stroke-dasharray="0 440" stroke-linecap="round"></circle>
+        </svg>
         <p class="spinner-text">Đang tạo tài khoản...</p>
+    </div>
+</div>
+
+<!-- Guide Pending Approval Screen -->
+<div id="guidePendingScreen" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9998; justify-content:center; align-items:center;">
+    <div style="background:white; border-radius:20px; max-width:480px; width:90%; padding:40px; text-align:center; box-shadow:0 25px 60px rgba(0,0,0,0.3);">
+        <div style="width:80px; height:80px; background:linear-gradient(135deg,#FF6B35,#FF8C42); border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 24px;">
+            <span class="material-symbols-outlined" style="font-size:40px; color:white;">schedule</span>
+        </div>
+        <h2 style="color:#1a1a2e; font-size:24px; font-weight:800; margin-bottom:12px;">Đăng ký thành công!</h2>
+        <p style="color:#FF6B35; font-size:16px; font-weight:700; margin-bottom:16px;">Tài khoản đang chờ phê duyệt</p>
+        <p style="color:#555; font-size:14px; line-height:1.6; margin-bottom:28px;">
+            Hồ sơ Hướng dẫn viên của bạn đã được gửi đến Admin TripMate.<br/>
+            Chúng tôi sẽ xem xét và gửi kết quả qua email của bạn trong vòng <strong>24–48 giờ</strong>.
+        </p>
+        <div style="background:#fff8f5; border:1px solid #ffe0d0; border-radius:10px; padding:16px; margin-bottom:24px;">
+            <p style="color:#FF6B35; font-size:13px; font-weight:600; margin:0;">📧 Kiểm tra email của bạn để nhận thông báo kết quả từ TripMate!</p>
+        </div>
+        <a href="/Auth/Login" style="display:inline-block; background:linear-gradient(135deg,#FF6B35,#FF8C42); color:white; padding:12px 32px; border-radius:10px; text-decoration:none; font-weight:700; font-size:15px;">Về trang đăng nhập</a>
     </div>
 </div>
 
@@ -581,32 +604,19 @@
             const data = await response.json();
 
             if (response.ok) {
-                // Auto login after successful registration
-                if (data.accessToken) {
+                hideSpinner();
+                if (role === 'guide') {
+                    // Guide: show pending approval screen, do NOT auto-login
+                    document.getElementById('guidePendingScreen').style.display = 'flex';
+                } else if (data.accessToken) {
+                    // Traveler: auto-login and go to survey
                     localStorage.setItem('accessToken', data.accessToken);
                     localStorage.setItem('refreshToken', data.refreshToken || '');
                     localStorage.setItem('userEmail', data.user?.email || email);
                     localStorage.setItem('userId', data.user?.id || '');
                     localStorage.setItem('userRole', data.user?.role || role);
-
-                    // Redirect based on role
-                    setTimeout(() => {
-                        if (role === 'traveler') {
-                            // Travelers go to personality survey first
-                            window.location.href = '/Survey/Personality';
-                        } else if (role === 'guide') {
-                            // Show success message for guides (pending approval)
-                            alert('Đăng ký thành công! Tài khoản của bạn đang được xem xét và sẽ được kích hoạt trong 24-48 giờ.');
-                            window.location.href = '/Auth/Login';
-                        } else if (role === 'admin') {
-                            window.location.href = '/Admin/Dashboard';
-                        } else {
-                            window.location.href = '/';
-                        }
-                    }, 100);
+                    window.location.href = '/Survey/Personality';
                 } else {
-                    // Registration successful but no auto-login
-                    hideSpinner();
                     alert('Đăng ký thành công! Vui lòng đăng nhập.');
                     window.location.href = '/Auth/Login';
                 }

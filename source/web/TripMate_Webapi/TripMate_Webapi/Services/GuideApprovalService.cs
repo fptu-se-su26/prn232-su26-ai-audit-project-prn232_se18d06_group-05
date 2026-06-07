@@ -122,7 +122,7 @@ namespace TripMate_WebAPI.Services
         }
 
         // Approve guide
-        public async Task<bool> ApproveGuideAsync(string guideId, string adminComment = "")
+        public async Task<bool> ApproveGuideAsync(string guideId, string adminComment = "", string? accessToken = null)
         {
             try
             {
@@ -139,6 +139,10 @@ namespace TripMate_WebAPI.Services
                     $"{_supabaseUrl}/rest/v1/profiles?id=eq.{guideId}");
 
                 request.Headers.Add("apikey", _anonKey);
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                }
                 request.Headers.Add("Prefer", "return=minimal");
                 request.Content = new StringContent(
                     JsonSerializer.Serialize(updateData),
@@ -165,7 +169,7 @@ namespace TripMate_WebAPI.Services
         }
 
         // Reject guide
-        public async Task<bool> RejectGuideAsync(string guideId, string reason)
+        public async Task<bool> RejectGuideAsync(string guideId, string reason, string? accessToken = null)
         {
             try
             {
@@ -182,6 +186,10 @@ namespace TripMate_WebAPI.Services
                     $"{_supabaseUrl}/rest/v1/profiles?id=eq.{guideId}");
 
                 request.Headers.Add("apikey", _anonKey);
+                if (!string.IsNullOrEmpty(accessToken))
+                {
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                }
                 request.Headers.Add("Prefer", "return=minimal");
                 request.Content = new StringContent(
                     JsonSerializer.Serialize(updateData),
@@ -220,7 +228,10 @@ namespace TripMate_WebAPI.Services
         public string? Specialization { get; set; }
         public string? Languages { get; set; }
         public string? Bio { get; set; }
+        
+        [System.Text.Json.Serialization.JsonPropertyName("certificate_url")]
         public string? Certificate_Path { get; set; }
+        
         public string? Status { get; set; }
         public string? Admin_Comment { get; set; }
         public DateTime? Created_At { get; set; }

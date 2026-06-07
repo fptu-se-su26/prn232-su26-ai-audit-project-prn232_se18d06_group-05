@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../providers/auth_state_provider.dart';
-import 'signup_screen.dart';
-import '../../../../main.dart' show AuthWrapper;
+import 'signup_with_role_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -36,11 +35,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         );
 
     if (success && mounted) {
-      // AuthWrapper sẽ tự route đúng theo role
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const AuthWrapper()),
-        (_) => false,
-      );
+      // AuthWrapper đang watch authStateProvider và sẽ tự rebuild
+      // khi isAuthenticated thay đổi thành true — không cần navigate thủ công.
+      // Chỉ cần pushAndRemoveUntil về '/' để AuthWrapper rebuild với state mới.
+      Navigator.of(context).pushNamedAndRemoveUntil('/', (_) => false);
     }
   }
 
@@ -170,7 +168,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         onPressed: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
-                              builder: (context) => const SignUpScreen(),
+                              builder: (context) =>
+                                  const SignUpWithRoleScreen(),
                             ),
                           );
                         },

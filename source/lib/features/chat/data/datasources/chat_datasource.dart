@@ -33,7 +33,7 @@ class ChatDataSource {
   }) async {
     try {
       final res = await _dio.post(
-        '/chat/conversations',
+        '/api/chat/conversations',
         options: await _auth(),
         data: {'guideId': guideId, 'bookingId': bookingId},
       );
@@ -45,7 +45,7 @@ class ChatDataSource {
 
   Future<List<ConversationItem>> getMyConversations() async {
     try {
-      final res = await _dio.get('/chat/conversations', options: await _auth());
+      final res = await _dio.get('/api/chat/conversations', options: await _auth());
       final data = res.data as Map<String, dynamic>;
       return (data['conversations'] as List)
           .map((e) => ConversationItem.fromJson(e as Map<String, dynamic>))

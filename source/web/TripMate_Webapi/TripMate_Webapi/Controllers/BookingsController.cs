@@ -26,14 +26,21 @@ public class BookingsController : ControllerBase
         Request.Headers.Authorization.ToString().Replace("Bearer ", "").Trim()
         is { Length: > 0 } t ? t : null;
 
-    /// <summary>Tạo booking mới</summary>
+    /// <summary>
+    /// Tạo booking mới
+    /// POST /api/bookings
+    /// Body: { tourAvailabilityId, guests, note? }
+    /// </summary>
     [HttpPost]
     public async Task<IActionResult> CreateBooking([FromBody] CreateBookingRequest request)
     {
         if (UserId == null) return Unauthorized();
 
-        if (string.IsNullOrWhiteSpace(request.TourId))
-            return BadRequest(new { message = "Tour ID không được để trống" });
+        if (string.IsNullOrWhiteSpace(request.TourAvailabilityId))
+            return BadRequest(new { message = "TourAvailabilityId không được để trống" });
+
+        if (request.Guests < 1)
+            return BadRequest(new { message = "Số khách phải ít nhất là 1" });
 
         try
         {
@@ -50,7 +57,10 @@ public class BookingsController : ControllerBase
         }
     }
 
-    /// <summary>Lấy danh sách booking của tôi</summary>
+    /// <summary>
+    /// Lấy danh sách booking của tôi
+    /// GET /api/bookings/my
+    /// </summary>
     [HttpGet("my")]
     public async Task<IActionResult> GetMyBookings()
     {
@@ -67,7 +77,10 @@ public class BookingsController : ControllerBase
         }
     }
 
-    /// <summary>Lấy chi tiết một booking</summary>
+    /// <summary>
+    /// Lấy chi tiết một booking
+    /// GET /api/bookings/{id}
+    /// </summary>
     [HttpGet("{id}")]
     public async Task<IActionResult> GetBooking(string id)
     {
@@ -83,7 +96,10 @@ public class BookingsController : ControllerBase
         }
     }
 
-    /// <summary>Hủy booking</summary>
+    /// <summary>
+    /// Hủy booking
+    /// DELETE /api/bookings/{id}
+    /// </summary>
     [HttpDelete("{id}")]
     public async Task<IActionResult> CancelBooking(string id)
     {
@@ -101,6 +117,25 @@ public class BookingsController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lấy danh sách ngày trống của một guide_tour
+    /// GET /api/bookings/availability/{guideTourId}
+    /// </summary>
+    [HttpGet("availability/{guideTourId}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAvailability(string guideTourId)
+    {
+        try
+        {
+            var availability = await _bookingService.GetAvailabilityByGuideTourAsync(guideTourId);
+            return Ok(new { availability, total = availability.Count });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
         }
     }
 }

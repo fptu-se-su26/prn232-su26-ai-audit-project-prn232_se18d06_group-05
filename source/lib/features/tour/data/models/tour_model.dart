@@ -45,25 +45,33 @@ class TourModel extends TourEntity {
   }
 
   /// Create TourModel from ASP.NET API JSON (camelCase)
+  /// Backend TourDto trả: id, guideId, title, description, location,
+  /// price, durationHours, maxParticipants, images, rating, totalReviews,
+  /// status, createdAt, updatedAt  — KHÔNG có tourTemplateId
   factory TourModel.fromApiJson(Map<String, dynamic> json) {
     return TourModel(
-      id: json['id'] as String,
-      tourTemplateId: json['tourTemplateId'] as String,
-      guideId: json['guideId'] as String,
-      price: (json['price'] as num).toDouble(),
-      durationHours: json['durationHours'] as int,
+      id: json['id'] as String? ?? '',
+      tourTemplateId: json['tourTemplateId'] as String? ?? '',
+      guideId: json['guideId'] as String? ?? '',
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
+      durationHours: json['durationHours'] as int? ?? 0,
       maxParticipants: json['maxParticipants'] as int? ?? 10,
       status: json['status'] as String? ?? 'active',
-      rating: json['rating'] != null ? (json['rating'] as num).toDouble() : 0.0,
+      rating:
+          json['rating'] != null ? (json['rating'] as num).toDouble() : 0.0,
       totalReviews: json['totalReviews'] as int? ?? 0,
-      title: json['title'] as String,
+      title: json['title'] as String? ?? '',
       description: json['description'] as String?,
-      location: json['location'] as String,
+      location: json['location'] as String? ?? '',
       images: json['images'] != null
           ? List<String>.from(json['images'] as List)
           : [],
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : DateTime.now(),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : DateTime.now(),
     );
   }
 

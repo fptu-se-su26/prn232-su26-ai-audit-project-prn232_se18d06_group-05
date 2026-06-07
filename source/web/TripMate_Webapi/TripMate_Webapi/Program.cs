@@ -24,6 +24,8 @@ builder.Services.AddSingleton(_ =>
 // ── Auth Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SupabaseAuthService>();
 builder.Services.AddScoped<SupabaseAuthService>();
+builder.Services.AddScoped<DatabaseSeeder>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // ── Tour Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<TourService>();
@@ -41,7 +43,7 @@ builder.Services.AddScoped<GuideApprovalService>();
 builder.Services.AddHttpClient<ChatService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddHttpClient<NotificationService>();
-builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 // ── Survey Service ────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SurveyService>();
@@ -141,5 +143,12 @@ app.MapControllers(); // Map API controllers
 app.MapControllerRoute( // Map MVC routes
     name: "default",
     pattern: "{controller=LandingPage}/{action=LandingPage}/{id?}");
+
+// Seed database
+using (var scope = app.Services.CreateScope())
+{
+    var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
+    await seeder.SeedAsync();
+}
 
 app.Run();

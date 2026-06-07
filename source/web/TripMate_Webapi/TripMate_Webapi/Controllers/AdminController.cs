@@ -8,17 +8,23 @@ namespace TripMate_Webapi.Controllers
         private readonly TourService _tourService;
         private readonly BookingService _bookingService;
         private readonly GuideApprovalService _guideApprovalService;
+        private readonly IEmailService _emailService;
+        private readonly INotificationService _notificationService;
         private readonly ILogger<AdminController> _logger;
 
         public AdminController(
             TourService tourService, 
             BookingService bookingService,
             GuideApprovalService guideApprovalService,
+            IEmailService emailService,
+            INotificationService notificationService,
             ILogger<AdminController> logger)
         {
             _tourService = tourService;
             _bookingService = bookingService;
             _guideApprovalService = guideApprovalService;
+            _emailService = emailService;
+            _notificationService = notificationService;
             _logger = logger;
         }
 
@@ -112,10 +118,22 @@ namespace TripMate_Webapi.Controllers
         {
             try
             {
-                var success = await _guideApprovalService.ApproveGuideAsync(request.GuideId, request.Comment ?? "");
+                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "");
+                var application = await _guideApprovalService.GetApplicationByIdAsync(request.GuideId);
+                var success = await _guideApprovalService.ApproveGuideAsync(request.GuideId, request.Comment ?? "", token);
                 
                 if (success)
                 {
+                    if (application != null && !string.IsNullOrEmpty(application.Email))
+                    {
+                        var loginLink = $"{Request.Scheme}://{Request.Host}/Auth/Login";
+                        await _emailService.SendGuideApprovalEmailAsync(
+                            application.Email, 
+                            application.Full_Name ?? "Hướng dẫn viên", 
+                            true, 
+                            request.Comment ?? "Chúc mừng bạn đã được duyệt làm Hướng dẫn viên trên TripMate!",
+                            loginLink); // Approved: gửi link đăng nhập
+                    }
                     return Ok(new { message = "Hướng dẫn viên đã được phê duyệt thành công!" });
                 }
                 else
@@ -141,10 +159,21 @@ namespace TripMate_Webapi.Controllers
                     return BadRequest(new { message = "Vui lòng nhập lý do từ chối" });
                 }
 
-                var success = await _guideApprovalService.RejectGuideAsync(request.GuideId, request.Comment);
+                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "");
+                var application = await _guideApprovalService.GetApplicationByIdAsync(request.GuideId);
+                var success = await _guideApprovalService.RejectGuideAsync(request.GuideId, request.Comment, token);
                 
                 if (success)
                 {
+                    if (application != null && !string.IsNullOrEmpty(application.Email))
+                    {
+                        await _emailService.SendGuideApprovalEmailAsync(
+                            application.Email, 
+                            application.Full_Name ?? "Hướng dẫn viên", 
+                            false, 
+                            request.Comment,
+                            string.Empty); // Rejected: không gửi link
+                    }
                     return Ok(new { message = "Đã từ chối hướng dẫn viên" });
                 }
                 else
@@ -172,6 +201,50 @@ namespace TripMate_Webapi.Controllers
             {
                 _logger.LogError(ex, "Error getting pending count");
                 return Ok(new { count = 0 });
+            }
+        }
+
+        // GET: /Admin/GetNotifications (API for notifications)
+        [HttpGet]
+        public async Task<IActionResult> GetNotifications()
+        {
+            try
+            {
+                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "");
+                if (string.IsNullOrEmpty(token))
+                {
+                    return Unauthorized();
+                }
+
+                var notifications = await _notificationService.GetAdminNotificationsAsync(token);
+                return Ok(notifications);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting notifications");
+                return Ok(new List<object>());
+            }
+        }
+
+        // POST: /Admin/MarkNotificationRead
+        [HttpPost]
+        public async Task<IActionResult> MarkNotificationRead([FromBody] MarkNotificationRequest request)
+        {
+            try
+            {
+                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "");
+                if (string.IsNullOrEmpty(token))
+                {
+                    return Unauthorized();
+                }
+
+                await _notificationService.MarkNotificationAsReadAsync(request.NotificationId, token);
+                return Ok(new { message = "Notification marked as read" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error marking notification as read");
+                return StatusCode(500, new { message = "Có lỗi xảy ra" });
             }
         }
 
@@ -256,5 +329,10 @@ namespace TripMate_Webapi.Controllers
     {
         public string GuideId { get; set; } = string.Empty;
         public string? Comment { get; set; }
+    }
+
+    public class MarkNotificationRequest
+    {
+        public string NotificationId { get; set; } = string.Empty;
     }
 }

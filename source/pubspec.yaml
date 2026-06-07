@@ -53,8 +53,17 @@ dependencies:
   # Image Picker
   image_picker: ^1.0.7
   
+  # File Picker (for PDFs)
+  file_picker: ^8.0.0+1
+  
   # File handling
   path: ^1.9.0
+  
+  # MIME type detection
+  mime: ^1.0.5
+  
+  # Permissions
+  permission_handler: ^11.3.1
   
   # Utilities
   freezed_annotation: ^2.4.4
