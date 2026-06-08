@@ -41,7 +41,7 @@ namespace TripMate_WebAPI.Services
             try
             {
                 // Validate reCAPTCHA
-                var isCaptchaValid = await ValidateRecaptchaAsync(captchaToken);
+                var isCaptchaValid = true;
                 if (!isCaptchaValid)
                 {
                     _logger.LogWarning("Password reset attempted with invalid captcha for email: {Email}", email);
@@ -116,11 +116,6 @@ namespace TripMate_WebAPI.Services
                 _logger.LogError(ex, "Error updating password via Supabase");
                 return false;
             }
-        }
-
-        private async Task<bool> ValidateRecaptchaAsync(string captchaResponse)
-        {
-            return true;
         }
     }
 

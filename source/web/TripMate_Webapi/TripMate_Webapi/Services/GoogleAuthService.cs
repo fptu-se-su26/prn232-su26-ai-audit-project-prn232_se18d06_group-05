@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Configuration;
-using TripMate_WebAPI.Models;
+
 
 namespace TripMate_WebAPI.Services
 {
@@ -204,102 +204,5 @@ namespace TripMate_WebAPI.Services
         }
     }
 
-    // DTOs for Google OAuth
-    public class GoogleTokenInfo
-    {
-        [JsonPropertyName("iss")]
-        public string? Issuer { get; set; }
 
-        [JsonPropertyName("aud")]
-        public string? Audience { get; set; }
-
-        [JsonPropertyName("sub")]
-        public string? Subject { get; set; }
-
-        [JsonPropertyName("email")]
-        public string? Email { get; set; }
-
-        [JsonPropertyName("email_verified")]
-        public string? EmailVerified { get; set; }
-
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
-
-        [JsonPropertyName("picture")]
-        public string? Picture { get; set; }
-
-        [JsonPropertyName("given_name")]
-        public string? GivenName { get; set; }
-
-        [JsonPropertyName("family_name")]
-        public string? FamilyName { get; set; }
-
-        [JsonPropertyName("exp")]
-        public long Expiration { get; set; }
-    }
-
-    public class GoogleUserInfo
-    {
-        public string Email { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string? Picture { get; set; }
-        public bool EmailVerified { get; set; }
-    }
-
-    public class SupabaseOAuthSession
-    {
-        [JsonPropertyName("access_token")]
-        public string? AccessToken { get; set; }
-
-        [JsonPropertyName("refresh_token")]
-        public string? RefreshToken { get; set; }
-
-        [JsonPropertyName("expires_in")]
-        public int? ExpiresIn { get; set; }
-
-        [JsonPropertyName("token_type")]
-        public string? TokenType { get; set; }
-
-        [JsonPropertyName("user")]
-        public SupabaseUser? User { get; set; }
-    }
-
-    public class SupabaseUser
-    {
-        [JsonPropertyName("id")]
-        public string Id { get; set; } = string.Empty;
-
-        [JsonPropertyName("email")]
-        public string? Email { get; set; }
-
-        [JsonPropertyName("email_verified")]
-        public bool EmailVerified { get; set; }
-
-        [JsonPropertyName("user_metadata")]
-        public UserMetadata? UserMetadata { get; set; }
-
-        [JsonPropertyName("created_at")]
-        public DateTime? CreatedAt { get; set; }
-    }
-
-    public class UserMetadata
-    {
-        [JsonPropertyName("name")]
-        public string? Name { get; set; }
-
-        [JsonPropertyName("picture")]
-        public string? Picture { get; set; }
-
-        [JsonPropertyName("avatar_url")]
-        public string? AvatarUrl { get; set; }
-
-        [JsonPropertyName("full_name")]
-        public string? FullName { get; set; }
-
-        [JsonPropertyName("provider_id")]
-        public string? ProviderId { get; set; }
-
-        [JsonPropertyName("sub")]
-        public string? Sub { get; set; }
-    }
 }

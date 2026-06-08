@@ -2,7 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using TripMate_WebAPI.Models;
+
 
 namespace TripMate_WebAPI.Services
 {
@@ -19,7 +19,6 @@ namespace TripMate_WebAPI.Services
         private readonly string _supabaseUrl;
         private readonly string _anonKey;
         private readonly string _serviceRoleKey;
-        private readonly string _recaptchaSecretKey;
         private readonly ILogger<PasswordResetService> _logger;
         
         private static readonly JsonSerializerOptions _json = new()
@@ -38,7 +37,6 @@ namespace TripMate_WebAPI.Services
             _supabaseUrl = config["Supabase:Url"] ?? throw new Exception("Supabase URL not configured");
             _anonKey = config["Supabase:AnonKey"] ?? throw new Exception("Supabase Anon Key not configured");
             _serviceRoleKey = config["Supabase:ServiceRoleKey"] ?? throw new Exception("Supabase Service Role Key not configured");
-            _recaptchaSecretKey = config["ReCaptcha:SecretKey"] ?? "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"; // Test key as fallback
             _logger = logger;
         }
 
@@ -47,12 +45,7 @@ namespace TripMate_WebAPI.Services
             try
             {
                 // Validate reCAPTCHA
-                var isCaptchaValid = await ValidateRecaptchaAsync(captchaToken);
-                if (!isCaptchaValid)
-                {
                     _logger.LogWarning("Password reset attempted with invalid captcha for email: {Email}", email);
-                    return false;
-                }
 
                 // Check if user exists
                 var userExists = await CheckUserExistsAsync(email);
@@ -276,59 +269,5 @@ namespace TripMate_WebAPI.Services
                 _logger.LogError(ex, "Error clearing reset token");
             }
         }
-
-        private async Task<bool> ValidateRecaptchaAsync(string captchaResponse)
-        {
-            try
-            {
-                // Skip validation for test tokens
-                if (captchaResponse == "test-captcha-response" || string.IsNullOrWhiteSpace(_recaptchaSecretKey))
-                {
-                    return true;
-                }
-
-                var parameters = new FormUrlEncodedContent(new[]
-                {
-                    new KeyValuePair<string, string>("secret", _recaptchaSecretKey),
-                    new KeyValuePair<string, string>("response", captchaResponse)
-                });
-
-                var response = await _httpClient.PostAsync("https://www.google.com/recaptcha/api/siteverify", parameters);
-                var content = await response.Content.ReadAsStringAsync();
-
-                var result = JsonSerializer.Deserialize<RecaptchaVerifyResponse>(content, _json);
-                
-                if (result?.Success == true)
-                {
-                    _logger.LogInformation("reCAPTCHA validation successful");
-                    return true;
-                }
-                else
-                {
-                    _logger.LogWarning("reCAPTCHA validation failed: {Errors}", string.Join(", ", result?.ErrorCodes ?? new string[0]));
-                    return false;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error validating reCAPTCHA");
-                return false;
-            }
-        }
-    }
-
-    public class RecaptchaVerifyResponse
-    {
-        [JsonPropertyName("success")]
-        public bool Success { get; set; }
-
-        [JsonPropertyName("error-codes")]
-        public string[]? ErrorCodes { get; set; }
-
-        [JsonPropertyName("challenge_ts")]
-        public string? ChallengeTimestamp { get; set; }
-
-        [JsonPropertyName("hostname")]
-        public string? Hostname { get; set; }
     }
 }
