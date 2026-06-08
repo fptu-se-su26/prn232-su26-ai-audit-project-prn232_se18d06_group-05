@@ -1,0 +1,271 @@
+@{
+    ViewData["Title"] = "Guide Profile";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<!-- Profile Header Section -->
+<section class="bg-surface-variant relative pt-12 pb-24">
+    <div class="px-12 max-w-[1440px] mx-auto">
+        <div class="flex flex-col md:flex-row gap-10 items-start">
+            <!-- Avatar -->
+            <div class="w-48 h-48 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-gray-200 shrink-0 relative">
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <span class="material-symbols-outlined text-9xl text-gray-400">face_3</span>
+                </div>
+            </div>
+
+            <!-- Basic Info -->
+            <div class="flex-1 mt-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                    <div>
+                        <h1 class="text-5xl font-extrabold text-on-surface mb-2 flex items-center gap-4">
+                            Minh Anh
+                            <span class="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full font-bold flex items-center gap-1 border border-primary/20">
+                                <span class="material-symbols-outlined text-sm">verified</span>
+                                Verified Local
+                            </span>
+                        </h1>
+                        <p class="text-xl text-on-surface-variant flex items-center gap-2 font-medium">
+                            <span class="material-symbols-outlined text-primary">location_on</span>
+                            Hanoi, Vietnam
+                        </p>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="flex gap-4">
+                        <button class="w-14 h-14 rounded-full bg-white shadow-md flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-all">
+                            <span class="material-symbols-outlined">favorite</span>
+                        </button>
+                        <button class="w-14 h-14 rounded-full bg-white shadow-md flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary-container transition-all">
+                            <span class="material-symbols-outlined">share</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats & Tags -->
+                <div class="flex flex-wrap gap-8 items-center mt-8">
+                    <div class="flex flex-col">
+                        <span class="text-3xl font-extrabold text-on-surface flex items-center gap-2">
+                            5.0 <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+                        </span>
+                        <span class="text-on-surface-variant text-sm font-medium">124 Reviews</span>
+                    </div>
+                    <div class="w-px h-10 bg-outline-variant/30"></div>
+                    <div class="flex flex-col">
+                        <span class="text-3xl font-extrabold text-on-surface">150+</span>
+                        <span class="text-on-surface-variant text-sm font-medium">Trips Completed</span>
+                    </div>
+                    <div class="w-px h-10 bg-outline-variant/30"></div>
+                    <div class="flex gap-2">
+                        <span class="bg-blue-100 text-blue-700 font-bold px-4 py-2 rounded-xl border border-blue-200">EN</span>
+                        <span class="bg-red-100 text-red-700 font-bold px-4 py-2 rounded-xl border border-red-200">VN</span>
+                        <span class="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-xl border border-gray-300">FR</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<section class="py-16 px-12 max-w-[1440px] mx-auto -mt-16 relative z-10">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+        <!-- Left Column: Details -->
+        <div class="lg:col-span-2 space-y-12 bg-white p-10 rounded-3xl shadow-xl border border-outline-variant/20 tonal-elevation">
+            
+            <!-- Personality / MBTI Match -->
+            <div>
+                <h3 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-3xl">psychology</span>
+                    Personality & Vibe
+                </h3>
+                <div class="bg-primary-container/50 p-6 rounded-2xl border border-primary/20">
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="font-bold text-lg text-on-primary-container">ENFP - "The Campaigner"</span>
+                        <span class="bg-white text-primary px-3 py-1 rounded-full text-sm font-bold shadow-sm">Extrovert • Intuitive • Feeling • Prospecting</span>
+                    </div>
+                    <p class="text-on-surface-variant leading-relaxed">
+                        "I'm an energetic, warm, and passionate person who loves to uncover the deeper meaning of life through culture and human connection. Traveling with me means lots of spontaneous detours, deep conversations over coffee, and finding beauty in the little things."
+                    </p>
+                </div>
+            </div>
+
+            <!-- About Me -->
+            <div>
+                <h3 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-3xl">account_circle</span>
+                    About Minh Anh
+                </h3>
+                <p class="text-on-surface-variant leading-relaxed text-lg mb-4">
+                    Born and raised in the heart of Hanoi, I've spent the last 25 years watching this city evolve while preserving its thousand-year-old soul. I majored in Art History and currently work as a freelance photographer.
+                </p>
+                <p class="text-on-surface-variant leading-relaxed text-lg">
+                    I don't do "cookie-cutter" tours. If you book me, expect to sit on tiny plastic stools eating the best Pho you've ever had, wandering through hidden art galleries in old French colonial villas, and learning about Vietnam not just from textbooks, but from real, raw local perspectives.
+                </p>
+            </div>
+
+            <!-- Specialities -->
+            <div>
+                <h3 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-3xl">local_activity</span>
+                    Travel Specialties
+                </h3>
+                <div class="flex flex-wrap gap-4">
+                    <div class="flex items-center gap-2 bg-surface-variant px-5 py-3 rounded-xl">
+                        <span class="material-symbols-outlined text-secondary">camera_alt</span>
+                        <span class="font-bold text-on-surface">Photography Walks</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-surface-variant px-5 py-3 rounded-xl">
+                        <span class="material-symbols-outlined text-secondary">coffee</span>
+                        <span class="font-bold text-on-surface">Hidden Cafes</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-surface-variant px-5 py-3 rounded-xl">
+                        <span class="material-symbols-outlined text-secondary">palette</span>
+                        <span class="font-bold text-on-surface">Art & History</span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-surface-variant px-5 py-3 rounded-xl">
+                        <span class="material-symbols-outlined text-secondary">ramen_dining</span>
+                        <span class="font-bold text-on-surface">Street Food Tasting</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Reviews -->
+            <div>
+                <h3 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-primary text-3xl">forum</span>
+                    Traveler Reviews
+                </h3>
+                <div class="space-y-6">
+                    <!-- Review 1 -->
+                    <div class="border-b border-outline-variant/30 pb-6">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center font-bold">JD</div>
+                                <div>
+                                    <p class="font-bold text-on-surface">John Doe</p>
+                                    <p class="text-xs text-on-surface-variant">May 2026</p>
+                                </div>
+                            </div>
+                            <div class="flex text-primary">
+                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+                            </div>
+                        </div>
+                        <p class="text-on-surface-variant mt-2">"Minh Anh was exactly the Soulmate I needed for my trip! She took me to places I would have never found on Google Maps. Her photography skills are a huge plus too!"</p>
+                    </div>
+                    
+                    <!-- Review 2 -->
+                    <div class="border-b border-outline-variant/30 pb-6">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center font-bold">SL</div>
+                                <div>
+                                    <p class="font-bold text-on-surface">Sarah Lee</p>
+                                    <p class="text-xs text-on-surface-variant">April 2026</p>
+                                </div>
+                            </div>
+                            <div class="flex text-primary">
+                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
+                            </div>
+                        </div>
+                        <p class="text-on-surface-variant mt-2">"Amazing experience. It felt like walking around with an old friend rather than a hired tour guide. Highly recommended for solo female travelers!"</p>
+                    </div>
+                    
+                    <button class="text-primary font-bold hover:underline">Read all 124 reviews</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Booking Widget -->
+        <div class="lg:col-span-1">
+            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-primary/20 sticky top-24">
+                <div class="flex justify-between items-end mb-6 border-b border-outline-variant/30 pb-6">
+                    <div>
+                        <span class="text-3xl font-extrabold text-on-surface">500,000₫</span>
+                        <span class="text-on-surface-variant">/ day</span>
+                    </div>
+                </div>
+
+                <form action="/Traveler/Book" method="GET" class="space-y-6" id="bookingForm" onsubmit="handleBooking(event)">
+                    <!-- Hidden field for Guide ID -->
+                    <input type="hidden" name="guideId" value="1" />
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Select Date</label>
+                        <input type="date" name="date" required class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Number of Guests</label>
+                        <select name="guests" class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
+                            <option value="1">1 Person</option>
+                            <option value="2">2 People</option>
+                            <option value="3">3 People</option>
+                            <option value="4">4 People</option>
+                            <option value="5">5+ People</option>
+                        </select>
+                    </div>
+
+                    <div class="bg-primary-container/30 p-4 rounded-xl flex items-start gap-3">
+                        <span class="material-symbols-outlined text-primary">info</span>
+                        <p class="text-xs text-on-surface-variant leading-relaxed">
+                            You won't be charged yet. This will send a request to Minh Anh. You can discuss the specific itinerary before payment.
+                        </p>
+                    </div>
+
+                    <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-on-primary py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2 transition-all shadow-lg hover:-translate-y-1">
+                        Send Booking Request
+                        <span class="material-symbols-outlined">send</span>
+                    </button>
+                    
+                    <button type="button" onclick="handleMessage()" class="w-full bg-white border-2 border-primary text-primary hover:bg-primary-container py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2 transition-all">
+                        Message First
+                        <span class="material-symbols-outlined">chat</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Authentication Script -->
+<script>
+    function checkIsLoggedIn() {
+        const token = localStorage.getItem('accessToken');
+        const userEmail = localStorage.getItem('userEmail');
+        return token && userEmail;
+    }
+
+    function requireAuth() {
+        if (!checkIsLoggedIn()) {
+            // Save current URL to redirect back after login
+            localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
+            // Redirect to Login page
+            window.location.href = '/Auth/Login';
+            return false;
+        }
+        return true;
+    }
+
+    function handleBooking(event) {
+        if (!requireAuth()) {
+            event.preventDefault(); // Stop form submission if not logged in
+        }
+    }
+
+    function handleMessage() {
+        if (requireAuth()) {
+            // User is logged in, redirect to chat interface
+            // Mock URL for now
+            window.location.href = '/Traveler/Dashboard'; // Will implement Chat later
+        }
+    }
+</script>

@@ -1,0 +1,97 @@
+@{
+    ViewData["Title"] = "Leave a Review";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="min-h-screen bg-surface py-12 px-4" x-data="{ rating: 0, hovered: 0 }">
+    <div class="max-w-2xl mx-auto">
+        
+        <div class="mb-8 flex items-center gap-4">
+            <a href="/Traveler/Dashboard" class="w-10 h-10 rounded-full bg-white border border-outline-variant/50 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all shadow-sm">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </a>
+            <h1 class="text-3xl font-extrabold text-on-surface">Rate Your Experience</h1>
+        </div>
+
+        <div class="bg-white rounded-3xl p-8 shadow-xl border border-outline-variant/30 tonal-elevation">
+            
+            <!-- Guide Info -->
+            <div class="flex flex-col items-center mb-8 border-b border-outline-variant/30 pb-8 text-center">
+                <div class="w-24 h-24 rounded-full bg-gray-200 mb-4 overflow-hidden shadow-sm">
+                    <div class="w-full h-full flex items-center justify-center">
+                        <span class="material-symbols-outlined text-6xl text-gray-400">face_4</span>
+                    </div>
+                </div>
+                <h2 class="text-2xl font-bold text-on-surface">Tuan Kiet</h2>
+                <p class="text-on-surface-variant">Da Lat Coffee & Nature • Oct 2025</p>
+            </div>
+
+            <form action="/Traveler/SubmitReview" method="POST" class="space-y-8">
+                <input type="hidden" name="id" value="1" />
+                <input type="hidden" name="rating" x-model="rating" />
+
+                <!-- Star Rating -->
+                <div class="text-center">
+                    <h3 class="text-xl font-bold text-on-surface mb-4">How was your Soulmate Guide?</h3>
+                    <div class="flex justify-center gap-2">
+                        <template x-for="i in 5">
+                            <button 
+                                type="button" 
+                                @@mouseenter="hovered = i"
+                                @@mouseleave="hovered = 0"
+                                @@click="rating = i"
+                                class="transition-transform hover:scale-110 focus:outline-none"
+                            >
+                                <span 
+                                    class="material-symbols-outlined text-5xl transition-colors"
+                                    :class="(hovered >= i || (!hovered && rating >= i)) ? 'text-primary' : 'text-gray-300'"
+                                    :style="(hovered >= i || (!hovered && rating >= i)) ? `font-variation-settings: 'FILL' 1;` : `font-variation-settings: 'FILL' 0;`"
+                                >
+                                    star
+                                </span>
+                            </button>
+                        </template>
+                    </div>
+                    <p class="text-sm font-bold mt-4 h-5" :class="rating > 0 ? 'text-primary' : 'text-transparent'" x-text="
+                        rating === 1 ? 'Terrible' :
+                        rating === 2 ? 'Poor' :
+                        rating === 3 ? 'Average' :
+                        rating === 4 ? 'Very Good' :
+                        rating === 5 ? 'Exceptional!' : ''
+                    "></p>
+                </div>
+
+                <!-- Review Comment -->
+                <div>
+                    <label class="block text-sm font-bold text-on-surface mb-2">Write your review</label>
+                    <textarea 
+                        name="comment"
+                        rows="5" 
+                        required
+                        placeholder="Tell others about your experience. What did you love? Was there anything that could be improved?" 
+                        class="w-full bg-surface border-outline-variant/50 rounded-xl p-4 text-on-surface focus:ring-primary focus:border-primary resize-none"
+                    ></textarea>
+                </div>
+
+                <div class="bg-primary-container/30 p-4 rounded-xl flex items-start gap-3">
+                    <span class="material-symbols-outlined text-primary">verified_user</span>
+                    <p class="text-xs text-on-surface-variant leading-relaxed">
+                        Your review will be visible on Tuan Kiet's public profile to help future travelers make their decisions.
+                    </p>
+                </div>
+
+                <button 
+                    type="submit" 
+                    :disabled="rating === 0"
+                    class="w-full bg-primary hover:bg-primary/90 text-on-primary py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Submit Review
+                    <span class="material-symbols-outlined">send</span>
+                </button>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>

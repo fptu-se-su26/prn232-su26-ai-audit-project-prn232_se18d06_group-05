@@ -1,0 +1,163 @@
+@{
+    ViewData["Title"] = "Account Settings";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="min-h-screen bg-surface flex">
+    
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-outline-variant/30 hidden md:flex flex-col sticky top-20 h-[calc(100vh-80px)]">
+        <div class="p-8 flex flex-col items-center border-b border-outline-variant/30">
+            <div class="w-20 h-20 rounded-full bg-primary-container text-primary flex items-center justify-center text-2xl font-bold mb-4 shadow-sm border border-primary/20">
+                JD
+            </div>
+            <h3 class="font-bold text-on-surface text-lg">John Doe</h3>
+            <span class="text-xs text-on-surface-variant bg-surface-variant px-3 py-1 rounded-full mt-2 font-medium">Traveler • ENFP</span>
+        </div>
+        
+        <nav class="p-4 flex-1 space-y-2">
+            <a href="/Traveler/Dashboard" class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface rounded-xl font-medium transition-all">
+                <span class="material-symbols-outlined">dashboard</span>
+                My Dashboard
+            </a>
+            <a href="/Traveler/SavedGuides" class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface rounded-xl font-medium transition-all">
+                <span class="material-symbols-outlined">favorite</span>
+                Saved Guides
+            </a>
+            <a href="/Traveler/Messages" class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface rounded-xl font-medium transition-all">
+                <span class="material-symbols-outlined">chat</span>
+                Messages
+            </a>
+            <a href="/Survey" class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface rounded-xl font-medium transition-all">
+                <span class="material-symbols-outlined">travel_explore</span>
+                New Trip
+            </a>
+        </nav>
+        
+        <div class="p-4 border-t border-outline-variant/30">
+            <a href="/Traveler/Settings" class="flex items-center gap-4 px-6 py-3 bg-primary-container text-primary rounded-xl font-bold transition-all">
+                <span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8 md:p-12 overflow-y-auto h-[calc(100vh-80px)]">
+        
+        <div class="mb-10">
+            <h1 class="text-4xl font-extrabold text-on-surface mb-2">Account Settings</h1>
+            <p class="text-lg text-on-surface-variant">Manage your profile, preferences, and personality details.</p>
+        </div>
+
+        <div class="max-w-3xl space-y-8">
+            
+            <!-- Personal Info Section -->
+            <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
+                <h2 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-2 border-b border-outline-variant/30 pb-4">
+                    <span class="material-symbols-outlined text-primary">person</span> Personal Information
+                </h2>
+                
+                <form class="space-y-6">
+                    <div class="flex items-center gap-6 mb-8">
+                        <div class="w-24 h-24 rounded-full bg-primary-container text-primary flex items-center justify-center text-3xl font-bold shadow-sm border border-primary/20 relative group cursor-pointer">
+                            JD
+                            <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span class="material-symbols-outlined text-white">photo_camera</span>
+                            </div>
+                        </div>
+                        <button type="button" class="bg-surface-variant text-on-surface font-bold px-4 py-2 rounded-xl border border-outline-variant/50 hover:bg-gray-200 transition-all">
+                            Change Photo
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-bold text-on-surface mb-2">First Name</label>
+                            <input type="text" value="John" class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-on-surface mb-2">Last Name</label>
+                            <input type="text" value="Doe" class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-on-surface mb-2">Email Address</label>
+                            <input type="email" value="john.doe@example.com" readonly class="w-full bg-gray-100 border-outline-variant/30 rounded-xl p-3 text-on-surface-variant cursor-not-allowed">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-on-surface mb-2">Phone Number</label>
+                            <input type="tel" value="+1 234 567 8900" class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Bio</label>
+                        <textarea rows="4" class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">I'm an adventurous traveler who loves exploring new cultures, trying street food, and avoiding tourist traps.</textarea>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button type="button" class="bg-primary text-white font-bold px-8 py-3 rounded-xl hover:bg-primary/90 shadow-md transition-all">
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Personality Profile Section -->
+            <div class="bg-primary-container/20 rounded-3xl p-8 border border-primary/20">
+                <div class="flex justify-between items-start mb-6 border-b border-primary/20 pb-4">
+                    <h2 class="text-2xl font-bold text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">psychology</span> Personality Profile
+                    </h2>
+                    <span class="bg-white text-primary px-3 py-1 rounded-full text-sm font-bold shadow-sm border border-primary/20">Completed</span>
+                </div>
+                
+                <div class="flex flex-col md:flex-row gap-8 items-center">
+                    <div class="w-32 h-32 shrink-0 bg-white rounded-2xl shadow-sm border border-outline-variant/30 flex flex-col items-center justify-center">
+                        <span class="text-4xl font-extrabold text-primary mb-1">ENFP</span>
+                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Campaigner</span>
+                    </div>
+                    <div>
+                        <p class="text-on-surface-variant mb-4 leading-relaxed">
+                            You are a true free spirit – energetic, enthusiastic, and curious. In travel, you prefer flexibility over rigid itineraries and value deep connections with locals.
+                        </p>
+                        <a href="/Survey/Personality" class="text-primary font-bold hover:underline flex items-center gap-1">
+                            Retake Personality Test <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Travel Preferences Section -->
+            <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
+                <h2 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-2 border-b border-outline-variant/30 pb-4">
+                    <span class="material-symbols-outlined text-primary">travel_explore</span> Default Travel Preferences
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Preferred Vibe</label>
+                        <select class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
+                            <option>Chill & Relax</option>
+                            <option selected>Adventure</option>
+                            <option>Cultural Deep-dive</option>
+                            <option>Foodie Tour</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Budget Level</label>
+                        <select class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
+                            <option>Budget-friendly</option>
+                            <option selected>Standard</option>
+                            <option>Premium</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <p class="text-xs text-on-surface-variant mt-4">These defaults are used to speed up your matching process, but you can always change them for specific trips.</p>
+            </div>
+
+        </div>
+
+    </main>
+</div>

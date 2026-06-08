@@ -71,6 +71,13 @@ namespace TripMate_Webapi.Controllers
                 return View(new GuideDashboardViewModel());
             }
         }
+
+        // GET: /Guide/Profile/{id}
+        // This is the public profile viewed by the Traveler
+        public IActionResult Profile(string id = "1")
+        {
+            return View();
+        }
     }
 
     // View Models
