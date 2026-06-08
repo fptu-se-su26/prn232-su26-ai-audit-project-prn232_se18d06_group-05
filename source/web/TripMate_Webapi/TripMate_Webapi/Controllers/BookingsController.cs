@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TripMate_WebAPI.Models;
+
 using TripMate_WebAPI.Services;
 
 namespace TripMate_WebAPI.Controllers;

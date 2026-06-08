@@ -62,3 +62,8 @@ app.*.map.json
 
 # ASP.NET secrets
 **/appsettings.Development.json
+appsettings.json
+
+# Kiro
+.kiro
+.kiro/

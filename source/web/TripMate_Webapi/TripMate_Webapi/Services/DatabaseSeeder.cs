@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using TripMate_WebAPI.Models;
+
 
 namespace TripMate_WebAPI.Services;
 
@@ -101,15 +101,3 @@ public class DatabaseSeeder
     }
 }
 
-public class SeedAccountConfig
-{
-    public string Email { get; set; } = string.Empty;
-    public string Password { get; set; } = string.Empty;
-    public string Role { get; set; } = "traveler";
-    public string? FullName { get; set; }
-    public string? Phone { get; set; }
-    public string? Experience { get; set; }
-    public string? Specialization { get; set; }
-    public string? Languages { get; set; }
-    public string? Bio { get; set; }
-}

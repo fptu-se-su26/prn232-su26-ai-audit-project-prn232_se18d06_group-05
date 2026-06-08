@@ -2,7 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using TripMate_WebAPI.Models;
+
 using TripMate_WebAPI.Services;
 
 namespace TripMate_WebAPI.Services;
