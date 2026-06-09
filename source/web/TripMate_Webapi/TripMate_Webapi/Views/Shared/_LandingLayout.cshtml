@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>@ViewData["Title"] - TripMate</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#ff5a00", // Adjusted to match the orange in the logo
+                        "brand-orange": "#c25317",
+                        "brand-dark": "#2a221b",
+                        "brand-cream": "#f7f3ec",
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-brand-cream text-brand-dark">
+    @{
+        var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    }
+    <!-- Landing Page Header -->
+    <header class="w-full bg-white border-b border-gray-100 z-50 sticky top-0">
+        <div class="flex justify-between items-center h-20 px-8 lg:px-16 max-w-[1440px] mx-auto">
+            <!-- Logo -->
+            <a href="/" class="flex items-center gap-3">
+                <img alt="TripMate Logo" class="h-10 w-10 rounded-full object-cover" src="/images/AVATAR.png"/>
+                <span class="text-2xl font-extrabold tracking-tight text-brand-dark uppercase">TripMate</span>
+            </a>
+            
+            <!-- Navigation -->
+            <nav class="hidden md:flex items-center gap-8 text-sm font-medium">
+                <a href="/" class="@(currentAction == "LandingPage" ? "text-brand-orange font-bold" : "text-brand-dark hover:text-brand-orange transition-colors")">Explore</a>
+                <a href="/LandingPage/HowItWorks" class="@(currentAction == "HowItWorks" ? "text-brand-orange font-bold" : "text-brand-dark hover:text-brand-orange transition-colors")">How It Works</a>
+                <a href="/LandingPage/BecomeAGuide" class="@(currentAction == "BecomeAGuide" ? "text-brand-orange font-bold" : "text-brand-dark hover:text-brand-orange transition-colors")">Become a Guide</a>
+                <a href="/LandingPage/Support" class="@(currentAction == "Support" ? "text-brand-orange font-bold" : "text-brand-dark hover:text-brand-orange transition-colors")">Support</a>
+            </nav>
+            
+            <!-- Actions -->
+            <div class="flex items-center gap-6">
+                <button class="hidden md:flex items-center gap-1 text-sm font-medium text-brand-dark hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">language</span>
+                    Language
+                </button>
+                <a href="/Auth/Login" class="bg-[#ff5a00] hover:bg-[#e65100] text-white px-6 py-2.5 rounded-full text-sm font-bold transition-colors shadow-sm">
+                    Get Started
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main>
+        @RenderBody()
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full bg-white border-t border-gray-100 py-12">
+        <div class="max-w-[1440px] mx-auto px-8 lg:px-16 text-center">
+            <span class="text-sm text-brand-dark/50 font-bold tracking-widest uppercase">
+                © 2024 TRIPMATE. EXPLORE VIETNAM YOUR WAY.
+            </span>
+        </div>
+    </footer>
+</body>
+</html>

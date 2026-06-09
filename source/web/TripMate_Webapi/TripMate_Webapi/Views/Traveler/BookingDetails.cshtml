@@ -1,0 +1,159 @@
+@{
+    ViewData["Title"] = "Booking Details";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="bg-surface min-h-screen py-12 px-4">
+    <div class="max-w-[1000px] mx-auto">
+        <!-- Breadcrumbs & Header -->
+        <div class="mb-8 flex items-center gap-4">
+            <a href="/Traveler/Dashboard" class="w-10 h-10 rounded-full bg-white border border-outline-variant/50 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all shadow-sm">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </a>
+            <div>
+                <h1 class="text-3xl font-extrabold text-on-surface">Hanoi Art & Culture Walk</h1>
+                <p class="text-on-surface-variant font-medium">Booking Reference: #TM-2026-8942</p>
+            </div>
+            
+            <div class="ml-auto bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-bold border border-blue-200 flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm">check_circle</span> Approved
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Itinerary -->
+            <div class="lg:col-span-2 space-y-8">
+                <!-- Overview Card -->
+                <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
+                    <h2 class="text-2xl font-bold text-on-surface mb-6 border-b border-outline-variant/30 pb-4">Trip Overview</h2>
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
+                        <div>
+                            <p class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Start Date</p>
+                            <p class="font-bold text-on-surface">Jun 15, 2026</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">End Date</p>
+                            <p class="font-bold text-on-surface">Jun 17, 2026</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Guests</p>
+                            <p class="font-bold text-on-surface">2 People</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Location</p>
+                            <p class="font-bold text-on-surface">Hanoi, VN</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-primary-container/30 p-6 rounded-2xl flex items-start gap-4">
+                        <div class="w-12 h-12 bg-primary text-white flex items-center justify-center rounded-full shrink-0">
+                            <span class="material-symbols-outlined">location_on</span>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-lg text-on-surface mb-1">Meeting Point</h4>
+                            <p class="text-on-surface-variant mb-2">Hoan Kiem Lake, Main Fountain Square</p>
+                            <a href="#" class="text-primary font-bold text-sm hover:underline flex items-center gap-1">
+                                View on Map <span class="material-symbols-outlined text-sm">open_in_new</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Itinerary Timeline -->
+                <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
+                    <h2 class="text-2xl font-bold text-on-surface mb-8 border-b border-outline-variant/30 pb-4">Your Custom Itinerary</h2>
+                    
+                    <div class="relative pl-8 border-l-2 border-primary/30 space-y-10">
+                        <!-- Day 1 -->
+                        <div class="relative">
+                            <div class="absolute -left-[41px] w-5 h-5 rounded-full bg-primary border-4 border-white shadow-sm"></div>
+                            <h3 class="text-xl font-bold text-on-surface mb-1">Day 1: Old Quarter & Hidden Cafes</h3>
+                            <p class="text-sm font-bold text-primary mb-4">Jun 15 • 09:00 AM - 04:00 PM</p>
+                            <div class="bg-surface-variant p-5 rounded-xl text-on-surface-variant space-y-2">
+                                <p>• Meet at Hoan Kiem Lake fountain.</p>
+                                <p>• Walk through the 36 streets, visiting a hidden temple.</p>
+                                <p>• Lunch at a famous local Pho stall (not the touristy ones).</p>
+                                <p>• Relax at a secret egg coffee shop overlooking the lake.</p>
+                            </div>
+                        </div>
+
+                        <!-- Day 2 -->
+                        <div class="relative">
+                            <div class="absolute -left-[41px] w-5 h-5 rounded-full bg-primary border-4 border-white shadow-sm"></div>
+                            <h3 class="text-xl font-bold text-on-surface mb-1">Day 2: Art Galleries & Sunset</h3>
+                            <p class="text-sm font-bold text-primary mb-4">Jun 16 • 02:00 PM - 08:00 PM</p>
+                            <div class="bg-surface-variant p-5 rounded-xl text-on-surface-variant space-y-2">
+                                <p>• Visit 2 contemporary art galleries in French colonial villas.</p>
+                                <p>• Sunset walk along West Lake.</p>
+                                <p>• Dinner at a local BBQ joint near the lake.</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Day 3 -->
+                        <div class="relative">
+                            <div class="absolute -left-[41px] w-5 h-5 rounded-full bg-outline-variant border-4 border-white shadow-sm"></div>
+                            <h3 class="text-xl font-bold text-on-surface mb-1">Day 3: Free & Easy</h3>
+                            <p class="text-sm font-bold text-on-surface-variant mb-4">Jun 17</p>
+                            <div class="bg-surface-variant p-5 rounded-xl text-on-surface-variant">
+                                <p>No scheduled activities. Guide will provide a customized list of recommendations for shopping and souvenirs.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Guide & Payment -->
+            <div class="lg:col-span-1 space-y-8">
+                <!-- Guide Profile Card -->
+                <div class="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/30 tonal-elevation text-center">
+                    <div class="w-24 h-24 mx-auto rounded-full bg-gray-200 mb-4 overflow-hidden relative border-2 border-primary/20">
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span class="material-symbols-outlined text-6xl text-gray-400">face_3</span>
+                        </div>
+                    </div>
+                    <h3 class="text-xl font-bold text-on-surface mb-1">Minh Anh</h3>
+                    <p class="text-sm text-primary font-bold mb-4">Your Local Soulmate</p>
+                    
+                    <div class="flex flex-col gap-3">
+                        <button class="w-full bg-primary-container text-primary hover:bg-primary hover:text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+                            <span class="material-symbols-outlined">chat</span> Message Guide
+                        </button>
+                        <a href="/Guide/Profile/1" class="w-full border-2 border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+                            <span class="material-symbols-outlined">person</span> View Profile
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Payment Summary Card -->
+                <div class="bg-white rounded-3xl p-8 shadow-2xl border-2 border-primary/20 sticky top-24">
+                    <h3 class="text-xl font-bold text-on-surface mb-6">Payment Summary</h3>
+                    
+                    <div class="space-y-4 mb-6 border-b border-outline-variant/30 pb-6">
+                        <div class="flex justify-between text-on-surface-variant">
+                            <span>Guide Fee (2 Days)</span>
+                            <span class="font-medium text-on-surface">1,000,000₫</span>
+                        </div>
+                        <div class="flex justify-between text-on-surface-variant">
+                            <span>Custom Itinerary Planning</span>
+                            <span class="font-medium text-on-surface">400,000₫</span>
+                        </div>
+                        <div class="flex justify-between text-on-surface-variant">
+                            <span>Platform Fee</span>
+                            <span class="font-medium text-on-surface">100,000₫</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-end mb-8">
+                        <span class="font-bold text-on-surface">Total</span>
+                        <span class="text-3xl font-extrabold text-primary">1,500,000₫</span>
+                    </div>
+
+                    <a href="/Traveler/Checkout/1" class="block w-full text-center bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:-translate-y-1 transition-all flex justify-center items-center gap-2">
+                        <span class="material-symbols-outlined">lock</span> Proceed to Pay
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

@@ -23,7 +23,6 @@ builder.Configuration["Cloudinary:ApiKey"] = Environment.GetEnvironmentVariable(
 builder.Configuration["Cloudinary:ApiSecret"] = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET") ?? builder.Configuration["Cloudinary:ApiSecret"];
 builder.Configuration["EmailSettings:SmtpUser"] = Environment.GetEnvironmentVariable("SMTP_USER") ?? builder.Configuration["EmailSettings:SmtpUser"];
 builder.Configuration["EmailSettings:SmtpPass"] = Environment.GetEnvironmentVariable("SMTP_PASS") ?? builder.Configuration["EmailSettings:SmtpPass"];
-var builder = WebApplication.CreateBuilder(args);
 
 // ── Supabase Client (singleton) ───────────────────────────────────────────────
 var supabaseUrl = builder.Configuration["Supabase:Url"]!;
@@ -176,7 +175,7 @@ app.UseAuthorization();
 app.MapControllers(); // Map API controllers
 app.MapControllerRoute( // Map MVC routes
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=LandingPage}/{action=LandingPage}/{id?}");
 
 // Seed database
 using (var scope = app.Services.CreateScope())

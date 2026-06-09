@@ -1,0 +1,67 @@
+@{
+    ViewData["Title"] = "Explore Vietnam";
+    Layout = "~/Views/Shared/_LandingLayout.cshtml";
+}
+
+<div class="bg-brand-cream text-brand-dark min-h-screen">
+    <!-- Header Section -->
+    <section class="relative pt-40 pb-20 px-8 md:px-16 flex flex-col justify-center overflow-hidden bg-[url('https://images.unsplash.com/photo-1542042161784-26ab9e041f89?w=1920')] bg-cover bg-center">
+        <div class="absolute inset-0 bg-black/50 z-0"></div>
+        <div class="max-w-[1440px] mx-auto w-full relative z-10 text-center">
+            <span class="text-brand-orange font-bold text-xs tracking-[0.2em] uppercase mb-4 block animate-fade-in-up">DESTINATIONS</span>
+            <h1 class="font-serif-custom text-5xl md:text-7xl font-semibold leading-[1.1] mb-6 text-white text-shadow-lg animate-fade-in-up">
+                Explore the Unseen
+            </h1>
+            <p class="text-lg text-white/90 max-w-2xl mx-auto font-serif-custom italic animate-fade-in-up">
+                "From the misty mountains of Sapa to the vibrant floating markets of the Mekong. Find your next adventure."
+            </p>
+        </div>
+    </section>
+
+    <!-- Content Section -->
+    <section class="py-24 px-8 md:px-16 max-w-[1440px] mx-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+            <!-- Region Card -->
+            <div class="group cursor-pointer">
+                <div class="relative overflow-hidden rounded-2xl aspect-[4/5] mb-6 shadow-lg">
+                    <img src="https://images.unsplash.com/photo-1509149037-37dcbc7edce3?w=800" alt="Northern Vietnam" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"/>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80"></div>
+                    <div class="absolute bottom-6 left-6 right-6 text-white">
+                        <h3 class="text-3xl font-serif-custom mb-2">The North</h3>
+                        <p class="text-sm text-white/80 line-clamp-2">Majestic peaks, ethnic villages, and the timeless capital of Hanoi.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Region Card -->
+            <div class="group cursor-pointer">
+                <div class="relative overflow-hidden rounded-2xl aspect-[4/5] mb-6 shadow-lg">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800" alt="Central Vietnam" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"/>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80"></div>
+                    <div class="absolute bottom-6 left-6 right-6 text-white">
+                        <h3 class="text-3xl font-serif-custom mb-2">The Center</h3>
+                        <p class="text-sm text-white/80 line-clamp-2">Ancient towns, imperial citadels, and the most pristine coastlines.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Region Card -->
+            <div class="group cursor-pointer">
+                <div class="relative overflow-hidden rounded-2xl aspect-[4/5] mb-6 shadow-lg">
+                    <img src="https://images.unsplash.com/photo-1555921015-c1c5e40e2dce?w=800" alt="Southern Vietnam" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"/>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80"></div>
+                    <div class="absolute bottom-6 left-6 right-6 text-white">
+                        <h3 class="text-3xl font-serif-custom mb-2">The South</h3>
+                        <p class="text-sm text-white/80 line-clamp-2">The bustling energy of Saigon and the lush waters of the Mekong Delta.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-20 text-center">
+            <a href="/Survey/Index" class="inline-block border-2 border-brand-dark text-brand-dark hover:bg-brand-dark hover:text-white px-10 py-4 text-xs font-bold tracking-[0.2em] uppercase transition-all duration-300">
+                Match With A Guide In These Regions
+            </a>
+        </div>
+    </section>
+</div>

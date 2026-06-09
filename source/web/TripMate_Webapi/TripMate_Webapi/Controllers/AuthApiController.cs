@@ -153,7 +153,7 @@ namespace TripMate_Webapi.Controllers
                 }
 
                 // Handle file upload for guides
-                string certificatePath = null;
+                string? certificatePath = null;
                 if (request.Role == "guide" && request.Certificate != null)
                 {
                     var cloudName = _configuration["Cloudinary:CloudName"];

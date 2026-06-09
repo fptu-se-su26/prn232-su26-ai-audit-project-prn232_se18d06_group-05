@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>@ViewData["Title"] - TripMate</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <script>
@@ -59,10 +60,9 @@
                 </a>
             </div>
             <nav class="hidden md:flex items-center gap-8 text-base font-medium">
-                <a class="text-primary border-b-2 border-primary pb-1 font-bold" href="/">Destinations</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Experiences</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Adventures</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Concierge</a>
+                <a class="text-primary border-b-2 border-primary pb-1 font-bold" href="/">Home</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="/Guide">Top Guides</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="/Stories">Stories</a>
             </nav>
             <div class="flex items-center gap-4">
                 <button class="p-2 hover:bg-primary-container transition-all rounded-full">
@@ -92,30 +92,30 @@
                     <span class="text-xl font-extrabold text-on-surface">TRIPMATE</span>
                 </div>
                 <p class="text-on-surface-variant leading-relaxed font-medium">
-                    Khám phá Việt Nam theo cách của bạn với những hướng dẫn viên địa phương tận tâm.
+                    Explore Vietnam your way with dedicated local guides.
                 </p>
             </div>
             <div class="flex flex-col gap-3">
-                <h5 class="text-sm font-bold text-on-surface tracking-widest uppercase">Khám Phá</h5>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Điểm đến</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Trải nghiệm</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Hướng dẫn viên</a>
+                <h5 class="text-sm font-bold text-on-surface tracking-widest uppercase">Explore</h5>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Destinations</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Experiences</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Local Guides</a>
             </div>
             <div class="flex flex-col gap-3">
-                <h5 class="text-sm font-bold text-on-surface tracking-widest uppercase">Công Ty</h5>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Về chúng tôi</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Tuyển dụng</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Liên hệ</a>
+                <h5 class="text-sm font-bold text-on-surface tracking-widest uppercase">Company</h5>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">About Us</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Careers</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Contact</a>
             </div>
             <div class="flex flex-col gap-3">
-                <h5 class="text-sm font-bold text-on-surface tracking-widest uppercase">Pháp Lý</h5>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Chính sách bảo mật</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Điều khoản</a>
+                <h5 class="text-sm font-bold text-on-surface tracking-widest uppercase">Legal</h5>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
             </div>
         </div>
         <div class="px-12 py-6 border-t border-outline-variant/20 max-w-[1440px] mx-auto text-center">
             <span class="text-sm text-on-surface-variant font-bold tracking-widest uppercase">
-                © 2024 TRIPMATE. KHÁM PHÁ VIỆT NAM THEO CÁCH CỦA BẠN.
+                © 2024 TRIPMATE. EXPLORE VIETNAM YOUR WAY.
             </span>
         </div>
     </footer>
@@ -163,7 +163,7 @@
                                 </a>
                                 <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-lg transition-all text-red-600 font-medium">
                                     <span class="material-symbols-outlined">logout</span>
-                                    <span>Đăng xuất</span>
+                                    <span>Logout</span>
                                 </button>
                             </div>
                         </div>
@@ -173,7 +173,7 @@
                 // User is not logged in
                 userSection.innerHTML = `
                     <a href="/Auth/Login" class="px-6 py-2 bg-primary text-on-primary rounded-lg font-medium hover:bg-primary/90 transition-all">
-                        Đăng nhập
+                        Login
                     </a>
                 `;
             }

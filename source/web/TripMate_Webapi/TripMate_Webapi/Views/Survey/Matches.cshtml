@@ -1,0 +1,180 @@
+@{
+    ViewData["Title"] = "Your Matches";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="min-h-screen bg-surface" x-data="matchingResults()">
+    <!-- Loading State -->
+    <div x-show="isLoading" class="flex flex-col items-center justify-center h-[80vh]">
+        <div class="relative w-32 h-32 mb-8">
+            <!-- Ripple Effect -->
+            <div class="absolute inset-0 border-4 border-primary/20 rounded-full animate-ping"></div>
+            <div class="absolute inset-2 border-4 border-primary/40 rounded-full animate-ping" style="animation-delay: 0.2s"></div>
+            <!-- Center Icon -->
+            <div class="absolute inset-4 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-xl z-10">
+                <span class="material-symbols-outlined text-5xl animate-pulse">magic_button</span>
+            </div>
+        </div>
+        <h2 class="text-3xl font-bold text-on-surface mb-2">Analyzing your preferences...</h2>
+        <p class="text-on-surface-variant text-lg">Finding the perfect Local Soulmates for your trip to <strong class="text-primary" x-text="preferences.destination === 'Other' ? preferences.customDestination : preferences.destination"></strong></p>
+    </div>
+
+    <!-- Results State -->
+    <div x-show="!isLoading" style="display: none;" class="py-16 px-12 max-w-[1440px] mx-auto" x-transition.opacity.duration.1000ms>
+        
+        <div class="text-center mb-16">
+            <span class="bg-primary-container text-primary px-4 py-1.5 rounded-full text-sm font-bold mb-4 inline-block tracking-widest uppercase">Matches Found</span>
+            <h2 class="text-5xl font-extrabold text-on-surface mb-4">Meet Your Local Soulmates</h2>
+            <p class="text-xl text-on-surface-variant">We've found <span class="font-bold text-primary">3</span> perfect guides for your upcoming <span class="lowercase" x-text="preferences.vibe === 'Other' ? preferences.customVibe : preferences.vibe"></span> trip to <span class="font-bold" x-text="preferences.destination === 'Other' ? preferences.customDestination : preferences.destination"></span>.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+            <!-- Top Match Card -->
+            <div class="md:col-span-3 bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 flex flex-col md:flex-row relative">
+                <!-- Top Match Badge -->
+                <div class="absolute top-4 left-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1 z-10">
+                    <span class="material-symbols-outlined text-sm">local_fire_department</span>
+                    98% Match
+                </div>
+
+                <div class="md:w-2/5 h-80 md:h-auto relative bg-gray-200">
+                    <!-- Placeholder Avatar -->
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-9xl text-gray-400">face_3</span>
+                    </div>
+                </div>
+                
+                <div class="md:w-3/5 p-8 md:p-12 flex flex-col justify-center">
+                    <div class="flex justify-between items-start mb-2">
+                        <h3 class="text-4xl font-bold text-on-surface">Minh Anh</h3>
+                        <div class="flex items-center gap-1">
+                            <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+                            <span class="font-bold text-lg">5.0</span>
+                            <span class="text-on-surface-variant text-sm">(124 trips)</span>
+                        </div>
+                    </div>
+                    
+                    <p class="text-primary font-medium mb-6 text-lg">Art Enthusiast & Coffee Lover</p>
+                    
+                    <p class="text-on-surface-variant leading-relaxed mb-8">
+                        "I love showing travelers the hidden alleys and secret cafes that only locals know. Since you're looking for a chill vibe, I have the perfect itinerary combining vintage bookstores, lakeside walks, and the absolute best egg coffee in town."
+                    </p>
+                    
+                    <div class="flex flex-wrap gap-2 mb-8">
+                        <span class="bg-surface-variant text-on-surface-variant px-3 py-1.5 rounded-lg text-sm font-medium">Photography</span>
+                        <span class="bg-surface-variant text-on-surface-variant px-3 py-1.5 rounded-lg text-sm font-medium">History</span>
+                        <span class="bg-surface-variant text-on-surface-variant px-3 py-1.5 rounded-lg text-sm font-medium">Street Food</span>
+                    </div>
+
+                    <div class="flex items-center gap-4 mt-auto">
+                        <button onclick="handleConnect(event, '/Guide/Profile/1')" class="bg-primary hover:bg-primary/90 text-on-primary px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
+                            Connect Now
+                            <span class="material-symbols-outlined">send</span>
+                        </button>
+                        <a href="/Guide/Profile/1" class="text-on-surface-variant hover:text-primary font-bold px-6 py-4 rounded-xl hover:bg-primary-container transition-all">
+                            View Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Other Matches -->
+            <div class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col">
+                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 z-10">
+                    92% Match
+                </div>
+                <div class="h-64 relative bg-gray-200">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-7xl text-gray-400">face_4</span>
+                    </div>
+                </div>
+                <div class="p-8 flex-1 flex flex-col">
+                    <h4 class="text-2xl font-bold text-on-surface mb-1">Tuan Kiet</h4>
+                    <p class="text-primary text-sm mb-4">Local Food Expert</p>
+                    <p class="text-on-surface-variant text-sm line-clamp-3 mb-6">"If you want to eat like a local, I'm your guy. I know all the spots that aren't on Google Maps."</p>
+                    <div class="mt-auto">
+                        <button class="w-full border-2 border-primary text-primary hover:bg-primary hover:text-on-primary py-3 rounded-xl font-bold transition-all">
+                            View Profile
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col">
+                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 z-10">
+                    89% Match
+                </div>
+                <div class="h-64 relative bg-gray-200">
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-7xl text-gray-400">face_5</span>
+                    </div>
+                </div>
+                <div class="p-8 flex-1 flex flex-col">
+                    <h4 class="text-2xl font-bold text-on-surface mb-1">Linh Chi</h4>
+                    <p class="text-primary text-sm mb-4">History Student & Photographer</p>
+                    <p class="text-on-surface-variant text-sm line-clamp-3 mb-6">"I can show you the historical depths of the city while capturing your best moments."</p>
+                    <div class="mt-auto">
+                        <button class="w-full border-2 border-primary text-primary hover:bg-primary hover:text-on-primary py-3 rounded-xl font-bold transition-all">
+                            View Profile
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-primary-container rounded-3xl p-8 flex flex-col items-center justify-center text-center border-2 border-dashed border-primary/30">
+                <span class="material-symbols-outlined text-6xl text-primary mb-4">psychology</span>
+                <h4 class="text-xl font-bold text-on-primary-container mb-2">Want better matches?</h4>
+                <p class="text-on-surface-variant text-sm mb-6">Complete your personality profile to unlock 99% accuracy matches.</p>
+                <a href="/Survey/Personality" class="bg-primary text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-primary/90 transition-all">
+                    Take Personality Test
+                </a>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- Alpine.js is included in _Layout.cshtml -->
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('matchingResults', () => ({
+            isLoading: true,
+            preferences: {
+                destination: 'Vietnam',
+                vibe: 'Chill & Relax'
+            },
+            init() {
+                // Read preferences from localStorage
+                const savedPrefs = localStorage.getItem('tripPreferences');
+                if (savedPrefs) {
+                    this.preferences = JSON.parse(savedPrefs);
+                }
+
+                // Simulate matching algorithm loading
+                setTimeout(() => {
+                    this.isLoading = false;
+                }, 2500); // 2.5 seconds loading screen
+            }
+        }))
+    })
+</script>
+
+<!-- Authentication Script -->
+<script>
+    function handleConnect(event, redirectUrl) {
+        const token = localStorage.getItem('accessToken');
+        const userEmail = localStorage.getItem('userEmail');
+        
+        if (!token || !userEmail) {
+            event.preventDefault();
+            // Save destination URL to redirect back after login
+            localStorage.setItem('redirectAfterLogin', redirectUrl);
+            // Redirect to Login page
+            window.location.href = '/Auth/Login';
+        } else {
+            // Already logged in, go to profile to book
+            window.location.href = redirectUrl;
+        }
+    }
+</script>
