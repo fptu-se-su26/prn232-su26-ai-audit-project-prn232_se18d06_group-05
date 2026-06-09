@@ -168,76 +168,40 @@
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <!-- Destination Card 1 -->
-            <a href="/Survey/Index?destination=halong" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all"
-               x-data="{ active: 0, images: [
-                   'https://images.unsplash.com/photo-1528127269322-539801943592?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-                   'https://images.unsplash.com/photo-1552564619-a1d261e4a11f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-                   'https://images.unsplash.com/photo-1504457047772-27faf1c00561?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
-               ] }" x-init="setInterval(() => active = (active + 1) % images.length, 3500)">
-                <template x-for="(img, index) in images" :key="index">
-                    <img :src="img" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 duration-700"
-                         :class="{ 'opacity-100 z-10': active === index, 'opacity-0 z-0': active !== index }"
-                         style="transition: opacity 1.5s ease-in-out, transform 0.7s ease-in-out;" alt="Ha Long Bay" />
-                </template>
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
-                <div class="absolute bottom-6 left-6 right-6 z-30">
+            <a href="/Survey/Index?destination=halong" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all">
+                <img src="/images/halong.jpg" alt="Ha Long Bay" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"/>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                <div class="absolute bottom-6 left-6 right-6">
                     <h3 class="text-2xl font-bold text-white mb-1">Ha Long Bay</h3>
                     <p class="text-white/80 text-sm font-medium">120+ Guides</p>
                 </div>
             </a>
 
             <!-- Destination Card 2 -->
-            <a href="/Survey/Index?destination=hoian" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all"
-               x-data="{ active: 0, images: [
-                   'https://images.unsplash.com/photo-1583417319070-4a69db38a482?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-                   'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-                   'https://images.unsplash.com/photo-1540484551139-2ceb46bd9d71?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
-               ] }" x-init="setInterval(() => active = (active + 1) % images.length, 4000)">
-                <template x-for="(img, index) in images" :key="index">
-                    <img :src="img" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 duration-700"
-                         :class="{ 'opacity-100 z-10': active === index, 'opacity-0 z-0': active !== index }"
-                         style="transition: opacity 1.5s ease-in-out, transform 0.7s ease-in-out;" alt="Hoi An" />
-                </template>
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
-                <div class="absolute bottom-6 left-6 right-6 z-30">
+            <a href="/Survey/Index?destination=hoian" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all">
+                <img src="/images/hoian.png" alt="Hoi An" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"/>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                <div class="absolute bottom-6 left-6 right-6">
                     <h3 class="text-2xl font-bold text-white mb-1">Hoi An</h3>
                     <p class="text-white/80 text-sm font-medium">85+ Guides</p>
                 </div>
             </a>
             
             <!-- Destination Card 3 -->
-            <a href="/Survey/Index?destination=sapa" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all"
-               x-data="{ active: 0, images: [
-                   'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-                   'https://images.unsplash.com/photo-1518608826760-b6f4a86fbd70?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-                   'https://images.unsplash.com/photo-1550951298-5c7b95a66bfc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
-               ] }" x-init="setInterval(() => active = (active + 1) % images.length, 3800)">
-                <template x-for="(img, index) in images" :key="index">
-                    <img :src="img" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 duration-700"
-                         :class="{ 'opacity-100 z-10': active === index, 'opacity-0 z-0': active !== index }"
-                         style="transition: opacity 1.5s ease-in-out, transform 0.7s ease-in-out;" alt="Sapa" />
-                </template>
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
-                <div class="absolute bottom-6 left-6 right-6 z-30">
+            <a href="/Survey/Index?destination=sapa" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all">
+                <img src="/images/sapa.png" alt="Sapa" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"/>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                <div class="absolute bottom-6 left-6 right-6">
                     <h3 class="text-2xl font-bold text-white mb-1">Sapa</h3>
                     <p class="text-white/80 text-sm font-medium">94+ Guides</p>
                 </div>
             </a>
             
             <!-- Destination Card 4 -->
-            <a href="/Survey/Index?destination=phuquoc" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all"
-               x-data="{ active: 0, images: [
-                   'https://images.unsplash.com/photo-1552058544-f2b08422138a?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-                   'https://images.unsplash.com/photo-1504312683973-2e4bdcba5f5c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
-                   'https://images.unsplash.com/photo-1505881504895-df9b43ed5b07?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
-               ] }" x-init="setInterval(() => active = (active + 1) % images.length, 4200)">
-                <template x-for="(img, index) in images" :key="index">
-                    <img :src="img" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 duration-700"
-                         :class="{ 'opacity-100 z-10': active === index, 'opacity-0 z-0': active !== index }"
-                         style="transition: opacity 1.5s ease-in-out, transform 0.7s ease-in-out;" alt="Phu Quoc" />
-                </template>
-                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
-                <div class="absolute bottom-6 left-6 right-6 z-30">
+            <a href="/Survey/Index?destination=phuquoc" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all">
+                <img src="/images/phuquoc_new.png" alt="Phu Quoc" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"/>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                <div class="absolute bottom-6 left-6 right-6">
                     <h3 class="text-2xl font-bold text-white mb-1">Phu Quoc</h3>
                     <p class="text-white/80 text-sm font-medium">60+ Guides</p>
                 </div>

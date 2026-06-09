@@ -1,0 +1,171 @@
+@{
+    ViewData["Title"] = "Find Local Guides";
+}
+
+<div class="bg-surface">
+    <!-- Header/Hero for Guide Listing -->
+    <div class="bg-primary-container py-16 px-6">
+        <div class="max-w-[1440px] mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-on-surface mb-4">Meet your Local Experts</h1>
+            <p class="text-lg text-on-surface-variant max-w-2xl mx-auto mb-8">Discover top-rated local guides in Vietnam who share your passion and vibe. Filter by destination, price, and more.</p>
+            
+            <!-- Post a Trip Request Call-to-Action -->
+            <div class="bg-white p-6 rounded-2xl shadow-lg max-w-3xl mx-auto flex flex-col md:flex-row items-center justify-between border border-outline-variant/30">
+                <div class="text-left mb-4 md:mb-0">
+                    <h3 class="text-xl font-bold text-on-surface flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary">campaign</span>
+                        Can't find the perfect match?
+                    </h3>
+                    <p class="text-on-surface-variant text-sm mt-1">Post a public trip request. Let available local guides find YOU and send their best offers.</p>
+                </div>
+                <a href="/Traveler/CreateTripRequest" class="bg-surface-variant text-on-surface-variant hover:bg-primary hover:text-white px-6 py-3 rounded-xl font-bold transition-all whitespace-nowrap">
+                    Post a Trip Request
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content: Filters + Grid -->
+    <div class="max-w-[1440px] mx-auto px-6 py-12 flex flex-col lg:flex-row gap-10">
+        <!-- Sidebar Filters -->
+        <aside class="w-full lg:w-80 flex-shrink-0 space-y-8">
+            <div>
+                <h4 class="font-bold text-on-surface mb-4 text-lg">Destination</h4>
+                <select class="w-full bg-white border border-outline-variant/50 rounded-xl px-4 py-3 text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none">
+                    <option>All Destinations</option>
+                    <option>Ha Long Bay</option>
+                    <option>Sapa</option>
+                    <option>Hoi An</option>
+                    <option>Phu Quoc</option>
+                </select>
+            </div>
+            
+            <div>
+                <h4 class="font-bold text-on-surface mb-4 text-lg">Price per Day</h4>
+                <div class="flex items-center gap-4">
+                    <input type="number" placeholder="Min" class="w-full bg-white border border-outline-variant/50 rounded-xl px-4 py-2 text-on-surface outline-none focus:border-primary">
+                    <span class="text-on-surface-variant">-</span>
+                    <input type="number" placeholder="Max" class="w-full bg-white border border-outline-variant/50 rounded-xl px-4 py-2 text-on-surface outline-none focus:border-primary">
+                </div>
+            </div>
+
+            <div>
+                <h4 class="font-bold text-on-surface mb-4 text-lg">Languages</h4>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" checked class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary">
+                        <span class="text-on-surface-variant group-hover:text-primary transition-colors">English</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary">
+                        <span class="text-on-surface-variant group-hover:text-primary transition-colors">Vietnamese</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer group">
+                        <input type="checkbox" class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary">
+                        <span class="text-on-surface-variant group-hover:text-primary transition-colors">Korean</span>
+                    </label>
+                </div>
+            </div>
+
+            <button class="w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-md">Apply Filters</button>
+        </aside>
+
+        <!-- Guide Grid -->
+        <div class="flex-1">
+            <div class="flex justify-between items-center mb-6">
+                <span class="text-on-surface-variant font-medium">Showing 124 guides</span>
+                <select class="bg-transparent border-none text-on-surface font-bold focus:ring-0 cursor-pointer">
+                    <option>Sort by: Recommended</option>
+                    <option>Sort by: Highest Rated</option>
+                    <option>Sort by: Lowest Price</option>
+                </select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                <!-- Dummy Guide Card 1 -->
+                <div class="bg-white rounded-2xl overflow-hidden border border-outline-variant/30 hover:shadow-xl transition-shadow group relative">
+                    <button class="absolute top-4 right-4 z-10 w-10 h-10 bg-white/50 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white transition-colors group/btn">
+                        <span class="material-symbols-outlined text-outline group-hover/btn:text-red-500">favorite</span>
+                    </button>
+                    <div class="aspect-[4/3] overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1544168190-79c15427d235?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Guide" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold text-on-surface">Minh Tuấn</h3>
+                            <div class="flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-1 rounded-md text-xs font-bold">
+                                <span class="material-symbols-outlined text-[14px]">star</span>
+                                4.9 (120)
+                            </div>
+                        </div>
+                        <p class="text-on-surface-variant text-sm flex items-center gap-1 mb-4">
+                            <span class="material-symbols-outlined text-[16px]">location_on</span>
+                            Hanoi & Ha Long Bay
+                        </p>
+                        <p class="text-on-surface-variant text-sm line-clamp-2 mb-6">
+                            Food enthusiast and history buff. I will show you the hidden gems of Hanoi that only locals know about.
+                        </p>
+                        <div class="flex justify-between items-center pt-4 border-t border-outline-variant/30">
+                            <div>
+                                <span class="text-xs text-on-surface-variant">From</span>
+                                <div class="text-lg font-bold text-primary">₫800k <span class="text-xs font-normal text-on-surface-variant">/ day</span></div>
+                            </div>
+                            <a href="/Guide/Profile/1" class="text-sm font-bold bg-surface-variant text-on-surface px-4 py-2 rounded-lg hover:bg-primary hover:text-white transition-colors">
+                                View Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dummy Guide Card 2 -->
+                <div class="bg-white rounded-2xl overflow-hidden border border-outline-variant/30 hover:shadow-xl transition-shadow group relative">
+                    <button class="absolute top-4 right-4 z-10 w-10 h-10 bg-white/50 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white transition-colors group/btn">
+                        <span class="material-symbols-outlined text-outline group-hover/btn:text-red-500">favorite</span>
+                    </button>
+                    <div class="aspect-[4/3] overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Guide" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                    </div>
+                    <div class="p-6">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold text-on-surface">Linh Nguyen</h3>
+                            <div class="flex items-center gap-1 bg-yellow-100 text-yellow-700 px-2 py-1 rounded-md text-xs font-bold">
+                                <span class="material-symbols-outlined text-[14px]">star</span>
+                                5.0 (85)
+                            </div>
+                        </div>
+                        <p class="text-on-surface-variant text-sm flex items-center gap-1 mb-4">
+                            <span class="material-symbols-outlined text-[16px]">location_on</span>
+                            Hoi An & Da Nang
+                        </p>
+                        <p class="text-on-surface-variant text-sm line-clamp-2 mb-6">
+                            Professional photographer and culture guide. Let's capture the best moments in the ancient town!
+                        </p>
+                        <div class="flex justify-between items-center pt-4 border-t border-outline-variant/30">
+                            <div>
+                                <span class="text-xs text-on-surface-variant">From</span>
+                                <div class="text-lg font-bold text-primary">₫1.2M <span class="text-xs font-normal text-on-surface-variant">/ day</span></div>
+                            </div>
+                            <a href="/Guide/Profile/2" class="text-sm font-bold bg-surface-variant text-on-surface px-4 py-2 rounded-lg hover:bg-primary hover:text-white transition-colors">
+                                View Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="flex justify-center items-center gap-2 mt-12">
+                <button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant hover:bg-surface-variant transition-colors text-on-surface-variant">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                </button>
+                <button class="w-10 h-10 rounded-lg flex items-center justify-center bg-primary text-white font-bold shadow-md">1</button>
+                <button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant hover:bg-surface-variant transition-colors text-on-surface font-medium">2</button>
+                <button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant hover:bg-surface-variant transition-colors text-on-surface font-medium">3</button>
+                <span class="text-on-surface-variant">...</span>
+                <button class="w-10 h-10 rounded-lg flex items-center justify-center border border-outline-variant hover:bg-surface-variant transition-colors text-on-surface-variant">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

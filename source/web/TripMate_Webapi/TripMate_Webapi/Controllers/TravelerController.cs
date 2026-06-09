@@ -74,6 +74,20 @@ namespace TripMate_Webapi.Controllers
             return View();
         }
 
+        // GET: /Traveler/CreateTripRequest
+        public IActionResult CreateTripRequest()
+        {
+            return View();
+        }
+
+        // POST: /Traveler/CreateTripRequest
+        [HttpPost]
+        public IActionResult CreateTripRequest(string destination, string dates, string budget, string notes)
+        {
+            TempData["SuccessMessage"] = "Your trip request has been posted! Local guides will contact you soon.";
+            return RedirectToAction("Trips");
+        }
+
         // POST: /Traveler/SubmitReview
         [HttpPost]
         public IActionResult SubmitReview(string id, int rating, string comment)

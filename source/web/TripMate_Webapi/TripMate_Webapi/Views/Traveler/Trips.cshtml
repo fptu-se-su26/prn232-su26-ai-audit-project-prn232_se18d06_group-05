@@ -1,0 +1,168 @@
+@{
+    ViewData["Title"] = "My Trips Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="min-h-screen bg-surface flex">
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-outline-variant/30 hidden md:flex flex-col sticky top-20 h-[calc(100vh-80px)]">
+        <div class="p-8 flex flex-col items-center border-b border-outline-variant/30">
+            <div class="w-20 h-20 rounded-full bg-primary-container text-primary flex items-center justify-center text-2xl font-bold mb-4 shadow-sm border border-primary/20">
+                JD
+            </div>
+            <h3 class="font-bold text-on-surface text-lg">John Doe</h3>
+            <span class="text-xs text-on-surface-variant bg-surface-variant px-3 py-1 rounded-full mt-2 font-medium">Traveler • ENFP</span>
+        </div>
+        
+        <nav class="p-4 flex-1 space-y-2">
+            <a href="/Traveler/Dashboard" class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface rounded-xl font-medium transition-all">
+                <span class="material-symbols-outlined">dashboard</span>
+                My Dashboard
+            </a>
+            <a href="/Traveler/Trips" class="flex items-center gap-4 px-6 py-3 bg-primary-container text-primary rounded-xl font-bold transition-all">
+                <span class="material-symbols-outlined">calendar_month</span>
+                My Trips
+            </a>
+            <a href="/Traveler/Saved" class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface rounded-xl font-medium transition-all">
+                <span class="material-symbols-outlined">favorite</span>
+                Saved Guides
+            </a>
+            <a href="#" class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface rounded-xl font-medium transition-all">
+                <span class="material-symbols-outlined">chat</span>
+                Messages
+                <span class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">2</span>
+            </a>
+            <a href="/Traveler/CreateTripRequest" class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface rounded-xl font-medium transition-all">
+                <span class="material-symbols-outlined">travel_explore</span>
+                New Trip
+            </a>
+        </nav>
+        
+        <div class="p-4 border-t border-outline-variant/30">
+            <a href="/Traveler/Settings" class="flex items-center gap-4 px-6 py-3 text-on-surface-variant hover:bg-surface-variant hover:text-on-surface rounded-xl font-medium transition-all">
+                <span class="material-symbols-outlined">settings</span>
+                Settings
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto h-[calc(100vh-80px)]">
+    <!-- Dashboard Header -->
+    <div class="bg-white border-b border-outline-variant/30 pt-10 pb-6 px-6 md:px-12">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-on-surface">My Trips</h1>
+                <p class="text-on-surface-variant mt-1">Manage your upcoming adventures and trip requests.</p>
+            </div>
+            <a href="/Traveler/CreateTripRequest" class="bg-primary text-white font-bold px-6 py-3 rounded-xl shadow-lg hover:shadow-primary/30 transition-all hover:-translate-y-1 flex items-center gap-2">
+                <span class="material-symbols-outlined">add</span>
+                New Trip Request
+            </a>
+        </div>
+    </div>
+
+    <!-- Alert / Message -->
+    @if(TempData["SuccessMessage"] != null)
+    {
+        <div class="max-w-[1200px] mx-auto mt-6 px-6">
+            <div class="bg-green-100 border border-green-300 text-green-800 px-6 py-4 rounded-xl flex items-center gap-3 animate-fade-in-up">
+                <span class="material-symbols-outlined">check_circle</span>
+                <p class="font-medium">@TempData["SuccessMessage"]</p>
+            </div>
+        </div>
+    }
+
+    <!-- Main Content Tabs -->
+    <div class="px-6 md:px-12 mt-8" x-data="{ tab: 'requests' }">
+        <!-- Tabs -->
+        <div class="flex gap-8 border-b border-outline-variant/30 mb-8 overflow-x-auto">
+            <button @@click="tab = 'requests'" :class="tab === 'requests' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'" class="border-b-2 pb-4 px-2 font-bold whitespace-nowrap transition-colors">
+                Public Requests (1)
+            </button>
+            <button @@click="tab = 'upcoming'" :class="tab === 'upcoming' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'" class="border-b-2 pb-4 px-2 font-bold whitespace-nowrap transition-colors">
+                Upcoming Trips (0)
+            </button>
+            <button @@click="tab = 'past'" :class="tab === 'past' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'" class="border-b-2 pb-4 px-2 font-bold whitespace-nowrap transition-colors">
+                Past Trips (2)
+            </button>
+        </div>
+
+        <!-- Requests Tab -->
+        <div x-show="tab === 'requests'" class="space-y-6 animate-fade-in-up">
+            <!-- Active Request Card -->
+            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-outline-variant/30">
+                <div class="flex flex-col md:flex-row justify-between items-start gap-6">
+                    <div class="flex-1">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">ACTIVE REQUEST</span>
+                            <span class="text-sm text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">schedule</span> Posted 2 hours ago</span>
+                        </div>
+                        <h2 class="text-2xl font-bold text-on-surface mb-2">3 Days in Ha Long Bay</h2>
+                        <div class="flex flex-wrap gap-4 text-sm text-on-surface-variant mb-4">
+                            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">calendar_month</span> Oct 12 - Oct 15</span>
+                            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">group</span> 2 People</span>
+                            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">payments</span> Standard (1M-2M VND/day)</span>
+                        </div>
+                        <p class="text-on-surface-variant mb-6 line-clamp-2">"I love trying local street food, hate crowded tourist spots, and want to learn about the history. I need an English-speaking guide."</p>
+                        
+                        <div class="bg-surface p-4 rounded-xl border border-outline-variant/30 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-primary">mail</span>
+                                </div>
+                                <div>
+                                    <p class="font-bold text-on-surface">3 Offers Received</p>
+                                    <p class="text-xs text-on-surface-variant">Local guides have responded to your request!</p>
+                                </div>
+                            </div>
+                            <button class="bg-on-surface text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-on-surface/90 transition-colors">View Offers</button>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full md:w-48 flex flex-col gap-3">
+                        <button class="w-full bg-surface-variant text-on-surface px-4 py-2 rounded-lg font-bold text-sm hover:bg-outline-variant/30 transition-colors">Edit Request</button>
+                        <button class="w-full text-red-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-50 transition-colors">Cancel Request</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Tab -->
+        <div x-show="tab === 'upcoming'" style="display: none;" class="animate-fade-in-up">
+            <div class="text-center py-20">
+                <div class="w-24 h-24 bg-surface-variant rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="material-symbols-outlined text-4xl text-on-surface-variant">luggage</span>
+                </div>
+                <h3 class="text-xl font-bold text-on-surface mb-2">No upcoming trips</h3>
+                <p class="text-on-surface-variant max-w-md mx-auto mb-6">You don't have any confirmed trips yet. Browse our local experts or post a request to start your journey.</p>
+                <a href="/Guide/Index" class="inline-block bg-on-surface text-white font-bold px-6 py-3 rounded-xl hover:bg-on-surface/90 transition-colors">Find a Guide</a>
+            </div>
+        </div>
+
+        <!-- Past Tab -->
+        <div x-show="tab === 'past'" style="display: none;" class="space-y-6 animate-fade-in-up">
+            <!-- Dummy Past Trip -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-6 items-center">
+                <img src="https://images.unsplash.com/photo-1549884518-da225d36cfae?ixlib=rb-4.0.3&w=300&q=80" alt="Sapa" class="w-full md:w-48 h-32 object-cover rounded-xl">
+                <div class="flex-1">
+                    <div class="flex items-center gap-3 mb-1">
+                        <h3 class="text-xl font-bold text-on-surface">Sapa Trekking & Homestay</h3>
+                        <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase">Completed</span>
+                    </div>
+                    <p class="text-sm text-on-surface-variant mb-3">May 10 - May 12, 2024</p>
+                    <div class="flex items-center gap-3 mb-4">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&w=100&q=80" alt="Guide" class="w-8 h-8 rounded-full object-cover">
+                        <span class="text-sm font-medium text-on-surface">Guided by Linh Nguyen</span>
+                    </div>
+                    <div class="flex gap-3">
+                        <button class="text-primary text-sm font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-[16px]">star</span> Leave a Review</button>
+                        <button class="text-on-surface-variant text-sm font-bold flex items-center gap-1 hover:text-on-surface"><span class="material-symbols-outlined text-[16px]">receipt_long</span> View Receipt</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    </main>
+</div>

@@ -19,6 +19,18 @@ namespace TripMate_Webapi.Controllers
             _logger = logger;
         }
 
+        // GET: /Guide/Index (List of all Guides for Traveler)
+        public IActionResult Index()
+        {
+            return View();
+        }
+
+        // GET: /Guide/TripRequests (For Guides to see public requests)
+        public IActionResult TripRequests()
+        {
+            return View();
+        }
+
         // GET: /Guide/Dashboard
         public async Task<IActionResult> Dashboard()
         {
