@@ -196,16 +196,16 @@
                                 <div class="flex items-center px-8 py-6 border-b border-gray-100 hover:bg-gray-50 transition-colors group">
                                     <div class="w-20 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
                                         <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                                             src="@(tour.Images?.FirstOrDefault() ?? "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800")" 
+                                             src="@(tour.GuideProfile?.CoverPhotoUrl ?? "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800")" 
                                              alt="@tour.Title">
                                     </div>
                                     <div class="ml-6 flex-grow">
                                         <p class="font-medium text-gray-900">@tour.Title</p>
-                                        <p class="text-sm text-gray-600">@tour.Location</p>
+                                        <p class="text-sm text-gray-600">@(tour.GuideProfile?.CityArea ?? "Vietnam")</p>
                                     </div>
                                     <div class="hidden md:block px-6">
                                         <p class="text-xs text-gray-600 mb-1">Price</p>
-                                        <p class="font-medium">@tour.Price.ToString("N0")₫</p>
+                                        <p class="font-medium">@tour.PricePerSession.ToString("N0")₫</p>
                                     </div>
                                     <div class="flex gap-3">
                                         <button class="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors">

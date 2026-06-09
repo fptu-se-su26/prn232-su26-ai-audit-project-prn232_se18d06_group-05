@@ -1,8 +1,13 @@
 namespace TripMate_WebAPI.DTOs.Booking;
 
-public record TourAvailabilityDto(
+/// <summary>
+/// Guide availability (blocked dates) DTO
+/// Maps to public.guide_availability in database_setup.sql
+/// The guide_availability table is a BLACKLIST of unavailable dates.
+/// </summary>
+public record GuideAvailabilityDto(
     string Id,
-    string GuideTourId,
-    DateOnly Date,
-    int RemainingSlots
+    string GuideProfileId,
+    string UnavailableDate,     // yyyy-MM-dd format
+    string? Reason
 );

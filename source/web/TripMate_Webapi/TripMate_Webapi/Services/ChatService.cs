@@ -5,6 +5,11 @@ using System.Text.Json.Serialization;
 
 namespace TripMate_WebAPI.Services;
 
+/// <summary>
+/// ChatService — refactored to use chat_messages table from database_setup.sql.
+/// No separate conversations/messages tables. Conversations are simulated
+/// by grouping chat_messages by booking_id.
+/// </summary>
 public class ChatService
 {
     private readonly HttpClient _http;
@@ -21,78 +26,114 @@ public class ChatService
         _anonKey = config["Supabase:AnonKey"]!;
     }
 
-    // ── Get or create conversation ────────────────────────────────────────────
+    // ── Get or create "conversation" (= messages grouped by booking_id) ───────
 
     public async Task<ConversationDto> GetOrCreateConversationAsync(
         string travelerId, string guideId, string bookingId, string userToken)
     {
-        // Check existing
-        var url = $"{_supabaseUrl}/rest/v1/conversations" +
-                  $"?traveler_id=eq.{travelerId}&guide_id=eq.{guideId}" +
-                  $"&booking_id=eq.{bookingId}&select=*";
+        // In the new schema, a "conversation" is just a booking_id grouping.
+        // We return metadata about the conversation.
+        // Check if any messages exist for this booking
+        var url = $"{_supabaseUrl}/rest/v1/chat_messages" +
+                  $"?booking_id=eq.{bookingId}" +
+                  $"&limit=1&select=id,sent_at";
 
-        var existing = await GetAsync<List<ConvRow>>(url, userToken);
-        if (existing?.Count > 0)
-            return MapConv(existing[0]);
+        var existing = await GetAsync<List<ChatMessageRow>>(url, userToken);
 
-        // Create new
-        var body = new { traveler_id = travelerId, guide_id = guideId, booking_id = bookingId };
-        var req = BuildRequest(HttpMethod.Post, $"{_supabaseUrl}/rest/v1/conversations", userToken);
-        req.Headers.Add("Prefer", "return=representation");
-        req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+        var createdAt = existing?.FirstOrDefault()?.SentAt ?? DateTime.UtcNow;
 
-        var res = await _http.SendAsync(req);
-        var content = await res.Content.ReadAsStringAsync();
-        EnsureSuccess(res, content);
-
-        var rows = JsonSerializer.Deserialize<List<ConvRow>>(content, _json);
-        return MapConv(rows!.First());
+        return new ConversationDto(
+            BookingId: bookingId,
+            TravelerId: travelerId,
+            GuideId: guideId,
+            CreatedAt: createdAt
+        );
     }
 
-    // ── Get my conversations ──────────────────────────────────────────────────
+    // ── Get my conversations (= distinct booking_ids I have messages in) ─────
 
-    public async Task<List<ConversationDto>> GetMyConversationsAsync(string userId, string userToken)
+    public async Task<List<ConversationDto>> GetMyConversationsAsync(
+        string userId, string userToken)
     {
-        var url = $"{_supabaseUrl}/rest/v1/conversations" +
-                  $"?or=(traveler_id.eq.{userId},guide_id.eq.{userId})" +
-                  $"&order=created_at.desc&select=*";
+        // Get all messages where I'm sender or receiver, ordered by most recent
+        var url = $"{_supabaseUrl}/rest/v1/chat_messages" +
+                  $"?or=(sender_id.eq.{userId},receiver_id.eq.{userId})" +
+                  $"&order=sent_at.desc" +
+                  $"&select=booking_id,sender_id,receiver_id,sent_at";
 
-        var rows = await GetAsync<List<ConvRow>>(url, userToken) ?? [];
-        return rows.Select(MapConv).ToList();
+        var messages = await GetAsync<List<ChatMessageRow>>(url, userToken) ?? [];
+
+        // Group by booking_id → simulate conversations
+        var conversations = messages
+            .GroupBy(m => m.BookingId)
+            .Select(g =>
+            {
+                var first = g.First();
+                var senderId = first.SenderId ?? "";
+                var receiverId = first.ReceiverId ?? "";
+
+                // Determine traveler vs guide
+                var travelerId = senderId == userId ? senderId : receiverId;
+                var guideId = senderId == userId ? receiverId : senderId;
+
+                return new ConversationDto(
+                    BookingId: g.Key ?? "",
+                    TravelerId: travelerId,
+                    GuideId: guideId,
+                    CreatedAt: g.Min(m => m.SentAt)
+                );
+            })
+            .ToList();
+
+        return conversations;
     }
 
-    // ── Get messages ──────────────────────────────────────────────────────────
+    // ── Get messages by booking_id ────────────────────────────────────────────
 
     public async Task<List<MessageDto>> GetMessagesAsync(
-        string conversationId, string userToken)
+        string bookingId, string userToken)
     {
-        var url = $"{_supabaseUrl}/rest/v1/messages" +
-                  $"?conversation_id=eq.{conversationId}&order=created_at.asc&select=*";
+        var url = $"{_supabaseUrl}/rest/v1/chat_messages" +
+                  $"?booking_id=eq.{bookingId}" +
+                  $"&order=sent_at.asc" +
+                  $"&select=*";
 
-        var rows = await GetAsync<List<MsgRow>>(url, userToken) ?? [];
+        var rows = await GetAsync<List<ChatMessageRow>>(url, userToken) ?? [];
         return rows.Select(r => new MessageDto(
-            r.Id ?? "", r.ConversationId ?? "", r.SenderId ?? "",
-            r.Content ?? "", r.IsRead, r.CreatedAt)).ToList();
+            r.Id, r.BookingId ?? "", r.SenderId ?? "", r.ReceiverId ?? "",
+            r.MessageText ?? "", r.IsRead, r.SentAt)).ToList();
     }
 
     // ── Send message ──────────────────────────────────────────────────────────
 
     public async Task<MessageDto> SendMessageAsync(
-        string conversationId, string senderId, string content, string userToken)
+        string bookingId, string senderId, string receiverId,
+        string content, string userToken)
     {
-        var body = new { conversation_id = conversationId, sender_id = senderId, content };
-        var req = BuildRequest(HttpMethod.Post, $"{_supabaseUrl}/rest/v1/messages", userToken);
+        var body = new
+        {
+            booking_id = bookingId,
+            sender_id = senderId,
+            receiver_id = receiverId,
+            message_text = content,
+            is_read = false,
+        };
+
+        var req = BuildRequest(HttpMethod.Post,
+            $"{_supabaseUrl}/rest/v1/chat_messages", userToken);
         req.Headers.Add("Prefer", "return=representation");
-        req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+        req.Content = new StringContent(
+            JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
         var res = await _http.SendAsync(req);
         var c = await res.Content.ReadAsStringAsync();
         EnsureSuccess(res, c);
 
-        var rows = JsonSerializer.Deserialize<List<MsgRow>>(c, _json);
+        var rows = JsonSerializer.Deserialize<List<ChatMessageRow>>(c, _json);
         var row = rows!.First();
-        return new MessageDto(row.Id ?? "", row.ConversationId ?? "", row.SenderId ?? "",
-            row.Content ?? "", row.IsRead, row.CreatedAt);
+        return new MessageDto(
+            row.Id, row.BookingId ?? "", row.SenderId ?? "", row.ReceiverId ?? "",
+            row.MessageText ?? "", row.IsRead, row.SentAt);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -119,34 +160,46 @@ public class ChatService
     {
         if (!r.IsSuccessStatusCode) throw new Exception($"Supabase {r.StatusCode}: {c}");
     }
-
-    private static ConversationDto MapConv(ConvRow r) =>
-        new(r.Id ?? "", r.TravelerId ?? "", r.GuideId ?? "", r.BookingId, r.CreatedAt);
 }
 
 // ── DTOs ──────────────────────────────────────────────────────────────────────
 
-public record ConversationDto(string Id, string TravelerId, string GuideId,
-    string? BookingId, DateTime CreatedAt);
+/// <summary>
+/// Simulated conversation = messages grouped by booking_id
+/// </summary>
+public record ConversationDto(
+    string BookingId,
+    string TravelerId,
+    string GuideId,
+    DateTime CreatedAt);
 
-public record MessageDto(string Id, string ConversationId, string SenderId,
-    string Content, bool IsRead, DateTime CreatedAt);
+/// <summary>
+/// Maps to a row in public.chat_messages
+/// </summary>
+public record MessageDto(
+    long Id,
+    string BookingId,
+    string SenderId,
+    string ReceiverId,
+    string MessageText,
+    bool IsRead,
+    DateTime SentAt);
 
-internal class ConvRow
+// ── Request DTOs ──────────────────────────────────────────────────────────────
+
+public record CreateConversationRequest(string GuideId, string BookingId);
+public record SendMessageRequest(string Content, string ReceiverId);
+
+// ── Internal row model ────────────────────────────────────────────────────────
+
+internal class ChatMessageRow
 {
-    [JsonPropertyName("id")]          public string? Id { get; set; }
-    [JsonPropertyName("traveler_id")] public string? TravelerId { get; set; }
-    [JsonPropertyName("guide_id")]    public string? GuideId { get; set; }
-    [JsonPropertyName("booking_id")]  public string? BookingId { get; set; }
-    [JsonPropertyName("created_at")]  public DateTime CreatedAt { get; set; }
-}
-
-internal class MsgRow
-{
-    [JsonPropertyName("id")]              public string? Id { get; set; }
-    [JsonPropertyName("conversation_id")] public string? ConversationId { get; set; }
-    [JsonPropertyName("sender_id")]       public string? SenderId { get; set; }
-    [JsonPropertyName("content")]         public string? Content { get; set; }
-    [JsonPropertyName("is_read")]         public bool IsRead { get; set; }
-    [JsonPropertyName("created_at")]      public DateTime CreatedAt { get; set; }
+    [JsonPropertyName("id")]           public long Id { get; set; }
+    [JsonPropertyName("booking_id")]   public string? BookingId { get; set; }
+    [JsonPropertyName("sender_id")]    public string? SenderId { get; set; }
+    [JsonPropertyName("receiver_id")]  public string? ReceiverId { get; set; }
+    [JsonPropertyName("message_text")] public string? MessageText { get; set; }
+    [JsonPropertyName("is_read")]      public bool IsRead { get; set; }
+    [JsonPropertyName("sent_at")]      public DateTime SentAt { get; set; }
+    [JsonPropertyName("edited_at")]    public DateTime? EditedAt { get; set; }
 }

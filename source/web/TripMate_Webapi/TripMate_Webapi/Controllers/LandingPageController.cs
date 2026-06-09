@@ -79,8 +79,8 @@ namespace TripMate_Webapi.Controllers
     // View Model
     public class HomeViewModel
     {
-        public List<TourRow> FeaturedTours { get; set; } = new();
-        public List<TourRow> CuratedStays { get; set; } = new();
-        public List<TourRow> AllTours { get; set; } = new();
+        public List<ExperiencePackageRow> FeaturedTours { get; set; } = new();
+        public List<ExperiencePackageRow> CuratedStays { get; set; } = new();
+        public List<ExperiencePackageRow> AllTours { get; set; } = new();
     }
 }
