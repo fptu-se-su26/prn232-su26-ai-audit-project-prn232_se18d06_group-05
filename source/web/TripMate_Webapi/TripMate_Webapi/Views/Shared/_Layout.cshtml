@@ -34,9 +34,6 @@
     </script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
         .hero-gradient {
             background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.5) 100%);
         }
@@ -59,10 +56,27 @@
                     <span class="text-2xl font-extrabold tracking-tight text-on-surface">TRIPMATE</span>
                 </a>
             </div>
-            <nav class="hidden md:flex items-center gap-8 text-base font-medium">
-                <a class="text-primary border-b-2 border-primary pb-1 font-bold" href="/">Home</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="/Guide">Top Guides</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="/Stories">Stories</a>
+            <nav id="mainNav" class="hidden md:flex items-center gap-6 text-sm font-bold flex-1 ml-8">
+                <!-- Search Bar in Header -->
+                <form action="/Survey/Index" method="get" class="relative group hidden lg:flex bg-surface-variant rounded-full border border-outline-variant/30 overflow-hidden items-center">
+                    <div class="flex items-center px-4 py-2 border-r border-outline-variant/30">
+                        <span class="material-symbols-outlined text-on-surface-variant text-lg mr-2">search</span>
+                        <input type="text" name="destination" placeholder="Where to?" class="bg-transparent text-on-surface text-sm w-32 focus:outline-none border-none p-0 placeholder-on-surface-variant/70">
+                    </div>
+                    <div class="flex items-center px-4 py-2">
+                        <span class="material-symbols-outlined text-on-surface-variant text-lg mr-2">calendar_month</span>
+                        <input type="text" name="when" placeholder="When?" class="bg-transparent text-on-surface text-sm w-24 focus:outline-none border-none p-0 placeholder-on-surface-variant/70">
+                    </div>
+                    <button type="submit" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 h-full font-bold transition-colors">Search</button>
+                </form>
+
+                <div class="flex-1"></div> <!-- Spacer -->
+
+                <a class="text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap" href="/Home/BecomeAGuide">Become a guide</a>
+                <a class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-500 hover:opacity-80 transition-opacity flex items-center gap-1 whitespace-nowrap" href="/Survey/Index">
+                    <span class="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>
+                    AI Matchmaker
+                </a>
             </nav>
             <div class="flex items-center gap-4">
                 <button class="p-2 hover:bg-primary-container transition-all rounded-full">
@@ -153,6 +167,16 @@
                                 </span>
                             </div>
                             <div class="p-2">
+                                ${userRole === 'traveler' ? `
+                                <a href="/Traveler/Trips" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                    <span class="material-symbols-outlined text-on-surface-variant">calendar_month</span>
+                                    <span class="font-medium">My Trips</span>
+                                </a>
+                                <a href="/Traveler/Messages" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                    <span class="material-symbols-outlined text-on-surface-variant">chat</span>
+                                    <span class="font-medium">Messages</span>
+                                </a>
+                                ` : ''}
                                 <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
                                     <span class="material-symbols-outlined text-on-surface-variant">person</span>
                                     <span class="font-medium">Profile</span>
@@ -169,6 +193,20 @@
                         </div>
                     </div>
                 `;
+
+                // Optionally adjust Main Nav based on role
+                const mainNav = document.getElementById('mainNav');
+                if(userRole === 'traveler') {
+                    // Inject Saved Guides link
+                    if(!document.getElementById('savedGuidesLink')) {
+                        const savedGuides = document.createElement('a');
+                        savedGuides.id = 'savedGuidesLink';
+                        savedGuides.className = 'text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1';
+                        savedGuides.href = '/Traveler/Saved'; // placeholder
+                        savedGuides.innerHTML = '<span class="material-symbols-outlined text-[18px]">favorite</span> Saved';
+                        mainNav.insertBefore(savedGuides, mainNav.lastElementChild);
+                    }
+                }
             } else {
                 // User is not logged in
                 userSection.innerHTML = `

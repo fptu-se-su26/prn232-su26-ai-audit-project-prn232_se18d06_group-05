@@ -70,8 +70,15 @@ public class SupabaseAuthService
             throw new Exception("Đăng ký thất bại");
 
         // 2. Upsert profile vào bảng profiles với thông tin mở rộng
-        await UpsertProfileAsync(session.AccessToken, session.User.Id, email, fullName, role, 
-            phoneNumber, experience, specialization, languages, bio, certificatePath);
+        if (!string.IsNullOrEmpty(session.AccessToken))
+        {
+            await UpsertProfileAsync(session.AccessToken, session.User.Id, email, fullName, role, 
+                phoneNumber, experience, specialization, languages, bio, certificatePath);
+        }
+        else
+        {
+            Console.WriteLine($"[WARNING] No access token returned for {email}. Profile cannot be upserted. Email confirmation might be required.");
+        }
 
         // 3. Notify admin if it's a guide registration
         if (role == "guide")
@@ -339,7 +346,7 @@ internal class GoTrueError
     public string? ErrorCode { get; set; }
 
     [JsonPropertyName("code")]
-    public int? Code { get; set; }
+    public JsonElement? Code { get; set; }
 
     // Legacy format: {"error":"...", "error_description":"..."}
     [JsonPropertyName("error")]

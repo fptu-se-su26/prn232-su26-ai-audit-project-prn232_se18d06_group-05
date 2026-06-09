@@ -64,7 +64,8 @@ public class DatabaseSeeder
                     ex.Message.Contains("already registered") || 
                     ex.Message.Contains("đã được đăng ký") ||
                     ex.Message.Contains("400") ||
-                    ex.Message.Contains("registered"))
+                    ex.Message.Contains("registered") ||
+                    ex.Message.Contains("Lỗi xác thực"))
                 {
                     _logger.LogInformation("Account {Email} already exists. Syncing profile role & details...", account.Email);
                     try

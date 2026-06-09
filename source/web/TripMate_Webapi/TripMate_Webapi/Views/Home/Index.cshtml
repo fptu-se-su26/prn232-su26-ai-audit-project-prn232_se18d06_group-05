@@ -1,0 +1,378 @@
+@{
+    ViewData["Title"] = "TripMate - Authentic Local Experiences";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="bg-surface min-h-screen font-sans" x-data="travelerHome()">
+    
+    <!-- Hero Section -->
+    <section class="relative h-[80vh] min-h-[600px] flex items-center justify-center overflow-hidden">
+        <!-- Background Image with Parallax effect -->
+        <div class="absolute inset-0 z-0">
+            <img src="https://images.unsplash.com/photo-1504457047772-27faf1c00561?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" alt="Vietnam Landscape" class="w-full h-full object-cover animate-ken-burns" />
+            <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-surface"></div>
+        </div>
+
+        <div class="relative z-10 w-full max-w-[1200px] mx-auto px-6 flex flex-col items-center mt-12 text-center">
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20 mb-6 animate-fade-in-up shadow-lg">
+                <span class="material-symbols-outlined text-primary text-sm animate-pulse">auto_awesome</span>
+                <span class="text-white text-sm font-bold tracking-wide uppercase">TripMate AI Matchmaker</span>
+            </div>
+            
+            <h1 class="text-6xl md:text-8xl font-extrabold text-white mb-6 leading-tight drop-shadow-2xl animate-fade-in-up animation-delay-100 tracking-tighter">
+                Find your soulmate<br/><span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-400">Local Guide.</span>
+            </h1>
+            <p class="text-white/90 text-xl md:text-2xl mb-12 max-w-3xl mx-auto font-medium drop-shadow-md animate-fade-in-up animation-delay-200">
+                Stop endlessly browsing. Take a 2-minute survey and let our AI pair you with local experts who perfectly match your travel vibe.
+            </p>
+
+            <a href="/Survey/Index" class="bg-primary hover:bg-primary/90 text-white px-10 py-5 rounded-full flex items-center justify-center font-bold text-lg transition-all duration-300 shadow-[0_10px_40px_rgba(255,122,0,0.4)] hover:shadow-[0_15px_50px_rgba(255,122,0,0.6)] hover:-translate-y-2 animate-fade-in-up animation-delay-300">
+                <span class="material-symbols-outlined mr-2">magic_button</span> Try AI Matchmaker
+            </a>
+        </div>
+    </section>
+
+    <!-- AI Survey Call to Action (The core USP) -->
+    <section class="py-12 bg-white">
+        <div class="max-w-[1200px] mx-auto px-6">
+            <div class="flex justify-between items-end mb-10 border-b border-outline-variant/20 pb-4">
+                <div>
+                    <h2 class="text-3xl font-extrabold text-on-surface mb-2">Meet Popular Local Experts</h2>
+                    <p class="text-on-surface-variant text-lg">Highly rated guides ready to show you their world.</p>
+                </div>
+                <a href="/Survey/Index" class="hidden md:flex text-primary font-bold items-center gap-1 hover:underline bg-primary/5 px-4 py-2 rounded-lg transition-colors hover:bg-primary/10">
+                    See all guides <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                </a>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                <!-- Guide Card 1 -->
+                <div class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 relative flex flex-col hover:-translate-y-1">
+                    <button @@click="toggleSave(1)" class="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center hover:bg-white transition-colors shadow-sm">
+                        <span class="material-symbols-outlined" :class="savedGuides.includes(1) ? 'text-red-500 fill-current' : 'text-gray-400'">favorite</span>
+                    </button>
+                    <div class="h-56 overflow-hidden relative">
+                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Hai" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12">
+                            <h3 class="text-xl font-bold text-white mb-1">Nguyen Hai</h3>
+                            <p class="text-sm text-white/90 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Ha Long Bay</p>
+                        </div>
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
+                                <span class="material-symbols-outlined text-[18px] text-yellow-500 fill-current">star</span> 4.9 <span class="text-on-surface-variant font-normal">(120)</span>
+                            </div>
+                            <div class="text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">$15/h</div>
+                        </div>
+                        <p class="text-sm text-on-surface-variant italic mb-4 line-clamp-2">"I love showing guests the hidden caves and kayaking spots that large cruises miss."</p>
+                        <div class="flex flex-wrap gap-2 mt-auto">
+                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Photography</span>
+                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Nature</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Guide Card 2 -->
+                <div class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 relative flex flex-col hover:-translate-y-1">
+                    <button @@click="toggleSave(2)" class="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center hover:bg-white transition-colors shadow-sm">
+                        <span class="material-symbols-outlined" :class="savedGuides.includes(2) ? 'text-red-500 fill-current' : 'text-gray-400'">favorite</span>
+                    </button>
+                    <div class="h-56 overflow-hidden relative">
+                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Mai" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12">
+                            <h3 class="text-xl font-bold text-white mb-1">Tran Mai</h3>
+                            <p class="text-sm text-white/90 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Hoi An</p>
+                        </div>
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
+                                <span class="material-symbols-outlined text-[18px] text-yellow-500 fill-current">star</span> 5.0 <span class="text-on-surface-variant font-normal">(85)</span>
+                            </div>
+                            <div class="text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">$12/h</div>
+                        </div>
+                        <p class="text-sm text-on-surface-variant italic mb-4 line-clamp-2">"Let's taste the best street food and make traditional lanterns together."</p>
+                        <div class="flex flex-wrap gap-2 mt-auto">
+                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Culinary</span>
+                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Culture</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Guide Card 3 -->
+                <div class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 relative flex flex-col hover:-translate-y-1">
+                    <button @@click="toggleSave(3)" class="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center hover:bg-white transition-colors shadow-sm">
+                        <span class="material-symbols-outlined" :class="savedGuides.includes(3) ? 'text-red-500 fill-current' : 'text-gray-400'">favorite</span>
+                    </button>
+                    <div class="h-56 overflow-hidden relative">
+                        <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Tuan" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12">
+                            <h3 class="text-xl font-bold text-white mb-1">Le Tuan</h3>
+                            <p class="text-sm text-white/90 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Sapa</p>
+                        </div>
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
+                                <span class="material-symbols-outlined text-[18px] text-yellow-500 fill-current">star</span> 4.8 <span class="text-on-surface-variant font-normal">(210)</span>
+                            </div>
+                            <div class="text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">$18/h</div>
+                        </div>
+                        <p class="text-sm text-on-surface-variant italic mb-4 line-clamp-2">"Trekking through rice terraces and connecting with local ethnic minorities."</p>
+                        <div class="flex flex-wrap gap-2 mt-auto">
+                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Trekking</span>
+                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Adventure</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Guide Card 4 -->
+                <div class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 relative flex flex-col hover:-translate-y-1">
+                    <button @@click="toggleSave(4)" class="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center hover:bg-white transition-colors shadow-sm">
+                        <span class="material-symbols-outlined" :class="savedGuides.includes(4) ? 'text-red-500 fill-current' : 'text-gray-400'">favorite</span>
+                    </button>
+                    <div class="h-56 overflow-hidden relative">
+                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Linh" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12">
+                            <h3 class="text-xl font-bold text-white mb-1">Pham Linh</h3>
+                            <p class="text-sm text-white/90 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Ho Chi Minh City</p>
+                        </div>
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col">
+                        <div class="flex justify-between items-center mb-3">
+                            <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
+                                <span class="material-symbols-outlined text-[18px] text-yellow-500 fill-current">star</span> 4.9 <span class="text-on-surface-variant font-normal">(150)</span>
+                            </div>
+                            <div class="text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">$14/h</div>
+                        </div>
+                        <p class="text-sm text-on-surface-variant italic mb-4 line-clamp-2">"Motorbike tours by night. I'll show you the real Saigon vibe."</p>
+                        <div class="flex flex-wrap gap-2 mt-auto">
+                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Nightlife</span>
+                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Motorbike</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Popular Destinations Section -->
+    <section class="py-16 px-6 max-w-[1200px] mx-auto">
+        <div class="flex justify-between items-end mb-10 border-b border-outline-variant/20 pb-4">
+            <div>
+                <h2 class="text-3xl font-extrabold text-on-surface mb-2">Explore Destinations</h2>
+                <p class="text-on-surface-variant text-lg">Top spots for private, tailored tours.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Destination Card 1 -->
+            <a href="/Survey/Index?destination=halong" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all"
+               x-data="{ active: 0, images: [
+                   'https://images.unsplash.com/photo-1528127269322-539801943592?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+                   'https://images.unsplash.com/photo-1552564619-a1d261e4a11f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+                   'https://images.unsplash.com/photo-1504457047772-27faf1c00561?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+               ] }" x-init="setInterval(() => active = (active + 1) % images.length, 3500)">
+                <template x-for="(img, index) in images" :key="index">
+                    <img :src="img" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 duration-700"
+                         :class="{ 'opacity-100 z-10': active === index, 'opacity-0 z-0': active !== index }"
+                         style="transition: opacity 1.5s ease-in-out, transform 0.7s ease-in-out;" alt="Ha Long Bay" />
+                </template>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
+                <div class="absolute bottom-6 left-6 right-6 z-30">
+                    <h3 class="text-2xl font-bold text-white mb-1">Ha Long Bay</h3>
+                    <p class="text-white/80 text-sm font-medium">120+ Guides</p>
+                </div>
+            </a>
+
+            <!-- Destination Card 2 -->
+            <a href="/Survey/Index?destination=hoian" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all"
+               x-data="{ active: 0, images: [
+                   'https://images.unsplash.com/photo-1583417319070-4a69db38a482?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+                   'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+                   'https://images.unsplash.com/photo-1540484551139-2ceb46bd9d71?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+               ] }" x-init="setInterval(() => active = (active + 1) % images.length, 4000)">
+                <template x-for="(img, index) in images" :key="index">
+                    <img :src="img" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 duration-700"
+                         :class="{ 'opacity-100 z-10': active === index, 'opacity-0 z-0': active !== index }"
+                         style="transition: opacity 1.5s ease-in-out, transform 0.7s ease-in-out;" alt="Hoi An" />
+                </template>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
+                <div class="absolute bottom-6 left-6 right-6 z-30">
+                    <h3 class="text-2xl font-bold text-white mb-1">Hoi An</h3>
+                    <p class="text-white/80 text-sm font-medium">85+ Guides</p>
+                </div>
+            </a>
+            
+            <!-- Destination Card 3 -->
+            <a href="/Survey/Index?destination=sapa" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all"
+               x-data="{ active: 0, images: [
+                   'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+                   'https://images.unsplash.com/photo-1518608826760-b6f4a86fbd70?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+                   'https://images.unsplash.com/photo-1550951298-5c7b95a66bfc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+               ] }" x-init="setInterval(() => active = (active + 1) % images.length, 3800)">
+                <template x-for="(img, index) in images" :key="index">
+                    <img :src="img" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 duration-700"
+                         :class="{ 'opacity-100 z-10': active === index, 'opacity-0 z-0': active !== index }"
+                         style="transition: opacity 1.5s ease-in-out, transform 0.7s ease-in-out;" alt="Sapa" />
+                </template>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
+                <div class="absolute bottom-6 left-6 right-6 z-30">
+                    <h3 class="text-2xl font-bold text-white mb-1">Sapa</h3>
+                    <p class="text-white/80 text-sm font-medium">94+ Guides</p>
+                </div>
+            </a>
+            
+            <!-- Destination Card 4 -->
+            <a href="/Survey/Index?destination=phuquoc" class="group relative rounded-2xl overflow-hidden aspect-square shadow-md hover:shadow-xl transition-all"
+               x-data="{ active: 0, images: [
+                   'https://images.unsplash.com/photo-1552058544-f2b08422138a?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+                   'https://images.unsplash.com/photo-1504312683973-2e4bdcba5f5c?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80',
+                   'https://images.unsplash.com/photo-1505881504895-df9b43ed5b07?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80'
+               ] }" x-init="setInterval(() => active = (active + 1) % images.length, 4200)">
+                <template x-for="(img, index) in images" :key="index">
+                    <img :src="img" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 duration-700"
+                         :class="{ 'opacity-100 z-10': active === index, 'opacity-0 z-0': active !== index }"
+                         style="transition: opacity 1.5s ease-in-out, transform 0.7s ease-in-out;" alt="Phu Quoc" />
+                </template>
+                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-20"></div>
+                <div class="absolute bottom-6 left-6 right-6 z-30">
+                    <h3 class="text-2xl font-bold text-white mb-1">Phu Quoc</h3>
+                    <p class="text-white/80 text-sm font-medium">60+ Guides</p>
+                </div>
+            </a>
+        </div>
+    </section>
+
+    <!-- How it works -->
+    <section id="how-it-works" class="py-20 bg-primary-container text-on-primary-container relative overflow-hidden">
+        <div class="max-w-[1200px] mx-auto px-6 relative z-10">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl md:text-4xl font-extrabold mb-4">How TripMate Works</h2>
+                <p class="text-lg opacity-80 max-w-2xl mx-auto">Your personalized journey starts with a simple conversation.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div class="text-center flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-2xl bg-primary text-white flex items-center justify-center text-2xl font-bold mb-6 shadow-lg shadow-primary/30">1</div>
+                    <h3 class="text-xl font-bold mb-3">AI Survey</h3>
+                    <p class="opacity-80 text-sm">Tell us your vibes and preferences in a quick 2-minute test.</p>
+                </div>
+                <div class="text-center flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-2xl bg-white text-primary flex items-center justify-center text-2xl font-bold mb-6 shadow-lg">2</div>
+                    <h3 class="text-xl font-bold mb-3">Get Matched</h3>
+                    <p class="opacity-80 text-sm">Our AI connects you with highly compatible local experts.</p>
+                </div>
+                <div class="text-center flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-2xl bg-white text-primary flex items-center justify-center text-2xl font-bold mb-6 shadow-lg">3</div>
+                    <h3 class="text-xl font-bold mb-3">Customize</h3>
+                    <p class="opacity-80 text-sm">Chat with your guide and co-create your perfect schedule.</p>
+                </div>
+                <div class="text-center flex flex-col items-center">
+                    <div class="w-16 h-16 rounded-2xl bg-white text-primary flex items-center justify-center text-2xl font-bold mb-6 shadow-lg">4</div>
+                    <h3 class="text-xl font-bold mb-3">Travel</h3>
+                    <p class="opacity-80 text-sm">Experience the destination authentically and securely.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Recent Bookings / Reviews -->
+    <section class="py-20 bg-surface">
+        <div class="max-w-[1200px] mx-auto px-6">
+            <h2 class="text-3xl font-extrabold text-center text-on-surface mb-16">Traveler Stories</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Review 1 -->
+                <div class="bg-white rounded-3xl shadow-lg border border-outline-variant/20 p-8 relative pt-12 mt-8">
+                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" class="w-20 h-20 rounded-full border-4 border-white absolute -top-10 left-8 object-cover shadow-md" />
+                    <div class="flex text-yellow-500 mb-4">
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star</i>
+                    </div>
+                    <p class="text-on-surface-variant text-base italic mb-6 leading-relaxed">"Mai was an incredible guide! The AI matched us perfectly based on our love for street food. She took us to the best Banh Mi spot that no tourist knows about."</p>
+                    <div>
+                        <p class="text-on-surface font-bold">Sarah Jenkins</p>
+                        <p class="text-sm text-primary font-medium">Traveled to Hoi An</p>
+                    </div>
+                </div>
+
+                <!-- Review 2 -->
+                <div class="bg-white rounded-3xl shadow-lg border border-outline-variant/20 p-8 relative pt-12 mt-8 md:-translate-y-8">
+                    <img src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" class="w-20 h-20 rounded-full border-4 border-white absolute -top-10 left-8 object-cover shadow-md" />
+                    <div class="flex text-yellow-500 mb-4">
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star</i>
+                    </div>
+                    <p class="text-on-surface-variant text-base italic mb-6 leading-relaxed">"Minh organized a private boat for us in Phu Quoc. The snorkeling was out of this world. TripMate made finding a trustworthy guide so easy."</p>
+                    <div>
+                        <p class="text-on-surface font-bold">David Chen</p>
+                        <p class="text-sm text-primary font-medium">Traveled to Phu Quoc</p>
+                    </div>
+                </div>
+
+                <!-- Review 3 -->
+                <div class="bg-white rounded-3xl shadow-lg border border-outline-variant/20 p-8 relative pt-12 mt-8">
+                    <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80" class="w-20 h-20 rounded-full border-4 border-white absolute -top-10 left-8 object-cover shadow-md" />
+                    <div class="flex text-yellow-500 mb-4">
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star</i>
+                        <i class="material-symbols-outlined fill-current">star_half</i>
+                    </div>
+                    <p class="text-on-surface-variant text-base italic mb-6 leading-relaxed">"Tuan was so patient during our trek in Sapa. He shared amazing stories about the local tribes. A truly authentic experience."</p>
+                    <div>
+                        <p class="text-on-surface font-bold">Jessica Alba</p>
+                        <p class="text-sm text-primary font-medium">Traveled to Sapa</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+<style>
+    @@keyframes ken-burns {
+        0% { transform: scale(1); }
+        100% { transform: scale(1.05); }
+    }
+    .animate-ken-burns {
+        animation: ken-burns 20s ease-in-out infinite alternate;
+    }
+    
+    @@keyframes fade-in-up {
+        0% { opacity: 0; transform: translateY(20px); }
+        100% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in-up {
+        animation: fade-in-up 0.8s ease-out forwards;
+        opacity: 0;
+    }
+    .animation-delay-100 { animation-delay: 100ms; }
+    .animation-delay-200 { animation-delay: 200ms; }
+    .animation-delay-300 { animation-delay: 300ms; }
+</style>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('travelerHome', () => ({
+            savedGuides: [], 
+            toggleSave(id) {
+                if(this.savedGuides.includes(id)) {
+                    this.savedGuides = this.savedGuides.filter(g => g !== id);
+                } else {
+                    this.savedGuides.push(id);
+                }
+            }
+        }))
+    })
+</script>

@@ -11,7 +11,13 @@ namespace TripMate_Webapi.Controllers
             _logger = logger;
         }
 
-        // GET: /Traveler/Dashboard
+        // GET: /Traveler/Home
+        public IActionResult Home()
+        {
+            return View();
+        }
+
+        // GET: /Traveler/Dashboard (Will eventually be deprecated/redirected to Trips)
         public IActionResult Dashboard()
         {
             return View();
@@ -58,6 +64,12 @@ namespace TripMate_Webapi.Controllers
 
         // GET: /Traveler/Review/{id}
         public IActionResult Review(string id = "1")
+        {
+            return View();
+        }
+
+        // GET: /Traveler/Trips
+        public IActionResult Trips()
         {
             return View();
         }

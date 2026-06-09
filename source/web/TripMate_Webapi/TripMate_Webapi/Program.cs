@@ -142,7 +142,7 @@ app.UseAuthorization();
 app.MapControllers(); // Map API controllers
 app.MapControllerRoute( // Map MVC routes
     name: "default",
-    pattern: "{controller=LandingPage}/{action=LandingPage}/{id?}");
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 // Seed database
 using (var scope = app.Services.CreateScope())

@@ -3,19 +3,19 @@ using TripMate_WebAPI.Services;
 
 namespace TripMate_Webapi.Controllers
 {
-    public class LandingPageController : Controller
+    public class HomeController : Controller
     {
         private readonly TourService _tourService;
-        private readonly ILogger<LandingPageController> _logger;
+        private readonly ILogger<HomeController> _logger;
 
-        public LandingPageController(TourService tourService, ILogger<LandingPageController> logger)
+        public HomeController(TourService tourService, ILogger<HomeController> logger)
         {
             _tourService = tourService;
             _logger = logger;
         }
 
-        // GET: /LandingPage/LandingPage or /
-        public async Task<IActionResult> LandingPage()
+        // GET: /Home/Index or /
+        public async Task<IActionResult> Index()
         {
             try
             {
