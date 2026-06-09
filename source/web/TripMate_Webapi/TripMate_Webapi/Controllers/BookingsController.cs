@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using TripMate_WebAPI.Models;
+
 using TripMate_WebAPI.Services;
 
 namespace TripMate_WebAPI.Controllers;
@@ -29,17 +29,23 @@ public class BookingsController : ControllerBase
     /// <summary>
     /// Tạo booking mới
     /// POST /api/bookings
-    /// Body: { tourAvailabilityId, guests, note? }
+    /// Body: { experiencePackageId, bookingDate, startTime, guestCount, travelerNotes? }
     /// </summary>
     [HttpPost]
     public async Task<IActionResult> CreateBooking([FromBody] CreateBookingRequest request)
     {
         if (UserId == null) return Unauthorized();
 
-        if (string.IsNullOrWhiteSpace(request.TourAvailabilityId))
-            return BadRequest(new { message = "TourAvailabilityId không được để trống" });
+        if (string.IsNullOrWhiteSpace(request.ExperiencePackageId))
+            return BadRequest(new { message = "ExperiencePackageId không được để trống" });
 
-        if (request.Guests < 1)
+        if (string.IsNullOrWhiteSpace(request.BookingDate))
+            return BadRequest(new { message = "BookingDate không được để trống" });
+
+        if (string.IsNullOrWhiteSpace(request.StartTime))
+            return BadRequest(new { message = "StartTime không được để trống" });
+
+        if (request.GuestCount < 1)
             return BadRequest(new { message = "Số khách phải ít nhất là 1" });
 
         try
@@ -121,17 +127,17 @@ public class BookingsController : ControllerBase
     }
 
     /// <summary>
-    /// Lấy danh sách ngày trống của một guide_tour
-    /// GET /api/bookings/availability/{guideTourId}
+    /// Lấy ngày nghỉ/bận của guide (blacklist)
+    /// GET /api/bookings/availability/{guideProfileId}
     /// </summary>
-    [HttpGet("availability/{guideTourId}")]
+    [HttpGet("availability/{guideProfileId}")]
     [AllowAnonymous]
-    public async Task<IActionResult> GetAvailability(string guideTourId)
+    public async Task<IActionResult> GetAvailability(string guideProfileId)
     {
         try
         {
-            var availability = await _bookingService.GetAvailabilityByGuideTourAsync(guideTourId);
-            return Ok(new { availability, total = availability.Count });
+            var unavailableDates = await _bookingService.GetGuideAvailabilityAsync(guideProfileId);
+            return Ok(new { unavailableDates, total = unavailableDates.Count });
         }
         catch (Exception ex)
         {

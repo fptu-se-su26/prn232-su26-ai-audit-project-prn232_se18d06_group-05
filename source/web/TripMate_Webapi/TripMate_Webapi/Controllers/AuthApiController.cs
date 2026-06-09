@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
 
+
 namespace TripMate_Webapi.Controllers
 {
     /// <summary>
@@ -12,12 +13,21 @@ namespace TripMate_Webapi.Controllers
     public class AuthApiController : ControllerBase
     {
         private readonly SupabaseAuthService _authService;
+        private readonly IGoogleAuthService _googleAuthService;
+        private readonly IPasswordResetService _passwordResetService;
         private readonly ILogger<AuthApiController> _logger;
         private readonly IConfiguration _configuration;
 
-        public AuthApiController(SupabaseAuthService authService, ILogger<AuthApiController> logger, IConfiguration configuration)
+        public AuthApiController(
+            SupabaseAuthService authService,
+            IGoogleAuthService googleAuthService,
+            IPasswordResetService passwordResetService,
+            ILogger<AuthApiController> logger, 
+            IConfiguration configuration)
         {
             _authService = authService;
+            _googleAuthService = googleAuthService;
+            _passwordResetService = passwordResetService;
             _logger = logger;
             _configuration = configuration;
         }
@@ -44,25 +54,19 @@ namespace TripMate_Webapi.Controllers
                 _logger.LogInformation("Login successful for email: {Email}", request.Email);
 
                 var userRole = result.User?.Role ?? "traveler";
-                var userStatus = result.User?.Status ?? "active";
+                var userIsActive = result.User?.IsActive ?? true;
                 
                 // Cố định role cho các tài khoản seed để tránh lỗi sai role từ Database
                 if (request.Email == "admin@tripmate.com") userRole = "admin";
                 if (request.Email == "guide@tripmate.com") {
                     userRole = "guide";
-                    userStatus = "active";
+                    userIsActive = true;
                 }
 
-                if (userRole == "guide" && userStatus == "pending")
+                if (userRole == "guide" && !userIsActive)
                 {
-                    _logger.LogWarning("Pending guide login attempt for email: {Email}", request.Email);
-                    return Unauthorized(new { message = "Tài khoản của bạn đang chờ Admin phê duyệt. Vui lòng quay lại sau." });
-                }
-                
-                if (userRole == "guide" && userStatus == "rejected")
-                {
-                    _logger.LogWarning("Rejected guide login attempt for email: {Email}", request.Email);
-                    return Unauthorized(new { message = "Tài khoản hướng dẫn viên của bạn đã bị từ chối." });
+                    _logger.LogWarning("Pending or inactive guide login attempt for email: {Email}", request.Email);
+                    return Unauthorized(new { message = "Tài khoản của bạn đang chờ Admin phê duyệt hoặc đã bị vô hiệu hóa. Vui lòng quay lại sau." });
                 }
 
                 return Ok(new
@@ -229,6 +233,126 @@ namespace TripMate_Webapi.Controllers
         }
 
         /// <summary>
+        /// Google OAuth login endpoint
+        /// POST /api/auth/google-login
+        /// </summary>
+        [HttpPost("google-login")]
+        public async Task<IActionResult> GoogleLogin([FromBody] GoogleLoginRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Google login attempt with token: {TokenStart}...", request.IdToken.Substring(0, 20));
+
+                var result = await _googleAuthService.LoginWithGoogleAsync(request.IdToken, request.AccessToken);
+
+                if (result == null)
+                {
+                    _logger.LogWarning("Google login failed - invalid token");
+                    return Unauthorized(new { message = "Google token không hợp lệ" });
+                }
+
+                _logger.LogInformation("Google login successful for email: {Email}", result.User?.Email);
+
+                return Ok(new
+                {
+                    accessToken = result.AccessToken,
+                    refreshToken = result.RefreshToken,
+                    user = new
+                    {
+                        id = result.User?.Id,
+                        email = result.User?.Email,
+                        role = result.User?.Role ?? "traveler"
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Google login error");
+                return Unauthorized(new { message = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Forgot password endpoint
+        /// POST /api/auth/forgot-password
+        /// </summary>
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Forgot password request for email: {Email}", request.Email);
+
+                // Validate input
+                if (string.IsNullOrWhiteSpace(request.Email))
+                {
+                    return BadRequest(new { message = "Email là bắt buộc" });
+                }
+
+
+                var success = await _passwordResetService.SendPasswordResetEmailAsync(request.Email, request.CaptchaToken);
+
+                if (success)
+                {
+                    return Ok(new ForgotPasswordResponse(
+                        "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi link đặt lại mật khẩu.", 
+                        true));
+                }
+                else
+                {
+                    return BadRequest(new { message = "Không thể gửi email đặt lại mật khẩu" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in forgot password for email: {Email}", request.Email);
+                return StatusCode(500, new { message = "Có lỗi xảy ra, vui lòng thử lại sau" });
+            }
+        }
+
+        /// <summary>
+        /// Reset password endpoint
+        /// POST /api/auth/reset-password
+        /// </summary>
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            try
+            {
+                _logger.LogInformation("Reset password request with access token");
+
+                // Validate input
+                if (string.IsNullOrWhiteSpace(request.Email) || 
+                    string.IsNullOrWhiteSpace(request.Token) || 
+                    string.IsNullOrWhiteSpace(request.NewPassword))
+                {
+                    return BadRequest(new { message = "Thiếu thông tin bắt buộc" });
+                }
+
+                if (request.NewPassword.Length < 6)
+                {
+                    return BadRequest(new { message = "Mật khẩu mới phải có ít nhất 6 ký tự" });
+                }
+
+                var success = await _passwordResetService.ResetPasswordAsync(request.Email, request.Token, request.NewPassword);
+
+                if (success)
+                {
+                    return Ok(new { message = "Đặt lại mật khẩu thành công" });
+                }
+                else
+                {
+                    return BadRequest(new { message = "Token không hợp lệ hoặc đã hết hạn" });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in reset password");
+                return StatusCode(500, new { message = "Có lỗi xảy ra, vui lòng thử lại sau" });
+            }
+        }
+
+        /// <summary>
         /// Logout endpoint (optional - mainly client-side)
         /// POST /api/auth/logout
         /// </summary>
@@ -246,6 +370,25 @@ namespace TripMate_Webapi.Controllers
     {
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
+    }
+
+    public class GoogleLoginRequest
+    {
+        public string IdToken { get; set; } = string.Empty;
+        public string? AccessToken { get; set; }
+    }
+
+    public class ForgotPasswordRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string CaptchaToken { get; set; } = string.Empty;
+    }
+
+    public class ResetPasswordRequest
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Token { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
     }
 
     public class AuthApiRegisterRequest

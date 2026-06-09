@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TripMate_WebAPI.Extensions;
-using TripMate_WebAPI.Models;
+
 
 namespace TripMate_WebAPI.Services;
 
@@ -124,7 +124,7 @@ public class SupabaseAuthService
         return content;
     }
 
-    private async Task<ProfileRow> GetProfileAsync(string accessToken, string userId)
+    public async Task<ProfileRow> GetProfileAsync(string accessToken, string userId)
     {
         var request = new HttpRequestMessage(
             HttpMethod.Get,
@@ -195,7 +195,7 @@ public class SupabaseAuthService
         {
             Id = userId,
             Role = "traveler",
-            Status = "active",
+            IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
     }
@@ -289,10 +289,10 @@ public class SupabaseAuthService
                 Id: profile.Id ?? session.User.Id,
                 Email: profile.Email ?? session.User.Email ?? "",
                 FullName: profile.FullName,
-                Phone: profile.Phone,
+                PhoneNumber: profile.PhoneNumber,
                 AvatarUrl: profile.AvatarUrl,
                 Role: profile.Role ?? "traveler",
-                Status: profile.Status ?? "active",
+                IsActive: profile.IsActive,
                 CreatedAt: profile.CreatedAt
             )
         );
@@ -310,79 +310,4 @@ public class SupabaseAuthService
     };
 }
 
-// ── Internal GoTrue models ────────────────────────────────────────────────────
 
-internal class GoTrueSession
-{
-    [JsonPropertyName("access_token")]
-    public string AccessToken { get; set; } = "";
-
-    [JsonPropertyName("refresh_token")]
-    public string RefreshToken { get; set; } = "";
-
-    [JsonPropertyName("expires_at")]
-    public long ExpiresAt { get; set; }
-
-    [JsonPropertyName("user")]
-    public GoTrueUser User { get; set; } = new();
-}
-
-internal class GoTrueUser
-{
-    [JsonPropertyName("id")]
-    public string Id { get; set; } = "";
-
-    [JsonPropertyName("email")]
-    public string? Email { get; set; }
-}
-
-internal class GoTrueError
-{
-    // Supabase GoTrue v2 format: {"code":400,"error_code":"invalid_credentials","msg":"..."}
-    [JsonPropertyName("msg")]
-    public string? Msg { get; set; }
-
-    [JsonPropertyName("error_code")]
-    public string? ErrorCode { get; set; }
-
-    [JsonPropertyName("code")]
-    public JsonElement? Code { get; set; }
-
-    // Legacy format: {"error":"...", "error_description":"..."}
-    [JsonPropertyName("error")]
-    public string? Error { get; set; }
-
-    [JsonPropertyName("error_description")]
-    public string? ErrorDescription { get; set; }
-
-    // Helper to get most meaningful message
-    public string GetMessage() =>
-        ErrorDescription ?? Msg ?? Error ?? "Lỗi xác thực";
-}
-
-public class ProfileRow
-{
-    [JsonPropertyName("id")]
-    public string? Id { get; set; }
-
-    [JsonPropertyName("email")]
-    public string? Email { get; set; }
-
-    [JsonPropertyName("full_name")]
-    public string? FullName { get; set; }
-
-    [JsonPropertyName("phone")]          // schema mới: phone (không phải phone_number)
-    public string? Phone { get; set; }
-
-    [JsonPropertyName("avatar_url")]
-    public string? AvatarUrl { get; set; }
-
-    [JsonPropertyName("role")]
-    public string? Role { get; set; }
-
-    [JsonPropertyName("status")]
-    public string? Status { get; set; }
-
-    [JsonPropertyName("created_at")]
-    public DateTime CreatedAt { get; set; }
-}

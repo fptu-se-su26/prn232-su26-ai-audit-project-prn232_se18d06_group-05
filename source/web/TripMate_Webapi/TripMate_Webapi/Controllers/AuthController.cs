@@ -30,6 +30,14 @@ namespace TripMate_Webapi.Controllers
             return View();
         }
 
+        // GET: /Auth/ResetPassword?email=...&token=...
+        public IActionResult ResetPassword(string email = "", string token = "")
+        {
+            ViewBag.Email = email;
+            ViewBag.Token = token;
+            return View();
+        }
+
         // GET: /Auth/Logout
         public IActionResult Logout()
         {

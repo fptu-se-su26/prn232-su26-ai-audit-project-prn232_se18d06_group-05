@@ -2,7 +2,27 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Supabase;
 using TripMate_WebAPI.Services;
+using DotNetEnv;
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Load environment variables from .env file
+Env.Load();
+
+// Override configuration with environment variables
+builder.Configuration["Supabase:Url"] = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? builder.Configuration["Supabase:Url"];
+builder.Configuration["Supabase:AnonKey"] = Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY") ?? builder.Configuration["Supabase:AnonKey"];
+builder.Configuration["Supabase:ServiceRoleKey"] = Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY") ?? builder.Configuration["Supabase:ServiceRoleKey"];
+builder.Configuration["GoogleOAuth:ClientId"] = Environment.GetEnvironmentVariable("GOOGLE_OAUTH_CLIENT_ID") ?? builder.Configuration["GoogleOAuth:ClientId"];
+builder.Configuration["GoogleOAuth:ClientSecret"] = Environment.GetEnvironmentVariable("GOOGLE_OAUTH_CLIENT_SECRET") ?? builder.Configuration["GoogleOAuth:ClientSecret"];
+builder.Configuration["ReCaptcha:SiteKey"] = Environment.GetEnvironmentVariable("RECAPTCHA_SITE_KEY") ?? builder.Configuration["ReCaptcha:SiteKey"];
+builder.Configuration["ReCaptcha:SecretKey"] = Environment.GetEnvironmentVariable("RECAPTCHA_SECRET_KEY") ?? builder.Configuration["ReCaptcha:SecretKey"];
+builder.Configuration["SerpApi:ApiKey"] = Environment.GetEnvironmentVariable("SERPAPI_KEY") ?? builder.Configuration["SerpApi:ApiKey"];
+builder.Configuration["Cloudinary:CloudName"] = Environment.GetEnvironmentVariable("CLOUDINARY_CLOUD_NAME") ?? builder.Configuration["Cloudinary:CloudName"];
+builder.Configuration["Cloudinary:ApiKey"] = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY") ?? builder.Configuration["Cloudinary:ApiKey"];
+builder.Configuration["Cloudinary:ApiSecret"] = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET") ?? builder.Configuration["Cloudinary:ApiSecret"];
+builder.Configuration["EmailSettings:SmtpUser"] = Environment.GetEnvironmentVariable("SMTP_USER") ?? builder.Configuration["EmailSettings:SmtpUser"];
+builder.Configuration["EmailSettings:SmtpPass"] = Environment.GetEnvironmentVariable("SMTP_PASS") ?? builder.Configuration["EmailSettings:SmtpPass"];
 
 // ── Supabase Client (singleton) ───────────────────────────────────────────────
 var supabaseUrl = builder.Configuration["Supabase:Url"]!;
@@ -24,8 +44,14 @@ builder.Services.AddSingleton(_ =>
 // ── Auth Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SupabaseAuthService>();
 builder.Services.AddScoped<SupabaseAuthService>();
+builder.Services.AddHttpClient<GoogleAuthService>();
+builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
+builder.Services.AddHttpClient<SupabasePasswordResetService>();
+builder.Services.AddScoped<ISupabasePasswordResetService, SupabasePasswordResetService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpClient<PasswordResetService>();
+builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 
 // ── Tour Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<TourService>();
@@ -130,6 +156,13 @@ app.UseDefaultFiles();  // Serve index.html as default
 app.UseStaticFiles();   // Serve files from wwwroot
 
 app.UseCors("AllowAll");
+
+// Allow Google Sign-In popups to communicate with the main window
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["Cross-Origin-Opener-Policy"] = "same-origin-allow-popups";
+    await next();
+});
 
 // Chỉ redirect HTTPS trên production — dev để Flutter Web gọi http được
 if (!app.Environment.IsDevelopment())

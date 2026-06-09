@@ -2,10 +2,16 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using TripMate_WebAPI.Models;
+
 
 namespace TripMate_WebAPI.Services;
 
+/// <summary>
+/// SurveyService — refactored to match database_setup.sql schema.
+/// reviews table uses guide_profile_id (not tour_id).
+/// bookings uses experience_package_id (not tour_id).
+/// Rating recalculation updates guide_profiles.average_rating / total_reviews.
+/// </summary>
 public class SurveyService
 {
     private readonly HttpClient _http;
@@ -28,8 +34,7 @@ public class SurveyService
     }
 
     /// <summary>
-    /// Submit a survey for a completed tour booking
-    /// Implements Requirements 1, 2, 5, 6, 9
+    /// Submit a review for a completed booking
     /// </summary>
     public async Task<SurveySubmissionResponse> SubmitSurveyAsync(
         SubmitSurveyRequest request,
@@ -38,93 +43,65 @@ public class SurveyService
     {
         try
         {
-            // Requirement 1.4: Verify booking status is "completed"
+            // Verify booking status is "completed" (status = 2)
             var booking = await GetBookingAsync(request.BookingId, userToken);
             if (booking == null)
             {
-                return new SurveySubmissionResponse(
-                    false,
-                    "Booking not found",
-                    null,
-                    null
-                );
+                return new SurveySubmissionResponse(false, "Booking not found", null, null);
             }
 
-            if (booking.Status != "completed")
+            if (booking.Status != 2) // 2 = completed
             {
                 return new SurveySubmissionResponse(
-                    false,
-                    "Chỉ có thể đánh giá tour đã hoàn thành",
-                    null,
-                    null
-                );
+                    false, "Chỉ có thể đánh giá tour đã hoàn thành", null, null);
             }
 
-            // Requirement 1.5: Verify no previous survey for this booking
+            // Verify no previous review for this booking
             var existingSurvey = await GetSurveyByBookingIdAsync(request.BookingId, userToken);
             if (existingSurvey != null)
             {
                 return new SurveySubmissionResponse(
-                    false,
-                    "Survey already submitted",
-                    null,
-                    null
-                );
+                    false, "Survey already submitted", null, null);
             }
 
-            // Requirement 1.6: Store survey in database
+            // Store review in database
             var survey = await CreateSurveyAsync(request, userId, userToken);
             if (survey == null)
             {
                 return new SurveySubmissionResponse(
-                    false,
-                    "Failed to create survey",
-                    null,
-                    null
-                );
+                    false, "Failed to create survey", null, null);
             }
 
-            // Requirement 1.7: Recalculate tour rating
-            await RecalculateTourRatingAsync(request.TourId, userToken);
+            // Recalculate guide rating
+            await RecalculateGuideRatingAsync(request.GuideProfileId, userToken);
 
-            // Requirement 5: Send notification to guide
-            await SendGuideNotificationAsync(request.TourId, userId, request.Rating, userToken);
+            // Send notification to guide
+            await SendGuideNotificationAsync(request.GuideProfileId, userId, request.Rating, userToken);
 
-            // Requirement 9: Check for first-time survey and create voucher
+            // Check for first-time survey and create voucher
             var voucher = await CreateFirstTimeSurveyVoucherAsync(userId, userToken);
 
-            // Requirement 1.8: Return success response
             return new SurveySubmissionResponse(
-                true,
-                "Cảm ơn bạn đã đánh giá tour!",
-                survey,
-                voucher
-            );
+                true, "Cảm ơn bạn đã đánh giá tour!", survey, voucher);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error submitting survey");
             return new SurveySubmissionResponse(
-                false,
-                "Đã xảy ra lỗi khi gửi đánh giá",
-                null,
-                null
-            );
+                false, "Đã xảy ra lỗi khi gửi đánh giá", null, null);
         }
     }
 
     /// <summary>
-    /// Get all published surveys for a tour
-    /// Implements Requirement 4
+    /// Get all published reviews for a guide
     /// </summary>
     public async Task<TourSurveysResponse> GetTourSurveysAsync(
-        string tourId,
-        string userToken)
+        string guideProfileId, string userToken)
     {
         try
         {
             var url = $"{_supabaseUrl}/rest/v1/reviews" +
-                      $"?tour_id=eq.{tourId}" +
+                      $"?guide_profile_id=eq.{guideProfileId}" +
                       $"&order=created_at.desc" +
                       $"&select=*";
 
@@ -137,11 +114,11 @@ public class SurveyService
 
             if (!res.IsSuccessStatusCode)
             {
-                _logger.LogError("Failed to fetch tour surveys: {Content}", content);
+                _logger.LogError("Failed to fetch guide reviews: {Content}", content);
                 return new TourSurveysResponse(new List<SurveyDto>(), 0, 0);
             }
 
-            var rows = JsonSerializer.Deserialize<List<SurveyReviewRow>>(content,
+            var rows = JsonSerializer.Deserialize<List<ReviewRow>>(content,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
 
             var surveys = new List<SurveyDto>();
@@ -150,35 +127,32 @@ public class SurveyService
                 var travelerName = await GetTravelerNameAsync(row.TravelerId, userToken);
                 surveys.Add(new SurveyDto(
                     row.Id,
-                    row.TourId,
+                    row.GuideProfileId,
                     row.TravelerId,
                     travelerName,
                     row.BookingId,
                     row.Rating,
                     row.Comment ?? "",
-                    true, // All stored surveys are published
+                    true,
                     row.CreatedAt
                 ));
             }
 
             var avgRating = surveys.Any() ? surveys.Average(s => s.Rating) : 0;
-
             return new TourSurveysResponse(surveys, surveys.Count, Math.Round(avgRating, 1));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting tour surveys");
+            _logger.LogError(ex, "Error getting guide reviews");
             return new TourSurveysResponse(new List<SurveyDto>(), 0, 0);
         }
     }
 
     /// <summary>
-    /// Get traveler's survey history
-    /// Implements Requirement 8
+    /// Get traveler's review history
     /// </summary>
     public async Task<TravelerSurveysResponse> GetTravelerSurveysAsync(
-        string travelerId,
-        string userToken)
+        string travelerId, string userToken)
     {
         try
         {
@@ -196,22 +170,22 @@ public class SurveyService
 
             if (!res.IsSuccessStatusCode)
             {
-                _logger.LogError("Failed to fetch traveler surveys: {Content}", content);
+                _logger.LogError("Failed to fetch traveler reviews: {Content}", content);
                 return new TravelerSurveysResponse(new List<TravelerSurveyDto>(), 0);
             }
 
-            var rows = JsonSerializer.Deserialize<List<SurveyReviewRow>>(content,
+            var rows = JsonSerializer.Deserialize<List<ReviewRow>>(content,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
 
             var surveys = new List<TravelerSurveyDto>();
             foreach (var row in rows)
             {
-                var tour = await GetTourBasicInfoAsync(row.TourId, userToken);
+                var guideInfo = await GetGuideBasicInfoAsync(row.GuideProfileId, userToken);
                 surveys.Add(new TravelerSurveyDto(
                     row.Id,
-                    row.TourId,
-                    tour?.Title ?? "Unknown Tour",
-                    tour?.Location ?? "",
+                    row.GuideProfileId,
+                    guideInfo?.FullName ?? "Unknown Guide",
+                    guideInfo?.CityArea ?? "",
                     row.Rating,
                     row.Comment ?? "",
                     row.CreatedAt
@@ -222,20 +196,19 @@ public class SurveyService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error getting traveler surveys");
+            _logger.LogError(ex, "Error getting traveler reviews");
             return new TravelerSurveysResponse(new List<TravelerSurveyDto>(), 0);
         }
     }
 
     /// <summary>
     /// Get survey analytics for admin dashboard
-    /// Implements Requirement 10
     /// </summary>
     public async Task<SurveyAnalyticsDto> GetSurveyAnalyticsAsync(string userToken)
     {
         try
         {
-            // Get all surveys
+            // Get all reviews
             var url = $"{_supabaseUrl}/rest/v1/reviews?select=*";
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Add("apikey", _anonKey);
@@ -244,11 +217,11 @@ public class SurveyService
             var res = await _http.SendAsync(req);
             var content = await res.Content.ReadAsStringAsync();
 
-            var reviews = JsonSerializer.Deserialize<List<SurveyReviewRow>>(content,
+            var reviews = JsonSerializer.Deserialize<List<ReviewRow>>(content,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
 
-            // Get all completed bookings
-            var bookingsUrl = $"{_supabaseUrl}/rest/v1/bookings?status=eq.completed&select=count";
+            // Get all completed bookings count (status = 2)
+            var bookingsUrl = $"{_supabaseUrl}/rest/v1/bookings?status=eq.2&select=count";
             var bookingsReq = new HttpRequestMessage(HttpMethod.Get, bookingsUrl);
             bookingsReq.Headers.Add("apikey", _anonKey);
             bookingsReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", userToken);
@@ -273,51 +246,50 @@ public class SurveyService
                 ? (double)totalSurveys / totalCompletedBookings * 100
                 : 0;
 
-            // Rating distribution
             var ratingDistribution = reviews
                 .GroupBy(r => r.Rating)
                 .ToDictionary(g => g.Key, g => g.Count());
 
-            // Highest and lowest rated tours
-            var tourRatings = reviews
-                .GroupBy(r => r.TourId)
+            // Highest and lowest rated guides
+            var guideRatings = reviews
+                .GroupBy(r => r.GuideProfileId)
                 .Select(g => new
                 {
-                    TourId = g.Key,
+                    GuideProfileId = g.Key,
                     AvgRating = g.Average(r => r.Rating),
                     Count = g.Count()
                 })
-                .Where(t => t.Count >= 3) // At least 3 reviews
+                .Where(t => t.Count >= 3)
                 .ToList();
 
             TourRatingDto? highest = null;
             TourRatingDto? lowest = null;
 
-            if (tourRatings.Any())
+            if (guideRatings.Any())
             {
-                var highestTour = tourRatings.OrderByDescending(t => t.AvgRating).First();
-                var lowestTour = tourRatings.OrderBy(t => t.AvgRating).First();
+                var highestGuide = guideRatings.OrderByDescending(t => t.AvgRating).First();
+                var lowestGuide = guideRatings.OrderBy(t => t.AvgRating).First();
 
-                var highestTourInfo = await GetTourBasicInfoAsync(highestTour.TourId, userToken);
-                var lowestTourInfo = await GetTourBasicInfoAsync(lowestTour.TourId, userToken);
+                var highestGuideInfo = await GetGuideBasicInfoAsync(highestGuide.GuideProfileId, userToken);
+                var lowestGuideInfo = await GetGuideBasicInfoAsync(lowestGuide.GuideProfileId, userToken);
 
-                if (highestTourInfo != null)
+                if (highestGuideInfo != null)
                 {
                     highest = new TourRatingDto(
-                        highestTour.TourId,
-                        highestTourInfo.Title,
-                        Math.Round(highestTour.AvgRating, 1),
-                        highestTour.Count
+                        highestGuide.GuideProfileId,
+                        highestGuideInfo.FullName ?? "Unknown",
+                        Math.Round(highestGuide.AvgRating, 1),
+                        highestGuide.Count
                     );
                 }
 
-                if (lowestTourInfo != null)
+                if (lowestGuideInfo != null)
                 {
                     lowest = new TourRatingDto(
-                        lowestTour.TourId,
-                        lowestTourInfo.Title,
-                        Math.Round(lowestTour.AvgRating, 1),
-                        lowestTour.Count
+                        lowestGuide.GuideProfileId,
+                        lowestGuideInfo.FullName ?? "Unknown",
+                        Math.Round(lowestGuide.AvgRating, 1),
+                        lowestGuide.Count
                     );
                 }
             }
@@ -365,7 +337,7 @@ public class SurveyService
         }
     }
 
-    private async Task<SurveyReviewRow?> GetSurveyByBookingIdAsync(string bookingId, string userToken)
+    private async Task<ReviewRow?> GetSurveyByBookingIdAsync(string bookingId, string userToken)
     {
         try
         {
@@ -377,28 +349,26 @@ public class SurveyService
             var res = await _http.SendAsync(req);
             var content = await res.Content.ReadAsStringAsync();
 
-            var reviews = JsonSerializer.Deserialize<List<SurveyReviewRow>>(content,
+            var reviews = JsonSerializer.Deserialize<List<ReviewRow>>(content,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             return reviews?.FirstOrDefault();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error checking existing survey");
+            _logger.LogError(ex, "Error checking existing review");
             return null;
         }
     }
 
     private async Task<SurveyDto?> CreateSurveyAsync(
-        SubmitSurveyRequest request,
-        string userId,
-        string userToken)
+        SubmitSurveyRequest request, string userId, string userToken)
     {
         try
         {
             var payload = new
             {
-                tour_id = request.TourId,
+                guide_profile_id = request.GuideProfileId,
                 traveler_id = userId,
                 booking_id = request.BookingId,
                 rating = request.Rating,
@@ -411,20 +381,18 @@ public class SurveyService
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", userToken);
             req.Headers.Add("Prefer", "return=representation");
             req.Content = new StringContent(
-                JsonSerializer.Serialize(payload),
-                Encoding.UTF8,
-                "application/json");
+                JsonSerializer.Serialize(payload), Encoding.UTF8, "application/json");
 
             var res = await _http.SendAsync(req);
             var content = await res.Content.ReadAsStringAsync();
 
             if (!res.IsSuccessStatusCode)
             {
-                _logger.LogError("Failed to create survey: {Content}", content);
+                _logger.LogError("Failed to create review: {Content}", content);
                 return null;
             }
 
-            var rows = JsonSerializer.Deserialize<List<SurveyReviewRow>>(content,
+            var rows = JsonSerializer.Deserialize<List<ReviewRow>>(content,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             var row = rows?.FirstOrDefault();
@@ -433,30 +401,22 @@ public class SurveyService
             var travelerName = await GetTravelerNameAsync(userId, userToken);
 
             return new SurveyDto(
-                row.Id,
-                row.TourId,
-                row.TravelerId,
-                travelerName,
-                row.BookingId,
-                row.Rating,
-                row.Comment ?? "",
-                true,
-                row.CreatedAt
-            );
+                row.Id, row.GuideProfileId, row.TravelerId, travelerName,
+                row.BookingId, row.Rating, row.Comment ?? "", true, row.CreatedAt);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating survey");
+            _logger.LogError(ex, "Error creating review");
             return null;
         }
     }
 
-    private async Task RecalculateTourRatingAsync(string tourId, string userToken)
+    private async Task RecalculateGuideRatingAsync(string guideProfileId, string userToken)
     {
         try
         {
-            // Get all reviews for this tour
-            var url = $"{_supabaseUrl}/rest/v1/reviews?tour_id=eq.{tourId}&select=rating";
+            // Get all reviews for this guide
+            var url = $"{_supabaseUrl}/rest/v1/reviews?guide_profile_id=eq.{guideProfileId}&select=rating";
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Add("apikey", _anonKey);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", userToken);
@@ -464,7 +424,7 @@ public class SurveyService
             var res = await _http.SendAsync(req);
             var content = await res.Content.ReadAsStringAsync();
 
-            var reviews = JsonSerializer.Deserialize<List<SurveyReviewRow>>(content,
+            var reviews = JsonSerializer.Deserialize<List<ReviewRow>>(content,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? [];
 
             if (!reviews.Any()) return;
@@ -472,51 +432,45 @@ public class SurveyService
             var avgRating = Math.Round(reviews.Average(r => r.Rating), 1);
             var totalReviews = reviews.Count;
 
-            // Update tour rating
+            // Update guide_profiles rating
             var updatePayload = new
             {
-                rating = avgRating,
+                average_rating = avgRating,
                 total_reviews = totalReviews
             };
 
             var updateReq = new HttpRequestMessage(HttpMethod.Patch,
-                $"{_supabaseUrl}/rest/v1/tours?id=eq.{tourId}");
+                $"{_supabaseUrl}/rest/v1/guide_profiles?id=eq.{guideProfileId}");
             updateReq.Headers.Add("apikey", _anonKey);
             updateReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", userToken);
             updateReq.Content = new StringContent(
-                JsonSerializer.Serialize(updatePayload),
-                Encoding.UTF8,
-                "application/json");
+                JsonSerializer.Serialize(updatePayload), Encoding.UTF8, "application/json");
 
             await _http.SendAsync(updateReq);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error recalculating tour rating");
+            _logger.LogError(ex, "Error recalculating guide rating");
         }
     }
 
     private async Task SendGuideNotificationAsync(
-        string tourId,
-        string travelerId,
-        int rating,
-        string userToken)
+        string guideProfileId, string travelerId, int rating, string userToken)
     {
         try
         {
-            // Get tour and guide info
-            var tour = await GetTourBasicInfoAsync(tourId, userToken);
-            if (tour == null) return;
+            var guideInfo = await GetGuideBasicInfoAsync(guideProfileId, userToken);
+            if (guideInfo == null) return;
 
             var travelerName = await GetTravelerNameAsync(travelerId, userToken);
 
-            // Send notification to guide
+            // Send notification to the guide's user_id
             await _notificationService.SendAsync(
-                tour.GuideId,
+                guideInfo.UserId ?? "",
                 "new_review",
                 "Đánh giá mới",
-                $"{travelerName} đã đánh giá tour \"{tour.Title}\" với {rating} sao",
-                new { tour_id = tourId, rating }
+                $"{travelerName} đã đánh giá bạn với {rating} sao",
+                new { guide_profile_id = guideProfileId, rating }
             );
         }
         catch (Exception ex)
@@ -526,12 +480,10 @@ public class SurveyService
     }
 
     private async Task<DiscountVoucherDto?> CreateFirstTimeSurveyVoucherAsync(
-        string userId,
-        string userToken)
+        string userId, string userToken)
     {
         try
         {
-            // Check if this is first survey
             var url = $"{_supabaseUrl}/rest/v1/reviews?traveler_id=eq.{userId}&select=count";
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Add("apikey", _anonKey);
@@ -539,7 +491,7 @@ public class SurveyService
             req.Headers.Add("Prefer", "count=exact");
 
             var res = await _http.SendAsync(req);
-            
+
             var surveyCount = 0;
             if (res.Headers.TryGetValues("Content-Range", out var values))
             {
@@ -551,20 +503,16 @@ public class SurveyService
                 }
             }
 
-            // If this is the first survey, create voucher
             if (surveyCount == 1)
             {
                 var voucherCode = $"FIRST5-{Guid.NewGuid().ToString()[..8].ToUpper()}";
                 var expiresAt = DateTime.UtcNow.AddDays(30);
 
-                // TODO: Store voucher in database (vouchers table needs to be created)
-                // For now, just return the voucher info
-
                 await _notificationService.SendAsync(
                     userId,
                     "discount_voucher",
                     "Mã giảm giá cho bạn!",
-                    $"Cảm ơn bạn đã đánh giá tour đầu tiên! Sử dụng mã {voucherCode} để được giảm 5% cho booking tiếp theo.",
+                    $"Cảm ơn bạn đã đánh giá đầu tiên! Sử dụng mã {voucherCode} để được giảm 5% cho booking tiếp theo.",
                     new { voucher_code = voucherCode, discount_percent = 5, expires_at = expiresAt }
                 );
 
@@ -603,11 +551,14 @@ public class SurveyService
         }
     }
 
-    private async Task<SurveyTourBasicInfo?> GetTourBasicInfoAsync(string tourId, string userToken)
+    private async Task<GuideBasicInfo?> GetGuideBasicInfoAsync(
+        string guideProfileId, string userToken)
     {
         try
         {
-            var url = $"{_supabaseUrl}/rest/v1/tours?id=eq.{tourId}&select=id,guide_id,title,location";
+            var url = $"{_supabaseUrl}/rest/v1/guide_profiles" +
+                      $"?id=eq.{guideProfileId}" +
+                      $"&select=id,user_id,city_area,profiles(full_name)";
             var req = new HttpRequestMessage(HttpMethod.Get, url);
             req.Headers.Add("apikey", _anonKey);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", userToken);
@@ -615,10 +566,17 @@ public class SurveyService
             var res = await _http.SendAsync(req);
             var content = await res.Content.ReadAsStringAsync();
 
-            var tours = JsonSerializer.Deserialize<List<SurveyTourBasicInfo>>(content,
+            var guides = JsonSerializer.Deserialize<List<GuideBasicInfoRow>>(content,
                 new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            return tours?.FirstOrDefault();
+            var guide = guides?.FirstOrDefault();
+            if (guide == null) return null;
+
+            return new GuideBasicInfo(
+                guide.Id, guide.UserId,
+                guide.Profile?.FullName ?? "Unknown",
+                guide.CityArea ?? ""
+            );
         }
         catch
         {
@@ -629,23 +587,31 @@ public class SurveyService
 
 // ── Internal Models ───────────────────────────────────────────────────────────
 
-internal class SurveyReviewRow
+/// <summary>
+/// Maps to public.reviews table in database_setup.sql
+/// </summary>
+internal class ReviewRow
 {
-    [JsonPropertyName("id")]          public string Id { get; set; } = "";
-    [JsonPropertyName("tour_id")]     public string TourId { get; set; } = "";
-    [JsonPropertyName("traveler_id")] public string TravelerId { get; set; } = "";
-    [JsonPropertyName("booking_id")]  public string? BookingId { get; set; }
-    [JsonPropertyName("rating")]      public int Rating { get; set; }
-    [JsonPropertyName("comment")]     public string? Comment { get; set; }
-    [JsonPropertyName("created_at")]  public DateTime CreatedAt { get; set; }
+    [JsonPropertyName("id")]               public string Id { get; set; } = "";
+    [JsonPropertyName("guide_profile_id")] public string GuideProfileId { get; set; } = "";
+    [JsonPropertyName("traveler_id")]      public string TravelerId { get; set; } = "";
+    [JsonPropertyName("booking_id")]       public string? BookingId { get; set; }
+    [JsonPropertyName("rating")]           public int Rating { get; set; }
+    [JsonPropertyName("comment")]          public string? Comment { get; set; }
+    [JsonPropertyName("created_at")]       public DateTime CreatedAt { get; set; }
 }
 
+/// <summary>
+/// Booking row for survey validation.
+/// Matches public.bookings schema — status is smallint (0-3).
+/// </summary>
 internal class SurveyBookingRow
 {
-    [JsonPropertyName("id")]          public string Id { get; set; } = "";
-    [JsonPropertyName("status")]      public string Status { get; set; } = "";
-    [JsonPropertyName("tour_id")]     public string TourId { get; set; } = "";
-    [JsonPropertyName("traveler_id")] public string TravelerId { get; set; } = "";
+    [JsonPropertyName("id")]                    public string Id { get; set; } = "";
+    [JsonPropertyName("status")]                public int Status { get; set; }
+    [JsonPropertyName("experience_package_id")] public string ExperiencePackageId { get; set; } = "";
+    [JsonPropertyName("traveler_id")]           public string TravelerId { get; set; } = "";
+    [JsonPropertyName("guide_profile_id")]      public string GuideProfileId { get; set; } = "";
 }
 
 internal class SurveyProfileRow
@@ -654,10 +620,12 @@ internal class SurveyProfileRow
     [JsonPropertyName("full_name")] public string FullName { get; set; } = "";
 }
 
-internal class SurveyTourBasicInfo
+internal class GuideBasicInfoRow
 {
-    [JsonPropertyName("id")]       public string Id { get; set; } = "";
-    [JsonPropertyName("guide_id")] public string GuideId { get; set; } = "";
-    [JsonPropertyName("title")]    public string Title { get; set; } = "";
-    [JsonPropertyName("location")] public string Location { get; set; } = "";
+    [JsonPropertyName("id")]        public string Id { get; set; } = "";
+    [JsonPropertyName("user_id")]   public string UserId { get; set; } = "";
+    [JsonPropertyName("city_area")] public string? CityArea { get; set; }
+    [JsonPropertyName("profiles")]  public SurveyProfileRow? Profile { get; set; }
 }
+
+internal record GuideBasicInfo(string Id, string UserId, string FullName, string CityArea);

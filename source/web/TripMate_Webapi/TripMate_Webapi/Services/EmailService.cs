@@ -9,6 +9,7 @@ namespace TripMate_WebAPI.Services
     {
         Task SendGuideApprovalEmailAsync(string toEmail, string fullName, bool isApproved, string adminMessage, string verificationLink);
         Task SendAdminNotificationEmailAsync(string adminEmail, string adminName, string guideName, string guideEmail);
+        Task SendPasswordResetEmailAsync(string toEmail, string resetLink);
     }
 
     public class EmailService : IEmailService
@@ -213,6 +214,90 @@ namespace TripMate_WebAPI.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error sending admin notification email to {AdminEmail}", adminEmail);
+            }
+        }
+
+        public async Task SendPasswordResetEmailAsync(string toEmail, string resetLink)
+        {
+            try
+            {
+                var smtpHost = _config["EmailSettings:SmtpHost"] ?? "smtp.gmail.com";
+                var smtpPort = int.Parse(_config["EmailSettings:SmtpPort"] ?? "587");
+                var smtpUser = _config["EmailSettings:SmtpUser"];
+                var smtpPass = _config["EmailSettings:SmtpPass"];
+
+                if (string.IsNullOrEmpty(smtpUser) || string.IsNullOrEmpty(smtpPass))
+                {
+                    _logger.LogWarning("EmailSettings not configured properly in appsettings.json.");
+                    return;
+                }
+
+                var email = new MimeMessage();
+                email.From.Add(new MailboxAddress("TripMate Support", smtpUser));
+                email.To.Add(new MailboxAddress("", toEmail));
+
+                email.Subject = "[TripMate] Đặt lại mật khẩu tài khoản";
+
+                string bodyHtml = $@"
+                    <div style='font-family:Arial,sans-serif; max-width:600px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden; box-shadow:0 4px 20px rgba(0,0,0,0.1);'>
+                        <!-- Header -->
+                        <div style='background:linear-gradient(135deg,#FF6B35,#FF8C42); padding:30px; text-align:center;'>
+                            <div style='font-size:48px; margin-bottom:12px;'>🔑</div>
+                            <h1 style='color:white; margin:0; font-size:22px; font-weight:800;'>TripMate</h1>
+                            <p style='color:rgba(255,255,255,0.85); margin:4px 0 0 0; font-size:13px;'>Đặt lại mật khẩu</p>
+                        </div>
+
+                        <!-- Body -->
+                        <div style='padding:30px;'>
+                            <h2 style='color:#FF6B35; font-size:18px; margin:0 0 8px 0;'>🔐 Yêu cầu đặt lại mật khẩu</h2>
+                            <p style='color:#333; font-size:15px; margin:0 0 20px 0;'>Xin chào,</p>
+                            <p style='color:#555; font-size:14px; line-height:1.6; margin:0 0 20px 0;'>
+                                Chúng tôi đã nhận được yêu cầu đặt lại mật khẩu cho tài khoản TripMate của bạn.
+                            </p>
+
+                            <!-- Reset Button -->
+                            <div style='text-align:center; margin:24px 0;'>
+                                <a href='{resetLink}' 
+                                   style='display:inline-block; background:linear-gradient(135deg,#FF6B35,#FF8C42); color:white; padding:14px 32px; 
+                                          text-decoration:none; border-radius:8px; font-weight:700; font-size:15px;'>
+                                    Đặt lại mật khẩu
+                                </a>
+                            </div>
+
+                            <!-- Security Note -->
+                            <div style='background:#fff3cd; border:1px solid #ffeaa7; border-radius:10px; padding:16px; margin:20px 0;'>
+                                <p style='color:#856404; font-size:13px; margin:0;'>
+                                    🔒 <strong>Lưu ý bảo mật:</strong> Link này có hiệu lực trong 24 giờ. 
+                                    Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.
+                                </p>
+                            </div>
+
+                            <!-- Manual Link -->
+                            <p style='color:#888; font-size:12px; margin:20px 0 0 0;'>
+                                Nếu nút không hoạt động, copy link sau vào trình duyệt:<br>
+                                <a href='{resetLink}' style='color:#FF6B35; word-break:break-all;'>{resetLink}</a>
+                            </p>
+                        </div>
+
+                        <!-- Footer -->
+                        <div style='background:#f8f8f8; padding:20px 30px; text-align:center; border-top:1px solid #eee;'>
+                            <p style='color:#aaa; font-size:12px; margin:0;'>© 2025 TripMate. Email tự động từ hệ thống.</p>
+                        </div>
+                    </div>";
+
+                email.Body = new TextPart(TextFormat.Html) { Text = bodyHtml };
+
+                using var smtp = new SmtpClient();
+                await smtp.ConnectAsync(smtpHost, smtpPort, SecureSocketOptions.StartTls);
+                await smtp.AuthenticateAsync(smtpUser, smtpPass);
+                await smtp.SendAsync(email);
+                await smtp.DisconnectAsync(true);
+
+                _logger.LogInformation("Password reset email sent to {Email}", toEmail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending password reset email to {Email}", toEmail);
             }
         }
     }

@@ -58,7 +58,7 @@
                                 class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/20" />
                             <span class="text-on-surface-variant font-medium">Ghi nhớ đăng nhập</span>
                         </label>
-                        <a href="#" class="text-primary font-bold hover:underline">Quên mật khẩu?</a>
+                        <a href="#" onclick="showForgotPasswordModal()" class="text-primary font-bold hover:underline">Quên mật khẩu?</a>
                     </div>
 
                     <!-- Error Message -->
@@ -90,7 +90,7 @@
 
                 <!-- Social Login -->
                 <div class="space-y-3">
-                    <button
+                    <button id="googleLoginBtn"
                         class="w-full bg-surface-variant hover:bg-outline-variant/30 border-2 border-outline-variant text-on-surface font-medium py-3 rounded-lg transition-all flex items-center justify-center gap-3">
                         <svg class="w-5 h-5" viewBox="0 0 24 24">
                             <path fill="currentColor"
@@ -126,6 +126,52 @@
     </div>
 </section>
 
+<!-- Forgot Password Modal -->
+<div id="forgotPasswordModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-surface rounded-2xl shadow-2xl border border-outline-variant/30 w-full max-w-md mx-4">
+        <div class="bg-gradient-to-r from-primary to-primary/80 p-6 text-center rounded-t-2xl">
+            <h2 class="text-2xl font-bold text-white">Quên mật khẩu</h2>
+            <p class="text-white/90 mt-1">Nhập email để đặt lại mật khẩu</p>
+        </div>
+        
+        <form id="forgotPasswordForm" class="p-6 space-y-4">
+            <!-- Email -->
+            <div>
+                <label class="block text-sm font-bold text-on-surface-variant mb-2">EMAIL</label>
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">mail</span>
+                    <input type="email" id="forgotEmail" required
+                        class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
+                        placeholder="your@email.com" />
+                </div>
+            </div>
+            
+            
+            <!-- Error Message -->
+            <div id="forgotErrorMessage" class="hidden bg-red-50 border-l-4 border-red-500 p-3 rounded-lg">
+                <p class="text-sm text-red-700" id="forgotErrorText"></p>
+            </div>
+            
+            <!-- Success Message -->
+            <div id="forgotSuccessMessage" class="hidden bg-green-50 border-l-4 border-green-500 p-3 rounded-lg">
+                <p class="text-sm text-green-700">Email đặt lại mật khẩu đã được gửi!</p>
+            </div>
+            
+            <!-- Buttons -->
+            <div class="flex gap-3 pt-2">
+                <button type="button" onclick="closeForgotPasswordModal()"
+                    class="flex-1 bg-surface-variant hover:bg-outline-variant/30 text-on-surface font-medium py-3 rounded-lg transition-all">
+                    Hủy
+                </button>
+                <button type="submit"
+                    class="flex-1 bg-primary hover:bg-primary/90 text-on-primary font-bold py-3 rounded-lg transition-all">
+                    Gửi email
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Loading Spinner -->
 <link rel="stylesheet" href="/spinner.css">
 <div id="loadingSpinner" class="spinner-overlay" style="display: none;">
@@ -144,7 +190,15 @@
     </div>
 </div>
 
+<!-- Google Sign-In SDK -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+
+
+
 <script>
+    let recaptchaWidget;
+    let googleInitialized = false;
+
     // Toggle password visibility
     function togglePassword() {
         const passwordInput = document.getElementById('password');
@@ -180,6 +234,154 @@
             errorDiv.classList.add('hidden');
         }, 5000);
     }
+
+    // Forgot password modal functions
+    function showForgotPasswordModal() {
+        document.getElementById('forgotPasswordModal').classList.remove('hidden');
+    }
+
+    function closeForgotPasswordModal() {
+        document.getElementById('forgotPasswordModal').classList.add('hidden');
+        document.getElementById('forgotPasswordForm').reset();
+        document.getElementById('forgotErrorMessage').classList.add('hidden');
+        document.getElementById('forgotSuccessMessage').classList.add('hidden');
+    }
+
+    // Handle forgot password form
+    document.getElementById('forgotPasswordForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById('forgotEmail').value;
+
+        try {
+            const response = await fetch('/api/auth/forgot-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    email: email,
+                    captchaToken: 'test-captcha-response'
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                document.getElementById('forgotErrorMessage').classList.add('hidden');
+                document.getElementById('forgotSuccessMessage').classList.remove('hidden');
+                
+                setTimeout(() => {
+                    closeForgotPasswordModal();
+                }, 2000);
+            } else {
+                document.getElementById('forgotErrorText').textContent = data.message || 'Có lỗi xảy ra';
+                document.getElementById('forgotErrorMessage').classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Forgot password error:', error);
+            document.getElementById('forgotErrorText').textContent = 'Có lỗi xảy ra. Vui lòng thử lại sau.';
+            document.getElementById('forgotErrorMessage').classList.remove('hidden');
+        }
+    });
+
+    // Google Sign-In callback
+    function handleCredentialResponse(response) {
+        console.log('Google credential response received');
+        showSpinner();
+        
+        fetch('/api/auth/google-login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+                idToken: response.credential,
+                accessToken: null
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideSpinner();
+            
+            if (data.accessToken) {
+                // Save to localStorage
+                localStorage.setItem('accessToken', data.accessToken);
+                localStorage.setItem('refreshToken', data.refreshToken || '');
+                localStorage.setItem('userEmail', data.user?.email || '');
+                localStorage.setItem('userId', data.user?.id || '');
+                localStorage.setItem('userRole', data.user?.role || 'traveler');
+
+                // Redirect based on role
+                const role = data.user?.role || 'traveler';
+                const surveyCompleted = localStorage.getItem('surveyCompleted');
+
+                setTimeout(() => {
+                    if (role === 'traveler' && surveyCompleted !== 'true') {
+                        window.location.href = '/Survey/Personality';
+                    } else if (role === 'admin') {
+                        window.location.href = '/Admin/Dashboard';
+                    } else if (role === 'guide') {
+                        window.location.href = '/Guide/Dashboard';
+                    } else {
+                        window.location.href = '/';
+                    }
+                }, 100);
+            } else {
+                showError(data.message || 'Đăng nhập Google thất bại');
+            }
+        })
+        .catch(error => {
+            hideSpinner();
+            console.error('Google login error:', error);
+            showError('Có lỗi xảy ra với đăng nhập Google');
+        });
+    }
+
+    // Initialize Google Sign-In
+    function initializeGoogle() {
+        if (typeof google !== 'undefined' && google.accounts && !googleInitialized) {
+            try {
+                google.accounts.id.initialize({
+                    client_id: "603408450988-ev8uo6i21kspfng413hb7ugr9u6mfna1.apps.googleusercontent.com",
+                    callback: handleCredentialResponse,
+                    auto_select: false,
+                    cancel_on_tap_outside: true
+                });
+                googleInitialized = true;
+                console.log('Google Sign-In initialized successfully');
+            } catch (error) {
+                console.error('Google Sign-In initialization error:', error);
+            }
+        }
+    }
+
+    // Handle Google login button click
+    function handleGoogleLogin() {
+        if (googleInitialized && typeof google !== 'undefined') {
+            try {
+                google.accounts.id.prompt((notification) => {
+                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                        console.log('Google One Tap not displayed, showing popup');
+                        // Fallback to popup if One Tap doesn't work
+                        google.accounts.id.renderButton(
+                            document.getElementById('googleLoginBtn'),
+                            { theme: "outline", size: "large" }
+                        );
+                    }
+                });
+            } catch (error) {
+                console.error('Google login prompt error:', error);
+                showError('Không thể khởi tạo đăng nhập Google. Vui lòng thử lại.');
+            }
+        } else {
+            console.error('Google Sign-In not initialized');
+            showError('Google Sign-In chưa sẵn sàng. Vui lòng thử lại sau.');
+        }
+    }
+
+    // Handle Google login button click
+    document.getElementById('googleLoginBtn').addEventListener('click', handleGoogleLogin);
 
     // Handle form submission
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -238,5 +440,26 @@
             console.error('Login error:', error);
             showError('Có lỗi xảy ra. Vui lòng thử lại sau.');
         }
+    });
+
+    // Close modal when clicking outside
+    document.getElementById('forgotPasswordModal').addEventListener('click', (e) => {
+        if (e.target.id === 'forgotPasswordModal') {
+            closeForgotPasswordModal();
+        }
+    });
+
+    // Initialize when page loads
+    window.addEventListener('load', function() {
+        // Initialize Google Sign-In when available
+        const checkGoogle = setInterval(() => {
+            if (typeof google !== 'undefined' && google.accounts) {
+                initializeGoogle();
+                clearInterval(checkGoogle);
+            }
+        }, 100);
+        
+        // Stop checking after 10 seconds
+        setTimeout(() => clearInterval(checkGoogle), 10000);
     });
 </script>

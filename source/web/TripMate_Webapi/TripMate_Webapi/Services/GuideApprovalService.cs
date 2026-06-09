@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace TripMate_WebAPI.Services
 {
@@ -24,14 +25,14 @@ namespace TripMate_WebAPI.Services
             _json = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         }
 
-        // Get pending guide applications
+        // Get pending guide applications (is_verified = false)
         public async Task<List<GuideApplicationRow>> GetPendingApplicationsAsync()
         {
             try
             {
                 var request = new HttpRequestMessage(
                     HttpMethod.Get,
-                    $"{_supabaseUrl}/rest/v1/profiles?role=eq.guide&status=eq.pending&select=*&order=created_at.desc");
+                    $"{_supabaseUrl}/rest/v1/guide_profiles?is_verified=eq.false&select=*,profiles(email,full_name,phone_number,role),guide_certificates(certificate_name,file_url)&order=created_at.desc");
 
                 request.Headers.Add("apikey", _anonKey);
                 request.Headers.Add("Prefer", "return=representation");
@@ -45,8 +46,8 @@ namespace TripMate_WebAPI.Services
                     return new List<GuideApplicationRow>();
                 }
 
-                var applications = JsonSerializer.Deserialize<List<GuideApplicationRow>>(content, _json);
-                return applications ?? new List<GuideApplicationRow>();
+                var rows = JsonSerializer.Deserialize<List<GuideProfileWithRelationsRow>>(content, _json) ?? new();
+                return rows.Select(MapToDto).ToList();
             }
             catch (Exception ex)
             {
@@ -62,7 +63,7 @@ namespace TripMate_WebAPI.Services
             {
                 var request = new HttpRequestMessage(
                     HttpMethod.Get,
-                    $"{_supabaseUrl}/rest/v1/profiles?role=eq.guide&status=eq.pending&select=id");
+                    $"{_supabaseUrl}/rest/v1/guide_profiles?is_verified=eq.false&select=id");
 
                 request.Headers.Add("apikey", _anonKey);
                 request.Headers.Add("Prefer", "count=exact");
@@ -91,14 +92,14 @@ namespace TripMate_WebAPI.Services
             }
         }
 
-        // Get guide application by ID
-        public async Task<GuideApplicationRow?> GetApplicationByIdAsync(string guideId)
+        // Get guide application by ID (guide_profiles.id)
+        public async Task<GuideApplicationRow?> GetApplicationByIdAsync(string guideProfileId)
         {
             try
             {
                 var request = new HttpRequestMessage(
                     HttpMethod.Get,
-                    $"{_supabaseUrl}/rest/v1/profiles?id=eq.{guideId}&select=*");
+                    $"{_supabaseUrl}/rest/v1/guide_profiles?id=eq.{guideProfileId}&select=*,profiles(email,full_name,phone_number,role),guide_certificates(certificate_name,file_url)");
 
                 request.Headers.Add("apikey", _anonKey);
 
@@ -111,8 +112,9 @@ namespace TripMate_WebAPI.Services
                     return null;
                 }
 
-                var applications = JsonSerializer.Deserialize<List<GuideApplicationRow>>(content, _json);
-                return applications?.FirstOrDefault();
+                var rows = JsonSerializer.Deserialize<List<GuideProfileWithRelationsRow>>(content, _json);
+                var row = rows?.FirstOrDefault();
+                return row != null ? MapToDto(row) : null;
             }
             catch (Exception ex)
             {
@@ -122,43 +124,45 @@ namespace TripMate_WebAPI.Services
         }
 
         // Approve guide
-        public async Task<bool> ApproveGuideAsync(string guideId, string adminComment = "", string? accessToken = null)
+        public async Task<bool> ApproveGuideAsync(string guideProfileId, string adminComment = "", string? accessToken = null)
         {
             try
             {
-                var updateData = new
+                var application = await GetApplicationByIdAsync(guideProfileId);
+                if (application == null) return false;
+
+                // 1. Update guide_profiles
+                var updateProfileData = new
                 {
-                    status = "active",
-                    admin_comment = adminComment,
-                    approved_at = DateTime.UtcNow,
+                    is_verified = true,
+                    verified_at = DateTime.UtcNow,
                     updated_at = DateTime.UtcNow
                 };
 
-                var request = new HttpRequestMessage(
+                var req1 = new HttpRequestMessage(
                     HttpMethod.Patch,
-                    $"{_supabaseUrl}/rest/v1/profiles?id=eq.{guideId}");
+                    $"{_supabaseUrl}/rest/v1/guide_profiles?id=eq.{guideProfileId}");
+                
+                req1.Headers.Add("apikey", _anonKey);
+                if (!string.IsNullOrEmpty(accessToken)) req1.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                req1.Content = new StringContent(JsonSerializer.Serialize(updateProfileData), Encoding.UTF8, "application/json");
 
-                request.Headers.Add("apikey", _anonKey);
-                if (!string.IsNullOrEmpty(accessToken))
+                var res1 = await _http.SendAsync(req1);
+                if (!res1.IsSuccessStatusCode) return false;
+
+                // 2. Update profiles role to 'guide'
+                if (!string.IsNullOrEmpty(application.UserId))
                 {
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-                }
-                request.Headers.Add("Prefer", "return=minimal");
-                request.Content = new StringContent(
-                    JsonSerializer.Serialize(updateData),
-                    Encoding.UTF8,
-                    "application/json");
-
-                var response = await _http.SendAsync(request);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    var content = await response.Content.ReadAsStringAsync();
-                    _logger.LogError("Failed to approve guide: {Content}", content);
-                    return false;
+                    var req2 = new HttpRequestMessage(
+                        HttpMethod.Patch,
+                        $"{_supabaseUrl}/rest/v1/profiles?id=eq.{application.UserId}");
+                    req2.Headers.Add("apikey", _anonKey);
+                    if (!string.IsNullOrEmpty(accessToken)) req2.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+                    req2.Content = new StringContent(JsonSerializer.Serialize(new { role = "guide" }), Encoding.UTF8, "application/json");
+                    await _http.SendAsync(req2);
                 }
 
-                _logger.LogInformation("Guide {GuideId} approved successfully", guideId);
+                _logger.LogInformation("Guide {GuideId} approved successfully", guideProfileId);
                 return true;
             }
             catch (Exception ex)
@@ -169,32 +173,21 @@ namespace TripMate_WebAPI.Services
         }
 
         // Reject guide
-        public async Task<bool> RejectGuideAsync(string guideId, string reason, string? accessToken = null)
+        public async Task<bool> RejectGuideAsync(string guideProfileId, string reason, string? accessToken = null)
         {
             try
             {
-                var updateData = new
-                {
-                    status = "rejected",
-                    admin_comment = reason,
-                    rejected_at = DateTime.UtcNow,
-                    updated_at = DateTime.UtcNow
-                };
-
+                // To reject, we delete the guide_profiles row so they can apply again later.
+                // (Alternatively, we could keep it and add a status column to the DB).
                 var request = new HttpRequestMessage(
-                    HttpMethod.Patch,
-                    $"{_supabaseUrl}/rest/v1/profiles?id=eq.{guideId}");
+                    HttpMethod.Delete,
+                    $"{_supabaseUrl}/rest/v1/guide_profiles?id=eq.{guideProfileId}");
 
                 request.Headers.Add("apikey", _anonKey);
                 if (!string.IsNullOrEmpty(accessToken))
                 {
                     request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
                 }
-                request.Headers.Add("Prefer", "return=minimal");
-                request.Content = new StringContent(
-                    JsonSerializer.Serialize(updateData),
-                    Encoding.UTF8,
-                    "application/json");
 
                 var response = await _http.SendAsync(request);
 
@@ -205,7 +198,7 @@ namespace TripMate_WebAPI.Services
                     return false;
                 }
 
-                _logger.LogInformation("Guide {GuideId} rejected successfully", guideId);
+                _logger.LogInformation("Guide {GuideId} rejected successfully", guideProfileId);
                 return true;
             }
             catch (Exception ex)
@@ -214,17 +207,41 @@ namespace TripMate_WebAPI.Services
                 return false;
             }
         }
+
+        private static GuideApplicationRow MapToDto(GuideProfileWithRelationsRow row)
+        {
+            var firstCert = row.Certificates?.FirstOrDefault();
+
+            return new GuideApplicationRow
+            {
+                Id = row.Id,
+                UserId = row.UserId,
+                Email = row.Profile?.Email,
+                Full_Name = row.Profile?.FullName,
+                Phone_Number = row.Profile?.PhoneNumber,
+                Role = row.Profile?.Role,
+                Bio = row.Bio,
+                Languages = string.Join(", ", row.Languages ?? new List<string>()),
+                Specialization = string.Join(", ", row.Specialties ?? new List<string>()),
+                Status = row.IsVerified ? "active" : "pending",
+                Created_At = row.CreatedAt,
+                Updated_At = row.UpdatedAt,
+                Approved_At = row.VerifiedAt,
+                Certificate_Path = firstCert?.FileUrl
+            };
+        }
     }
 
-    // DTOs
+    // DTO mapped to Admin view
     public class GuideApplicationRow
     {
         public string? Id { get; set; }
+        public string? UserId { get; set; }
         public string? Email { get; set; }
         public string? Full_Name { get; set; }
         public string? Phone_Number { get; set; }
         public string? Role { get; set; }
-        public string? Experience { get; set; }
+        public string? Experience { get; set; } // Left blank intentionally, no matching column
         public string? Specialization { get; set; }
         public string? Languages { get; set; }
         public string? Bio { get; set; }
@@ -238,5 +255,36 @@ namespace TripMate_WebAPI.Services
         public DateTime? Updated_At { get; set; }
         public DateTime? Approved_At { get; set; }
         public DateTime? Rejected_At { get; set; }
+    }
+
+    // Internal Row Models matching database_setup.sql
+    internal class GuideProfileWithRelationsRow
+    {
+        [JsonPropertyName("id")]              public string? Id { get; set; }
+        [JsonPropertyName("user_id")]         public string? UserId { get; set; }
+        [JsonPropertyName("bio")]             public string? Bio { get; set; }
+        [JsonPropertyName("languages")]       public List<string>? Languages { get; set; }
+        [JsonPropertyName("specialties")]     public List<string>? Specialties { get; set; }
+        [JsonPropertyName("is_verified")]     public bool IsVerified { get; set; }
+        [JsonPropertyName("verified_at")]     public DateTime? VerifiedAt { get; set; }
+        [JsonPropertyName("created_at")]      public DateTime? CreatedAt { get; set; }
+        [JsonPropertyName("updated_at")]      public DateTime? UpdatedAt { get; set; }
+
+        [JsonPropertyName("profiles")]        public ProfileData? Profile { get; set; }
+        [JsonPropertyName("guide_certificates")] public List<CertificateData>? Certificates { get; set; }
+    }
+
+    internal class ProfileData
+    {
+        [JsonPropertyName("email")]        public string? Email { get; set; }
+        [JsonPropertyName("full_name")]    public string? FullName { get; set; }
+        [JsonPropertyName("phone_number")] public string? PhoneNumber { get; set; }
+        [JsonPropertyName("role")]         public string? Role { get; set; }
+    }
+
+    internal class CertificateData
+    {
+        [JsonPropertyName("certificate_name")] public string? CertificateName { get; set; }
+        [JsonPropertyName("file_url")]         public string? FileUrl { get; set; }
     }
 }
