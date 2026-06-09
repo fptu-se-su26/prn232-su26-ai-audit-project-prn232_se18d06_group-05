@@ -4,9 +4,9 @@ public record UserDto(
     string Id,
     string Email,
     string? FullName,
-    string? Phone,
+    string? PhoneNumber,
     string? AvatarUrl,
     string Role,
-    string? Status,
+    bool IsActive,
     DateTime CreatedAt
 );

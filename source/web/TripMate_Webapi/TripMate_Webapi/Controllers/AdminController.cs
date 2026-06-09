@@ -305,7 +305,7 @@ namespace TripMate_Webapi.Controllers
         public string ActiveUsers { get; set; } = "0";
         public int PendingCount { get; set; }
         public int PendingGuidesCount { get; set; }
-        public List<TourRow> PendingTours { get; set; } = new();
+        public List<ExperiencePackageRow> PendingTours { get; set; } = new();
         public List<ActivityItem> RecentActivities { get; set; } = new();
     }
 

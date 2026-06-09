@@ -188,7 +188,7 @@ public class SupabaseAuthService
         {
             Id = userId,
             Role = "traveler",
-            Status = "active",
+            IsActive = true,
             CreatedAt = DateTime.UtcNow
         };
     }
@@ -282,10 +282,10 @@ public class SupabaseAuthService
                 Id: profile.Id ?? session.User.Id,
                 Email: profile.Email ?? session.User.Email ?? "",
                 FullName: profile.FullName,
-                Phone: profile.Phone,
+                PhoneNumber: profile.PhoneNumber,
                 AvatarUrl: profile.AvatarUrl,
                 Role: profile.Role ?? "traveler",
-                Status: profile.Status ?? "active",
+                IsActive: profile.IsActive,
                 CreatedAt: profile.CreatedAt
             )
         );

@@ -2,10 +2,11 @@ namespace TripMate_WebAPI.DTOs.Survey;
 
 /// <summary>
 /// Survey/Review data transfer object
+/// Maps to public.reviews in database_setup.sql
 /// </summary>
 public record SurveyDto(
     string Id,
-    string TourId,
+    string GuideProfileId,      // was: TourId
     string TravelerId,
     string TravelerName,
     string? BookingId,

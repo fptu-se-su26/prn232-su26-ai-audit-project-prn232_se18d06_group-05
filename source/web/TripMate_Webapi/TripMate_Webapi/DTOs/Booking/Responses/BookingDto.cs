@@ -1,18 +1,27 @@
 namespace TripMate_WebAPI.DTOs.Booking;
 
+/// <summary>
+/// Booking response DTO
+/// Maps to public.bookings + joins in database_setup.sql
+/// </summary>
 public record BookingDto(
     string Id,
-    string TourAvailabilityId,
-    string GuideTourId,       // Lấy qua join: tour_availability.guide_tour_id
-    string TourTitle,
-    string TourLocation,
     string TravelerId,
-    DateOnly TourDate,        // Lấy từ tour_availability.date
-    int Guests,
-    double TotalPrice,
-    string? Note,
-    string Status,
+    string GuideProfileId,
+    string ExperiencePackageId,
+    string? PackageTitle,
+    string BookingDate,
+    string StartTime,
+    int GuestCount,
+    decimal TotalAmount,
+    decimal PlatformFee,
+    decimal GuideEarnings,
+    string Status,              // mapped from smallint: pending/confirmed/completed/cancelled
+    string? PaymentReference,
+    string? PaymentMethod,
+    bool EscrowReleased,
+    string? TravelerNotes,
+    string? CancelReason,
     DateTime CreatedAt,
-    // Thêm thông tin hữu ích
-    int? RemainingSlots       // Số chỗ còn lại sau khi đặt
+    DateTime UpdatedAt
 );

@@ -5,6 +5,11 @@ using TripMate_WebAPI.Services;
 
 namespace TripMate_WebAPI.Controllers;
 
+/// <summary>
+/// Chat controller — uses chat_messages table via ChatService.
+/// Conversations are simulated by grouping messages by booking_id.
+/// Route param {bookingId} replaces the old {conversationId}.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
@@ -18,7 +23,7 @@ public class ChatController : ControllerBase
     private string UserToken => Request.Headers.Authorization.ToString()
         .Replace("Bearer ", "").Trim();
 
-    /// <summary>Lấy hoặc tạo conversation</summary>
+    /// <summary>Lấy hoặc tạo conversation (= booking_id group)</summary>
     [HttpPost("conversations")]
     public async Task<IActionResult> GetOrCreate(
         [FromBody] CreateConversationRequest req)
@@ -44,31 +49,29 @@ public class ChatController : ControllerBase
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
     }
 
-    /// <summary>Lấy messages của conversation</summary>
-    [HttpGet("conversations/{id}/messages")]
-    public async Task<IActionResult> GetMessages(string id)
+    /// <summary>Lấy messages theo booking_id</summary>
+    [HttpGet("conversations/{bookingId}/messages")]
+    public async Task<IActionResult> GetMessages(string bookingId)
     {
         try
         {
-            var msgs = await _chat.GetMessagesAsync(id, UserToken);
+            var msgs = await _chat.GetMessagesAsync(bookingId, UserToken);
             return Ok(new { messages = msgs });
         }
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
     }
 
-    /// <summary>Gửi tin nhắn</summary>
-    [HttpPost("conversations/{id}/messages")]
+    /// <summary>Gửi tin nhắn trong conversation (= booking_id)</summary>
+    [HttpPost("conversations/{bookingId}/messages")]
     public async Task<IActionResult> SendMessage(
-        string id, [FromBody] SendMessageRequest req)
+        string bookingId, [FromBody] SendMessageRequest req)
     {
         try
         {
-            var msg = await _chat.SendMessageAsync(id, UserId, req.Content, UserToken);
+            var msg = await _chat.SendMessageAsync(
+                bookingId, UserId, req.ReceiverId, req.Content, UserToken);
             return Ok(msg);
         }
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
     }
 }
-
-public record CreateConversationRequest(string GuideId, string BookingId);
-public record SendMessageRequest(string Content);
