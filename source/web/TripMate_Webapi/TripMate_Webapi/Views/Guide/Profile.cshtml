@@ -8,10 +8,8 @@
     <div class="px-12 max-w-[1440px] mx-auto">
         <div class="flex flex-col md:flex-row gap-10 items-start">
             <!-- Avatar -->
-            <div class="w-48 h-48 rounded-full border-4 border-white shadow-2xl overflow-hidden bg-gray-200 shrink-0 relative">
-                <div class="absolute inset-0 flex items-center justify-center">
-                    <span class="material-symbols-outlined text-9xl text-gray-400">face_3</span>
-                </div>
+            <div class="w-48 h-48 rounded-full border-4 border-white shadow-2xl overflow-hidden shrink-0 relative">
+                <img src="/images/guide_1.png" alt="Minh Anh" class="w-full h-full object-cover"/>
             </div>
 
             <!-- Basic Info -->
@@ -264,8 +262,7 @@
     function handleMessage() {
         if (requireAuth()) {
             // User is logged in, redirect to chat interface
-            // Mock URL for now
-            window.location.href = '/Traveler/Dashboard'; // Will implement Chat later
+            window.location.href = '/Traveler/Messages'; 
         }
     }
 </script>

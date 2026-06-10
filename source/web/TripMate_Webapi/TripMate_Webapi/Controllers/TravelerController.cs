@@ -50,8 +50,8 @@ namespace TripMate_Webapi.Controllers
             return View();
         }
 
-        // GET: /Traveler/SavedGuides
-        public IActionResult SavedGuides()
+        // GET: /Traveler/Saved
+        public IActionResult Saved()
         {
             return View();
         }
