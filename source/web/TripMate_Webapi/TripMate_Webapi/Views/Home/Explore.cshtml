@@ -1,7 +1,8 @@
+@model List<TripMate_Webapi.Entities.GuideProfileEntity>
 @{
     ViewData["Title"] = "Explore Guides & Destinations";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    string searchDest = ViewBag.SearchDestination as string;
+    string searchDest = ViewBag.Destination as string;
     string searchWhen = ViewBag.SearchWhen as string;
     bool hasSearch = !string.IsNullOrEmpty(searchDest) || !string.IsNullOrEmpty(searchWhen);
 }
@@ -57,104 +58,53 @@
 
         <!-- Guides Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            <!-- Guide Card 1 -->
-            <a href="/Guide/Profile/1" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 relative flex flex-col">
-                <div class="h-64 overflow-hidden relative">
-                    <img src="/images/guide_1.png" alt="Minh Anh" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
-                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
-                        <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">Minh Anh</h3>
-                        <p class="text-sm text-white/90 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> Hanoi</p>
-                    </div>
-                    <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center gap-1 shadow-sm">
-                        <span class="material-symbols-outlined text-[14px]">verified</span> Verified
-                    </div>
-                </div>
-                <div class="p-6 flex-1 flex flex-col">
-                    <div class="flex justify-between items-center mb-4">
-                        <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
-                            <span class="material-symbols-outlined text-[20px] text-yellow-500" style="font-variation-settings: 'FILL' 1;">star</span> 5.0 <span class="text-on-surface-variant font-normal">(124)</span>
+            @if (Model != null && Model.Any())
+            {
+                foreach (var guide in Model)
+                {
+                    <a href="/Guide/Profile/@guide.UserId" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 relative flex flex-col">
+                        <div class="h-64 overflow-hidden relative">
+                            <img src="@(string.IsNullOrEmpty(guide.Profile?.AvatarUrl) ? "/images/default_avatar.png" : guide.Profile.AvatarUrl)" alt="@guide.Profile?.FullName" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                            <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
+                                <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">@(guide.Profile?.FullName ?? "Unknown Guide")</h3>
+                                <p class="text-sm text-white/90 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> @guide.CityArea</p>
+                            </div>
+                            @if (guide.IsVerified == true)
+                            {
+                                <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center gap-1 shadow-sm">
+                                    <span class="material-symbols-outlined text-[14px]">verified</span> Verified
+                                </div>
+                            }
                         </div>
-                        <div class="text-primary font-bold bg-primary-container px-3 py-1 rounded-lg text-sm">500k ₫ / day</div>
-                    </div>
-                    <p class="text-on-surface-variant italic mb-5 line-clamp-2 leading-relaxed">"Art history major. I'll take you to hidden cafes and art galleries."</p>
-                    <div class="flex flex-wrap gap-2 mt-auto">
-                        <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">Art</span>
-                        <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">Photography</span>
-                    </div>
-                </div>
-            </a>
-
-            <!-- Guide Card 2 -->
-            <a href="/Guide/Profile/2" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 relative flex flex-col">
-                <div class="h-64 overflow-hidden relative">
-                    <img src="/images/guide_2.png" alt="Linh Chi" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
-                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
-                        <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">Linh Chi</h3>
-                        <p class="text-sm text-white/90 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> Da Lat</p>
-                    </div>
-                </div>
-                <div class="p-6 flex-1 flex flex-col">
-                    <div class="flex justify-between items-center mb-4">
-                        <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
-                            <span class="material-symbols-outlined text-[20px] text-yellow-500" style="font-variation-settings: 'FILL' 1;">star</span> 4.9 <span class="text-on-surface-variant font-normal">(89)</span>
+                        <div class="p-6 flex-1 flex flex-col">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
+                                    <span class="material-symbols-outlined text-[20px] text-yellow-500" style="font-variation-settings: 'FILL' 1;">star</span> @(guide.AverageRating?.ToString("0.0") ?? "0.0") <span class="text-on-surface-variant font-normal">(@(guide.TotalReviews ?? 0))</span>
+                                </div>
+                                <div class="text-primary font-bold bg-primary-container px-3 py-1 rounded-lg text-sm">@(guide.PricePerHour?.ToString("#,##0") ?? "0") ₫ / hr</div>
+                            </div>
+                            <p class="text-on-surface-variant italic mb-5 line-clamp-2 leading-relaxed">"@guide.Bio"</p>
+                            <div class="flex flex-wrap gap-2 mt-auto">
+                                @if (guide.Specialties != null)
+                                {
+                                    foreach (var spec in guide.Specialties.Take(3))
+                                    {
+                                        <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">@spec</span>
+                                    }
+                                }
+                            </div>
                         </div>
-                        <div class="text-primary font-bold bg-primary-container px-3 py-1 rounded-lg text-sm">450k ₫ / day</div>
-                    </div>
-                    <p class="text-on-surface-variant italic mb-5 line-clamp-2 leading-relaxed">"Nature lover. Let's hunt clouds and drink the best coffee in town."</p>
-                    <div class="flex flex-wrap gap-2 mt-auto">
-                        <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">Nature</span>
-                        <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">Coffee</span>
-                    </div>
+                    </a>
+                }
+            }
+            else
+            {
+                <div class="col-span-full text-center py-20">
+                    <span class="material-symbols-outlined text-6xl text-outline mb-4">search_off</span>
+                    <h3 class="text-2xl font-bold text-on-surface mb-2">No guides found</h3>
+                    <p class="text-on-surface-variant">Try adjusting your search criteria or explore other destinations.</p>
                 </div>
-            </a>
-
-            <!-- Guide Card 3 -->
-            <a href="/Guide/Profile/3" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 relative flex flex-col">
-                <div class="h-64 overflow-hidden relative">
-                    <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Le Tuan" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
-                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
-                        <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">Le Tuan</h3>
-                        <p class="text-sm text-white/90 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> Sapa</p>
-                    </div>
-                </div>
-                <div class="p-6 flex-1 flex flex-col">
-                    <div class="flex justify-between items-center mb-4">
-                        <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
-                            <span class="material-symbols-outlined text-[20px] text-yellow-500" style="font-variation-settings: 'FILL' 1;">star</span> 4.8 <span class="text-on-surface-variant font-normal">(210)</span>
-                        </div>
-                        <div class="text-primary font-bold bg-primary-container px-3 py-1 rounded-lg text-sm">600k ₫ / day</div>
-                    </div>
-                    <p class="text-on-surface-variant italic mb-5 line-clamp-2 leading-relaxed">"Trekking through rice terraces and connecting with local ethnic minorities."</p>
-                    <div class="flex flex-wrap gap-2 mt-auto">
-                        <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">Trekking</span>
-                        <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">Adventure</span>
-                    </div>
-                </div>
-            </a>
-
-            <!-- Guide Card 4 -->
-            <a href="/Guide/Profile/4" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 relative flex flex-col">
-                <div class="h-64 overflow-hidden relative">
-                    <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Pham Linh" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
-                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16">
-                        <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">Pham Linh</h3>
-                        <p class="text-sm text-white/90 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> Ho Chi Minh City</p>
-                    </div>
-                </div>
-                <div class="p-6 flex-1 flex flex-col">
-                    <div class="flex justify-between items-center mb-4">
-                        <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
-                            <span class="material-symbols-outlined text-[20px] text-yellow-500" style="font-variation-settings: 'FILL' 1;">star</span> 4.9 <span class="text-on-surface-variant font-normal">(150)</span>
-                        </div>
-                        <div class="text-primary font-bold bg-primary-container px-3 py-1 rounded-lg text-sm">550k ₫ / day</div>
-                    </div>
-                    <p class="text-on-surface-variant italic mb-5 line-clamp-2 leading-relaxed">"Motorbike tours by night. I'll show you the real Saigon vibe."</p>
-                    <div class="flex flex-wrap gap-2 mt-auto">
-                        <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">Nightlife</span>
-                        <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">Motorbike</span>
-                    </div>
-                </div>
-            </a>
+            }
         </div>
     </div>
 </div>

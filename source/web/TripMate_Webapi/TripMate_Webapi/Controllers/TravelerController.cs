@@ -1,14 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
+using TripMate_Webapi.Repositories;
+using TripMate_Webapi.Entities;
 
 namespace TripMate_Webapi.Controllers
 {
     public class TravelerController : Controller
     {
         private readonly ILogger<TravelerController> _logger;
+        private readonly ITripRequestRepository _tripRequestRepository;
 
-        public TravelerController(ILogger<TravelerController> logger)
+        public TravelerController(ILogger<TravelerController> logger, ITripRequestRepository tripRequestRepository)
         {
             _logger = logger;
+            _tripRequestRepository = tripRequestRepository;
         }
 
         // GET: /Traveler/Home
@@ -69,9 +73,22 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Traveler/Trips
-        public IActionResult Trips()
+        public async Task<IActionResult> Trips()
         {
-            return View();
+            var travelerId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            
+            List<TripRequestEntity> trips;
+            if (!string.IsNullOrEmpty(travelerId))
+            {
+                trips = await _tripRequestRepository.GetTripRequestsByTravelerAsync(travelerId);
+            }
+            else
+            {
+                // Fallback for testing: Just show all trip requests if not logged in
+                trips = await _tripRequestRepository.GetAllTripRequestsAsync();
+            }
+
+            return View(trips);
         }
 
         // GET: /Traveler/CreateTripRequest
@@ -82,9 +99,69 @@ namespace TripMate_Webapi.Controllers
 
         // POST: /Traveler/CreateTripRequest
         [HttpPost]
-        public IActionResult CreateTripRequest(string destination, string dates, string budget, string notes)
+        public async Task<IActionResult> CreateTripRequest(
+            [FromServices] Supabase.Client supabase, 
+            string destination, string dates, string budget, string notes)
         {
+            // Parse dates from "YYYY-MM-DD to YYYY-MM-DD"
+            DateTime startDate = DateTime.UtcNow;
+            DateTime endDate = DateTime.UtcNow.AddDays(1);
+            if (!string.IsNullOrEmpty(dates) && dates.Contains(" to "))
+            {
+                var parts = dates.Split(" to ");
+                if (DateTime.TryParse(parts[0], out var start)) startDate = start;
+                if (DateTime.TryParse(parts[1], out var end)) endDate = end;
+            }
+            else if (DateTime.TryParse(dates, out var singleDate))
+            {
+                startDate = singleDate;
+                endDate = singleDate;
+            }
+
+            var travelerId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            
+            // Fallback for testing: get any existing traveler profile from DB
+            if (string.IsNullOrEmpty(travelerId))
+            {
+                var profiles = await supabase.From<ProfileEntity>().Select("id").Limit(1).Get();
+                travelerId = profiles.Models.FirstOrDefault()?.Id ?? Guid.NewGuid().ToString();
+            }
+
+            var tripRequest = new TripRequestEntity
+            {
+                Id = Guid.NewGuid().ToString(),
+                TravelerId = travelerId,
+                Destination = destination,
+                StartDate = startDate.ToUniversalTime(),
+                EndDate = endDate.ToUniversalTime(),
+                GroupSize = 1, // Add to form later
+                Budget = budget ?? "",
+                Notes = notes ?? "",
+                Status = "open",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            await _tripRequestRepository.CreateTripRequestAsync(tripRequest);
+
             TempData["SuccessMessage"] = "Your trip request has been posted! Local guides will contact you soon.";
+            return RedirectToAction("Trips");
+        }
+
+        // POST: /Traveler/DeleteTrip/{id}
+        [HttpPost]
+        public async Task<IActionResult> DeleteTrip(string id)
+        {
+            await _tripRequestRepository.DeleteTripRequestAsync(id);
+            TempData["SuccessMessage"] = "Trip request deleted successfully.";
+            return RedirectToAction("Trips");
+        }
+
+        // POST: /Traveler/ToggleTripStatus/{id}
+        [HttpPost]
+        public async Task<IActionResult> ToggleTripStatus(string id)
+        {
+            await _tripRequestRepository.ToggleTripRequestStatusAsync(id);
+            TempData["SuccessMessage"] = "Trip status updated successfully.";
             return RedirectToAction("Trips");
         }
 

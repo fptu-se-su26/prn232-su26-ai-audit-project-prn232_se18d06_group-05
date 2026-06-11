@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Supabase;
 using TripMate_WebAPI.Services;
+using TripMate_Webapi.Repositories;
 using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,7 +27,7 @@ builder.Configuration["EmailSettings:SmtpPass"] = Environment.GetEnvironmentVari
 
 // ── Supabase Client (singleton) ───────────────────────────────────────────────
 var supabaseUrl = builder.Configuration["Supabase:Url"]!;
-var supabaseKey = builder.Configuration["Supabase:AnonKey"]!;
+var supabaseKey = builder.Configuration["Supabase:ServiceRoleKey"]!;
 var jwksUri     = builder.Configuration["Supabase:JwksUri"]!;
 var issuer      = builder.Configuration["Supabase:Issuer"]!;
 
@@ -60,6 +61,10 @@ builder.Services.AddScoped<TourService>();
 // ── Booking Service ───────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<BookingService>();
 builder.Services.AddScoped<BookingService>();
+
+// ── Repositories ──────────────────────────────────────────────────────────────
+builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
+builder.Services.AddScoped<IGuideRepository, GuideRepository>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();

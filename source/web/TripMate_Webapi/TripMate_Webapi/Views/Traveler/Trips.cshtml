@@ -1,3 +1,4 @@
+@model IEnumerable<TripMate_Webapi.Entities.TripRequestEntity>
 @{
     ViewData["Title"] = "My Trips Dashboard";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -90,42 +91,82 @@
 
         <!-- Requests Tab -->
         <div x-show="tab === 'requests'" class="space-y-6 animate-fade-in-up">
-            <!-- Active Request Card -->
-            <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-outline-variant/30">
-                <div class="flex flex-col md:flex-row justify-between items-start gap-6">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-3 mb-2">
-                            <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full">ACTIVE REQUEST</span>
-                            <span class="text-sm text-on-surface-variant flex items-center gap-1"><span class="material-symbols-outlined text-[16px]">schedule</span> Posted 2 hours ago</span>
-                        </div>
-                        <h2 class="text-2xl font-bold text-on-surface mb-2">3 Days in Ha Long Bay</h2>
-                        <div class="flex flex-wrap gap-4 text-sm text-on-surface-variant mb-4">
-                            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">calendar_month</span> Oct 12 - Oct 15</span>
-                            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">group</span> 2 People</span>
-                            <span class="flex items-center gap-1"><span class="material-symbols-outlined text-[18px]">payments</span> Standard (1M-2M VND/day)</span>
-                        </div>
-                        <p class="text-on-surface-variant mb-6 line-clamp-2">"I love trying local street food, hate crowded tourist spots, and want to learn about the history. I need an English-speaking guide."</p>
-                        
-                        <div class="bg-surface p-4 rounded-xl border border-outline-variant/30 flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-primary">mail</span>
+            @if (Model != null && Model.Any())
+            {
+                foreach (var trip in Model)
+                {
+                    var isClosed = trip.Status?.ToLower() == "closed";
+                    <div class="bg-white rounded-2xl p-6 md:p-8 shadow-sm border border-outline-variant/30 @(isClosed ? "opacity-60" : "")">
+                        <div class="flex flex-col md:flex-row justify-between items-start gap-6">
+                            <div class="flex-1">
+                                <div class="flex items-center gap-3 mb-2">
+                                    <span class="@(isClosed ? "bg-gray-100 text-gray-700" : "bg-blue-100 text-blue-700") text-xs font-bold px-3 py-1 rounded-full">
+                                        @(isClosed ? "CLOSED" : "ACTIVE REQUEST")
+                                    </span>
+                                    <span class="text-sm text-on-surface-variant flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[16px]">schedule</span> 
+                                        Posted @trip.CreatedAt.ToString("MMM dd, yyyy HH:mm")
+                                    </span>
                                 </div>
-                                <div>
-                                    <p class="font-bold text-on-surface">3 Offers Received</p>
-                                    <p class="text-xs text-on-surface-variant">Local guides have responded to your request!</p>
+                                <h2 class="text-2xl font-bold text-on-surface mb-2">Trip to @trip.Destination</h2>
+                                <div class="flex flex-wrap gap-4 text-sm text-on-surface-variant mb-4">
+                                    <span class="flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[18px]">calendar_month</span> 
+                                        @trip.StartDate.ToString("MMM dd") - @trip.EndDate.ToString("MMM dd, yyyy")
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[18px]">group</span> 
+                                        @trip.GroupSize People
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[18px]">payments</span> 
+                                        Budget: @(string.IsNullOrEmpty(trip.Budget) ? "Flexible" : trip.Budget)
+                                    </span>
                                 </div>
+                                <p class="text-on-surface-variant mb-6 line-clamp-2">"@trip.Notes"</p>
+                                
+                                @if (!isClosed)
+                                {
+                                    <div class="bg-surface p-4 rounded-xl border border-outline-variant/30 flex items-center justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center">
+                                                <span class="material-symbols-outlined text-primary">mail</span>
+                                            </div>
+                                            <div>
+                                                <p class="font-bold text-on-surface">Waiting for Offers</p>
+                                                <p class="text-xs text-on-surface-variant">Local guides have not responded yet.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
                             </div>
-                            <button class="bg-on-surface text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-on-surface/90 transition-colors">View Offers</button>
+                            
+                            <div class="w-full md:w-48 flex flex-col gap-3">
+                                <form action="/Traveler/ToggleTripStatus/@trip.Id" method="post" class="w-full">
+                                    <button type="submit" class="w-full @(isClosed ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-surface-variant text-on-surface hover:bg-outline-variant/30") px-4 py-2 rounded-lg font-bold text-sm transition-colors">
+                                        @(isClosed ? "Reactivate Request" : "Close Request")
+                                    </button>
+                                </form>
+                                <form action="/Traveler/DeleteTrip/@trip.Id" method="post" class="w-full" onsubmit="return confirm('Are you sure you want to delete this trip request?');">
+                                    <button type="submit" class="w-full text-red-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-50 transition-colors">
+                                        Delete Request
+                                    </button>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="w-full md:w-48 flex flex-col gap-3">
-                        <button class="w-full bg-surface-variant text-on-surface px-4 py-2 rounded-lg font-bold text-sm hover:bg-outline-variant/30 transition-colors">Edit Request</button>
-                        <button class="w-full text-red-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-red-50 transition-colors">Cancel Request</button>
+                }
+            }
+            else
+            {
+                <div class="text-center py-20 bg-white rounded-2xl border border-outline-variant/30">
+                    <div class="w-20 h-20 bg-surface-variant rounded-full flex items-center justify-center mx-auto mb-4">
+                        <span class="material-symbols-outlined text-3xl text-on-surface-variant">search_off</span>
                     </div>
+                    <h3 class="text-xl font-bold text-on-surface mb-2">No active requests</h3>
+                    <p class="text-on-surface-variant">You haven't posted any trip requests yet.</p>
                 </div>
-            </div>
+            }
         </div>
 
         <!-- Upcoming Tab -->

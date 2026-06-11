@@ -1,16 +1,20 @@
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
+using TripMate_Webapi.Repositories;
+using TripMate_Webapi.Entities;
 
 namespace TripMate_Webapi.Controllers
 {
     public class HomeController : Controller
     {
         private readonly TourService _tourService;
+        private readonly IGuideRepository _guideRepository;
         private readonly ILogger<HomeController> _logger;
 
-        public HomeController(TourService tourService, ILogger<HomeController> logger)
+        public HomeController(TourService tourService, IGuideRepository guideRepository, ILogger<HomeController> logger)
         {
             _tourService = tourService;
+            _guideRepository = guideRepository;
             _logger = logger;
         }
 
@@ -51,10 +55,29 @@ namespace TripMate_Webapi.Controllers
             return View();
         }
 
-        // GET: /LandingPage/Explore
-        public IActionResult Explore()
+        // GET: /Home/Explore
+        public async Task<IActionResult> Explore(string? destination = null)
         {
-            return View();
+            try
+            {
+                List<GuideProfileEntity> guides;
+                if (string.IsNullOrEmpty(destination))
+                {
+                    guides = await _guideRepository.GetAllGuidesAsync();
+                }
+                else
+                {
+                    guides = await _guideRepository.GetGuidesByDestinationAsync(destination);
+                }
+                
+                ViewBag.Destination = destination;
+                return View(guides);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching guides for explore page");
+                return View(new List<GuideProfileEntity>());
+            }
         }
 
         // GET: /LandingPage/HowItWorks

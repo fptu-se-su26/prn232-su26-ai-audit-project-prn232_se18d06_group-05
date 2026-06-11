@@ -1,0 +1,11 @@
+using TripMate_Webapi.Entities;
+
+namespace TripMate_Webapi.Repositories
+{
+    public interface IGuideRepository
+    {
+        Task<List<GuideProfileEntity>> GetAllGuidesAsync();
+        Task<List<GuideProfileEntity>> GetGuidesByDestinationAsync(string destination);
+        Task<GuideProfileEntity> GetGuideByIdAsync(string id);
+    }
+}
