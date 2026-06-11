@@ -19,17 +19,17 @@ Nguyên tắc ghi changelog:
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học |  |
-| Mã môn học |  |
-| Lớp |  |
-| Học kỳ |  |
-| Tên bài tập / Project |  |
-| Tên sinh viên / Nhóm |  |
-| MSSV / Danh sách MSSV |  |
+| Môn học | PRN232 |
+| Mã môn học | PRN232 |
+| Lớp | SE18D06 |
+| Học kỳ | Summer 2026 |
+| Tên bài tập / Project | TripMate - Tour Guide Booking Platform |
+| Tên sinh viên / Nhóm | Dương Khánh Hòa |
+| MSSV / Danh sách MSSV | DE180869 |
 | Giảng viên hướng dẫn |  |
-| Repository URL |  |
-| Ngày bắt đầu |  |
-| Ngày hoàn thành |  |
+| Repository URL | https://github.com/tripmate_github/tripmate_flutter |
+| Ngày bắt đầu | 30/05/2026 |
+| Ngày hoàn thành | 15/08/2026 |
 
 ---
 
