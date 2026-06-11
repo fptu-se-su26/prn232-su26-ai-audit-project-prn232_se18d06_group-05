@@ -10,7 +10,7 @@
 | Học kỳ | Summer 2026 |
 | Tên bài tập / Project | TripMate - Tour Guide Booking Platform |
 | Tên sinh viên / Nhóm | Dương Khánh Hòa |
-| MSSV / Danh sách MSSV | de180869 |
+| MSSV / Danh sách MSSV | DE180869 |
 | Giảng viên hướng dẫn |  |
 | Ngày bắt đầu | 30/05/2026 |
 | Ngày cập nhật gần nhất | 09/06/2026 |
