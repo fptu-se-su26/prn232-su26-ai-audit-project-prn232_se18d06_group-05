@@ -1,3 +1,4 @@
+@model TripMate_Webapi.Controllers.HomeViewModel
 @{
     ViewData["Title"] = "TripMate - Authentic Local Experiences";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -87,113 +88,55 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <!-- Guide Card 1 -->
-                <div class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 relative flex flex-col hover:-translate-y-1">
-                    <button @@click="toggleSave(1)" class="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center hover:bg-white transition-colors shadow-sm">
-                        <span class="material-symbols-outlined" :class="savedGuides.includes(1) ? 'text-red-500 fill-current' : 'text-gray-400'">favorite</span>
-                    </button>
-                    <div class="h-56 overflow-hidden relative">
-                        <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Hai" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
-                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12">
-                            <h3 class="text-xl font-bold text-white mb-1">Nguyen Hai</h3>
-                            <p class="text-sm text-white/90 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Ha Long Bay</p>
-                        </div>
-                    </div>
-                    <div class="p-5 flex-1 flex flex-col">
-                        <div class="flex justify-between items-center mb-3">
-                            <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
-                                <span class="material-symbols-outlined text-[18px] text-yellow-500 fill-current">star</span> 4.9 <span class="text-on-surface-variant font-normal">(120)</span>
+                @if (Model != null && Model.PopularGuides != null && Model.PopularGuides.Any())
+                {
+                    foreach (var guide in Model.PopularGuides)
+                    {
+                        <a href="/Guide/Profile/@guide.UserId" class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 relative flex flex-col hover:-translate-y-1">
+                            <button @@click.prevent="toggleSave('@guide.Id')" class="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center hover:bg-white transition-colors shadow-sm">
+                                <span class="material-symbols-outlined" :class="savedGuides.includes('@guide.Id') ? 'text-red-500 fill-current' : 'text-gray-400'">favorite</span>
+                            </button>
+                            <div class="h-56 overflow-hidden relative">
+                                <img src="@(string.IsNullOrEmpty(guide.CoverPhotoUrl) ? "/images/halong.jpg" : guide.CoverPhotoUrl)" alt="Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                
+                                <!-- Floating Avatar -->
+                                <div class="absolute top-4 left-4 z-10 w-14 h-14 rounded-full border-2 border-white overflow-hidden shadow-lg">
+                                    <img src="@(string.IsNullOrEmpty(guide.Profile?.AvatarUrl) ? "/images/default_avatar.png" : guide.Profile.AvatarUrl)" alt="@guide.Profile?.FullName" class="w-full h-full object-cover"/>
+                                </div>
+                                
+                                <div class="absolute bottom-0 left-0 right-0 p-4 pt-12 z-10">
+                                    <h3 class="text-xl font-bold text-white mb-1">@(guide.Profile?.FullName ?? "Unknown Guide")</h3>
+                                    <p class="text-sm text-white/90 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> @guide.CityArea</p>
+                                </div>
                             </div>
-                            <div class="text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">$15/h</div>
-                        </div>
-                        <p class="text-sm text-on-surface-variant italic mb-4 line-clamp-2">"I love showing guests the hidden caves and kayaking spots that large cruises miss."</p>
-                        <div class="flex flex-wrap gap-2 mt-auto">
-                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Photography</span>
-                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Nature</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Guide Card 2 -->
-                <div class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 relative flex flex-col hover:-translate-y-1">
-                    <button @@click="toggleSave(2)" class="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center hover:bg-white transition-colors shadow-sm">
-                        <span class="material-symbols-outlined" :class="savedGuides.includes(2) ? 'text-red-500 fill-current' : 'text-gray-400'">favorite</span>
-                    </button>
-                    <div class="h-56 overflow-hidden relative">
-                        <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Mai" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
-                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12">
-                            <h3 class="text-xl font-bold text-white mb-1">Tran Mai</h3>
-                            <p class="text-sm text-white/90 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Hoi An</p>
-                        </div>
-                    </div>
-                    <div class="p-5 flex-1 flex flex-col">
-                        <div class="flex justify-between items-center mb-3">
-                            <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
-                                <span class="material-symbols-outlined text-[18px] text-yellow-500 fill-current">star</span> 5.0 <span class="text-on-surface-variant font-normal">(85)</span>
+                            <div class="p-5 flex-1 flex flex-col">
+                                <div class="flex justify-between items-center mb-3">
+                                    <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
+                                        <span class="material-symbols-outlined text-[18px] text-yellow-500 fill-current">star</span> @(guide.AverageRating?.ToString("0.0") ?? "0.0") <span class="text-on-surface-variant font-normal">(@(guide.TotalReviews ?? 0))</span>
+                                    </div>
+                                    <div class="text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">₫@(guide.PricePerHour?.ToString("#,##0") ?? "0")/h</div>
+                                </div>
+                                <p class="text-sm text-on-surface-variant italic mb-4 line-clamp-2">"@guide.Bio"</p>
+                                <div class="flex flex-wrap gap-2 mt-auto">
+                                    @if (guide.Specialties != null)
+                                    {
+                                        foreach (var spec in guide.Specialties.Take(2))
+                                        {
+                                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">@spec</span>
+                                        }
+                                    }
+                                </div>
                             </div>
-                            <div class="text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">$12/h</div>
-                        </div>
-                        <p class="text-sm text-on-surface-variant italic mb-4 line-clamp-2">"Let's taste the best street food and make traditional lanterns together."</p>
-                        <div class="flex flex-wrap gap-2 mt-auto">
-                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Culinary</span>
-                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Culture</span>
-                        </div>
+                        </a>
+                    }
+                }
+                else
+                {
+                    <div class="col-span-full text-center text-on-surface-variant py-10">
+                        No popular guides available at the moment.
                     </div>
-                </div>
-                
-                <!-- Guide Card 3 -->
-                <div class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 relative flex flex-col hover:-translate-y-1">
-                    <button @@click="toggleSave(3)" class="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center hover:bg-white transition-colors shadow-sm">
-                        <span class="material-symbols-outlined" :class="savedGuides.includes(3) ? 'text-red-500 fill-current' : 'text-gray-400'">favorite</span>
-                    </button>
-                    <div class="h-56 overflow-hidden relative">
-                        <img src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Tuan" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
-                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12">
-                            <h3 class="text-xl font-bold text-white mb-1">Le Tuan</h3>
-                            <p class="text-sm text-white/90 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Sapa</p>
-                        </div>
-                    </div>
-                    <div class="p-5 flex-1 flex flex-col">
-                        <div class="flex justify-between items-center mb-3">
-                            <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
-                                <span class="material-symbols-outlined text-[18px] text-yellow-500 fill-current">star</span> 4.8 <span class="text-on-surface-variant font-normal">(210)</span>
-                            </div>
-                            <div class="text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">$18/h</div>
-                        </div>
-                        <p class="text-sm text-on-surface-variant italic mb-4 line-clamp-2">"Trekking through rice terraces and connecting with local ethnic minorities."</p>
-                        <div class="flex flex-wrap gap-2 mt-auto">
-                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Trekking</span>
-                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Adventure</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Guide Card 4 -->
-                <div class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 relative flex flex-col hover:-translate-y-1">
-                    <button @@click="toggleSave(4)" class="absolute top-3 right-3 z-10 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center hover:bg-white transition-colors shadow-sm">
-                        <span class="material-symbols-outlined" :class="savedGuides.includes(4) ? 'text-red-500 fill-current' : 'text-gray-400'">favorite</span>
-                    </button>
-                    <div class="h-56 overflow-hidden relative">
-                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&auto=format&fit=crop&w=400&q=80" alt="Linh" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
-                        <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-12">
-                            <h3 class="text-xl font-bold text-white mb-1">Pham Linh</h3>
-                            <p class="text-sm text-white/90 flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Ho Chi Minh City</p>
-                        </div>
-                    </div>
-                    <div class="p-5 flex-1 flex flex-col">
-                        <div class="flex justify-between items-center mb-3">
-                            <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
-                                <span class="material-symbols-outlined text-[18px] text-yellow-500 fill-current">star</span> 4.9 <span class="text-on-surface-variant font-normal">(150)</span>
-                            </div>
-                            <div class="text-primary font-bold bg-primary/10 px-2 py-1 rounded text-sm">$14/h</div>
-                        </div>
-                        <p class="text-sm text-on-surface-variant italic mb-4 line-clamp-2">"Motorbike tours by night. I'll show you the real Saigon vibe."</p>
-                        <div class="flex flex-wrap gap-2 mt-auto">
-                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Nightlife</span>
-                            <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-semibold uppercase tracking-wider">Motorbike</span>
-                        </div>
-                    </div>
-                </div>
+                }
             </div>
         </div>
     </section>

@@ -15,7 +15,6 @@ namespace TripMate_Webapi.Repositories
         public async Task<List<GuideProfileEntity>> GetAllGuidesAsync()
         {
             var response = await _supabase.From<GuideProfileEntity>()
-                .Select("*, profiles(*)")
                 .Get();
             
             return response.Models;
@@ -24,7 +23,6 @@ namespace TripMate_Webapi.Repositories
         public async Task<List<GuideProfileEntity>> GetGuidesByDestinationAsync(string destination)
         {
             var response = await _supabase.From<GuideProfileEntity>()
-                .Select("*, profiles(*)")
                 .Filter("city_area", Postgrest.Constants.Operator.ILike, $"%{destination}%")
                 .Get();
                 
@@ -34,7 +32,6 @@ namespace TripMate_Webapi.Repositories
         public async Task<GuideProfileEntity> GetGuideByIdAsync(string id)
         {
             var response = await _supabase.From<GuideProfileEntity>()
-                .Select("*, profiles(*)")
                 .Where(x => x.UserId == id)
                 .Single();
                 

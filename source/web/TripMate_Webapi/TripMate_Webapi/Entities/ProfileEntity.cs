@@ -21,14 +21,12 @@ namespace TripMate_Webapi.Entities
         [Column("avatar_url")]
         public string AvatarUrl { get; set; }
 
-        [Column("mbti")]
-        public string Mbti { get; set; }
 
-        [Column("phone")]
-        public string Phone { get; set; }
+        [Column("phone_number")]
+        public string? Phone { get; set; }
 
-        [Column("status")]
-        public string Status { get; set; }
+        [Column("is_active")]
+        public bool IsActive { get; set; }
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }

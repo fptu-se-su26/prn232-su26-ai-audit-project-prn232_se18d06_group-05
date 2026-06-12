@@ -23,21 +23,24 @@ namespace TripMate_Webapi.Controllers
         {
             try
             {
-                // Load tours from service
+                // Load tours and guides
                 var tours = await _tourService.GetToursAsync();
+                var guides = await _guideRepository.GetAllGuidesAsync();
                 
                 // Prepare view model
                 var viewModel = new HomeViewModel
                 {
                     FeaturedTours = tours.Take(2).ToList(),
                     CuratedStays = tours.Skip(2).Take(4).ToList(),
-                    AllTours = tours.ToList()
+                    AllTours = tours.ToList(),
+                    PopularGuides = guides.Take(4).ToList()
                 };
 
                 return View(viewModel);
             }
             catch (Exception ex)
             {
+                System.IO.File.WriteAllText("error_log.txt", ex.ToString());
                 _logger.LogError(ex, "Error loading home page");
                 return View(new HomeViewModel());
             }
@@ -105,5 +108,6 @@ namespace TripMate_Webapi.Controllers
         public List<ExperiencePackageRow> FeaturedTours { get; set; } = new();
         public List<ExperiencePackageRow> CuratedStays { get; set; } = new();
         public List<ExperiencePackageRow> AllTours { get; set; } = new();
+        public List<GuideProfileEntity> PopularGuides { get; set; } = new();
     }
 }

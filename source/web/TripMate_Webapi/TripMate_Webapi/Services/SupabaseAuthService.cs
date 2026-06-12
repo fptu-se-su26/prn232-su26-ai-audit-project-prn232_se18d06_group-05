@@ -52,7 +52,7 @@ public class SupabaseAuthService
 
     public async Task<AuthResponse> RegisterAsync(string email, string password, string fullName, string role = "traveler", 
         string? phoneNumber = null, string? experience = null, string? specialization = null, 
-        string? languages = null, string? bio = null, string? certificatePath = null)
+        string? languages = null, string? bio = null, string? certificatePath = null, string? avatarUrl = null)
     {
         // 1. Tạo tài khoản Supabase Auth
         var body = JsonSerializer.Serialize(new
@@ -73,7 +73,7 @@ public class SupabaseAuthService
         if (!string.IsNullOrEmpty(session.AccessToken))
         {
             await UpsertProfileAsync(session.AccessToken, session.User.Id, email, fullName, role, 
-                phoneNumber, experience, specialization, languages, bio, certificatePath);
+                phoneNumber, experience, specialization, languages, bio, certificatePath, avatarUrl);
         }
         else
         {
@@ -202,7 +202,7 @@ public class SupabaseAuthService
 
     public async Task UpsertProfileAsync(string accessToken, string userId, string email, string fullName, string role = "traveler",
         string? phoneNumber = null, string? experience = null, string? specialization = null, 
-        string? languages = null, string? bio = null, string? certificatePath = null)
+        string? languages = null, string? bio = null, string? certificatePath = null, string? avatarUrl = null)
     {
         try
         {
@@ -211,14 +211,15 @@ public class SupabaseAuthService
                 id = userId,
                 email,
                 full_name = fullName,
-                phone = phoneNumber,         // schema mới dùng 'phone'
+                phone_number = phoneNumber,         // schema mới dùng 'phone_number'
                 role = role,
                 experience = experience,
                 specialization = specialization,
                 languages = languages,
                 bio = bio,
+                avatar_url = avatarUrl,
                 certificate_url = certificatePath,
-                status = role == "guide" ? "pending" : "active",
+                is_active = role == "guide" ? false : true,
                 created_at = DateTime.UtcNow,
                 updated_at = DateTime.UtcNow,
             };
@@ -252,14 +253,15 @@ public class SupabaseAuthService
             updateRequest.Content = new StringContent(
                 JsonSerializer.Serialize(new {
                     full_name = fullName,
-                    phone = phoneNumber,
+                    phone_number = phoneNumber,
                     role = role,
                     experience = experience,
                     specialization = specialization,
                     languages = languages,
                     bio = bio,
+                    avatar_url = avatarUrl,
                     certificate_url = certificatePath,
-                    status = role == "guide" ? "pending" : "active",
+                    is_active = role == "guide" ? false : true,
                     updated_at = DateTime.UtcNow,
                 }), Encoding.UTF8, "application/json");
 

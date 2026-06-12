@@ -6,7 +6,7 @@ namespace TripMate_Webapi.Entities
     [Table("guide_profiles")]
     public class GuideProfileEntity : BaseModel
     {
-        [PrimaryKey("id", false)]
+        [PrimaryKey("id", true)]
         public string Id { get; set; }
 
         [Column("user_id")]

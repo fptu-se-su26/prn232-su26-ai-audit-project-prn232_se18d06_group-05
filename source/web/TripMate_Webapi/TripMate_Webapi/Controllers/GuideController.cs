@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
+using TripMate_Webapi.Repositories;
 
 namespace TripMate_Webapi.Controllers
 {

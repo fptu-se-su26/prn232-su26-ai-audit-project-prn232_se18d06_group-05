@@ -11,4 +11,6 @@ public class SeedAccountConfig
     public string? Specialization { get; set; }
     public string? Languages { get; set; }
     public string? Bio { get; set; }
+    public string? AvatarUrl { get; set; }
+    public string? CoverPhotoUrl { get; set; }
 }
