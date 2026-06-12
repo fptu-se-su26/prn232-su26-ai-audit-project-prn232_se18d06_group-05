@@ -1,0 +1,341 @@
+@{
+    ViewData["Title"] = "Quản lý Lịch";
+    ViewData["ActivePage"] = "Calendar";
+    Layout = "_GuideLayout";
+}
+
+@section Styles {
+    <!-- FullCalendar CSS -->
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+    <style>
+        .fc-toolbar-title {
+            font-size: 1.25rem !important;
+            font-weight: 700 !important;
+            color: #1f2937 !important;
+        }
+        .fc-button-primary {
+            background-color: #FF6B35 !important;
+            border-color: #FF6B35 !important;
+        }
+        .fc-button-primary:hover {
+            background-color: #E55A2B !important;
+            border-color: #E55A2B !important;
+        }
+        .fc-button-active {
+            background-color: #E55A2B !important;
+        }
+        .fc-day-today {
+            background-color: #fff7ed !important; /* orange-50 */
+        }
+        .fc-daygrid-day-number {
+            color: #4b5563 !important;
+            font-weight: 500 !important;
+            padding: 8px !important;
+        }
+        /* Custom day states */
+        .fc-blocked-day {
+            background-color: #fee2e2 !important; /* red-100 */
+            cursor: pointer;
+        }
+        .fc-booked-day {
+            background-color: #fef3c7 !important; /* amber-100 */
+            cursor: not-allowed;
+        }
+        .fc-available-day {
+            cursor: pointer;
+        }
+        .fc-available-day:hover {
+            background-color: #f3f4f6 !important;
+        }
+        .fc-scrollgrid {
+            border-color: #f3f4f6 !important;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+    </style>
+}
+
+<div x-data="calendarManager()" x-init="initCalendar()">
+    <!-- Banner Hướng Dẫn -->
+    <div x-show="showBanner" class="bg-blue-50 border border-blue-100 rounded-2xl p-4 mb-6 flex items-start justify-between">
+        <div class="flex gap-4">
+            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 flex-shrink-0">
+                <span class="material-symbols-outlined">lightbulb</span>
+            </div>
+            <div>
+                <h4 class="font-bold text-blue-900 mb-1">Hướng dẫn quản lý lịch rảnh</h4>
+                <p class="text-sm text-blue-800">
+                    Hệ thống tự động hiển thị bạn là <strong>sẵn sàng</strong> vào tất cả các ngày. 
+                    Nếu bạn bận, hãy click vào ngày đó để chuyển sang trạng thái <strong>đã chặn</strong>. 
+                    Hệ thống sẽ không ghép khách cho bạn vào những ngày đã chặn.
+                </p>
+            </div>
+        </div>
+        <button @@click="showBanner = false" class="text-blue-400 hover:text-blue-600">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        
+        <!-- Left: Calendar Area -->
+        <div class="lg:col-span-3">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <!-- Legend -->
+                <div class="flex flex-wrap gap-6 mb-6 px-4 py-3 bg-gray-50 rounded-xl border border-gray-100">
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-md bg-white border border-gray-300"></div>
+                        <span class="text-sm font-medium text-gray-700">Sẵn sàng (Click để chặn)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-md bg-red-100 border border-red-200"></div>
+                        <span class="text-sm font-medium text-gray-700">Đã chặn (Click để bỏ chặn)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-4 h-4 rounded-md bg-amber-100 border border-amber-200"></div>
+                        <span class="text-sm font-medium text-gray-700">Đã có booking</span>
+                    </div>
+                </div>
+
+                <!-- FullCalendar Container -->
+                <div id="calendar" class="min-h-[600px]"></div>
+            </div>
+        </div>
+
+        <!-- Right: Stats Panel -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Summary Stats -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <h3 class="font-bold text-gray-900 mb-4">Tháng <span x-text="currentMonth"></span></h3>
+                
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center p-3 bg-red-50 rounded-xl">
+                        <span class="text-sm text-red-800 font-medium">Ngày đã chặn</span>
+                        <span class="text-lg font-bold text-red-600" x-text="blockedDates.length"></span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-amber-50 rounded-xl">
+                        <span class="text-sm text-amber-800 font-medium">Đã có tour</span>
+                        <span class="text-lg font-bold text-amber-600" x-text="bookedDates.length"></span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-gray-50 rounded-xl">
+                        <span class="text-sm text-gray-700 font-medium">Ngày sẵn sàng</span>
+                        <span class="text-lg font-bold text-gray-900" x-text="getAvailableDays()"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blocked List -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 flex flex-col max-h-[400px]">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="font-bold text-gray-900">Danh sách đã chặn</h3>
+                    <button @@click="clearAllBlocked()" class="text-xs font-medium text-red-500 hover:text-red-700">
+                        Bỏ chặn tất cả
+                    </button>
+                </div>
+                
+                <div class="p-0 overflow-y-auto flex-1">
+                    <template x-if="blockedDates.length === 0">
+                        <div class="text-center py-8 text-gray-500 text-sm">
+                            Bạn chưa chặn ngày nào trong tháng này.
+                        </div>
+                    </template>
+                    
+                    <ul class="divide-y divide-gray-50">
+                        <template x-for="date in sortedBlockedDates()" :key="date">
+                            <li class="px-6 py-3 flex justify-between items-center hover:bg-gray-50">
+                                <span class="text-sm font-medium text-gray-700" x-text="formatDate(date)"></span>
+                                <button @@click="toggleDate(date)" class="text-gray-400 hover:text-red-500">
+                                    <span class="material-symbols-outlined text-[18px]">close</span>
+                                </button>
+                            </li>
+                        </template>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unsaved Changes Sticky Banner -->
+    <div x-show="hasChanges" x-transition.opacity
+         class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)] z-50 p-4 transform transition-all duration-300">
+        <div class="max-w-7xl mx-auto flex items-center justify-between px-[280px]">
+            <div class="flex items-center gap-3">
+                <span class="material-symbols-outlined text-amber-500">info</span>
+                <p class="font-medium text-gray-800">Bạn có thay đổi lịch rảnh chưa được lưu.</p>
+            </div>
+            <div class="flex gap-3">
+                <button @@click="discardChanges()" class="px-6 py-2.5 rounded-xl font-medium text-gray-600 hover:bg-gray-100 transition-colors">
+                    Hủy bỏ
+                </button>
+                <button @@click="saveChanges()" class="px-6 py-2.5 rounded-xl font-bold bg-primary text-white hover:bg-primary-dark transition-colors shadow-sm flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]" x-show="!isSaving">save</span>
+                    <span class="material-symbols-outlined text-[18px] animate-spin" x-show="isSaving">autorenew</span>
+                    <span x-text="isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function calendarManager() {
+            return {
+                showBanner: true,
+                calendar: null,
+                currentMonth: new Date().getMonth() + 1,
+                daysInMonth: 30, // Tạm thời
+                
+                // Mock data from server
+                originalBlockedDates: ['2026-06-15', '2026-06-18', '2026-06-19'],
+                bookedDates: ['2026-06-12', '2026-06-20', '2026-06-21'],
+                
+                // Current state
+                blockedDates: [],
+                hasChanges: false,
+                isSaving: false,
+
+                initCalendar() {
+                    // Clone original data to state
+                    this.blockedDates = [...this.originalBlockedDates];
+                    
+                    const calendarEl = document.getElementById('calendar');
+                    
+                    this.calendar = new FullCalendar.Calendar(calendarEl, {
+                        initialView: 'dayGridMonth',
+                        initialDate: '2026-06-01', // Set to target month for demo
+                        locale: 'vi',
+                        headerToolbar: {
+                            left: 'prev,next today',
+                            center: 'title',
+                            right: '' // dayGridMonth,timeGridWeek
+                        },
+                        buttonText: {
+                            today: 'Hôm nay',
+                            month: 'Tháng',
+                            week: 'Tuần'
+                        },
+                        firstDay: 1, // Start on Monday
+                        height: 'auto',
+                        
+                        // Custom rendering for days
+                        dayCellDidMount: (info) => {
+                            const dateStr = info.date.toISOString().split('T')[0];
+                            const cell = info.el;
+                            
+                            // Clear existing classes
+                            cell.classList.remove('fc-blocked-day', 'fc-booked-day', 'fc-available-day');
+                            
+                            if (this.bookedDates.includes(dateStr)) {
+                                cell.classList.add('fc-booked-day');
+                                cell.title = "Đã có booking ngày này";
+                            } else if (this.blockedDates.includes(dateStr)) {
+                                cell.classList.add('fc-blocked-day');
+                                cell.title = "Bạn đã chặn ngày này";
+                            } else {
+                                cell.classList.add('fc-available-day');
+                                cell.title = "Ngày trống, có thể nhận khách";
+                            }
+                        },
+                        
+                        // Handle clicking a date
+                        dateClick: (info) => {
+                            const dateStr = info.dateStr;
+                            
+                            // Cannot block dates that already have bookings
+                            if (this.bookedDates.includes(dateStr)) {
+                                showToast('warning', 'Ngày này đã có tour, không thể chặn!');
+                                return;
+                            }
+                            
+                            this.toggleDate(dateStr);
+                        },
+                        
+                        // Handle changing months
+                        datesSet: (info) => {
+                            const midDate = new Date((info.start.getTime() + info.end.getTime()) / 2);
+                            this.currentMonth = midDate.getMonth() + 1;
+                            this.daysInMonth = new Date(midDate.getFullYear(), midDate.getMonth() + 1, 0).getDate();
+                        }
+                    });
+                    
+                    this.calendar.render();
+                },
+                
+                toggleDate(dateStr) {
+                    const index = this.blockedDates.indexOf(dateStr);
+                    if (index > -1) {
+                        // Remove from blocked
+                        this.blockedDates.splice(index, 1);
+                    } else {
+                        // Add to blocked
+                        this.blockedDates.push(dateStr);
+                    }
+                    
+                    this.checkChanges();
+                    
+                    // Re-render calendar cells
+                    if (this.calendar) {
+                        // Trick to force re-render without changing view
+                        const cells = document.querySelectorAll('.fc-day');
+                        cells.forEach(cell => {
+                            const d = cell.getAttribute('data-date');
+                            if (d === dateStr) {
+                                cell.classList.remove('fc-blocked-day', 'fc-available-day');
+                                cell.classList.add(this.blockedDates.includes(dateStr) ? 'fc-blocked-day' : 'fc-available-day');
+                            }
+                        });
+                    }
+                },
+                
+                clearAllBlocked() {
+                    if (this.blockedDates.length === 0) return;
+                    if (confirm('Bạn chắc chắn muốn bỏ chặn tất cả các ngày trong tháng?')) {
+                        this.blockedDates = [];
+                        this.checkChanges();
+                        this.calendar.render(); // Re-render whole calendar
+                    }
+                },
+                
+                checkChanges() {
+                    // Check if current blockedDates is different from originalBlockedDates
+                    const sortedCurrent = [...this.blockedDates].sort().join(',');
+                    const sortedOriginal = [...this.originalBlockedDates].sort().join(',');
+                    this.hasChanges = sortedCurrent !== sortedOriginal;
+                },
+                
+                discardChanges() {
+                    this.blockedDates = [...this.originalBlockedDates];
+                    this.hasChanges = false;
+                    this.calendar.render();
+                },
+                
+                async saveChanges() {
+                    this.isSaving = true;
+                    
+                    // Simulate API call
+                    setTimeout(() => {
+                        this.originalBlockedDates = [...this.blockedDates];
+                        this.hasChanges = false;
+                        this.isSaving = false;
+                        showToast('success', 'Đã cập nhật lịch rảnh thành công!');
+                    }, 1000);
+                },
+                
+                getAvailableDays() {
+                    return this.daysInMonth - this.blockedDates.length - this.bookedDates.length;
+                },
+                
+                sortedBlockedDates() {
+                    return [...this.blockedDates].sort();
+                },
+                
+                formatDate(dateStr) {
+                    const parts = dateStr.split('-');
+                    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+                }
+            }
+        }
+    </script>
+}
