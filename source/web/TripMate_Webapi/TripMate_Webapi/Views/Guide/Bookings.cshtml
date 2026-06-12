@@ -1,0 +1,471 @@
+@{
+    ViewData["Title"] = "Quản lý Đặt Chỗ (Bookings)";
+    ViewData["ActivePage"] = "Bookings";
+    Layout = "_GuideLayout";
+    
+    var bookings = ViewBag.Bookings as IEnumerable<dynamic>;
+}
+
+<!-- JSON data cho AlpineJS -->
+<script>
+    window.initialBookings = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(bookings));
+</script>
+
+<div x-data="bookingsManager()">
+    
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-900 mb-1">Bookings</h2>
+            <p class="text-gray-500 text-sm">Quản lý lịch đặt tour và phản hồi yêu cầu của du khách.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                Chọn ngày
+            </button>
+            <button class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">sort</span>
+                Mới nhất
+            </button>
+        </div>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="bg-white p-2 rounded-2xl shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-4 mb-6">
+        <!-- Tabs -->
+        <div class="flex overflow-x-auto hide-scrollbar gap-1 p-1">
+            <template x-for="tab in tabs" :key="tab.id">
+                <button @@click="currentTab = tab.id"
+                        :class="currentTab === tab.id ? 'bg-primary text-white font-bold shadow-sm' : 'text-gray-600 hover:bg-gray-100 font-medium'"
+                        class="px-5 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all flex items-center gap-2">
+                    <span x-text="tab.label"></span>
+                    <span x-show="tab.count > 0" 
+                          :class="currentTab === tab.id ? 'bg-white/20 text-white' : 'bg-gray-200 text-gray-700'"
+                          class="px-2 py-0.5 rounded-full text-xs" x-text="tab.count"></span>
+                </button>
+            </template>
+        </div>
+
+        <div class="h-8 w-px bg-gray-200 hidden lg:block self-center"></div>
+
+        <!-- Search -->
+        <div class="relative flex-grow p-1">
+            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">search</span>
+            <input type="text" x-model="searchQuery" placeholder="Tìm tên khách, mã booking..." 
+                   class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl py-2.5 pl-12 pr-4 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+        </div>
+    </div>
+
+    <!-- Booking List -->
+    <div class="space-y-4">
+        <template x-if="filteredBookings.length === 0">
+            <div class="bg-white rounded-2xl p-12 shadow-sm border border-gray-100 text-center">
+                <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+                    <span class="material-symbols-outlined text-[32px]">inbox</span>
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 mb-1">Chưa có booking nào</h3>
+                <p class="text-gray-500 text-sm">Hồ sơ của bạn đang hoạt động — hãy chờ khách tìm đến!</p>
+            </div>
+        </template>
+
+        <template x-for="b in filteredBookings" :key="b.Id">
+            <!-- Booking Card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow relative">
+                <!-- Header -->
+                <div class="px-6 py-3 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold font-mono text-gray-500 bg-gray-200/50 px-2 py-1 rounded-md" x-text="'#' + b.Id"></span>
+                        
+                        <!-- Status Badge -->
+                        <span x-show="b.Status === 'Pending'" class="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-3 py-1 rounded-full text-xs font-bold border border-amber-100">
+                            <span class="material-symbols-outlined text-[14px]">schedule</span> CHỜ DUYỆT
+                        </span>
+                        <span x-show="b.Status === 'Confirmed'" class="flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-bold border border-green-100">
+                            <span class="material-symbols-outlined text-[14px]">check_circle</span> ĐÃ XÁC NHẬN
+                        </span>
+                        <span x-show="b.Status === 'Completed'" class="flex items-center gap-1.5 bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-bold border border-gray-200">
+                            <span class="material-symbols-outlined text-[14px]">done_all</span> HOÀN THÀNH
+                        </span>
+                        <span x-show="b.Status === 'Cancelled'" class="flex items-center gap-1.5 bg-red-50 text-red-700 px-3 py-1 rounded-full text-xs font-bold border border-red-100">
+                            <span class="material-symbols-outlined text-[14px]">cancel</span> ĐÃ HỦY
+                        </span>
+                    </div>
+
+                    <!-- Countdown for Pending -->
+                    <div x-show="b.Status === 'Pending'" class="flex items-center gap-2 text-sm">
+                        <span class="text-gray-500">Phản hồi trong:</span>
+                        <span class="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md" x-text="formatCountdown(b.SecondsRemaining)"></span>
+                    </div>
+                </div>
+
+                <!-- Body -->
+                <div class="p-6 flex flex-col lg:flex-row gap-6">
+                    <!-- Traveler Info -->
+                    <div class="flex gap-4 lg:w-1/4">
+                        <img :src="b.TravelerAvatar" class="w-12 h-12 rounded-full border border-gray-200 object-cover flex-shrink-0">
+                        <div>
+                            <h4 class="font-bold text-gray-900" x-text="b.TravelerName"></h4>
+                            <div class="flex items-center gap-2 mt-1 text-sm text-gray-500">
+                                <span class="flex items-center text-amber-400 font-medium">
+                                    <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                                    <span x-text="b.TravelerRating" class="text-gray-700 ml-0.5"></span>
+                                </span>
+                                <span>•</span>
+                                <span class="flex items-center">
+                                    <span class="material-symbols-outlined text-[16px] mr-0.5">location_on</span>
+                                    <span x-text="b.TravelerLocation"></span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tour Info -->
+                    <div class="lg:w-2/4">
+                        <div class="flex items-start gap-3">
+                            <span class="material-symbols-outlined text-primary text-[20px] mt-0.5">tour</span>
+                            <div>
+                                <h4 class="font-bold text-gray-900 mb-2" x-text="b.TourName"></h4>
+                                <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-600">
+                                    <div class="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
+                                        <span class="material-symbols-outlined text-[16px] text-gray-400">calendar_month</span>
+                                        <span class="font-medium text-gray-800" x-text="b.Date"></span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
+                                        <span class="material-symbols-outlined text-[16px] text-gray-400">schedule</span>
+                                        <span class="font-medium text-gray-800" x-text="b.Time"></span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 bg-gray-50 px-2.5 py-1 rounded-lg">
+                                        <span class="material-symbols-outlined text-[16px] text-gray-400">group</span>
+                                        <span class="font-medium text-gray-800" x-text="b.Guests + ' người'"></span>
+                                    </div>
+                                </div>
+                                <div x-show="b.Note" class="mt-3 text-sm text-gray-600 bg-blue-50 border border-blue-100 rounded-lg p-3 italic flex items-start gap-2">
+                                    <span class="material-symbols-outlined text-[16px] text-blue-400 mt-0.5">chat_bubble</span>
+                                    <span x-text="`&quot;${b.Note}&quot;`"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Financial & Actions -->
+                    <div class="lg:w-1/4 flex flex-col justify-between items-end border-t lg:border-t-0 lg:border-l border-gray-100 pt-4 lg:pt-0 lg:pl-6">
+                        <div class="text-right w-full mb-4">
+                            <p class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Bạn sẽ nhận</p>
+                            <p class="text-2xl font-bold text-green-600" x-text="formatCurrency(b.NetEarnings)"></p>
+                            <p class="text-xs text-gray-500 mt-1">Tổng tour: <span x-text="formatCurrency(b.TotalAmount)"></span></p>
+                        </div>
+                        
+                        <!-- Actions based on status -->
+                        <div class="flex gap-2 w-full justify-end">
+                            <button @@click="openDetail(b)" class="flex-1 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors">
+                                Chi tiết
+                            </button>
+                            
+                            <!-- Pending Actions -->
+                            <template x-if="b.Status === 'Pending'">
+                                <div class="flex gap-2 flex-2">
+                                    <button @@click="rejectBooking(b.Id)" class="bg-white border-2 border-red-100 text-red-600 hover:bg-red-50 hover:border-red-200 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors">
+                                        Từ chối
+                                    </button>
+                                    <button @@click="acceptBooking(b.Id)" class="bg-primary text-white hover:bg-primary-dark px-4 py-2.5 rounded-xl text-sm font-bold transition-colors shadow-sm flex-grow text-center">
+                                        Chấp nhận
+                                    </button>
+                                </div>
+                            </template>
+                            
+                            <!-- Confirmed Actions -->
+                            <template x-if="b.Status === 'Confirmed'">
+                                <a href="/Guide/Messages" class="flex-2 bg-blue-50 text-blue-700 hover:bg-blue-100 px-4 py-2.5 rounded-xl text-sm font-bold transition-colors text-center flex items-center justify-center gap-1">
+                                    <span class="material-symbols-outlined text-[18px]">chat</span> Nhắn tin
+                                </a>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Paginator -->
+    <div class="mt-8 flex justify-center items-center gap-2" x-show="filteredBookings.length > 0">
+        <button class="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-50">
+            <span class="material-symbols-outlined">chevron_left</span>
+        </button>
+        <button class="w-10 h-10 rounded-xl bg-primary text-white font-bold shadow-sm">1</button>
+        <button class="w-10 h-10 rounded-xl border border-gray-200 font-medium text-gray-700 hover:bg-gray-50">2</button>
+        <button class="w-10 h-10 rounded-xl border border-gray-200 font-medium text-gray-700 hover:bg-gray-50">3</button>
+        <button class="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50">
+            <span class="material-symbols-outlined">chevron_right</span>
+        </button>
+    </div>
+
+    <!-- Slide-over Detail Modal -->
+    <div x-show="isDetailOpen" class="relative z-[100]" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+        <!-- Backdrop -->
+        <div x-show="isDetailOpen" 
+             x-transition:enter="ease-in-out duration-300" 
+             x-transition:enter-start="opacity-0" 
+             x-transition:enter-end="opacity-100" 
+             x-transition:leave="ease-in-out duration-300" 
+             x-transition:leave-start="opacity-100" 
+             x-transition:leave-end="opacity-0" 
+             class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm transition-opacity" 
+             @@click="closeDetail()"></div>
+
+        <div class="fixed inset-0 overflow-hidden pointer-events-none">
+            <div class="absolute inset-0 overflow-hidden">
+                <div class="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                    
+                    <!-- Panel -->
+                    <div x-show="isDetailOpen" 
+                         x-transition:enter="transform transition ease-in-out duration-300" 
+                         x-transition:enter-start="translate-x-full" 
+                         x-transition:enter-end="translate-x-0" 
+                         x-transition:leave="transform transition ease-in-out duration-300" 
+                         x-transition:leave-start="translate-x-0" 
+                         x-transition:leave-end="translate-x-full" 
+                         class="pointer-events-auto w-screen max-w-md">
+                        
+                        <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-2xl">
+                            <!-- Panel Header -->
+                            <div class="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between sticky top-0 z-10">
+                                <h2 class="text-lg font-bold text-gray-900" id="slide-over-title">Chi tiết Booking</h2>
+                                <button type="button" @@click="closeDetail()" class="rounded-full w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-gray-200 hover:text-gray-600 transition-colors">
+                                    <span class="material-symbols-outlined">close</span>
+                                </button>
+                            </div>
+                            
+                            <template x-if="selectedBooking">
+                                <div class="p-6 space-y-8" x-data="{ get b() { return selectedBooking; } }">
+                                    
+                                    <!-- Header Info -->
+                                    <div class="flex justify-between items-start">
+                                        <span class="font-mono text-sm font-bold text-gray-500" x-text="'#' + b.Id"></span>
+                                        <span x-show="b.Status === 'Pending'" class="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-xs font-bold">CHỜ DUYỆT</span>
+                                        <span x-show="b.Status === 'Confirmed'" class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">ĐÃ XÁC NHẬN</span>
+                                    </div>
+
+                                    <!-- THÔNG TIN KHÁCH -->
+                                    <div>
+                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Thông tin khách</h3>
+                                        <div class="flex items-center gap-4 bg-white border border-gray-100 shadow-sm rounded-xl p-4">
+                                            <img :src="b.TravelerAvatar" class="w-14 h-14 rounded-full object-cover border border-gray-200">
+                                            <div class="flex-grow">
+                                                <h4 class="font-bold text-gray-900 text-lg" x-text="b.TravelerName"></h4>
+                                                <p class="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
+                                                    <span class="material-symbols-outlined text-[16px] text-amber-400" style="font-variation-settings: 'FILL' 1;">star</span>
+                                                    <span x-text="b.TravelerRating"></span> • <span x-text="b.TravelerLocation"></span>
+                                                </p>
+                                            </div>
+                                            <a href="/Guide/Messages" class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center hover:bg-blue-100">
+                                                <span class="material-symbols-outlined text-[20px]">chat</span>
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <!-- CHI TIẾT ĐẶT LỊCH -->
+                                    <div>
+                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Chi tiết đặt lịch</h3>
+                                        <div class="bg-gray-50 rounded-xl p-5 space-y-4">
+                                            <div>
+                                                <p class="text-sm text-gray-500 mb-1">Gói trải nghiệm</p>
+                                                <p class="font-bold text-gray-900" x-text="b.TourName"></p>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <p class="text-sm text-gray-500 mb-1">Ngày đi</p>
+                                                    <p class="font-medium text-gray-900 flex items-center gap-1">
+                                                        <span class="material-symbols-outlined text-[16px] text-gray-400">calendar_month</span> <span x-text="b.Date"></span>
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm text-gray-500 mb-1">Giờ bắt đầu</p>
+                                                    <p class="font-medium text-gray-900 flex items-center gap-1">
+                                                        <span class="material-symbols-outlined text-[16px] text-gray-400">schedule</span> <span x-text="b.Time"></span>
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm text-gray-500 mb-1">Số khách</p>
+                                                    <p class="font-medium text-gray-900 flex items-center gap-1">
+                                                        <span class="material-symbols-outlined text-[16px] text-gray-400">group</span> <span x-text="b.Guests + ' người'"></span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div x-show="b.Note" class="pt-4 border-t border-gray-200">
+                                                <p class="text-sm text-gray-500 mb-1">Ghi chú của khách</p>
+                                                <p class="text-sm text-gray-800 italic" x-text="`&quot;${b.Note}&quot;`"></p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- THANH TOÁN -->
+                                    <div>
+                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Thanh toán</h3>
+                                        <div class="bg-white border border-green-100 rounded-xl p-5 shadow-sm">
+                                            <div class="space-y-3 text-sm">
+                                                <div class="flex justify-between text-gray-600">
+                                                    <span>Tổng tiền khách trả</span>
+                                                    <span class="font-medium" x-text="formatCurrency(b.TotalAmount)"></span>
+                                                </div>
+                                                <div class="flex justify-between text-red-500">
+                                                    <span>Phí nền tảng (15%)</span>
+                                                    <span x-text="'-' + formatCurrency(b.PlatformFee)"></span>
+                                                </div>
+                                                <div class="pt-3 border-t border-gray-100 flex justify-between items-center">
+                                                    <span class="font-bold text-gray-900">Bạn thực nhận</span>
+                                                    <span class="text-xl font-bold text-green-600" x-text="formatCurrency(b.NetEarnings)"></span>
+                                                </div>
+                                            </div>
+                                            <div class="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2 text-sm text-green-700 bg-green-50 p-3 rounded-lg">
+                                                <span class="material-symbols-outlined text-[18px]">verified_user</span>
+                                                <span class="font-medium">Đã thanh toán (Tạm giữ chờ tour xong)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- TIMELINE -->
+                                    <div>
+                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Tiến trình</h3>
+                                        <div class="relative pl-6 space-y-6">
+                                            <div class="absolute left-[7px] top-2 bottom-2 w-0.5 bg-gray-200"></div>
+                                            
+                                            <div class="relative">
+                                                <div class="absolute -left-6 w-3 h-3 bg-green-500 rounded-full ring-4 ring-white mt-1.5"></div>
+                                                <p class="text-sm font-bold text-gray-900">Khách đặt lịch</p>
+                                                <p class="text-xs text-gray-500">13/06/2026 10:23</p>
+                                            </div>
+                                            
+                                            <div class="relative">
+                                                <div class="absolute -left-6 w-3 h-3 rounded-full ring-4 ring-white mt-1.5" :class="b.Status === 'Pending' ? 'bg-amber-500' : 'bg-green-500'"></div>
+                                                <p class="text-sm font-bold text-gray-900" x-text="b.Status === 'Pending' ? 'Đang chờ bạn duyệt' : 'Bạn đã xác nhận'"></p>
+                                                <p class="text-xs text-gray-500" x-show="b.Status !== 'Pending'">13/06/2026 11:00</p>
+                                            </div>
+
+                                            <div class="relative opacity-50">
+                                                <div class="absolute -left-6 w-3 h-3 bg-gray-300 rounded-full ring-4 ring-white mt-1.5"></div>
+                                                <p class="text-sm font-bold text-gray-900">Hoàn thành tour</p>
+                                                <p class="text-xs text-gray-500">Dự kiến: <span x-text="b.Date"></span></p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Spacer for sticky footer -->
+                                    <div class="h-16"></div>
+
+                                </div>
+
+                                <!-- Sticky Footer Actions -->
+                                <template x-if="selectedBooking && selectedBooking.Status === 'Pending'">
+                                    <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex gap-3 z-20">
+                                        <button @@click="rejectBooking(selectedBooking.Id); closeDetail()" class="flex-1 py-3 bg-white border-2 border-red-100 text-red-600 rounded-xl font-bold hover:bg-red-50 transition-colors">
+                                            Từ chối
+                                        </button>
+                                        <button @@click="acceptBooking(selectedBooking.Id); closeDetail()" class="flex-2 py-3 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 transition-colors shadow-sm w-full">
+                                            Chấp nhận ngay
+                                        </button>
+                                    </div>
+                                </template>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function bookingsManager() {
+            return {
+                bookings: window.initialBookings || [],
+                currentTab: 'all',
+                searchQuery: '',
+                isDetailOpen: false,
+                selectedBooking: null,
+
+                get tabs() {
+                    return [
+                        { id: 'all', label: 'Tất cả', count: 0 },
+                        { id: 'Pending', label: 'Chờ duyệt', count: this.bookings.filter(b => b.Status === 'Pending').length },
+                        { id: 'Confirmed', label: 'Đã xác nhận', count: 0 },
+                        { id: 'Completed', label: 'Hoàn thành', count: 0 },
+                        { id: 'Cancelled', label: 'Đã hủy', count: 0 }
+                    ];
+                },
+
+                get filteredBookings() {
+                    return this.bookings.filter(b => {
+                        // Filter by tab
+                        if (this.currentTab !== 'all' && b.Status !== this.currentTab) return false;
+                        
+                        // Filter by search
+                        if (this.searchQuery) {
+                            const q = this.searchQuery.toLowerCase();
+                            return b.TravelerName.toLowerCase().includes(q) || 
+                                   b.Id.toLowerCase().includes(q) || 
+                                   b.TourName.toLowerCase().includes(q);
+                        }
+                        
+                        return true;
+                    });
+                },
+
+                init() {
+                    // Start countdown for pending bookings
+                    setInterval(() => {
+                        this.bookings.forEach(b => {
+                            if (b.Status === 'Pending' && b.SecondsRemaining > 0) {
+                                b.SecondsRemaining--;
+                            }
+                        });
+                    }, 1000);
+                },
+
+                formatCountdown(seconds) {
+                    if (seconds <= 0) return "Hết hạn";
+                    const h = Math.floor(seconds / 3600);
+                    const m = Math.floor((seconds % 3600) / 60);
+                    const s = seconds % 60;
+                    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+                },
+
+                formatCurrency(val) {
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+                },
+
+                openDetail(booking) {
+                    this.selectedBooking = booking;
+                    this.isDetailOpen = true;
+                    document.body.style.overflow = 'hidden'; // Prevent background scroll
+                },
+
+                closeDetail() {
+                    this.isDetailOpen = false;
+                    setTimeout(() => {
+                        this.selectedBooking = null;
+                        document.body.style.overflow = 'auto';
+                    }, 300);
+                },
+
+                acceptBooking(id) {
+                    const booking = this.bookings.find(b => b.Id === id);
+                    if (booking) {
+                        booking.Status = 'Confirmed';
+                        showToast('success', `Đã xác nhận booking ${id} thành công! Kênh chat đã được mở.`);
+                    }
+                },
+
+                rejectBooking(id) {
+                    if (confirm('Bạn có chắc chắn muốn từ chối booking này? Tiền sẽ được hoàn lại cho khách.')) {
+                        const booking = this.bookings.find(b => b.Id === id);
+                        if (booking) {
+                            booking.Status = 'Cancelled';
+                            showToast('info', `Đã từ chối booking ${id}.`);
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+}

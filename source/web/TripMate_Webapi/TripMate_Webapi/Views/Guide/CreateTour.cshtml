@@ -1,0 +1,267 @@
+@{
+    ViewData["Title"] = "Tạo Gói Trải Nghiệm Mới";
+    ViewData["ActivePage"] = "MyTours";
+    Layout = "_GuideLayout";
+}
+
+<div class="max-w-4xl mx-auto" x-data="createTourForm()">
+    <!-- Header -->
+    <div class="flex items-center gap-4 mb-8">
+        <a href="/Guide/MyTours" class="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:bg-gray-50 transition-colors shadow-sm">
+            <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+        </a>
+        <div>
+            <h2 class="text-3xl font-bold text-gray-900 mb-1">Tạo Gói Trải Nghiệm Mới</h2>
+            <p class="text-gray-500 text-sm">Điền thông tin chi tiết để bắt đầu nhận booking từ du khách.</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form @@submit.prevent="submitForm" class="space-y-8">
+        
+        <!-- THÔNG TIN CƠ BẢN -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary">info</span>
+                Thông Tin Cơ Bản
+            </h3>
+            
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Tên gói trải nghiệm <span class="text-red-500">*</span></label>
+                    <input type="text" x-model="formData.name" required minlength="10" maxlength="200"
+                           placeholder="VD: Khám phá phố cổ Hội An về đêm" 
+                           class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                    <p class="text-xs text-gray-400 mt-2 text-right" x-text="`${formData.name.length}/200 ký tự`"></p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Thời lượng (giờ) <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <input type="number" x-model="formData.duration" required min="0.5" max="24" step="0.5"
+                                   class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">giờ</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Số khách tối đa <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <input type="number" x-model="formData.maxGuests" required min="1" max="20"
+                                   class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">người</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Mô tả chi tiết <span class="text-red-500">*</span></label>
+                    <textarea x-model="formData.description" required minlength="100" rows="6"
+                              placeholder="Mô tả lộ trình, điểm dừng, giá trị mang lại cho khách..." 
+                              class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"></textarea>
+                    <p class="text-xs text-gray-400 mt-2 text-right">Tối thiểu 100 ký tự</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ĐỊNH GIÁ -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined text-green-600">payments</span>
+                Định Giá
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Giá mỗi buổi <span class="text-red-500">*</span></label>
+                    <div class="relative">
+                        <input type="number" x-model.number="formData.pricePerSession" required min="50000"
+                               class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-lg font-bold rounded-xl px-4 py-3 pl-10 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₫</span>
+                    </div>
+                    <div class="mt-4 p-4 bg-green-50 border border-green-100 rounded-xl">
+                        <div class="flex justify-between items-center text-sm mb-1">
+                            <span class="text-gray-600">Phí nền tảng (15%):</span>
+                            <span class="font-medium text-gray-800" x-text="formatCurrency(platformFee())"></span>
+                        </div>
+                        <div class="flex justify-between items-center border-t border-green-200 mt-2 pt-2">
+                            <span class="font-bold text-green-800">Doanh thu thực nhận:</span>
+                            <span class="text-lg font-bold text-green-700" x-text="formatCurrency(netEarnings())"></span>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Giá phụ thu theo người (Không bắt buộc)</label>
+                    <div class="relative mb-2">
+                        <input type="number" x-model.number="formData.pricePerGuest" min="0"
+                               class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 pl-10 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">₫</span>
+                    </div>
+                    <p class="text-xs text-gray-500">Sử dụng nếu bạn muốn thu thêm phí trên mỗi khách tham gia vượt quá 1 số lượng nhất định.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- DỊCH VỤ ĐÃ BAO GỒM -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <span class="material-symbols-outlined text-blue-500">done_all</span>
+                Dịch Vụ Đã Bao Gồm
+            </h3>
+            
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                <template x-for="service in availableServices" :key="service.id">
+                    <label class="flex items-center gap-3 p-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                        <input type="checkbox" :value="service.id" x-model="formData.includedServices"
+                               class="w-5 h-5 text-primary rounded border-gray-300 focus:ring-primary">
+                        <span class="text-sm font-medium text-gray-700" x-text="service.name"></span>
+                    </label>
+                </template>
+            </div>
+            
+            <div class="flex gap-3">
+                <input type="text" x-model="customService" placeholder="Thêm dịch vụ khác..." 
+                       class="flex-grow bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl px-4 py-2 focus:ring-2 focus:ring-primary/50 outline-none">
+                <button type="button" @@click="addCustomService()" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">
+                    + Thêm
+                </button>
+            </div>
+        </div>
+
+        <!-- TAGS TÌM KIẾM -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
+            <h3 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                <span class="material-symbols-outlined text-purple-500">sell</span>
+                Tags Tìm Kiếm
+            </h3>
+            <p class="text-sm text-gray-500 mb-6">Giúp du khách dễ dàng tìm thấy tour của bạn (Tối đa 5 tags)</p>
+            
+            <div class="flex flex-wrap gap-2 mb-4 p-4 min-h-[64px] bg-gray-50 border border-gray-200 rounded-xl">
+                <template x-for="tag in formData.tags" :key="tag">
+                    <span class="flex items-center gap-1 bg-white border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium shadow-sm">
+                        <span x-text="'#' + tag"></span>
+                        <button type="button" @@click="removeTag(tag)" class="text-gray-400 hover:text-red-500 ml-1">
+                            <span class="material-symbols-outlined text-[16px]">close</span>
+                        </button>
+                    </span>
+                </template>
+                <input type="text" x-model="tagInput" @@keydown.enter.prevent="addTag()" @@keydown.comma.prevent="addTag()"
+                       :disabled="formData.tags.length >= 5"
+                       placeholder="Nhập tag và nhấn Enter..." 
+                       class="bg-transparent border-none focus:ring-0 text-sm w-48 outline-none placeholder-gray-400 disabled:opacity-50">
+            </div>
+            
+            <div class="flex items-center gap-2 text-sm">
+                <span class="text-gray-500">Gợi ý:</span>
+                <div class="flex gap-2">
+                    <button type="button" @@click="addSuggestedTag('adventure')" class="text-primary hover:underline">#adventure</button>
+                    <button type="button" @@click="addSuggestedTag('photography')" class="text-primary hover:underline">#photography</button>
+                    <button type="button" @@click="addSuggestedTag('nightlife')" class="text-primary hover:underline">#nightlife</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="flex items-center justify-end gap-4 sticky bottom-6 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-gray-200 shadow-lg">
+            <button type="button" class="px-6 py-3 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+                Lưu Nháp
+            </button>
+            <button type="submit" class="px-8 py-3 rounded-xl font-bold bg-primary text-white hover:bg-primary-dark transition-colors shadow-sm flex items-center gap-2" :disabled="isSubmitting">
+                <span class="material-symbols-outlined text-[20px]" x-show="!isSubmitting">rocket_launch</span>
+                <span class="material-symbols-outlined text-[20px] animate-spin" x-show="isSubmitting">autorenew</span>
+                <span x-text="isSubmitting ? 'Đang xử lý...' : 'Đăng Gói Trải Nghiệm'"></span>
+            </button>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script>
+        function createTourForm() {
+            return {
+                isSubmitting: false,
+                tagInput: '',
+                customService: '',
+                
+                availableServices: [
+                    { id: 'scooter', name: 'Xe máy / Xe đạp' },
+                    { id: 'car', name: 'Ô tô đưa đón' },
+                    { id: 'breakfast', name: 'Ăn sáng' },
+                    { id: 'lunch', name: 'Ăn trưa/tối' },
+                    { id: 'water', name: 'Nước uống' },
+                    { id: 'ticket', name: 'Vé tham quan' },
+                ],
+                
+                formData: {
+                    name: '',
+                    duration: 4.5,
+                    maxGuests: 6,
+                    description: '',
+                    pricePerSession: 1200000,
+                    pricePerGuest: 0,
+                    includedServices: ['scooter', 'water'],
+                    tags: ['culture', 'food']
+                },
+
+                platformFee() {
+                    return this.formData.pricePerSession * 0.15;
+                },
+
+                netEarnings() {
+                    return this.formData.pricePerSession - this.platformFee();
+                },
+
+                formatCurrency(val) {
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val || 0);
+                },
+
+                addTag() {
+                    const tag = this.tagInput.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+                    if (tag && this.formData.tags.length < 5 && !this.formData.tags.includes(tag)) {
+                        this.formData.tags.push(tag);
+                    }
+                    this.tagInput = '';
+                },
+
+                addSuggestedTag(tag) {
+                    if (this.formData.tags.length < 5 && !this.formData.tags.includes(tag)) {
+                        this.formData.tags.push(tag);
+                    }
+                },
+
+                removeTag(tagToRemove) {
+                    this.formData.tags = this.formData.tags.filter(tag => tag !== tagToRemove);
+                },
+
+                addCustomService() {
+                    const s = this.customService.trim();
+                    if (s) {
+                        const id = 'custom_' + Date.now();
+                        this.availableServices.push({ id, name: s });
+                        this.formData.includedServices.push(id);
+                        this.customService = '';
+                    }
+                },
+
+                submitForm() {
+                    this.isSubmitting = true;
+                    // Validate
+                    if(this.formData.description.length < 100) {
+                        showToast('error', 'Mô tả chi tiết phải có ít nhất 100 ký tự!');
+                        this.isSubmitting = false;
+                        return;
+                    }
+                    
+                    // Simulate API POST
+                    setTimeout(() => {
+                        this.isSubmitting = false;
+                        showToast('success', 'Tạo gói trải nghiệm thành công!');
+                        setTimeout(() => {
+                            window.location.href = '/Guide/MyTours';
+                        }, 1500);
+                    }, 1000);
+                }
+            }
+        }
+    </script>
+}
