@@ -69,6 +69,9 @@ public class SupabaseAuthService
         if (session.User?.Id == null)
             throw new Exception("Đăng ký thất bại");
 
+        if (string.IsNullOrEmpty(session.AccessToken))
+            throw new Exception("Đăng ký thành công nhưng yêu cầu xác thực email. Vui lòng kiểm tra hộp thư của bạn.");
+
         // 2. Upsert profile vào bảng profiles với thông tin mở rộng
         await UpsertProfileAsync(session.AccessToken, session.User.Id, email, fullName, role, 
             phoneNumber, experience, specialization, languages, bio, certificatePath);

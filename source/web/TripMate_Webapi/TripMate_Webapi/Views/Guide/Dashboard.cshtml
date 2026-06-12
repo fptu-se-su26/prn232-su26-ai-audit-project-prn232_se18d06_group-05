@@ -1,338 +1,157 @@
 @model TripMate_Webapi.Controllers.GuideDashboardViewModel
 @{
-    ViewData["Title"] = "Guide Dashboard";
-    Layout = null;
+    ViewData["Title"] = "Dashboard";
+    ViewData["ActivePage"] = "Dashboard";
+    Layout = "_GuideLayout";
 }
 
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TripMate | Guide Portal</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#FF6B35',
-                        'primary-dark': '#E55A2B',
-                        secondary: '#004E89',
-                        accent: '#F7B801',
+<!-- Header Section -->
+<div class="flex justify-between items-end mb-8">
+    <div>
+        <h2 class="text-3xl font-bold text-gray-900 mb-2">Xin chào, @Model.GuideName! 👋</h2>
+        <p class="text-gray-600">Hôm nay là @DateTime.Now.ToString("dd/MM/yyyy"). Chúc bạn một ngày làm việc hiệu quả!</p>
+    </div>
+    <div class="flex gap-4">
+        <div class="bg-white border border-gray-200 px-4 py-2 rounded-lg flex items-center gap-2 text-gray-600 shadow-sm">
+            <span class="material-symbols-outlined text-primary">calendar_today</span>
+            <span class="text-sm font-medium">@Model.DateRange</span>
+        </div>
+        <button class="bg-white text-gray-900 px-6 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors border border-gray-200 shadow-sm flex items-center gap-2">
+            <span class="material-symbols-outlined">download</span> Báo cáo
+        </button>
+    </div>
+</div>
+
+<!-- Metrics Grid -->
+<div class="grid grid-cols-12 gap-6 mb-8">
+    <!-- Total Earnings Card -->
+    <div class="col-span-12 lg:col-span-6 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+        <div class="flex justify-between items-start">
+            <div>
+                <p class="text-sm font-medium text-gray-500 mb-2 uppercase tracking-wider">Tổng thu nhập tháng này</p>
+                <h3 class="text-4xl font-bold text-gray-900 mb-2">₫@Model.TotalEarnings.ToString("N0")</h3>
+                <p class="text-green-600 text-sm font-medium flex items-center gap-1 bg-green-50 w-max px-2 py-1 rounded-md">
+                    <span class="material-symbols-outlined text-[16px]">trending_up</span>
+                    +@Model.EarningsGrowth% so với tháng trước
+                </p>
+            </div>
+            <div class="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center text-primary">
+                <span class="material-symbols-outlined text-[28px]">payments</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Tours -->
+    <div class="col-span-12 md:col-span-6 lg:col-span-3 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+        <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 mb-4">
+            <span class="material-symbols-outlined">tour</span>
+        </div>
+        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Tours Hoạt Động</p>
+        <h3 class="text-3xl font-bold text-gray-900 mt-1">@Model.ActiveTours</h3>
+        <p class="text-xs mt-2 text-gray-500">Đang hiển thị trên app</p>
+    </div>
+
+    <!-- Total Bookings -->
+    <div class="col-span-12 md:col-span-6 lg:col-span-3 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+        <div class="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center text-green-600 mb-4">
+            <span class="material-symbols-outlined">calendar_month</span>
+        </div>
+        <p class="text-sm font-medium text-gray-500 uppercase tracking-wider">Tổng Bookings</p>
+        <h3 class="text-3xl font-bold text-gray-900 mt-1">@Model.TotalBookings</h3>
+        <div class="mt-3 w-full bg-gray-100 rounded-full h-1.5">
+            <div class="bg-green-500 h-1.5 rounded-full" style="width: @Model.BookingProgress%"></div>
+        </div>
+        <p class="text-xs mt-2 text-gray-500">Đạt @Model.BookingProgress% mục tiêu tháng</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-12 gap-8">
+    <!-- Recent Bookings List -->
+    <section class="col-span-12 lg:col-span-8">
+        <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+            <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <h4 class="text-lg font-bold text-gray-900">Bookings Gần Đây</h4>
+                <a href="/Guide/Bookings" class="text-sm font-medium text-primary hover:text-primary-dark flex items-center gap-1">
+                    Xem tất cả <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                </a>
+            </div>
+            <div class="p-0">
+                @if (Model.RecentBookings != null && Model.RecentBookings.Any())
+                {
+                    @foreach (var booking in Model.RecentBookings)
+                    {
+                        <div class="flex items-center px-6 py-4 border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                            <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0 text-primary">
+                                <span class="material-symbols-outlined text-[20px]">person</span>
+                            </div>
+                            <div class="ml-4 flex-grow">
+                                <p class="font-bold text-gray-900 text-sm">@booking.TravelerName</p>
+                                <p class="text-xs text-gray-500 mt-0.5">@booking.TourName</p>
+                            </div>
+                            <div class="hidden md:block px-6">
+                                <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Ngày đi</p>
+                                <p class="text-sm font-medium text-gray-800">@booking.Date</p>
+                            </div>
+                            <div class="hidden md:block px-6">
+                                <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Thu về</p>
+                                <p class="text-sm font-bold text-green-600">₫@booking.Amount.ToString("N0")</p>
+                            </div>
+                            <div class="pl-4">
+                                @if (booking.Status == "Confirmed")
+                                {
+                                    <span class="px-2.5 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-100">Đã xác nhận</span>
+                                }
+                                else if (booking.Status == "Pending")
+                                {
+                                    <span class="px-2.5 py-1 bg-amber-50 text-amber-700 rounded-lg text-xs font-bold border border-amber-100">Chờ duyệt</span>
+                                }
+                                else
+                                {
+                                    <span class="px-2.5 py-1 bg-gray-50 text-gray-700 rounded-lg text-xs font-bold border border-gray-200">@booking.Status</span>
+                                }
+                            </div>
+                        </div>
                     }
                 }
-            }
-        }
-    </script>
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(226, 232, 240, 0.5);
-        }
-    </style>
-</head>
-<body class="bg-gray-50">
-    <!-- Side Navigation Bar -->
-    <aside class="fixed left-0 top-0 h-screen w-[280px] bg-white border-r border-gray-200 flex flex-col py-8 pr-4 z-50">
-        <div class="px-6 mb-10">
-            <div class="flex items-center gap-3 mb-2">
-                <img src="/images/AVATAR.png" alt="TripMate" class="w-10 h-10 rounded-full">
-                <h1 class="text-2xl font-bold text-primary">TripMate</h1>
+                else
+                {
+                    <div class="text-center py-12 text-gray-500 flex flex-col items-center">
+                        <span class="material-symbols-outlined text-4xl text-gray-300 mb-2">inbox</span>
+                        <p>Chưa có booking nào gần đây</p>
+                    </div>
+                }
             </div>
-            <p class="text-sm text-gray-600">Guide Portal</p>
         </div>
+    </section>
 
-        <nav class="flex-grow flex flex-col gap-1">
-            <a class="flex items-center gap-4 px-6 py-3 bg-orange-100 text-primary border-l-4 border-primary rounded-r-full my-1 font-medium transition-all duration-200" href="/Guide/Dashboard">
-                <span class="material-symbols-outlined">dashboard</span>
-                <span>Dashboard</span>
-            </a>
-            <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="#">
-                <span class="material-symbols-outlined">tour</span>
-                <span>My Tours</span>
-            </a>
-            <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="#">
-                <span class="material-symbols-outlined">calendar_month</span>
-                <span>Bookings</span>
-            </a>
-            <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="#">
-                <span class="material-symbols-outlined">chat</span>
-                <span>Messages</span>
-            </a>
-            <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="#">
-                <span class="material-symbols-outlined">star</span>
-                <span>Reviews</span>
-            </a>
-            <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="#">
-                <span class="material-symbols-outlined">payments</span>
-                <span>Earnings</span>
-            </a>
-        </nav>
+    <!-- Recent Activity Timeline -->
+    <aside class="col-span-12 lg:col-span-4">
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 sticky top-24">
+            <h4 class="text-lg font-bold text-gray-900 mb-6">Hoạt động mới nhất</h4>
+            <div class="space-y-6 relative">
+                <div class="absolute left-[15px] top-2 bottom-2 w-0.5 bg-gray-100"></div>
 
-        <div class="px-4 mt-auto">
-            <button class="w-full bg-primary text-white py-3 rounded-xl font-medium flex items-center justify-center gap-2 shadow-lg hover:bg-primary-dark transition-all">
-                <span class="material-symbols-outlined">add</span>
-                Create Tour
-            </button>
-
-            <div class="mt-6 flex flex-col gap-1">
-                <a class="flex items-center gap-4 px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-r-full font-medium" href="#">
-                    <span class="material-symbols-outlined">person</span>
-                    <span>Profile</span>
-                </a>
-                <a class="flex items-center gap-4 px-6 py-2 text-gray-600 hover:bg-gray-100 rounded-r-full font-medium" href="/">
-                    <span class="material-symbols-outlined">home</span>
-                    <span>Back to Home</span>
-                </a>
+                @foreach (var activity in Model.RecentActivities)
+                {
+                    <div class="relative flex gap-4">
+                        <div class="w-8 h-8 rounded-full @activity.IconBgClass flex items-center justify-center @activity.IconTextClass z-10 shadow-sm ring-4 ring-white">
+                            <span class="material-symbols-outlined text-[16px]">@activity.Icon</span>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900 text-sm">@activity.Title</p>
+                            <p class="text-xs text-gray-500 mt-0.5">@activity.Description</p>
+                            <p class="text-[11px] font-medium text-gray-400 mt-1">@activity.TimeAgo</p>
+                        </div>
+                    </div>
+                }
             </div>
 
-            <div class="mt-6 px-4 py-4 flex items-center gap-3 border-t border-gray-200">
-                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                    <span class="material-symbols-outlined text-primary">badge</span>
-                </div>
-                <div class="flex-1">
-                    <p class="font-medium text-gray-900">@Model.GuideName</p>
-                    <p class="text-xs text-gray-500">@Model.GuideRole</p>
-                </div>
-                <button onclick="logout()" class="p-2 hover:bg-red-50 rounded-lg transition-all group" title="Đăng xuất">
-                    <span class="material-symbols-outlined text-gray-400 group-hover:text-red-600">logout</span>
+            <!-- Quick Action -->
+            <div class="mt-8 pt-6 border-t border-gray-100">
+                <button class="w-full bg-primary hover:bg-primary-dark text-white rounded-xl py-3 font-medium transition-colors flex justify-center items-center gap-2 shadow-sm">
+                    <span class="material-symbols-outlined text-[20px]">add</span> Tạo Tour Mới
                 </button>
             </div>
         </div>
     </aside>
-
-    <!-- Main Content Area -->
-    <main class="ml-[280px] min-h-screen p-12 bg-gray-50">
-        <!-- Header Section -->
-        <header class="flex justify-between items-end mb-12">
-            <div>
-                <h2 class="text-5xl font-bold text-gray-900 mb-2">Welcome Back!</h2>
-                <p class="text-lg text-gray-600">Here's what's happening with your tours today.</p>
-            </div>
-            <div class="flex gap-4">
-                <div class="glass-panel px-4 py-2 rounded-lg flex items-center gap-2 text-gray-600">
-                    <span class="material-symbols-outlined text-primary">calendar_today</span>
-                    <span class="text-sm font-medium">@Model.DateRange</span>
-                </div>
-                <button class="bg-white text-gray-900 px-6 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors border border-gray-200">
-                    Download Report
-                </button>
-            </div>
-        </header>
-
-        <!-- Metrics Grid -->
-        <div class="grid grid-cols-12 gap-8 mb-12">
-            <!-- Total Earnings Card -->
-            <div class="col-span-12 lg:col-span-6 bg-white rounded-2xl p-8 shadow-sm hover:-translate-y-1 transition-transform duration-300">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-sm text-gray-600 mb-2">Total Earnings</p>
-                        <h3 class="text-5xl font-bold text-primary mb-2">₫@Model.TotalEarnings.ToString("N0")</h3>
-                        <p class="text-green-600 font-medium flex items-center gap-1">
-                            <span class="material-symbols-outlined text-sm">trending_up</span>
-                            +@Model.EarningsGrowth% from last month
-                        </p>
-                    </div>
-                    <div class="w-48 h-24 bg-orange-50 rounded-lg relative overflow-hidden">
-                        <svg class="absolute bottom-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 40">
-                            <path d="M0,35 C10,30 20,38 30,25 C40,12 50,20 60,10 C70,0 80,15 90,5 L100,2" fill="none" stroke="#FF6B35" stroke-width="2"></path>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Active Tours -->
-            <div class="col-span-12 md:col-span-6 lg:col-span-3 bg-white rounded-2xl p-6 shadow-sm hover:-translate-y-1 transition-transform duration-300">
-                <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
-                    <span class="material-symbols-outlined">tour</span>
-                </div>
-                <p class="text-sm text-gray-600">Active Tours</p>
-                <h3 class="text-4xl font-bold text-gray-900 mt-2">@Model.ActiveTours</h3>
-                <p class="text-xs mt-4 text-gray-600">Tours currently available</p>
-            </div>
-
-            <!-- Total Bookings -->
-            <div class="col-span-12 md:col-span-6 lg:col-span-3 bg-white rounded-2xl p-6 shadow-sm hover:-translate-y-1 transition-transform duration-300">
-                <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 mb-4">
-                    <span class="material-symbols-outlined">calendar_month</span>
-                </div>
-                <p class="text-sm text-gray-600">Total Bookings</p>
-                <h3 class="text-4xl font-bold text-gray-900 mt-2">@Model.TotalBookings</h3>
-                <div class="mt-4 w-full bg-gray-200 rounded-full h-2">
-                    <div class="bg-green-500 h-2 rounded-full" style="width: @Model.BookingProgress%"></div>
-                </div>
-                <p class="text-xs mt-2 text-gray-600">@Model.BookingProgress% of monthly goal</p>
-            </div>
-
-            <!-- Average Rating -->
-            <div class="col-span-12 md:col-span-6 lg:col-span-6 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl p-6 shadow-lg text-white">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-white/90 mb-2">Average Rating</p>
-                        <div class="flex items-center gap-2">
-                            <h3 class="text-5xl font-bold">@Model.AverageRating.ToString("F1")</h3>
-                            <div class="flex">
-                                @for (int i = 0; i < 5; i++)
-                                {
-                                    <span class="material-symbols-outlined text-white" style="font-variation-settings: 'FILL' 1;">star</span>
-                                }
-                            </div>
-                        </div>
-                        <p class="text-sm text-white/90 mt-2">Based on 156 reviews</p>
-                    </div>
-                    <div class="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
-                        <span class="material-symbols-outlined text-6xl">emoji_events</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Stats -->
-            <div class="col-span-12 md:col-span-6 lg:col-span-6 bg-white rounded-2xl p-6 shadow-sm">
-                <h4 class="text-lg font-bold text-gray-900 mb-4">Quick Stats</h4>
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-blue-600">visibility</span>
-                            </div>
-                            <span class="text-gray-700">Profile Views</span>
-                        </div>
-                        <span class="font-bold text-gray-900">1,234</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-green-600">check_circle</span>
-                            </div>
-                            <span class="text-gray-700">Completed Tours</span>
-                        </div>
-                        <span class="font-bold text-gray-900">89</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-purple-600">repeat</span>
-                            </div>
-                            <span class="text-gray-700">Repeat Customers</span>
-                        </div>
-                        <span class="font-bold text-gray-900">34</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="grid grid-cols-12 gap-8">
-            <!-- Recent Bookings List -->
-            <section class="col-span-12 lg:col-span-8">
-                <div class="bg-white rounded-2xl overflow-hidden shadow-sm">
-                    <div class="px-8 py-6 border-b border-gray-200 flex justify-between items-center">
-                        <h4 class="text-2xl font-bold text-gray-900">Recent Bookings</h4>
-                        <span class="bg-green-100 text-green-700 px-4 py-1 rounded-full font-medium text-sm">@Model.RecentBookings.Count New</span>
-                    </div>
-                    <div class="p-0">
-                        @if (Model.RecentBookings != null && Model.RecentBookings.Any())
-                        {
-                            @foreach (var booking in Model.RecentBookings)
-                            {
-                                <div class="flex items-center px-8 py-6 border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                                    <div class="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                                        <span class="material-symbols-outlined text-primary">person</span>
-                                    </div>
-                                    <div class="ml-6 flex-grow">
-                                        <p class="font-medium text-gray-900">@booking.TravelerName</p>
-                                        <p class="text-sm text-gray-600">@booking.TourName</p>
-                                    </div>
-                                    <div class="hidden md:block px-6">
-                                        <p class="text-xs text-gray-600 mb-1">Date</p>
-                                        <p class="font-medium">@booking.Date</p>
-                                    </div>
-                                    <div class="hidden md:block px-6">
-                                        <p class="text-xs text-gray-600 mb-1">Amount</p>
-                                        <p class="font-medium">₫@booking.Amount.ToString("N0")</p>
-                                    </div>
-                                    <div>
-                                        @if (booking.Status == "Confirmed")
-                                        {
-                                            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">Confirmed</span>
-                                        }
-                                        else if (booking.Status == "Pending")
-                                        {
-                                            <span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">Pending</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">@booking.Status</span>
-                                        }
-                                    </div>
-                                </div>
-                            }
-                        }
-                        else
-                        {
-                            <div class="text-center py-12 text-gray-600">No recent bookings</div>
-                        }
-                    </div>
-                    <div class="p-4 bg-gray-50 text-center">
-                        <button class="text-primary font-medium hover:underline transition-all">View All Bookings</button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Recent Activity Timeline -->
-            <aside class="col-span-12 lg:col-span-4">
-                <div class="bg-white rounded-2xl p-8 shadow-sm sticky top-12">
-                    <h4 class="text-2xl font-bold text-gray-900 mb-8">Recent Activity</h4>
-                    <div class="space-y-8 relative">
-                        <div class="absolute left-3.5 top-2 bottom-2 w-0.5 bg-gray-200"></div>
-
-                        @foreach (var activity in Model.RecentActivities)
-                        {
-                            <div class="relative flex gap-6">
-                                <div class="w-8 h-8 rounded-full @activity.IconBgClass flex items-center justify-center @activity.IconTextClass z-10">
-                                    <span class="material-symbols-outlined text-sm">@activity.Icon</span>
-                                </div>
-                                <div>
-                                    <p class="font-medium text-gray-900">@activity.Title</p>
-                                    <p class="text-sm text-gray-600 mb-1">@activity.Description</p>
-                                    <p class="text-xs text-gray-500">@activity.TimeAgo</p>
-                                </div>
-                            </div>
-                        }
-                    </div>
-
-                    <div class="mt-10 p-6 bg-orange-50 rounded-xl border border-orange-200">
-                        <p class="font-medium text-primary mb-2">Guide Tip</p>
-                        <p class="text-sm text-gray-700 leading-relaxed">
-                            Update your tour availability for the upcoming holiday season to maximize bookings!
-                        </p>
-                    </div>
-                </div>
-            </aside>
-        </div>
-    </main>
-
-    <script>
-        // Logout function
-        function logout() {
-            if (confirm('Bạn có chắc muốn đăng xuất?')) {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                localStorage.removeItem('userEmail');
-                localStorage.removeItem('userId');
-                localStorage.removeItem('userRole');
-                localStorage.removeItem('surveyCompleted');
-                localStorage.removeItem('personalityProfile');
-                window.location.href = '/Auth/Login';
-            }
-        }
-    </script>
-</body>
-</html>
+</div>
