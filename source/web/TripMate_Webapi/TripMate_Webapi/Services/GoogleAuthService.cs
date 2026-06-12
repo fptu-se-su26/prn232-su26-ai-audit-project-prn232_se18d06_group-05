@@ -95,10 +95,10 @@ namespace TripMate_WebAPI.Services
                         session.User.Id,
                         session.User.Email,
                         user?.FullName ?? session.User.UserMetadata?.Name ?? session.User.Email.Split('@')[0],
-                        user?.Phone,
+                        user?.PhoneNumber,
                         session.User.UserMetadata?.AvatarUrl ?? session.User.UserMetadata?.Picture,
                         user?.Role ?? "traveler",
-                        user?.Status ?? "active",
+                        user?.IsActive ?? true,
                         session.User.CreatedAt ?? DateTime.UtcNow
                     )
                 );

@@ -1,11 +1,11 @@
 namespace TripMate_WebAPI.DTOs.Survey;
 
 /// <summary>
-/// Tour rating summary
+/// Guide rating summary (was: TourRatingDto)
 /// </summary>
 public record TourRatingDto(
-    string TourId,
-    string TourTitle,
+    string GuideProfileId,      // was: TourId
+    string GuideName,           // was: TourTitle
     double Rating,
     int TotalReviews
 );

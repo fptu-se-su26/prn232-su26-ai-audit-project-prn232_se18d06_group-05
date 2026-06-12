@@ -3,11 +3,14 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-using TripMate_WebAPI.Services;
+using TripMate_WebAPI.DTOs.Auth;
 
 namespace TripMate_WebAPI.Services;
 
-/// Gọi Supabase REST API để thao tác bảng tours
+/// <summary>
+/// Manages experience_packages table via Supabase REST API.
+/// Refactored to match database_setup.sql schema.
+/// </summary>
 public class TourService
 {
     private readonly HttpClient _http;
@@ -27,158 +30,119 @@ public class TourService
         _anonKey = config["Supabase:AnonKey"]!;
     }
 
-    // ── GET /tours ────────────────────────────────────────────────────────────
+    // ── GET all packages ──────────────────────────────────────────────────────
 
-    public async Task<List<TourRow>> GetToursAsync(string? location = null, string? search = null)
+    public async Task<List<ExperiencePackageRow>> GetToursAsync(string? search = null)
     {
-        // Updated to use guide_tours joined with tour_templates
-        var query = $"{_supabaseUrl}/rest/v1/guide_tours?status=eq.active&order=rating.desc&select=*,tour_templates(title,description,location,images,created_at),profiles(full_name)";
-
-        if (!string.IsNullOrWhiteSpace(location))
-            query += $"&tour_templates.location=ilike.*{Uri.EscapeDataString(location)}*";
+        var query = $"{_supabaseUrl}/rest/v1/experience_packages" +
+                    $"?is_active=eq.true&order=created_at.desc" +
+                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,profiles(full_name))";
 
         if (!string.IsNullOrWhiteSpace(search))
-            query += $"&or=(tour_templates.title.ilike.*{Uri.EscapeDataString(search)}*,tour_templates.location.ilike.*{Uri.EscapeDataString(search)}*)";
+            query += $"&or=(title.ilike.*{Uri.EscapeDataString(search)}*,description.ilike.*{Uri.EscapeDataString(search)}*)";
 
-        var rows = await GetAsync<List<GuideTourRow>>(query);
-        return rows?.Select(MapGuideTourToTourRow).ToList() ?? [];
+        return await GetAsync<List<ExperiencePackageRow>>(query) ?? [];
     }
 
-    // ── GET /tours/{id} ───────────────────────────────────────────────────────
+    // ── GET package by ID ─────────────────────────────────────────────────────
 
-    public async Task<TourRow?> GetTourByIdAsync(string id)
+    public async Task<ExperiencePackageRow?> GetTourByIdAsync(string id)
     {
-        var query = $"{_supabaseUrl}/rest/v1/guide_tours?id=eq.{id}&select=*,tour_templates(title,description,location,images,created_at),profiles(full_name)";
-        var rows = await GetAsync<List<GuideTourRow>>(query);
-        return rows?.FirstOrDefault() != null ? MapGuideTourToTourRow(rows.First()) : null;
+        var query = $"{_supabaseUrl}/rest/v1/experience_packages" +
+                    $"?id=eq.{id}" +
+                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,profiles(full_name))";
+
+        var rows = await GetAsync<List<ExperiencePackageRow>>(query);
+        return rows?.FirstOrDefault();
     }
 
-    // ── POST /tours ───────────────────────────────────────────────────────────
+    // ── GET packages by guide ─────────────────────────────────────────────────
 
-    public async Task<TourRow> CreateTourAsync(string guideId, CreateTourRequest req, string userToken)
+    public async Task<List<ExperiencePackageRow>> GetToursByGuideAsync(string guideProfileId)
     {
-        // First create or find tour template
-        var templateId = await CreateOrFindTourTemplateAsync(req, userToken);
-        
-        // Then create guide tour
+        var query = $"{_supabaseUrl}/rest/v1/experience_packages" +
+                    $"?guide_profile_id=eq.{guideProfileId}" +
+                    $"&order=created_at.desc" +
+                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,profiles(full_name))";
+
+        return await GetAsync<List<ExperiencePackageRow>>(query) ?? [];
+    }
+
+    // ── POST create package ───────────────────────────────────────────────────
+
+    public async Task<ExperiencePackageRow> CreateTourAsync(
+        string guideProfileId, CreateTourRequest req, string userToken)
+    {
         var body = new
         {
-            tour_template_id = templateId,
-            guide_id = guideId,
-            price = req.Price,
-            duration_hours = req.DurationHours,
-            max_participants = req.MaxParticipants,
-            status = "active",
-        };
-
-        var request = BuildRequest(HttpMethod.Post, $"{_supabaseUrl}/rest/v1/guide_tours", userToken);
-        request.Headers.Add("Prefer", "return=representation");
-        request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-
-        var response = await _http.SendAsync(request);
-        var content = await response.Content.ReadAsStringAsync();
-        EnsureSuccess(response, content);
-
-        var rows = JsonSerializer.Deserialize<List<GuideTourRow>>(content, _json);
-        var guideTour = rows?.FirstOrDefault() ?? throw new Exception("Tạo tour thất bại");
-        
-        // Get full tour data with template info
-        return await GetTourByIdAsync(guideTour.Id!) ?? throw new Exception("Không thể lấy thông tin tour vừa tạo");
-    }
-
-    private async Task<string> CreateOrFindTourTemplateAsync(CreateTourRequest req, string userToken)
-    {
-        // Check if template exists
-        var existingQuery = $"{_supabaseUrl}/rest/v1/tour_templates?title=eq.{Uri.EscapeDataString(req.Title)}&location=eq.{Uri.EscapeDataString(req.Location)}";
-        var existing = await GetAsync<List<TourTemplateRow>>(existingQuery);
-        
-        if (existing?.Any() == true)
-        {
-            return existing.First().Id!;
-        }
-
-        // Create new template
-        var templateBody = new
-        {
+            guide_profile_id = guideProfileId,
             title = req.Title,
             description = req.Description,
-            location = req.Location,
-            images = req.Images ?? []
+            duration_hours = req.DurationHours,
+            price_per_session = req.PricePerSession,
+            price_per_person = req.PricePerPerson,
+            max_group_size = req.MaxGroupSize,
+            included_items = req.IncludedItems ?? new List<string>(),
+            tags = req.Tags ?? new List<string>(),
+            is_active = true,
         };
 
-        var request = BuildRequest(HttpMethod.Post, $"{_supabaseUrl}/rest/v1/tour_templates", userToken);
+        var request = BuildRequest(HttpMethod.Post,
+            $"{_supabaseUrl}/rest/v1/experience_packages", userToken);
         request.Headers.Add("Prefer", "return=representation");
-        request.Content = new StringContent(JsonSerializer.Serialize(templateBody), Encoding.UTF8, "application/json");
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
         var response = await _http.SendAsync(request);
         var content = await response.Content.ReadAsStringAsync();
         EnsureSuccess(response, content);
 
-        var templates = JsonSerializer.Deserialize<List<TourTemplateRow>>(content, _json);
-        return templates?.FirstOrDefault()?.Id ?? throw new Exception("Tạo template thất bại");
+        var rows = JsonSerializer.Deserialize<List<ExperiencePackageRow>>(content, _json);
+        var created = rows?.FirstOrDefault() ?? throw new Exception("Tạo gói trải nghiệm thất bại");
+
+        // Fetch full data with guide join
+        return await GetTourByIdAsync(created.Id!) ?? created;
     }
 
-    // ── PATCH /tours/{id} ─────────────────────────────────────────────────────
+    // ── PATCH update package ──────────────────────────────────────────────────
 
-    public async Task<TourRow> UpdateTourAsync(string tourId, UpdateTourRequest req, string userToken)
+    public async Task<ExperiencePackageRow> UpdateTourAsync(
+        string packageId, UpdateTourRequest req, string userToken)
     {
-        // Get current guide tour to access template
-        var currentTour = await GetTourByIdAsync(tourId);
-        if (currentTour == null)
-            throw new Exception("Tour không tồn tại");
+        var updates = new Dictionary<string, object?>();
+        if (req.Title != null) updates["title"] = req.Title;
+        if (req.Description != null) updates["description"] = req.Description;
+        if (req.DurationHours.HasValue) updates["duration_hours"] = req.DurationHours;
+        if (req.PricePerSession.HasValue) updates["price_per_session"] = req.PricePerSession;
+        if (req.PricePerPerson.HasValue) updates["price_per_person"] = req.PricePerPerson;
+        if (req.MaxGroupSize.HasValue) updates["max_group_size"] = req.MaxGroupSize;
+        if (req.IncludedItems != null) updates["included_items"] = req.IncludedItems;
+        if (req.Tags != null) updates["tags"] = req.Tags;
+        if (req.IsActive.HasValue) updates["is_active"] = req.IsActive;
 
-        // Update guide tour fields
-        var guideTourUpdates = new Dictionary<string, object?>();
-        if (req.Price.HasValue) guideTourUpdates["price"] = req.Price;
-        if (req.DurationHours.HasValue) guideTourUpdates["duration_hours"] = req.DurationHours;
-        if (req.MaxParticipants.HasValue) guideTourUpdates["max_participants"] = req.MaxParticipants;
-        if (req.Status != null) guideTourUpdates["status"] = req.Status;
+        if (updates.Count == 0)
+            return await GetTourByIdAsync(packageId) ?? throw new Exception("Gói trải nghiệm không tồn tại");
 
-        if (guideTourUpdates.Count > 0)
-        {
-            var request = BuildRequest(HttpMethod.Patch, $"{_supabaseUrl}/rest/v1/guide_tours?id=eq.{tourId}", userToken);
-            request.Headers.Add("Prefer", "return=representation");
-            request.Content = new StringContent(JsonSerializer.Serialize(guideTourUpdates), Encoding.UTF8, "application/json");
+        var request = BuildRequest(HttpMethod.Patch,
+            $"{_supabaseUrl}/rest/v1/experience_packages?id=eq.{packageId}", userToken);
+        request.Headers.Add("Prefer", "return=representation");
+        request.Content = new StringContent(
+            JsonSerializer.Serialize(updates), Encoding.UTF8, "application/json");
 
-            var response = await _http.SendAsync(request);
-            var content = await response.Content.ReadAsStringAsync();
-            EnsureSuccess(response, content);
-        }
+        var response = await _http.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+        EnsureSuccess(response, content);
 
-        // Update template fields if needed
-        var templateUpdates = new Dictionary<string, object?>();
-        if (req.Title != null) templateUpdates["title"] = req.Title;
-        if (req.Description != null) templateUpdates["description"] = req.Description;
-        if (req.Location != null) templateUpdates["location"] = req.Location;
-        if (req.Images != null) templateUpdates["images"] = req.Images;
-
-        if (templateUpdates.Count > 0)
-        {
-            // Get template ID from current tour
-            var templateQuery = $"{_supabaseUrl}/rest/v1/guide_tours?id=eq.{tourId}&select=tour_template_id";
-            var templateResponse = await GetAsync<List<dynamic>>(templateQuery);
-            var templateId = templateResponse?.FirstOrDefault()?.GetProperty("tour_template_id").GetString();
-
-            if (!string.IsNullOrEmpty(templateId))
-            {
-                var request = BuildRequest(HttpMethod.Patch, $"{_supabaseUrl}/rest/v1/tour_templates?id=eq.{templateId}", userToken);
-                request.Content = new StringContent(JsonSerializer.Serialize(templateUpdates), Encoding.UTF8, "application/json");
-
-                var response = await _http.SendAsync(request);
-                var content = await response.Content.ReadAsStringAsync();
-                EnsureSuccess(response, content);
-            }
-        }
-
-        // Return updated tour
-        return await GetTourByIdAsync(tourId) ?? throw new Exception("Cập nhật tour thất bại");
+        return await GetTourByIdAsync(packageId)
+            ?? throw new Exception("Cập nhật gói trải nghiệm thất bại");
     }
 
-    // ── DELETE /tours/{id} ────────────────────────────────────────────────────
+    // ── DELETE package ────────────────────────────────────────────────────────
 
-    public async Task DeleteTourAsync(string tourId, string userToken)
+    public async Task DeleteTourAsync(string packageId, string userToken)
     {
-        var request = BuildRequest(HttpMethod.Delete, $"{_supabaseUrl}/rest/v1/guide_tours?id=eq.{tourId}", userToken);
+        var request = BuildRequest(HttpMethod.Delete,
+            $"{_supabaseUrl}/rest/v1/experience_packages?id=eq.{packageId}", userToken);
         var response = await _http.SendAsync(request);
         var content = await response.Content.ReadAsStringAsync();
         EnsureSuccess(response, content);
@@ -199,8 +163,6 @@ public class TourService
     {
         var request = new HttpRequestMessage(method, url);
         request.Headers.Add("apikey", _anonKey);
-        // Dùng JWT của user cho write ops để RLS nhận diện được auth.uid()
-        // Dùng anonKey cho read ops (public)
         request.Headers.Authorization = new AuthenticationHeaderValue(
             "Bearer", userToken ?? _anonKey);
         request.Headers.Add("Accept", "application/json");
@@ -213,90 +175,75 @@ public class TourService
             throw new Exception($"Supabase error {response.StatusCode}: {content}");
     }
 
-    // ── Mapping methods ───────────────────────────────────────────────────────
+    // ── Mapping ───────────────────────────────────────────────────────────────
 
-    private static TourRow MapGuideTourToTourRow(GuideTourRow guideTour)
+    public static TourDto MapToDto(ExperiencePackageRow row)
     {
-        return new TourRow
-        {
-            Id = guideTour.Id,
-            GuideId = guideTour.GuideId,
-            Title = guideTour.TourTemplate?.Title,
-            Description = guideTour.TourTemplate?.Description,
-            Location = guideTour.TourTemplate?.Location,
-            Price = guideTour.Price,
-            DurationHours = guideTour.DurationHours,
-            MaxParticipants = guideTour.MaxParticipants,
-            Images = guideTour.TourTemplate?.Images,
-            Rating = guideTour.Rating,
-            TotalReviews = guideTour.TotalReviews,
-            Status = guideTour.Status,
-            CreatedAt = guideTour.TourTemplate?.CreatedAt ?? DateTime.UtcNow,
-            UpdatedAt = guideTour.TourTemplate?.CreatedAt ?? DateTime.UtcNow
-        };
+        var guideName = row.GuideProfile?.Profile?.FullName;
+
+        return new TourDto(
+            Id: row.Id ?? "",
+            GuideProfileId: row.GuideProfileId ?? "",
+            GuideName: guideName,
+            Title: row.Title ?? "",
+            Description: row.Description ?? "",
+            DurationHours: row.DurationHours,
+            PricePerSession: row.PricePerSession,
+            PricePerPerson: row.PricePerPerson,
+            MaxGroupSize: row.MaxGroupSize,
+            IncludedItems: row.IncludedItems ?? [],
+            Tags: row.Tags ?? [],
+            IsActive: row.IsActive,
+            CreatedAt: row.CreatedAt
+        );
     }
-
-    public static TourDto MapToDto(TourRow row) => new(
-        Id: row.Id ?? "",
-        GuideId: row.GuideId ?? "",
-        Title: row.Title ?? "",
-        Description: row.Description,
-        Location: row.Location ?? "",
-        Price: row.Price,
-        DurationHours: row.DurationHours,
-        MaxParticipants: row.MaxParticipants,
-        Images: row.Images ?? [],
-        Rating: row.Rating,
-        TotalReviews: row.TotalReviews,
-        Status: row.Status ?? "active",
-        CreatedAt: row.CreatedAt,
-        UpdatedAt: row.UpdatedAt
-    );
 }
 
-// ── Supabase row model ────────────────────────────────────────────────────────
+// ── Row models matching database_setup.sql ────────────────────────────────────
 
-public class TourRow
-{
-    [JsonPropertyName("id")]          public string? Id { get; set; }
-    [JsonPropertyName("guide_id")]    public string? GuideId { get; set; }
-    [JsonPropertyName("title")]       public string? Title { get; set; }
-    [JsonPropertyName("description")] public string? Description { get; set; }
-    [JsonPropertyName("location")]    public string? Location { get; set; }
-    [JsonPropertyName("price")]       public double Price { get; set; }
-    [JsonPropertyName("duration_hours")]   public int DurationHours { get; set; }
-    [JsonPropertyName("max_participants")] public int MaxParticipants { get; set; }
-    [JsonPropertyName("images")]      public List<string>? Images { get; set; }
-    [JsonPropertyName("rating")]      public double Rating { get; set; }
-    [JsonPropertyName("total_reviews")]    public int TotalReviews { get; set; }
-    [JsonPropertyName("status")]      public string? Status { get; set; }
-    [JsonPropertyName("created_at")]  public DateTime CreatedAt { get; set; }
-    [JsonPropertyName("updated_at")]  public DateTime UpdatedAt { get; set; }
-}
-
-// ── New database schema models ────────────────────────────────────────────────
-
-public class GuideTourRow
+/// <summary>
+/// Maps to public.experience_packages table
+/// </summary>
+public class ExperiencePackageRow
 {
     [JsonPropertyName("id")]                public string? Id { get; set; }
-    [JsonPropertyName("tour_template_id")]  public string? TourTemplateId { get; set; }
-    [JsonPropertyName("guide_id")]          public string? GuideId { get; set; }
-    [JsonPropertyName("price")]             public double Price { get; set; }
-    [JsonPropertyName("duration_hours")]    public int DurationHours { get; set; }
-    [JsonPropertyName("max_participants")]  public int MaxParticipants { get; set; }
-    [JsonPropertyName("status")]            public string? Status { get; set; }
-    [JsonPropertyName("rating")]            public double Rating { get; set; }
-    [JsonPropertyName("total_reviews")]     public int TotalReviews { get; set; }
-    [JsonPropertyName("tour_templates")]    public TourTemplateRow? TourTemplate { get; set; }
-    [JsonPropertyName("profiles")]          public ProfileRow? Profile { get; set; }
+    [JsonPropertyName("guide_profile_id")]  public string? GuideProfileId { get; set; }
+    [JsonPropertyName("title")]             public string? Title { get; set; }
+    [JsonPropertyName("description")]       public string? Description { get; set; }
+    [JsonPropertyName("duration_hours")]    public decimal DurationHours { get; set; }
+    [JsonPropertyName("price_per_session")] public decimal PricePerSession { get; set; }
+    [JsonPropertyName("price_per_person")]  public decimal? PricePerPerson { get; set; }
+    [JsonPropertyName("max_group_size")]    public int MaxGroupSize { get; set; } = 6;
+    [JsonPropertyName("included_items")]    public List<string>? IncludedItems { get; set; }
+    [JsonPropertyName("tags")]              public List<string>? Tags { get; set; }
+    [JsonPropertyName("is_active")]         public bool IsActive { get; set; } = true;
+    [JsonPropertyName("created_at")]        public DateTime CreatedAt { get; set; }
+
+    // Joined from guide_profiles
+    [JsonPropertyName("guide_profiles")]    public GuideProfileRow? GuideProfile { get; set; }
 }
 
-public class TourTemplateRow
+/// <summary>
+/// Maps to public.guide_profiles table
+/// </summary>
+public class GuideProfileRow
 {
-    [JsonPropertyName("id")]          public string? Id { get; set; }
-    [JsonPropertyName("title")]       public string? Title { get; set; }
-    [JsonPropertyName("description")] public string? Description { get; set; }
-    [JsonPropertyName("location")]    public string? Location { get; set; }
-    [JsonPropertyName("images")]      public List<string>? Images { get; set; }
-    [JsonPropertyName("created_at")]  public DateTime CreatedAt { get; set; }
+    [JsonPropertyName("id")]              public string? Id { get; set; }
+    [JsonPropertyName("user_id")]         public string? UserId { get; set; }
+    [JsonPropertyName("bio")]             public string? Bio { get; set; }
+    [JsonPropertyName("languages")]       public List<string>? Languages { get; set; }
+    [JsonPropertyName("specialties")]     public List<string>? Specialties { get; set; }
+    [JsonPropertyName("city_area")]       public string? CityArea { get; set; }
+    [JsonPropertyName("price_per_hour")]  public decimal PricePerHour { get; set; }
+    [JsonPropertyName("is_verified")]     public bool IsVerified { get; set; }
+    [JsonPropertyName("verified_at")]     public DateTime? VerifiedAt { get; set; }
+    [JsonPropertyName("average_rating")]  public decimal AverageRating { get; set; }
+    [JsonPropertyName("total_reviews")]   public int TotalReviews { get; set; }
+    [JsonPropertyName("hidden_gems_urls")] public List<string>? HiddenGemsUrls { get; set; }
+    [JsonPropertyName("cover_photo_url")] public string? CoverPhotoUrl { get; set; }
+    [JsonPropertyName("created_at")]      public DateTime CreatedAt { get; set; }
+    [JsonPropertyName("updated_at")]      public DateTime UpdatedAt { get; set; }
+
+    // Joined from profiles
+    [JsonPropertyName("profiles")]        public ProfileRow? Profile { get; set; }
 }

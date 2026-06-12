@@ -96,7 +96,7 @@ namespace TripMate_Webapi.Controllers
         public decimal AverageRating { get; set; }
         
         // Data
-        public List<TourRow> MyTours { get; set; } = new();
+        public List<ExperiencePackageRow> MyTours { get; set; } = new();
         public List<GuideBookingItem> RecentBookings { get; set; } = new();
         public List<ActivityItem> RecentActivities { get; set; } = new();
     }

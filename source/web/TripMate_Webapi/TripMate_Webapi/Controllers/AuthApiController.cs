@@ -54,25 +54,19 @@ namespace TripMate_Webapi.Controllers
                 _logger.LogInformation("Login successful for email: {Email}", request.Email);
 
                 var userRole = result.User?.Role ?? "traveler";
-                var userStatus = result.User?.Status ?? "active";
+                var userIsActive = result.User?.IsActive ?? true;
                 
                 // Cố định role cho các tài khoản seed để tránh lỗi sai role từ Database
                 if (request.Email == "admin@tripmate.com") userRole = "admin";
                 if (request.Email == "guide@tripmate.com") {
                     userRole = "guide";
-                    userStatus = "active";
+                    userIsActive = true;
                 }
 
-                if (userRole == "guide" && userStatus == "pending")
+                if (userRole == "guide" && !userIsActive)
                 {
-                    _logger.LogWarning("Pending guide login attempt for email: {Email}", request.Email);
-                    return Unauthorized(new { message = "Tài khoản của bạn đang chờ Admin phê duyệt. Vui lòng quay lại sau." });
-                }
-                
-                if (userRole == "guide" && userStatus == "rejected")
-                {
-                    _logger.LogWarning("Rejected guide login attempt for email: {Email}", request.Email);
-                    return Unauthorized(new { message = "Tài khoản hướng dẫn viên của bạn đã bị từ chối." });
+                    _logger.LogWarning("Pending or inactive guide login attempt for email: {Email}", request.Email);
+                    return Unauthorized(new { message = "Tài khoản của bạn đang chờ Admin phê duyệt hoặc đã bị vô hiệu hóa. Vui lòng quay lại sau." });
                 }
 
                 return Ok(new

@@ -1,1104 +1,896 @@
 {
-    "info": {
-        "_postman_id": "tripmate-api-collection",
-        "name": "TripMate API Collection",
-        "description": "Complete API collection for TripMate system - includes all endpoints for testing",
-        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-    },
-    "item": [
-        {
-            "name": "Authentication",
-            "item": [
-                {
-                    "name": "Register User",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"John Doe\",\n  \"phone\": \"+84123456789\",\n  \"role\": \"traveler\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/auth/register",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "auth",
-                                "register"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Login User",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/auth/login",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "auth",
-                                "login"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Tours Management",
-            "item": [
-                {
-                    "name": "Get All Tours",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/tours?search=&location=&maxPrice=&duration=",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "tours"
-                            ],
-                            "query": [
-                                {
-                                    "key": "search",
-                                    "value": "",
-                                    "description": "Search by title or location"
-                                },
-                                {
-                                    "key": "location",
-                                    "value": "",
-                                    "description": "Filter by location"
-                                },
-                                {
-                                    "key": "maxPrice",
-                                    "value": "",
-                                    "description": "Maximum price filter"
-                                },
-                                {
-                                    "key": "duration",
-                                    "value": "",
-                                    "description": "Duration filter (1-4, 5-8, 9+)"
-                                }
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get Tour by ID",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/tours/{{tourId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "tours",
-                                "{{tourId}}"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Create Tour",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"title\": \"Khám phá Phố cổ Hà Nội\",\n  \"description\": \"Tham quan các di tích lịch sử và thưởng thức ẩm thực đường phố\",\n  \"location\": \"Hà Nội\",\n  \"price\": 500000,\n  \"durationHours\": 4,\n  \"maxParticipants\": 15,\n  \"images\": [\"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\"]\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/tours",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "tours"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Update Tour",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"title\": \"Khám phá Phố cổ Hà Nội - Cập nhật\",\n  \"description\": \"Mô tả đã được cập nhật\",\n  \"price\": 550000,\n  \"status\": \"active\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/tours/{{tourId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "tours",
-                                "{{tourId}}"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Delete Tour",
-                    "request": {
-                        "method": "DELETE",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/tours/{{tourId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "tours",
-                                "{{tourId}}"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get Tours by Guide",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/tours/guide/{{guideId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "tours",
-                                "guide",
-                                "{{guideId}}"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Tour Templates",
-            "item": [
-                {
-                    "name": "Get All Tour Templates",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/tour-templates",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "tour-templates"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Create Tour from Template",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"templateId\": \"{{templateId}}\",\n  \"price\": 600000,\n  \"durationHours\": 6,\n  \"maxParticipants\": 12\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/tours/from-template",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "tours",
-                                "from-template"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Bookings Management",
-            "item": [
-                {
-                    "name": "Create Booking",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"guideTourId\": \"{{tourId}}\",\n  \"tourDate\": \"2026-06-15\",\n  \"guests\": 2,\n  \"totalPrice\": 1000000\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/bookings",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "bookings"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get User Bookings",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/bookings/user",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "bookings",
-                                "user"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get Guide Bookings",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/bookings/guide",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "bookings",
-                                "guide"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Update Booking Status",
-                    "request": {
-                        "method": "PATCH",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"status\": \"confirmed\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/status",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "bookings",
-                                "{{bookingId}}",
-                                "status"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Payments",
-            "item": [
-                {
-                    "name": "Create Payment",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"bookingId\": \"{{bookingId}}\",\n  \"amount\": 1000000,\n  \"paymentMethod\": \"credit_card\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/payments",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "payments"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get Payment by Booking",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/payments/booking/{{bookingId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "payments",
-                                "booking",
-                                "{{bookingId}}"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Update Payment Status",
-                    "request": {
-                        "method": "PATCH",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"status\": \"completed\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/payments/{{paymentId}}/status",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "payments",
-                                "{{paymentId}}",
-                                "status"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Reviews",
-            "item": [
-                {
-                    "name": "Create Review",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"guideTourId\": \"{{tourId}}\",\n  \"bookingId\": \"{{bookingId}}\",\n  \"rating\": 5,\n  \"comment\": \"Tour tuyệt vời! Hướng dẫn viên rất nhiệt tình và am hiểu.\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/surveys",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "surveys"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get Reviews by Tour",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/surveys/tour/{{tourId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "surveys",
-                                "tour",
-                                "{{tourId}}"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get User Reviews",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/surveys/my-surveys",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "surveys",
-                                "my-surveys"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Update Review",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Tour khá tốt, có thể cải thiện thêm.\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/surveys/{{reviewId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "surveys",
-                                "{{reviewId}}"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Messages & Conversations",
-            "item": [
-                {
-                    "name": "Get User Conversations",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/chat/conversations",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "chat",
-                                "conversations"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Create Conversation",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"guideId\": \"{{guideId}}\",\n  \"bookingId\": \"{{bookingId}}\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/chat/conversations",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "chat",
-                                "conversations"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get Messages",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/chat/conversations/{{conversationId}}/messages",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "chat",
-                                "conversations",
-                                "{{conversationId}}",
-                                "messages"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Send Message",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"content\": \"Xin chào! Tôi muốn hỏi về tour này.\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/chat/conversations/{{conversationId}}/messages",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "chat",
-                                "conversations",
-                                "{{conversationId}}",
-                                "messages"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "User Profiles",
-            "item": [
-                {
-                    "name": "Get Current User Profile",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/profiles/me",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "profiles",
-                                "me"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Update Profile",
-                    "request": {
-                        "method": "PUT",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"fullName\": \"John Doe Updated\",\n  \"phone\": \"+84987654321\",\n  \"avatarUrl\": \"https://example.com/avatar.jpg\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/profiles/me",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "profiles",
-                                "me"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get Profile by ID",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/profiles/{{userId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "profiles",
-                                "{{userId}}"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Guide Certificates",
-            "item": [
-                {
-                    "name": "Upload Certificate",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"certificateName\": \"Chứng chỉ Hướng dẫn viên Du lịch\",\n  \"fileUrl\": \"https://example.com/certificate.pdf\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/guide-certificates",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "guide-certificates"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get Guide Certificates",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/guide-certificates/guide/{{guideId}}",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "guide-certificates",
-                                "guide",
-                                "{{guideId}}"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Verify Certificate (Admin)",
-                    "request": {
-                        "method": "PATCH",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"status\": \"verified\"\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/guide-certificates/{{certificateId}}/status",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "guide-certificates",
-                                "{{certificateId}}",
-                                "status"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Tour Availability",
-            "item": [
-                {
-                    "name": "Get Tour Availability",
-                    "request": {
-                        "method": "GET",
-                        "header": [],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/tours/{{tourId}}/availability?startDate=2026-06-01&endDate=2026-06-30",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "tours",
-                                "{{tourId}}",
-                                "availability"
-                            ],
-                            "query": [
-                                {
-                                    "key": "startDate",
-                                    "value": "2026-06-01"
-                                },
-                                {
-                                    "key": "endDate",
-                                    "value": "2026-06-30"
-                                }
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Update Tour Availability",
-                    "request": {
-                        "method": "POST",
-                        "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"date\": \"2026-06-15\",\n  \"remainingSlots\": 10\n}"
-                        },
-                        "url": {
-                            "raw": "{{baseUrl}}/api/tours/{{tourId}}/availability",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "tours",
-                                "{{tourId}}",
-                                "availability"
-                            ]
-                        }
-                    }
-                }
-            ]
-        },
-        {
-            "name": "Admin Dashboard",
-            "item": [
-                {
-                    "name": "Get Dashboard Statistics",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/admin/dashboard/stats",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "admin",
-                                "dashboard",
-                                "stats"
-                            ]
-                        }
-                    }
-                },
-                {
-                    "name": "Get All Users (Admin)",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Authorization",
-                                "value": "Bearer {{accessToken}}"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{baseUrl}}/api/admin/users?role=&search=&page=1&limit=10",
-                            "host": [
-                                "{{baseUrl}}"
-                            ],
-                            "path": [
-                                "api",
-                                "admin",
-                                "users"
-                            ],
-                            "query": [
-                                {
-                                    "key": "role",
-                                    "value": "",
-                                    "description": "Filter by role"
-                                },
-                                {
-                                    "key": "search",
-                                    "value": "",
-                                    "description": "Search by name or email"
-                                },
-                                {
-                                    "key": "page",
-                                    "value": "1"
-                                },
-                                {
-                                    "key": "limit",
-                                    "value": "10"
-                                }
-                            ]
-                        }
-                    }
-                }
-            ]
-        }
-    ],
-    "event": [
-        {
-            "listen": "prerequest",
-            "script": {
-                "type": "text/javascript",
-                "exec": [
-                    ""
-                ]
-            }
-        },
-        {
-            "listen": "test",
-            "script": {
-                "type": "text/javascript",
-                "exec": [
-                    ""
-                ]
-            }
-        }
-    ],
-    "variable": [
-        {
-            "key": "baseUrl",
-            "value": "https://localhost:5001",
-            "type": "string"
-        },
-        {
-            "key": "accessToken",
-            "value": "",
-            "type": "string"
-        },
-        {
-            "key": "userId",
-            "value": "",
-            "type": "string"
-        },
-        {
-            "key": "tourId",
-            "value": "",
-            "type": "string"
-        },
-        {
-            "key": "bookingId",
-            "value": "",
-            "type": "string"
-        },
-        {
-            "key": "guideId",
-            "value": "",
-            "type": "string"
-        },
-        {
-            "key": "conversationId",
-            "value": "",
-            "type": "string"
-        },
-        {
-            "key": "reviewId",
-            "value": "",
-            "type": "string"
-        },
-        {
-            "key": "paymentId",
-            "value": "",
-            "type": "string"
-        },
-        {
-            "key": "certificateId",
-            "value": "",
-            "type": "string"
-        },
-        {
-            "key": "templateId",
-            "value": "",
-            "type": "string"
-        }
-    ]
+	"info": {
+		"_postman_id": "tripmate-api-collection",
+		"name": "TripMate API Collection",
+		"description": "Complete API collection for TripMate system - includes all endpoints for testing",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\",\n  \"fullName\": \"John Doe\",\n  \"phone\": \"+84123456789\",\n  \"role\": \"traveler\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "Login User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "auth", "login"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Tours Management",
+			"item": [
+				{
+					"name": "Get All Tours",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/tours?search=&location=&maxPrice=&duration=",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours"],
+							"query": [
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search by title or location"
+								},
+								{
+									"key": "location",
+									"value": "",
+									"description": "Filter by location"
+								},
+								{
+									"key": "maxPrice",
+									"value": "",
+									"description": "Maximum price filter"
+								},
+								{
+									"key": "duration",
+									"value": "",
+									"description": "Duration filter (1-4, 5-8, 9+)"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Get Tour by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/tours/{{tourId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours", "{{tourId}}"]
+						}
+					}
+				}
+				,
+				{
+					"name": "Create Tour",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Khám phá Phố cổ Hà Nội\",\n  \"description\": \"Tham quan các di tích lịch sử và thưởng thức ẩm thực đường phố\",\n  \"location\": \"Hà Nội\",\n  \"price\": 500000,\n  \"durationHours\": 4,\n  \"maxParticipants\": 15,\n  \"images\": [\"https://example.com/image1.jpg\", \"https://example.com/image2.jpg\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tours",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours"]
+						}
+					}
+				},
+				{
+					"name": "Update Tour",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Khám phá Phố cổ Hà Nội - Cập nhật\",\n  \"description\": \"Mô tả đã được cập nhật\",\n  \"price\": 550000,\n  \"status\": \"active\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tours/{{tourId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours", "{{tourId}}"]
+						}
+					}
+				}
+				,
+				{
+					"name": "Delete Tour",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/tours/{{tourId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours", "{{tourId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Tours by Guide",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/tours/guide/{{guideId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours", "guide", "{{guideId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Tour Templates",
+			"item": [
+				{
+					"name": "Get All Tour Templates",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/tour-templates",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tour-templates"]
+						}
+					}
+				}
+				,
+				{
+					"name": "Create Tour from Template",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"templateId\": \"{{templateId}}\",\n  \"price\": 600000,\n  \"durationHours\": 6,\n  \"maxParticipants\": 12\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tours/from-template",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours", "from-template"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Bookings Management",
+			"item": [
+				{
+					"name": "Create Booking",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"guideTourId\": \"{{tourId}}\",\n  \"tourDate\": \"2026-06-15\",\n  \"guests\": 2,\n  \"totalPrice\": 1000000\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings"]
+						}
+					}
+				}
+				,
+				{
+					"name": "Get User Bookings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings/user",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings", "user"]
+						}
+					}
+				},
+				{
+					"name": "Get Guide Bookings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings/guide",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings", "guide"]
+						}
+					}
+				},
+				{
+					"name": "Update Booking Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"confirmed\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/bookings/{{bookingId}}/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "bookings", "{{bookingId}}", "status"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Payments",
+			"item": [
+				{
+					"name": "Create Payment",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"bookingId\": \"{{bookingId}}\",\n  \"amount\": 1000000,\n  \"paymentMethod\": \"credit_card\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/payments",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "payments"]
+						}
+					}
+				},
+				{
+					"name": "Get Payment by Booking",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/payments/booking/{{bookingId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "payments", "booking", "{{bookingId}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Payment Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"completed\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/payments/{{paymentId}}/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "payments", "{{paymentId}}", "status"]
+						}
+					}
+				}
+			]
+		}
+		,
+		{
+			"name": "Reviews",
+			"item": [
+				{
+					"name": "Create Review",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"guideTourId\": \"{{tourId}}\",\n  \"bookingId\": \"{{bookingId}}\",\n  \"rating\": 5,\n  \"comment\": \"Tour tuyệt vời! Hướng dẫn viên rất nhiệt tình và am hiểu.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/reviews",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "Get Reviews by Tour",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/reviews/tour/{{tourId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "reviews", "tour", "{{tourId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get User Reviews",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reviews/user",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "reviews", "user"]
+						}
+					}
+				},
+				{
+					"name": "Update Review",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rating\": 4,\n  \"comment\": \"Tour khá tốt, có thể cải thiện thêm.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/reviews/{{reviewId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "reviews", "{{reviewId}}"]
+						}
+					}
+				}
+			]
+		}
+		,
+		{
+			"name": "Messages & Conversations",
+			"item": [
+				{
+					"name": "Get User Conversations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/conversations",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "conversations"]
+						}
+					}
+				},
+				{
+					"name": "Create Conversation",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"guideId\": \"{{guideId}}\",\n  \"bookingId\": \"{{bookingId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/conversations",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "conversations"]
+						}
+					}
+				},
+				{
+					"name": "Get Messages",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/conversations/{{conversationId}}/messages",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "conversations", "{{conversationId}}", "messages"]
+						}
+					}
+				},
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"content\": \"Xin chào! Tôi muốn hỏi về tour này.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/conversations/{{conversationId}}/messages",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "conversations", "{{conversationId}}", "messages"]
+						}
+					}
+				}
+			]
+		}
+		,
+		{
+			"name": "User Profiles",
+			"item": [
+				{
+					"name": "Get Current User Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/profiles/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profiles", "me"]
+						}
+					}
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"John Doe Updated\",\n  \"phone\": \"+84987654321\",\n  \"avatarUrl\": \"https://example.com/avatar.jpg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/profiles/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profiles", "me"]
+						}
+					}
+				},
+				{
+					"name": "Get Profile by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/profiles/{{userId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "profiles", "{{userId}}"]
+						}
+					}
+				}
+			]
+		}
+		,
+		{
+			"name": "Guide Certificates",
+			"item": [
+				{
+					"name": "Upload Certificate",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"certificateName\": \"Chứng chỉ Hướng dẫn viên Du lịch\",\n  \"fileUrl\": \"https://example.com/certificate.pdf\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/guide-certificates",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "guide-certificates"]
+						}
+					}
+				},
+				{
+					"name": "Get Guide Certificates",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/guide-certificates/guide/{{guideId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "guide-certificates", "guide", "{{guideId}}"]
+						}
+					}
+				},
+				{
+					"name": "Verify Certificate (Admin)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"verified\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/guide-certificates/{{certificateId}}/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "guide-certificates", "{{certificateId}}", "status"]
+						}
+					}
+				}
+			]
+		}
+		,
+		{
+			"name": "Tour Availability",
+			"item": [
+				{
+					"name": "Get Tour Availability",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/tours/{{tourId}}/availability?startDate=2026-06-01&endDate=2026-06-30",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours", "{{tourId}}", "availability"],
+							"query": [
+								{
+									"key": "startDate",
+									"value": "2026-06-01"
+								},
+								{
+									"key": "endDate",
+									"value": "2026-06-30"
+								}
+							]
+						}
+					}
+				},
+				{
+					"name": "Update Tour Availability",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"date\": \"2026-06-15\",\n  \"remainingSlots\": 10\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tours/{{tourId}}/availability",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "tours", "{{tourId}}", "availability"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Admin Dashboard",
+			"item": [
+				{
+					"name": "Get Dashboard Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/dashboard/stats",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "dashboard", "stats"]
+						}
+					}
+				},
+				{
+					"name": "Get All Users (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/admin/users?role=&search=&page=1&limit=10",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "admin", "users"],
+							"query": [
+								{
+									"key": "role",
+									"value": "",
+									"description": "Filter by role"
+								},
+								{
+									"key": "search",
+									"value": "",
+									"description": "Search by name or email"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://localhost:5001",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "tourId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "bookingId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "guideId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "conversationId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "reviewId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "paymentId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "certificateId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "templateId",
+			"value": "",
+			"type": "string"
+		}
+	]
 }
