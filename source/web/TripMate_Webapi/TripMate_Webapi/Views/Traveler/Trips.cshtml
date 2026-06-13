@@ -2,6 +2,9 @@
 @{
     ViewData["Title"] = "My Trips Dashboard";
     Layout = "~/Views/Shared/_Layout.cshtml";
+    var bookings = (ViewBag.Bookings as List<TripMate_Webapi.Entities.BookingEntity>) ?? new List<TripMate_Webapi.Entities.BookingEntity>();
+    var upcomingBookings = bookings.Where(b => b.Status == 0 || b.Status == 1).OrderBy(b => b.BookingDate).ToList();
+    var pastBookings = bookings.Where(b => b.Status == 2).OrderByDescending(b => b.BookingDate).ToList();
 }
 
 <div class="min-h-screen bg-surface flex">
@@ -79,13 +82,13 @@
         <!-- Tabs -->
         <div class="flex gap-8 border-b border-outline-variant/30 mb-8 overflow-x-auto">
             <button @@click="tab = 'requests'" :class="tab === 'requests' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'" class="border-b-2 pb-4 px-2 font-bold whitespace-nowrap transition-colors">
-                Public Requests (1)
+                Public Requests (@(Model?.Count() ?? 0))
             </button>
             <button @@click="tab = 'upcoming'" :class="tab === 'upcoming' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'" class="border-b-2 pb-4 px-2 font-bold whitespace-nowrap transition-colors">
-                Upcoming Trips (0)
+                Upcoming Trips (@upcomingBookings.Count)
             </button>
             <button @@click="tab = 'past'" :class="tab === 'past' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'" class="border-b-2 pb-4 px-2 font-bold whitespace-nowrap transition-colors">
-                Past Trips (2)
+                Past Trips (@pastBookings.Count)
             </button>
         </div>
 
@@ -171,37 +174,81 @@
 
         <!-- Upcoming Tab -->
         <div x-show="tab === 'upcoming'" style="display: none;" class="animate-fade-in-up">
-            <div class="text-center py-20">
-                <div class="w-24 h-24 bg-surface-variant rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span class="material-symbols-outlined text-4xl text-on-surface-variant">luggage</span>
+            @if(upcomingBookings.Any())
+            {
+                <div class="space-y-6">
+                @foreach(var booking in upcomingBookings)
+                {
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-6 items-center">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-1">
+                                <h3 class="text-xl font-bold text-on-surface">@(booking.ExperiencePackage?.Title ?? "Custom Tour")</h3>
+                                <span class="@(booking.Status == 0 ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700") text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase">@(booking.Status == 0 ? "Pending" : "Confirmed")</span>
+                            </div>
+                            <p class="text-sm text-on-surface-variant mb-3">@booking.BookingDate.ToString("MMM dd, yyyy")</p>
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="text-sm font-medium text-on-surface">Guided by @(booking.GuideProfile?.Profile?.FullName ?? "Local Guide")</span>
+                            </div>
+                            <div class="flex gap-3">
+                                <a href="/Traveler/BookingDetails/@booking.Id" class="text-primary text-sm font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-[16px]">info</span> View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                }
                 </div>
-                <h3 class="text-xl font-bold text-on-surface mb-2">No upcoming trips</h3>
-                <p class="text-on-surface-variant max-w-md mx-auto mb-6">You don't have any confirmed trips yet. Browse our local experts or post a request to start your journey.</p>
-                <a href="/Guide/Index" class="inline-block bg-on-surface text-white font-bold px-6 py-3 rounded-xl hover:bg-on-surface/90 transition-colors">Find a Guide</a>
-            </div>
+            }
+            else
+            {
+                <div class="text-center py-20">
+                    <div class="w-24 h-24 bg-surface-variant rounded-full flex items-center justify-center mx-auto mb-6">
+                        <span class="material-symbols-outlined text-4xl text-on-surface-variant">luggage</span>
+                    </div>
+                    <h3 class="text-xl font-bold text-on-surface mb-2">No upcoming trips</h3>
+                    <p class="text-on-surface-variant max-w-md mx-auto mb-6">You don't have any confirmed trips yet. Browse our local experts or post a request to start your journey.</p>
+                    <a href="/Guide/Index" class="inline-block bg-on-surface text-white font-bold px-6 py-3 rounded-xl hover:bg-on-surface/90 transition-colors">Find a Guide</a>
+                </div>
+            }
         </div>
 
-        <!-- Past Tab -->
         <div x-show="tab === 'past'" style="display: none;" class="space-y-6 animate-fade-in-up">
-            <!-- Dummy Past Trip -->
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-6 items-center">
-                <img src="https://images.unsplash.com/photo-1549884518-da225d36cfae?ixlib=rb-4.0.3&w=300&q=80" alt="Sapa" class="w-full md:w-48 h-32 object-cover rounded-xl">
-                <div class="flex-1">
-                    <div class="flex items-center gap-3 mb-1">
-                        <h3 class="text-xl font-bold text-on-surface">Sapa Trekking & Homestay</h3>
-                        <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase">Completed</span>
+            @if(pastBookings.Any())
+            {
+                @foreach(var booking in pastBookings)
+                {
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-6 items-center">
+                        @if (!string.IsNullOrEmpty(booking.GuideProfile?.CoverPhotoUrl))
+                        {
+                            <img src="@booking.GuideProfile.CoverPhotoUrl" alt="Tour" class="w-full md:w-48 h-32 object-cover rounded-xl">
+                        }
+                        else
+                        {
+                            <div class="w-full md:w-48 h-32 bg-gray-200 rounded-xl flex items-center justify-center">
+                                <span class="material-symbols-outlined text-4xl text-gray-400">landscape</span>
+                            </div>
+                        }
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-1">
+                                <h3 class="text-xl font-bold text-on-surface">@(booking.ExperiencePackage?.Title ?? "Custom Tour")</h3>
+                                <span class="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase">Completed</span>
+                            </div>
+                            <p class="text-sm text-on-surface-variant mb-3">@booking.BookingDate.ToString("MMM dd, yyyy")</p>
+                            <div class="flex items-center gap-3 mb-4">
+                                <span class="text-sm font-medium text-on-surface">Guided by @(booking.GuideProfile?.Profile?.FullName ?? "Local Guide")</span>
+                            </div>
+                            <div class="flex gap-3">
+                                <button class="text-primary text-sm font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-[16px]">star</span> Leave a Review</button>
+                                <button class="text-on-surface-variant text-sm font-bold flex items-center gap-1 hover:text-on-surface"><span class="material-symbols-outlined text-[16px]">receipt_long</span> View Receipt</button>
+                            </div>
+                        </div>
                     </div>
-                    <p class="text-sm text-on-surface-variant mb-3">May 10 - May 12, 2024</p>
-                    <div class="flex items-center gap-3 mb-4">
-                        <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?ixlib=rb-4.0.3&w=100&q=80" alt="Guide" class="w-8 h-8 rounded-full object-cover">
-                        <span class="text-sm font-medium text-on-surface">Guided by Linh Nguyen</span>
-                    </div>
-                    <div class="flex gap-3">
-                        <button class="text-primary text-sm font-bold flex items-center gap-1 hover:underline"><span class="material-symbols-outlined text-[16px]">star</span> Leave a Review</button>
-                        <button class="text-on-surface-variant text-sm font-bold flex items-center gap-1 hover:text-on-surface"><span class="material-symbols-outlined text-[16px]">receipt_long</span> View Receipt</button>
-                    </div>
+                }
+            }
+            else
+            {
+                <div class="text-center py-10">
+                    <p class="text-on-surface-variant">You have no past trips.</p>
                 </div>
-            </div>
+            }
         </div>
 
     </div>
