@@ -1,0 +1,590 @@
+@{
+    ViewData["Title"] = "Financials & Escrow";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TripMate | Escrow & Finance</title>
+    <script>
+        // Front-end JWT and role authorization check
+        (function() {
+            const token = localStorage.getItem('accessToken');
+            const role = localStorage.getItem('userRole');
+            const email = localStorage.getItem('userEmail');
+            
+            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com')) {
+                window.location.href = '/Auth/Login';
+            }
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',
+                        'primary-dark': '#E55A2B',
+                        secondary: '#004E89',
+                        accent: '#F7B801',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex" x-data="{
+    kpis: { totalGmv: 0, platformRevenue: 0, escrowHeld: 0, pendingDisbursement: 0 },
+    bookings: [],
+    selectedIds: [],
+    showOverrideModal: false,
+    overrideBookingId: '',
+    overrideFeeAmount: 0,
+
+    async loadKpis() {
+        const res = await fetch('/api/admin/kpi', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+        });
+        if (res.status === 401) {
+            window.location.href = '/Auth/Login';
+            return;
+        }
+        if (res.ok) this.kpis = await res.json();
+    },
+
+    async loadBookings() {
+        const res = await fetch('/api/admin/bookings', {
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+        });
+        if (res.status === 401) {
+            window.location.href = '/Auth/Login';
+            return;
+        }
+        if (res.ok) this.bookings = await res.json();
+    },
+
+    async releaseBulk() {
+        if (this.selectedIds.length === 0) return alert('Please select at least one transaction');
+        if (!confirm(`Release escrow for ${this.selectedIds.length} selected transactions?`)) return;
+
+        const res = await fetch('/api/admin/escrow/release-bulk', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            },
+            body: JSON.stringify({ bookingIds: this.selectedIds })
+        });
+        if (res.status === 401) {
+            alert('Session expired. Please log in again.');
+            window.location.href = '/Auth/Login';
+            return;
+        }
+        const data = await res.json();
+        alert(data.message);
+        if (res.ok) {
+            this.selectedIds = [];
+            this.loadKpis();
+            this.loadBookings();
+        }
+    },
+
+    async releaseSingle(id) {
+        if (!confirm('Release escrow for this transaction?')) return;
+        const res = await fetch('/api/admin/escrow/release-bulk', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            },
+            body: JSON.stringify({ bookingIds: [id] })
+        });
+        if (res.status === 401) {
+            alert('Session expired. Please log in again.');
+            window.location.href = '/Auth/Login';
+            return;
+        }
+        const data = await res.json();
+        alert(data.message);
+        if (res.ok) {
+            this.loadKpis();
+            this.loadBookings();
+        }
+    },
+
+    openOverride(booking) {
+        this.overrideBookingId = booking.id;
+        this.overrideFeeAmount = booking.platform_fee;
+        this.showOverrideModal = true;
+    },
+
+    async submitOverride() {
+        const res = await fetch(`/api/admin/bookings/${this.overrideBookingId}/fee`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            },
+            body: JSON.stringify({ platformFee: parseFloat(this.overrideFeeAmount) })
+        });
+        if (res.status === 401) {
+            alert('Session expired. Please log in again.');
+            window.location.href = '/Auth/Login';
+            return;
+        }
+        const data = await res.json();
+        alert(data.message);
+        if (res.ok) {
+            this.showOverrideModal = false;
+            this.loadKpis();
+            this.loadBookings();
+        }
+    },
+
+    async handleCancelRequest(id, approve) {
+        const actionText = approve ? 'approve cancellation' : 'reject cancellation';
+        if (!confirm(`Are you sure you want to ${actionText} this booking?`)) return;
+
+        const res = await fetch(`/api/admin/bookings/${id}/cancel-approve`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            },
+            body: JSON.stringify({ approve: approve })
+        });
+        if (res.status === 401) {
+            alert('Session expired. Please log in again.');
+            window.location.href = '/Auth/Login';
+            return;
+        }
+        const data = await res.json();
+        alert(data.message);
+        if (res.ok) {
+            this.loadKpis();
+            this.loadBookings();
+        }
+    },
+
+    async exportExcel() {
+        try {
+            const response = await fetch('/api/admin/escrow/export', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+            });
+            if (!response.ok) {
+                if (response.status === 401) {
+                    alert('Session expired. Please log in again.');
+                    window.location.href = '/Auth/Login';
+                    return;
+                }
+                throw new Error('Failed to export file');
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ledger_export_${new Date().toISOString().slice(0,10)}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (error) {
+            alert(error.message);
+        }
+    },
+
+    getBookingStatusText(status) {
+        return ['Pending', 'Confirmed', 'Completed', 'Cancelled'][status] || 'Unknown';
+    },
+
+    logout() {
+        if (confirm('Are you sure you want to log out?')) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userId');
+            localStorage.removeItem('userRole');
+            window.location.href = '/Auth/Login';
+        }
+    },
+
+    init() {
+        this.loadKpis();
+        this.loadBookings();
+    }
+}">
+
+    <!-- Side Navigation Bar -->
+    <aside class="fixed left-0 top-0 h-screen w-[280px] bg-white border-r border-gray-200 flex flex-col py-8 pr-4 z-50">
+        <div class="px-6 mb-10">
+            <div class="flex items-center gap-3 mb-2">
+                <img src="/images/logo.svg" alt="TripMate" class="w-10 h-10">
+                <h1 class="text-2xl font-bold text-primary">TripMate</h1>
+            </div>
+            <p class="text-sm text-gray-600">Admin Portal</p>
+        </div>
+
+        <nav class="flex-grow flex flex-col gap-1">
+            <a id="nav-dashboard" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Dashboard">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span>Dashboard</span>
+            </a>
+            <a id="nav-approvals" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200 relative" href="/Admin/GuideApprovals">
+                <span class="material-symbols-outlined">badge</span>
+                <span>Guide Approvals</span>
+                <span id="guideBadge" class="hidden absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                <span id="guideCount" class="hidden absolute top-1 right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"></span>
+            </a>
+            <a id="nav-escrow" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Escrow">
+                <span class="material-symbols-outlined">payments</span>
+                <span>Escrow & Finance</span>
+            </a>
+            <a id="nav-moderation" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Moderation">
+                <span class="material-symbols-outlined">gavel</span>
+                <span>Content & Disputes</span>
+            </a>
+            <a id="nav-guides" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Guides">
+                <span class="material-symbols-outlined">group</span>
+                <span>Guides</span>
+            </a>
+            <a id="nav-analytics" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Analytics">
+                <span class="material-symbols-outlined">insights</span>
+                <span>Analytics</span>
+            </a>
+        </nav>
+
+        <div class="px-4 mt-auto">
+            <div class="mt-6 px-4 py-4 flex items-center gap-3 border-t border-gray-200">
+                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">person</span>
+                </div>
+                <div class="flex-1">
+                    <p id="sidebarAdminName" class="font-medium text-gray-900">Admin User</p>
+                    <p id="sidebarAdminRole" class="text-xs text-gray-500">Super Admin</p>
+                </div>
+                <button onclick="logout()" class="p-2 hover:bg-red-50 rounded-lg transition-all group" title="Logout">
+                    <span class="material-symbols-outlined text-gray-400 group-hover:text-red-600">logout</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="ml-[280px] w-[calc(100%-280px)] min-h-screen p-12 bg-gray-50">
+        <!-- Header Section -->
+        <header class="flex justify-between items-end mb-12">
+            <div>
+                <h2 class="text-5xl font-bold text-gray-900 mb-2">Escrow & Finance</h2>
+                <p class="text-lg text-gray-600">Manage cash flow, commissions, and release escrow payments.</p>
+            </div>
+            <div class="flex gap-4">
+                <button @@click="exportExcel()" class="bg-white text-gray-900 px-6 py-3 rounded-lg font-bold border border-gray-200 hover:bg-gray-100 shadow-sm transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-sm">download</span>
+                    Export Ledger (Excel)
+                </button>
+            </div>
+        </header>
+
+        <!-- KPI Cards Grid -->
+        <div class="grid grid-cols-4 gap-6 mb-12">
+            <!-- Total GMV -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-primary mb-4">
+                    <span class="material-symbols-outlined text-lg font-bold">query_stats</span>
+                </div>
+                <p class="text-sm text-gray-500 font-semibold uppercase tracking-wider">Total GMV</p>
+                <h3 class="text-3xl font-bold text-gray-900 mt-2" x-text="kpis.totalGmv.toLocaleString('en-US') + '₫'">0₫</h3>
+                <p class="text-xs text-gray-400 mt-1">Confirmed & completed tours</p>
+            </div>
+
+            <!-- Platform Revenue (15%) -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 mb-4">
+                    <span class="material-symbols-outlined text-lg font-bold">account_balance</span>
+                </div>
+                <p class="text-sm text-gray-500 font-semibold uppercase tracking-wider">Platform Revenue (15%)</p>
+                <h3 class="text-3xl font-bold text-green-600 mt-2" x-text="kpis.platformRevenue.toLocaleString('en-US') + '₫'">0₫</h3>
+                <p class="text-xs text-gray-400 mt-1">Deducted from completed tours</p>
+            </div>
+
+            <!-- Escrow Held -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 mb-4">
+                    <span class="material-symbols-outlined text-lg font-bold">lock_clock</span>
+                </div>
+                <p class="text-sm text-gray-500 font-semibold uppercase tracking-wider">Held in Escrow</p>
+                <h3 class="text-3xl font-bold text-blue-600 mt-2" x-text="kpis.escrowHeld.toLocaleString('en-US') + '₫'">0₫</h3>
+                <p class="text-xs text-gray-400 mt-1">Confirmed payments, not yet disbursed</p>
+            </div>
+
+            <!-- Pending Disbursement -->
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 mb-4">
+                    <span class="material-symbols-outlined text-lg font-bold">hourglass_empty</span>
+                </div>
+                <p class="text-sm text-gray-500 font-semibold uppercase tracking-wider">Pending Disbursement</p>
+                <h3 class="text-3xl font-bold text-purple-600 mt-2" x-text="kpis.pendingDisbursement.toLocaleString('en-US') + '₫'">0₫</h3>
+                <p class="text-xs text-gray-400 mt-1">Completed tours, pending release</p>
+            </div>
+        </div>
+
+        <!-- Bookings and Escrow Ledger -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-150 overflow-hidden">
+            <div class="px-8 py-6 border-b border-gray-200 flex justify-between items-center bg-white">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900">TripMate Escrow Ledger</h3>
+                    <p class="text-sm text-gray-500 mt-1">Control cash flow and bulk release commissions.</p>
+                </div>
+                <div class="flex gap-3">
+                    <button @@click="releaseBulk()" :disabled="selectedIds.length === 0" 
+                            :class="selectedIds.length > 0 ? 'bg-primary hover:bg-primary-dark text-white cursor-pointer shadow-md' : 'bg-gray-100 text-gray-400 cursor-not-allowed'"
+                            class="px-5 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">workspace_premium</span>
+                        Bulk Release Escrow (<span x-text="selectedIds.length"></span>)
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-200">
+                            <th class="py-4 px-6 text-center w-12">
+                                <input type="checkbox" 
+                                       @@change="selectedIds = $event.target.checked ? bookings.filter(b => !b.escrow_released).map(b => b.id) : []"
+                                       class="rounded border-gray-300 text-primary focus:ring-primary">
+                            </th>
+                            <th class="py-4 px-6">Tour ID / Title</th>
+                            <th class="py-4 px-6">Traveler / Guide</th>
+                            <th class="py-4 px-6 text-right">Total Amount</th>
+                            <th class="py-4 px-6 text-right">Platform Fee</th>
+                            <th class="py-4 px-6 text-right">Guide Earnings</th>
+                            <th class="py-4 px-6 text-center">Status</th>
+                            <th class="py-4 px-6 text-center">Escrow</th>
+                            <th class="py-4 px-6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm">
+                        <template x-for="b in bookings" :key="b.id">
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <!-- Checkbox -->
+                                <td class="py-4 px-6 text-center">
+                                    <input type="checkbox" 
+                                           :disabled="b.escrow_released"
+                                           :value="b.id"
+                                           x-model="selectedIds"
+                                           class="rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
+                                </td>
+
+                                <!-- Tour Details -->
+                                <td class="py-4 px-6">
+                                    <p class="font-bold text-gray-900" x-text="b.experience_packages?.title || 'Base Tour'"></p>
+                                    <p class="text-xs text-gray-400 mt-0.5" x-text="'ID: ' + b.id.substring(0, 8) + '...'"></p>
+                                </td>
+
+                                <!-- Users -->
+                                <td class="py-4 px-6">
+                                    <p class="text-gray-900"><span class="font-semibold text-gray-500">Traveler:</span> <span x-text="b.profiles?.full_name || 'Guest'"></span></p>
+                                    <p class="text-gray-500 mt-0.5"><span class="font-semibold text-gray-500">Guide:</span> <span x-text="b.experience_packages?.guide_profiles?.profiles?.full_name || 'None'"></span></p>
+                                </td>
+
+                                <!-- Amounts -->
+                                <td class="py-4 px-6 text-right font-semibold text-gray-900" x-text="b.total_amount.toLocaleString('en-US') + '₫'"></td>
+                                <td class="py-4 px-6 text-right text-orange-600 font-semibold" x-text="b.platform_fee.toLocaleString('en-US') + '₫'"></td>
+                                <td class="py-4 px-6 text-right text-green-600 font-semibold" x-text="b.guide_earnings.toLocaleString('en-US') + '₫'"></td>
+
+                                <!-- Status -->
+                                <td class="py-4 px-6 text-center">
+                                    <span :class="{
+                                        'bg-yellow-50 text-yellow-700 border-yellow-200': b.status === 0,
+                                        'bg-blue-50 text-blue-700 border-blue-200': b.status === 1,
+                                        'bg-green-50 text-green-700 border-green-200': b.status === 2,
+                                        'bg-red-50 text-red-700 border-red-200': b.status === 3,
+                                    }" class="px-2.5 py-1 rounded-full text-xs font-semibold border" x-text="getBookingStatusText(b.status)"></span>
+                                </td>
+
+                                <!-- Escrow Status -->
+                                <td class="py-4 px-6 text-center">
+                                    <span :class="b.escrow_released ? 'text-green-600 bg-green-50 border-green-200' : 'text-gray-500 bg-gray-50 border-gray-200'" 
+                                          class="px-2.5 py-1 rounded-full text-xs font-bold border"
+                                          x-text="b.escrow_released ? 'Released' : 'Held'"></span>
+                                </td>
+
+                                <!-- Actions -->
+                                <td class="py-4 px-6 text-center">
+                                    <div class="flex items-center justify-center gap-2">
+                                        <!-- Single Release -->
+                                        <button @@click="releaseSingle(b.id)" 
+                                                x-show="!b.escrow_released"
+                                                class="p-1 text-green-600 hover:bg-green-50 rounded" title="Release escrow">
+                                            <span class="material-symbols-outlined text-lg">check_circle</span>
+                                        </button>
+                                        <!-- Override Platform Fee -->
+                                        <button @@click="openOverride(b)"
+                                                x-show="!b.escrow_released"
+                                                class="p-1 text-primary hover:bg-orange-50 rounded" title="Adjust commission">
+                                            <span class="material-symbols-outlined text-lg">edit</span>
+                                        </button>
+                                        <!-- Cancellation approval -->
+                                        <template x-if="b.status === 3 && b.cancel_reason">
+                                            <div class="flex gap-1 border-l pl-2 border-gray-200">
+                                                <button @@click="handleCancelRequest(b.id, true)" class="p-1 text-green-600 hover:bg-green-50 rounded" title="Approve Cancel & Refund">
+                                                    <span class="material-symbols-outlined text-lg">sentiment_satisfied</span>
+                                                </button>
+                                                <button @@click="handleCancelRequest(b.id, false)" class="p-1 text-red-600 hover:bg-red-50 rounded" title="Restore Confirmed Status">
+                                                    <span class="material-symbols-outlined text-lg">restore</span>
+                                                </button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Fee Override Modal -->
+    <div x-show="showOverrideModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" x-cloak>
+        <div class="bg-white rounded-2xl max-w-sm w-full p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="material-symbols-outlined text-4xl text-primary font-bold">edit</span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Adjust Commission</h3>
+                <p class="text-sm text-gray-600">Manually adjust the platform fee for this transaction.</p>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">New Platform Fee Amount (₫)</label>
+                <input type="number" x-model="overrideFeeAmount" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-sm" placeholder="Enter amount...">
+            </div>
+
+            <div class="flex gap-3">
+                <button @@click="showOverrideModal = false" class="flex-1 px-6 py-3 bg-gray-100 text-gray-900 rounded-xl font-semibold hover:bg-gray-200 transition-all text-sm">
+                    Cancel
+                </button>
+                <button @@click="submitOverride()" class="flex-1 px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-all text-sm shadow-md">
+                    Update
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Set active tab styling dynamically based on path
+            const path = window.location.pathname;
+            let activeEl = null;
+            if (path.includes("/Admin/Dashboard") || path === "/Admin" || path === "/admin") {
+                activeEl = document.getElementById("nav-dashboard");
+            } else if (path.includes("/Admin/GuideApprovals")) {
+                activeEl = document.getElementById("nav-approvals");
+            } else if (path.includes("/Admin/Escrow")) {
+                activeEl = document.getElementById("nav-escrow");
+            } else if (path.includes("/Admin/Moderation")) {
+                activeEl = document.getElementById("nav-moderation");
+            } else if (path.includes("/Admin/Guides")) {
+                activeEl = document.getElementById("nav-guides");
+            } else if (path.includes("/Admin/Analytics")) {
+                activeEl = document.getElementById("nav-analytics");
+            }
+            
+            if (activeEl) {
+                activeEl.className = "flex items-center gap-4 px-6 py-3 bg-orange-100 text-primary border-l-4 border-primary rounded-r-full my-1 font-medium transition-all duration-200";
+            }
+
+            // Render Admin User Profile info
+            const email = localStorage.getItem("userEmail");
+            const role = localStorage.getItem("userRole");
+            if (email) {
+                const nameEl = document.getElementById("sidebarAdminName");
+                if (nameEl) nameEl.textContent = email.split('@@')[0];
+            }
+            if (role) {
+                const roleEl = document.getElementById("sidebarAdminRole");
+                if (roleEl) roleEl.textContent = role === "admin" ? "Super Admin" : role;
+            }
+
+            // Load pending guide count and update badge
+            async function loadPendingGuideCount() {
+                try {
+                    const response = await fetch('/Admin/GetPendingCount');
+                    const data = await response.json();
+                    
+                    if (data.count > 0) {
+                        const badge = document.getElementById('guideBadge');
+                        const countBadge = document.getElementById('guideCount');
+                        
+                        if (badge) badge.classList.remove('hidden');
+                        if (countBadge) {
+                            countBadge.classList.remove('hidden');
+                            countBadge.textContent = data.count;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading pending count:', error);
+                }
+            }
+
+            loadPendingGuideCount();
+            setInterval(loadPendingGuideCount, 30000);
+        });
+
+        // Logout function
+        window.logout = function() {
+            if (confirm('Are you sure you want to log out?')) {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('userRole');
+                window.location.href = '/Auth/Login';
+            }
+        }
+
+        // Show development toast
+        window.showDevelopmentToast = function(event, featureName) {
+            event.preventDefault();
+            const toast = document.createElement("div");
+            toast.className = "fixed top-6 right-6 z-[100] bg-gray-900 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 border border-gray-800 transform translate-y-2 opacity-0 transition-all duration-300";
+            toast.innerHTML = `
+                <span class="material-symbols-outlined text-amber-500 animate-bounce">construction</span>
+                <div>
+                    <p class="font-bold text-sm">Feature ${featureName}</p>
+                    <p class="text-xs text-gray-400">Under development and coming soon!</p>
+                </div>
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.remove("translate-y-2", "opacity-0");
+            }, 10);
+            setTimeout(() => {
+                toast.classList.add("translate-y-2", "opacity-0");
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

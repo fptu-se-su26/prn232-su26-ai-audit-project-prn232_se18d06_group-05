@@ -38,8 +38,8 @@ public class BookingService
     public static string MapStatus(int status) => StatusMap.GetValueOrDefault(status, "pending");
     public static int MapStatus(string status) => StatusReverseMap.GetValueOrDefault(status, 0);
 
-    // Platform fee rate (e.g. 10%)
-    private const decimal PlatformFeeRate = 0.10m;
+    // Platform fee rate (e.g. 15%)
+    private const decimal PlatformFeeRate = 0.15m;
 
     public BookingService(HttpClient http, IConfiguration config,
         INotificationService notif, ChatService chat)
