@@ -19,17 +19,17 @@ Nguyên tắc ghi changelog:
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học |  |
-| Mã môn học |  |
-| Lớp |  |
-| Học kỳ |  |
-| Tên bài tập / Project |  |
-| Tên sinh viên / Nhóm |  |
-| MSSV / Danh sách MSSV |  |
-| Giảng viên hướng dẫn |  |
+| Môn học | dotnet .Prn232 |
+| Mã môn học | PRN2332 |
+| Lớp | se18d06 |
+| Học kỳ | 8 |
+| Tên bài tập / Project | TripMate - Tour Guide Booking Platform |
+| Tên sinh viên / Nhóm | Nguyễn Hữu Sơn – Nhóm 5 |
+| MSSV / Danh sách MSSV | DE180845 |
+| Giảng viên hướng dẫn | quangltn3 |
 | Repository URL |  |
-| Ngày bắt đầu |  |
-| Ngày hoàn thành |  |
+| Ngày bắt đầu | 19/06/2026 |
+| Ngày hoàn thành | 21/06/2026 |
 
 ---
 

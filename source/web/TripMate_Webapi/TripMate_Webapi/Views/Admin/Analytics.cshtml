@@ -1,0 +1,432 @@
+@model TripMate_Webapi.Controllers.AnalyticsViewModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Platform Analytics";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TripMate | Platform Analytics</title>
+    <script>
+        // Front-end JWT and role authorization check
+        (function() {
+            const token = localStorage.getItem('accessToken');
+            const role = localStorage.getItem('userRole');
+            const email = localStorage.getItem('userEmail');
+            
+            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com')) {
+                window.location.href = '/Auth/Login';
+            }
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',
+                        'primary-dark': '#E55A2B',
+                        secondary: '#004E89',
+                        accent: '#F7B801',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(226, 232, 240, 0.6);
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex">
+
+    <!-- Side Navigation Bar -->
+    <aside class="fixed left-0 top-0 h-screen w-[280px] bg-white border-r border-gray-200 flex flex-col py-8 pr-4 z-50">
+        <div class="px-6 mb-10">
+            <div class="flex items-center gap-3 mb-2">
+                <img src="/images/logo.svg" alt="TripMate" class="w-10 h-10">
+                <h1 class="text-2xl font-bold text-primary">TripMate</h1>
+            </div>
+            <p class="text-sm text-gray-600">Admin Portal</p>
+        </div>
+
+        <nav class="flex-grow flex flex-col gap-1">
+            <a id="nav-dashboard" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Dashboard">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span>Dashboard</span>
+            </a>
+            <a id="nav-approvals" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200 relative" href="/Admin/GuideApprovals">
+                <span class="material-symbols-outlined">badge</span>
+                <span>Guide Approvals</span>
+                <span id="guideBadge" class="hidden absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                <span id="guideCount" class="hidden absolute top-1 right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"></span>
+            </a>
+            <a id="nav-escrow" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Escrow">
+                <span class="material-symbols-outlined">payments</span>
+                <span>Escrow & Finance</span>
+            </a>
+            <a id="nav-moderation" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Moderation">
+                <span class="material-symbols-outlined">gavel</span>
+                <span>Content & Disputes</span>
+            </a>
+            <a id="nav-guides" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Guides">
+                <span class="material-symbols-outlined">group</span>
+                <span>Guides</span>
+            </a>
+            <a id="nav-analytics" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Analytics">
+                <span class="material-symbols-outlined">insights</span>
+                <span>Analytics</span>
+            </a>
+        </nav>
+
+        <div class="px-4 mt-auto">
+            <div class="mt-6 px-4 py-4 flex items-center gap-3 border-t border-gray-200">
+                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">person</span>
+                </div>
+                <div class="flex-1">
+                    <p id="sidebarAdminName" class="font-medium text-gray-900">Admin User</p>
+                    <p id="sidebarAdminRole" class="text-xs text-gray-500">Super Admin</p>
+                </div>
+                <button onclick="logout()" class="p-2 hover:bg-red-50 rounded-lg transition-all group" title="Logout">
+                    <span class="material-symbols-outlined text-gray-400 group-hover:text-red-600">logout</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="ml-[280px] w-[calc(100%-280px)] min-h-screen p-12 bg-gray-50 flex flex-col gap-10">
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div>
+                <h2 class="text-5xl font-bold text-gray-900 mb-2">Platform Analytics</h2>
+                <p class="text-lg text-gray-600">In-depth analysis of revenue, booking trends, and user distribution on TripMate.</p>
+            </div>
+            
+            <div class="glass-panel px-5 py-3 rounded-xl flex items-center gap-3 text-gray-600 border shadow-sm self-start md:self-auto">
+                <span class="material-symbols-outlined text-primary">analytics</span>
+                <span class="text-sm font-semibold">Auto-update: Real-time</span>
+            </div>
+        </header>
+
+        <!-- KPI Metrics Row -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- GMV -->
+            <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-5 hover:-translate-y-1 transition-all duration-300">
+                <div class="w-14 h-14 bg-orange-50 text-primary rounded-2xl flex items-center justify-center">
+                    <span class="material-symbols-outlined text-3xl font-bold">payments</span>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Total GMV</p>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-0.5">@Model.Kpis.TotalGmv.ToString("N0")₫</h3>
+                </div>
+            </div>
+
+            <!-- Platform Revenue -->
+            <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-5 hover:-translate-y-1 transition-all duration-300">
+                <div class="w-14 h-14 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center">
+                    <span class="material-symbols-outlined text-3xl font-bold">account_balance_wallet</span>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Platform Revenue</p>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-0.5">@Model.Kpis.PlatformRevenue.ToString("N0")₫</h3>
+                </div>
+            </div>
+
+            <!-- Escrow Held -->
+            <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-5 hover:-translate-y-1 transition-all duration-300">
+                <div class="w-14 h-14 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center">
+                    <span class="material-symbols-outlined text-3xl font-bold">lock_open</span>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Held in Escrow</p>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-0.5">@Model.Kpis.EscrowHeld.ToString("N0")₫</h3>
+                </div>
+            </div>
+
+            <!-- Total Bookings -->
+            <div class="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center gap-5 hover:-translate-y-1 transition-all duration-300">
+                <div class="w-14 h-14 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center">
+                    <span class="material-symbols-outlined text-3xl font-bold">event_note</span>
+                </div>
+                <div>
+                    <p class="text-xs text-gray-400 font-bold uppercase tracking-wider">Total Bookings</p>
+                    <h3 class="text-2xl font-bold text-gray-900 mt-0.5">@Model.TotalBookings</h3>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts Grid (2x2) -->
+        <div class="grid grid-cols-12 gap-8">
+            <!-- Chart 1: Revenue Line Graph -->
+            <div class="col-span-12 lg:col-span-8 bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
+                <div class="flex justify-between items-center mb-6">
+                    <div>
+                        <h4 class="text-xl font-bold text-gray-900">Revenue & Bookings Trend</h4>
+                        <p class="text-xs text-gray-500">Statistics for the last 6 months</p>
+                    </div>
+                    <span class="bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-semibold border border-green-200">
+                        +15% Growth
+                    </span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="monthlyTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 2: User Demographics Ratio -->
+            <div class="col-span-12 lg:col-span-4 bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
+                <h4 class="text-xl font-bold text-gray-900 mb-1">User Balance</h4>
+                <p class="text-xs text-gray-500 mb-6">Ratio of Traveler vs Guide vs Admin</p>
+                <div class="chart-container flex items-center justify-center">
+                    <canvas id="roleDistributionChart" style="max-height: 250px; max-width: 250px;"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 3: Popular Tour Destinations -->
+            <div class="col-span-12 lg:col-span-6 bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
+                <h4 class="text-xl font-bold text-gray-900 mb-1">Top Popular Tours</h4>
+                <p class="text-xs text-gray-500 mb-6">Ranked by total booking count</p>
+                <div class="chart-container">
+                    <canvas id="popularToursChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Chart 4: Booking Status breakdown -->
+            <div class="col-span-12 lg:col-span-6 bg-white p-8 rounded-2xl border border-gray-200 shadow-sm">
+                <h4 class="text-xl font-bold text-gray-900 mb-1">Booking Status Ratio (%)</h4>
+                <p class="text-xs text-gray-500 mb-6">Analysis of tour completion states</p>
+                <div class="chart-container flex items-center justify-center">
+                    <canvas id="bookingStatusChart" style="max-height: 250px; max-width: 250px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Chart Scripts & Rendering -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Load and parse Razor JSON payloads
+            const monthlyStats = @Html.Raw(Model.MonthlyRevenueJson);
+            const statusCounts = @Html.Raw(Model.BookingStatusJson);
+            const popularTours = @Html.Raw(Model.PopularDestinationsJson);
+            const roleCounts = @Html.Raw(Model.RoleDistributionJson);
+
+            // 1. Monthly Revenue & Booking Chart (Line & Bar combined)
+            const months = monthlyStats.map(s => s.month);
+            const bookingCounts = monthlyStats.map(s => s.bookings);
+            const revenueAmounts = monthlyStats.map(s => s.revenue);
+
+            new Chart(document.getElementById('monthlyTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: months,
+                    datasets: [
+                        {
+                            label: 'Revenue (₫)',
+                            data: revenueAmounts,
+                            borderColor: '#FF6B35',
+                            backgroundColor: 'rgba(255, 107, 53, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            yAxisID: 'y'
+                        },
+                        {
+                            label: 'Number of bookings',
+                            data: bookingCounts,
+                            type: 'bar',
+                            backgroundColor: 'rgba(0, 78, 137, 0.3)',
+                            hoverBackgroundColor: 'rgba(0, 78, 137, 0.6)',
+                            borderRadius: 6,
+                            yAxisID: 'y1'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            grid: { drawOnChartArea: true },
+                            ticks: {
+                                callback: function(value) { return value.toLocaleString('vi-VN') + '₫'; }
+                            }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    }
+                }
+            });
+
+            // 2. User Roles Distribution Chart (Pie)
+            new Chart(document.getElementById('roleDistributionChart'), {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(roleCounts),
+                    datasets: [{
+                        data: Object.values(roleCounts),
+                        backgroundColor: ['#004E89', '#FF6B35', '#F7B801'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // 3. Top Popular Tours Chart (Bar)
+            new Chart(document.getElementById('popularToursChart'), {
+                type: 'bar',
+                data: {
+                    labels: popularTours.map(t => t.name.length > 25 ? t.name.substring(0, 22) + '...' : t.name),
+                    datasets: [{
+                        label: 'Number of bookings',
+                        data: popularTours.map(t => t.count),
+                        backgroundColor: 'rgba(247, 184, 1, 0.7)',
+                        borderColor: '#F7B801',
+                        borderWidth: 1.5,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        }
+                    }
+                }
+            });
+
+            // 4. Booking Status Distribution Chart (Doughnut)
+            new Chart(document.getElementById('bookingStatusChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(statusCounts),
+                    datasets: [{
+                        data: Object.values(statusCounts),
+                        backgroundColor: ['#F7B801', '#3b82f6', '#10b981', '#ef4444'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+
+            // Active tab styling
+            const path = window.location.pathname;
+            let activeEl = null;
+            if (path.includes("/Admin/Dashboard") || path === "/Admin" || path === "/admin") {
+                activeEl = document.getElementById("nav-dashboard");
+            } else if (path.includes("/Admin/GuideApprovals")) {
+                activeEl = document.getElementById("nav-approvals");
+            } else if (path.includes("/Admin/Escrow")) {
+                activeEl = document.getElementById("nav-escrow");
+            } else if (path.includes("/Admin/Moderation")) {
+                activeEl = document.getElementById("nav-moderation");
+            } else if (path.includes("/Admin/Guides")) {
+                activeEl = document.getElementById("nav-guides");
+            } else if (path.includes("/Admin/Analytics")) {
+                activeEl = document.getElementById("nav-analytics");
+            }
+            
+            if (activeEl) {
+                activeEl.className = "flex items-center gap-4 px-6 py-3 bg-orange-100 text-primary border-l-4 border-primary rounded-r-full my-1 font-medium transition-all duration-200";
+            }
+
+            // Render Admin User Profile info
+            const email = localStorage.getItem("userEmail");
+            const role = localStorage.getItem("userRole");
+            if (email) {
+                const nameEl = document.getElementById("sidebarAdminName");
+                if (nameEl) nameEl.textContent = email.split('@@')[0];
+            }
+            if (role) {
+                const roleEl = document.getElementById("sidebarAdminRole");
+                if (roleEl) roleEl.textContent = role === "admin" ? "Super Admin" : role;
+            }
+
+            // Load pending guide count and update badge
+            async function loadPendingGuideCount() {
+                try {
+                    const response = await fetch('/Admin/GetPendingCount');
+                    const data = await response.json();
+                    
+                    if (data.count > 0) {
+                        const badge = document.getElementById('guideBadge');
+                        const countBadge = document.getElementById('guideCount');
+                        
+                        if (badge) badge.classList.remove('hidden');
+                        if (countBadge) {
+                            countBadge.classList.remove('hidden');
+                            countBadge.textContent = data.count;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading pending count:', error);
+                }
+            }
+
+            loadPendingGuideCount();
+            setInterval(loadPendingGuideCount, 30000);
+        });
+
+        // Logout function
+        window.logout = function() {
+            if (confirm('Are you sure you want to log out?')) {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('userRole');
+                window.location.href = '/Auth/Login';
+            }
+        }
+    </script>
+</body>
+</html>

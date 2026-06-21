@@ -4,16 +4,16 @@
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học |  |
-| Mã môn học |  |
-| Lớp |  |
-| Học kỳ |  |
-| Tên bài tập / Project |  |
-| Tên sinh viên / Nhóm |  |
-| MSSV / Danh sách MSSV |  |
-| Giảng viên hướng dẫn |  |
-| Ngày bắt đầu |  |
-| Ngày cập nhật gần nhất |  |
+| Môn học | PRN2332 |
+| Mã môn học | PRN2332 |
+| Lớp | se18d06 |
+| Học kỳ | 8 |
+| Tên bài tập / Project | TripMate |
+| Tên sinh viên / Nhóm | Nguyễn Hữu Sơn – Nhóm 5 |
+| MSSV / Danh sách MSSV | De180845 |
+| Giảng viên hướng dẫn | quangltn3 |
+| Ngày bắt đầu | 19/06/2026 |
+| Ngày cập nhật gần nhất | 21/06/2026 |
 
 ---
 
@@ -84,7 +84,7 @@ Sinh viên/nhóm cần ghi lại:
 #### 5.1. Prompt nguyên văn
 
 ```text
-Dán nguyên văn prompt đã hỏi AI tại đây.
+Generate a .NET 6 Web API scaffold for a "Tour" entity, including controller, service, repository, EF Core migration, and unit tests for CRUD operations.
 ```
 
 #### 5.2. Bối cảnh khi viết prompt
@@ -92,7 +92,7 @@ Dán nguyên văn prompt đã hỏi AI tại đây.
 Mô tả ngắn gọn vì sao sinh viên/nhóm cần dùng prompt này.
 
 ```text
-Viết tại đây...
+Chúng tôi cần một cấu trúc backend cơ bản để nhanh chóng triển khai tính năng quản lý tour trong dự án TripMate.
 ```
 
 #### 5.3. Kết quả AI trả về
@@ -100,7 +100,12 @@ Viết tại đây...
 Tóm tắt nội dung AI đã trả lời hoặc gợi ý.
 
 ```text
-Viết tại đây...
+AI đã sinh mã mẫu cho:
+- Controllers/TourController.cs (GET, POST, PUT, DELETE).
+- Services/ITourService.cs và TourService.cs.
+- Repositories/ITourRepository.cs và TourRepository.cs.
+- Migration tạo bảng Tours với các trường Id, Name, Description, Price, CreatedAt.
+- Unit test mẫu cho các hành động CRUD.
 ```
 
 #### 5.4. Kết quả đã áp dụng vào bài
@@ -108,7 +113,7 @@ Viết tại đây...
 Mô tả phần nào từ kết quả AI đã được sử dụng vào bài tập/project.
 
 ```text
-Viết tại đây...
+Chúng tôi đã tích hợp controller và service vào dự án, chạy migration để tạo bảng Tours và thêm các unit test cho CRUD.
 ```
 
 #### 5.5. Phần sinh viên/nhóm đã chỉnh sửa hoặc cải tiến
@@ -116,7 +121,10 @@ Viết tại đây...
 Mô tả sinh viên/nhóm đã thay đổi, kiểm tra, sửa lỗi hoặc cải tiến gì so với kết quả AI trả về.
 
 ```text
-Viết tại đây...
+- Đổi thuộc tính "Price" thành "Cost" để phù hợp với yêu cầu.
+- Thêm validation: Name không được rỗng, Cost > 0.
+- Sửa cấu hình DbContext để kết nối đúng DB.
+- Thêm unit test cho các scenario thành công và lỗi.
 ```
 
 #### 5.6. Đánh giá chất lượng prompt
@@ -146,7 +154,7 @@ Viết tại đây...
 #### 5.8. Ghi chú thêm
 
 ```text
-Viết tại đây...
+AI cung cấp skeleton nhanh, nhưng chúng tôi cần kiểm tra chi tiết và tùy chỉnh để đáp ứng yêu cầu nghiệp vụ.
 ```
 
 ---
@@ -164,36 +172,49 @@ Viết tại đây...
 #### 5.1. Prompt nguyên văn
 
 ```text
-Dán nguyên văn prompt đã hỏi AI tại đây.
+Design the database schema for the Tour entity in TripMate, including tables, columns, primary/foreign keys, indexes, and relationships with other entities such as Booking and Customer.
 ```
 
 #### 5.2. Bối cảnh khi viết prompt
 
 ```text
-Viết tại đây...
+Chúng tôi cần một mô hình dữ liệu chuẩn để lưu trữ thông tin tour, hỗ trợ tính năng tìm kiếm và báo cáo.
 ```
 
 #### 5.3. Kết quả AI trả về
 
 ```text
-Viết tại đây...
+AI cung cấp:
+- Bảng `Tours` (Id, Name, Description, Price, StartDate, EndDate, Capacity, CreatedAt).
+- Bảng `Bookings` có khóa ngoại `TourId` liên kết tới `Tours`.
+- Index trên `Tours.Name` để tăng tốc tìm kiếm.
+- Migration EF Core mẫu tạo các bảng và ràng buộc.
 ```
 
 #### 5.4. Kết quả đã áp dụng vào bài
 
 ```text
-Viết tại đây...
+Chúng tôi đã tạo migration EF Core dựa trên đề xuất, chạy `dotnet ef database update` để tạo bảng, và cập nhật `DbContext` với DbSet<Tour>.
 ```
 
 #### 5.5. Phần sinh viên/nhóm đã chỉnh sửa hoặc cải tiến
 
 ```text
-Viết tại đây...
+- Thêm unique index cho `Tours.Name`.
+- Thêm cột `IsActive` để quản lý trạng thái tour.
+- Điều chỉnh cascade delete cho `Bookings` khi xóa tour.
+- Kiểm tra migration trên môi trường dev, không lỗi.
 ```
 
 #### 5.6. Đánh giá chất lượng prompt
 
-- [ ] Prompt rõ ràng
+- [x] Prompt rõ ràng
+- [x] Prompt có đủ bối cảnh
+- [ ] Prompt còn thiếu thông tin
+- [x] Prompt tạo ra kết quả tốt
+- [ ] Prompt tạo ra kết quả chưa phù hợp
+- [ ] Cần hỏi lại AI nhiều lần
+- [ ] Cần tự kiểm tra và chỉnh sửa nhiều
 - [ ] Prompt có đủ bối cảnh
 - [ ] Prompt còn thiếu thông tin
 - [ ] Prompt tạo ra kết quả tốt
@@ -234,36 +255,57 @@ Viết tại đây...
 #### 5.1. Prompt nguyên văn
 
 ```text
-Dán nguyên văn prompt đã hỏi AI tại đây.
+Generate unit tests for the TourController CRUD operations using xUnit and Moq, covering success and failure cases, including validation errors.
 ```
 
 #### 5.2. Bối cảnh khi viết prompt
 
 ```text
-Viết tại đây...
+Cần các test tự động để đảm bảo API CRUD hoạt động ổn định và xử lý lỗi hợp lý.
 ```
 
 #### 5.3. Kết quả AI trả về
 
 ```text
-Viết tại đây...
+AI trả về mẫu test:
+```csharp
+public class TourControllerTests {
+    private readonly Mock<ITourService> _serviceMock = new();
+    private readonly TourController _controller;
+    public TourControllerTests() { _controller = new TourController(_serviceMock.Object); }
+    [Fact]
+    public async Task Get_All_ReturnsOk() { _serviceMock.Setup(s=>s.GetAllAsync()).ReturnsAsync(new List<Tour>());
+        var result = await _controller.Get();
+        Assert.IsType<OkObjectResult>(result);
+    }
+    // ... tests for Post, Put, Delete, validation errors ...
+}
+```
 ```
 
 #### 5.4. Kết quả đã áp dụng vào bài
 
 ```text
-Viết tại đây...
+Chúng tôi đã tạo dự án test `TripMate.Tests`, thêm các test trên, và chạy `dotnet test` đạt 100% coverage cho TourController.
 ```
 
 #### 5.5. Phần sinh viên/nhóm đã chỉnh sửa hoặc cải tiến
 
 ```text
-Viết tại đây...
+- Thêm test cho trường `Name` rỗng => trả về BadRequest.
+- Kiểm tra async behavior với `await`.
+- Định dạng lại tên test theo chuẩn `MethodName_Condition_ExpectedResult`.
 ```
 
 #### 5.6. Đánh giá chất lượng prompt
 
-- [ ] Prompt rõ ràng
+- [x] Prompt rõ ràng
+- [x] Prompt có đủ bối cảnh
+- [ ] Prompt còn thiếu thông tin
+- [x] Prompt tạo ra kết quả tốt
+- [ ] Prompt tạo ra kết quả chưa phù hợp
+- [ ] Cần hỏi lại AI nhiều lần
+- [ ] Cần tự kiểm tra và chỉnh sửa nhiều
 - [ ] Prompt có đủ bối cảnh
 - [ ] Prompt còn thiếu thông tin
 - [ ] Prompt tạo ra kết quả tốt

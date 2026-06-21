@@ -207,7 +207,7 @@ public class SupabaseAuthService
                 id = userId,
                 email,
                 full_name = fullName,
-                phone = phoneNumber,         // schema mới dùng 'phone'
+                phone_number = phoneNumber,
                 role = role,
                 experience = experience,
                 specialization = specialization,
@@ -248,7 +248,7 @@ public class SupabaseAuthService
             updateRequest.Content = new StringContent(
                 JsonSerializer.Serialize(new {
                     full_name = fullName,
-                    phone = phoneNumber,
+                    phone_number = phoneNumber,
                     role = role,
                     experience = experience,
                     specialization = specialization,
