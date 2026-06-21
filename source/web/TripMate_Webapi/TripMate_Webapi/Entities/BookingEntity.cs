@@ -10,13 +10,13 @@ namespace TripMate_Webapi.Entities
         public string Id { get; set; } = Guid.NewGuid().ToString();
 
         [Column("traveler_id")]
-        public string TravelerId { get; set; }
+        public string TravelerId { get; set; } = string.Empty;
 
         [Column("guide_profile_id")]
-        public string GuideProfileId { get; set; }
+        public string GuideProfileId { get; set; } = string.Empty;
 
         [Column("experience_package_id")]
-        public string ExperiencePackageId { get; set; }
+        public string ExperiencePackageId { get; set; } = string.Empty;
 
         [Column("booking_date")]
         public DateTime BookingDate { get; set; }

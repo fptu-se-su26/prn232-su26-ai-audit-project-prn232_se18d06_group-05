@@ -7,13 +7,13 @@ namespace TripMate_Webapi.Entities
     public class TripRequestEntity : BaseModel
     {
         [PrimaryKey("id", true)]
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [Column("traveler_id")]
-        public string TravelerId { get; set; }
+        public string TravelerId { get; set; } = string.Empty;
 
         [Column("destination")]
-        public string Destination { get; set; }
+        public string Destination { get; set; } = string.Empty;
 
         [Column("start_date")]
         public DateTime StartDate { get; set; }
@@ -25,13 +25,13 @@ namespace TripMate_Webapi.Entities
         public int GroupSize { get; set; }
 
         [Column("budget")]
-        public string Budget { get; set; }
+        public string Budget { get; set; } = string.Empty;
 
         [Column("notes")]
-        public string Notes { get; set; }
+        public string Notes { get; set; } = string.Empty;
 
         [Column("status")]
-        public string Status { get; set; }
+        public string Status { get; set; } = string.Empty;
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; }

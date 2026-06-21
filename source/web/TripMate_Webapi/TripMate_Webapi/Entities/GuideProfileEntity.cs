@@ -7,16 +7,16 @@ namespace TripMate_Webapi.Entities
     public class GuideProfileEntity : BaseModel
     {
         [PrimaryKey("id", true)]
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [Column("user_id")]
-        public string UserId { get; set; }
+        public string UserId { get; set; } = string.Empty;
 
         [Reference(typeof(ProfileEntity))]
-        public ProfileEntity Profile { get; set; }
+        public ProfileEntity Profile { get; set; } = null!;
 
         [Column("bio")]
-        public string Bio { get; set; }
+        public string Bio { get; set; } = string.Empty;
 
         [Column("languages")]
         public List<string>? Languages { get; set; }

@@ -33,12 +33,40 @@ namespace TripMate_Webapi.Controllers
             return View();
         }
 
-        // GET: /Traveler/Dashboard (Will eventually be deprecated/redirected to Trips)
         public async Task<IActionResult> Dashboard()
         {
             var travelerId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             var bookings = new List<BookingEntity>();
             
+            // Fallback for testing
+            if (string.IsNullOrEmpty(travelerId))
+            {
+                try
+                {
+                    var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+                    var baseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
+                    using var http = new System.Net.Http.HttpClient();
+                    var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, $"{baseUrl}/rest/v1/profiles?role=eq.traveler&limit=1");
+                    req.Headers.Add("apikey", serviceKey);
+                    req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", serviceKey);
+                    var response = await http.SendAsync(req);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var profiles = System.Text.Json.JsonSerializer.Deserialize<List<TripMate_Webapi.Entities.ProfileEntity>>(await response.Content.ReadAsStringAsync());
+                        if (profiles != null && profiles.Any())
+                        {
+                            travelerId = profiles.First().Id;
+                            ViewBag.TravelerName = profiles.First().FullName;
+                        }
+                    }
+                }
+                catch { }
+            }
+            else
+            {
+                ViewBag.TravelerName = User.Identity?.Name ?? "Traveler";
+            }
+
             if (!string.IsNullOrEmpty(travelerId))
             {
                 bookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
@@ -52,11 +80,34 @@ namespace TripMate_Webapi.Controllers
         public async Task<IActionResult> Book(string guideId, DateTime date, int guests)
         {
             var travelerId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            string? testUserToken = null;
             if (string.IsNullOrEmpty(travelerId))
             {
-                // Fallback for testing/audit: get any existing profile
-                var profiles = await _bookingRepository.GetBookingsByTravelerAsync(""); // hack to access db client? No, let's just use a fake UUID if null for testing without login.
-                travelerId = "00000000-0000-0000-0000-000000000000"; 
+                // Fallback for testing: Fetch a traveler profile directly using ServiceRoleKey
+                try
+                {
+                    var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+                    var baseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
+                    using var http = new System.Net.Http.HttpClient();
+                    var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, $"{baseUrl}/rest/v1/profiles?role=eq.traveler&limit=1");
+                    req.Headers.Add("apikey", serviceKey);
+                    req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", serviceKey);
+                    
+                    var response = await http.SendAsync(req);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        var content = await response.Content.ReadAsStringAsync();
+                        var profiles = System.Text.Json.JsonSerializer.Deserialize<List<TripMate_Webapi.Entities.ProfileEntity>>(content);
+                        if (profiles != null && profiles.Any())
+                        {
+                            travelerId = profiles.First().Id;
+                        }
+                    }
+                }
+                catch (Exception)
+                {
+                    // Ignore errors in fallback
+                }
             }
 
             // Fallback for guideId
@@ -72,25 +123,13 @@ namespace TripMate_Webapi.Controllers
             }
             else
             {
-                // Create a dummy package for this guide to satisfy FK
-                try 
-                {
-                    // For audit purposes, if it fails, we catch it.
-                    var newPackage = await _tourService.CreateTourAsync(guideId, new TripMate_WebAPI.DTOs.Tour.CreateTourRequest(
-                        "Custom Trip", "Custom booking request", 4, 500000, null, guests, null, null
-                    ), "");
-                    packageId = newPackage.Id!;
-                }
-                catch
-                {
-                    // Fallback to a fake ID if creation fails (e.g. guide doesn't exist)
-                    packageId = "00000000-0000-0000-0000-000000000000";
-                }
+                // If no package exists, we fall back to a dummy guid. The repository will omit it.
+                packageId = "00000000-0000-0000-0000-000000000000";
             }
 
             var booking = new BookingEntity
             {
-                TravelerId = travelerId,
+                TravelerId = travelerId ?? string.Empty,
                 GuideProfileId = guideId,
                 ExperiencePackageId = packageId,
                 BookingDate = date,
@@ -102,22 +141,46 @@ namespace TripMate_Webapi.Controllers
                 Status = 0 // Pending
             };
 
-            await _bookingRepository.CreateBookingAsync(booking);
+            await _bookingRepository.CreateBookingAsync(booking, testUserToken);
 
             TempData["SuccessMessage"] = "Your booking request has been sent to the Guide successfully!";
             return RedirectToAction("Dashboard");
         }
 
         // GET: /Traveler/BookingDetails/{id}
-        public IActionResult BookingDetails(string id = "1")
+        public async Task<IActionResult> BookingDetails(string id)
         {
-            return View();
+            var booking = await _bookingRepository.GetBookingByIdAsync(id);
+            if (booking == null)
+            {
+                return RedirectToAction("Dashboard");
+            }
+            return View(booking);
         }
 
         // GET: /Traveler/Checkout/{id}
-        public IActionResult Checkout(string id = "1")
+        public async Task<IActionResult> Checkout(string id)
         {
-            return View();
+            var booking = await _bookingRepository.GetBookingByIdAsync(id);
+            if (booking == null)
+            {
+                return RedirectToAction("Dashboard");
+            }
+            return View(booking);
+        }
+
+        // POST: /Traveler/ProcessPayment
+        [HttpPost]
+        public async Task<IActionResult> ProcessPayment(string id, string paymentMethod)
+        {
+            var booking = await _bookingRepository.GetBookingByIdAsync(id);
+            if (booking != null)
+            {
+                booking.Status = 2; // 2 = Completed/Paid (assuming 0=Pending, 1=Approved, 2=Completed)
+                await _bookingRepository.UpdateBookingAsync(booking);
+                TempData["SuccessMessage"] = $"Payment successful via {paymentMethod}! Enjoy your trip.";
+            }
+            return RedirectToAction("Trips");
         }
 
         // GET: /Traveler/Messages

@@ -18,6 +18,7 @@ public class SupabaseAuthService
     private readonly INotificationService _notificationService;
     private readonly string _supabaseUrl;
     private readonly string _anonKey;
+    private readonly string _serviceRoleKey;
 
     private static readonly JsonSerializerOptions _json = new()
     {
@@ -32,6 +33,7 @@ public class SupabaseAuthService
         _notificationService = notificationService;
         _supabaseUrl = config["Supabase:Url"]!;
         _anonKey = config["Supabase:AnonKey"]!;
+        _serviceRoleKey = config["Supabase:ServiceRoleKey"]!;
     }
 
     // ── Login ─────────────────────────────────────────────────────────────────
@@ -66,19 +68,26 @@ public class SupabaseAuthService
         var session = JsonSerializer.Deserialize<GoTrueSession>(response, _json)
             ?? throw new Exception("Phản hồi không hợp lệ từ Supabase");
 
-        if (session.User?.Id == null)
+        // If Email Confirmations are on, the response might be a GoTrueUser instead of a Session
+        if (string.IsNullOrEmpty(session.AccessToken) && !response.Contains("\"access_token\""))
+        {
+            var userOnly = JsonSerializer.Deserialize<GoTrueUser>(response, _json);
+            if (userOnly != null && !string.IsNullOrEmpty(userOnly.Id))
+            {
+                session.User = userOnly;
+            }
+        }
+
+        if (string.IsNullOrEmpty(session.User?.Id))
             throw new Exception("Đăng ký thất bại");
 
         // 2. Upsert profile vào bảng profiles với thông tin mở rộng
-        if (!string.IsNullOrEmpty(session.AccessToken))
+        if (string.IsNullOrEmpty(session.AccessToken))
         {
-            await UpsertProfileAsync(session.AccessToken, session.User.Id, email, fullName, role, 
-                phoneNumber, experience, specialization, languages, bio, certificatePath, avatarUrl);
+            Console.WriteLine($"[WARNING] No access token returned for {email}. Using ServiceRoleKey to upsert profile.");
         }
-        else
-        {
-            Console.WriteLine($"[WARNING] No access token returned for {email}. Profile cannot be upserted. Email confirmation might be required.");
-        }
+        await UpsertProfileAsync(session.AccessToken, session.User.Id, email, fullName, role, 
+            phoneNumber, experience, specialization, languages, bio, certificatePath, avatarUrl);
 
         // 3. Notify admin if it's a guide registration
         if (role == "guide")
@@ -200,7 +209,7 @@ public class SupabaseAuthService
         };
     }
 
-    public async Task UpsertProfileAsync(string accessToken, string userId, string email, string fullName, string role = "traveler",
+    public async Task UpsertProfileAsync(string? accessToken, string userId, string email, string fullName, string role = "traveler",
         string? phoneNumber = null, string? experience = null, string? specialization = null, 
         string? languages = null, string? bio = null, string? certificatePath = null, string? avatarUrl = null)
     {
@@ -229,8 +238,9 @@ public class SupabaseAuthService
                 HttpMethod.Post,
                 $"{_supabaseUrl}/rest/v1/profiles");
 
+            var token = string.IsNullOrEmpty(accessToken) ? _serviceRoleKey : accessToken;
             insertRequest.Headers.Add("apikey", _anonKey);
-            insertRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            insertRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             insertRequest.Headers.Add("Prefer", "resolution=merge-duplicates");
             insertRequest.Content = new StringContent(
                 JsonSerializer.Serialize(profile), Encoding.UTF8, "application/json");
@@ -248,8 +258,9 @@ public class SupabaseAuthService
                 HttpMethod.Patch,
                 $"{_supabaseUrl}/rest/v1/profiles?id=eq.{userId}");
 
+            var tokenPatch = string.IsNullOrEmpty(accessToken) ? _serviceRoleKey : accessToken;
             updateRequest.Headers.Add("apikey", _anonKey);
-            updateRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
+            updateRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenPatch);
             updateRequest.Content = new StringContent(
                 JsonSerializer.Serialize(new {
                     full_name = fullName,

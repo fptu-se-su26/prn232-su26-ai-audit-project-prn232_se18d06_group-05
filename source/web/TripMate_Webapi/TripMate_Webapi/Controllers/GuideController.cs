@@ -8,15 +8,18 @@ namespace TripMate_Webapi.Controllers
     {
         private readonly TourService _tourService;
         private readonly BookingService _bookingService;
+        private readonly IGuideRepository _guideRepository;
         private readonly ILogger<GuideController> _logger;
 
         public GuideController(
             TourService tourService,
             BookingService bookingService,
+            IGuideRepository guideRepository,
             ILogger<GuideController> logger)
         {
             _tourService = tourService;
             _bookingService = bookingService;
+            _guideRepository = guideRepository;
             _logger = logger;
         }
 
@@ -87,9 +90,22 @@ namespace TripMate_Webapi.Controllers
 
         // GET: /Guide/Profile/{id}
         // This is the public profile viewed by the Traveler
-        public IActionResult Profile(string id = "1")
+        public async Task<IActionResult> Profile(string id)
         {
-            return View();
+            if (string.IsNullOrEmpty(id))
+            {
+                return RedirectToAction("Explore", "Home");
+            }
+
+            var guide = await _guideRepository.GetGuideByIdAsync(id);
+            if (guide == null)
+            {
+                return RedirectToAction("Explore", "Home");
+            }
+
+            // You can fetch packages later or use TourService
+            // For now, pass the guide profile to the view
+            return View(guide);
         }
     }
 

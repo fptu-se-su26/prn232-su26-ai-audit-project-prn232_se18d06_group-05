@@ -15,7 +15,7 @@ namespace TripMate_Webapi.Repositories
         public async Task<TripRequestEntity> CreateTripRequestAsync(TripRequestEntity tripRequest)
         {
             var response = await _supabase.From<TripRequestEntity>().Insert(tripRequest);
-            return response.Models.FirstOrDefault();
+            return response.Models.FirstOrDefault()!;
         }
 
         public async Task<List<TripRequestEntity>> GetTripRequestsByTravelerAsync(string travelerId)

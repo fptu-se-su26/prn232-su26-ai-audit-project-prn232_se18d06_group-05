@@ -73,28 +73,20 @@
             </div>
             <nav id="mainNav" class="hidden md:flex items-center gap-6 text-sm font-bold flex-1 ml-8">
                 <!-- Search Bar in Header -->
-                <datalist id="vietnam_locations">
-                    <option value="Hanoi, Vietnam"></option>
-                    <option value="Ho Chi Minh City, Vietnam"></option>
-                    <option value="Da Nang, Vietnam"></option>
-                    <option value="Hoi An, Vietnam"></option>
-                    <option value="Nha Trang, Vietnam"></option>
-                    <option value="Phu Quoc, Vietnam"></option>
-                    <option value="Da Lat, Vietnam"></option>
-                    <option value="Sapa, Vietnam"></option>
-                    <option value="Ha Long Bay, Vietnam"></option>
-                    <option value="Hue, Vietnam"></option>
-                </datalist>
-                <form action="/Home/Explore" method="get" class="relative group hidden lg:flex bg-surface-variant rounded-full border border-outline-variant/30 overflow-hidden items-center transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary shadow-sm hover:shadow-md bg-white">
-                    <div class="flex items-center px-4 py-2 border-r border-outline-variant/30">
+                <form action="/Home/Explore" method="get" class="relative group hidden lg:flex bg-surface-variant rounded-full border border-outline-variant/30 items-center transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary shadow-sm hover:shadow-md bg-white">
+                    <div class="flex items-center px-4 py-2 border-r border-outline-variant/30 relative">
                         <span class="material-symbols-outlined text-on-surface-variant text-lg mr-2">search</span>
-                        <input type="text" name="destination" list="vietnam_locations" placeholder="Where to?" class="bg-transparent text-on-surface text-sm w-32 focus:outline-none border-none p-0 placeholder-on-surface-variant/70">
+                        <input type="text" id="destination-input" name="destination" autocomplete="off" placeholder="Where to?" class="bg-transparent text-on-surface text-sm w-32 focus:outline-none border-none p-0 placeholder-on-surface-variant/70">
+                        
+                        <!-- Autocomplete Dropdown -->
+                        <div id="autocomplete-dropdown" class="absolute top-[120%] left-0 w-72 bg-white border border-outline-variant/30 rounded-xl shadow-xl hidden z-[100] max-h-60 overflow-y-auto">
+                        </div>
                     </div>
                     <div class="flex items-center px-4 py-2">
                         <span class="material-symbols-outlined text-on-surface-variant text-lg mr-2">calendar_month</span>
                         <input type="text" name="when" placeholder="When?" class="date-picker bg-transparent text-on-surface text-sm w-40 focus:outline-none border-none p-0 placeholder-on-surface-variant/70 cursor-pointer">
                     </div>
-                    <button type="submit" class="bg-primary hover:bg-primary/90 text-white px-4 py-2 h-full font-bold transition-all shadow-md">Search</button>
+                    <button type="submit" class="bg-primary hover:bg-primary/90 text-white px-6 py-2 h-full font-bold transition-all shadow-md rounded-r-full">Search</button>
                 </form>
 
                 <a class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-500 hover:opacity-80 transition-opacity flex items-center gap-1 whitespace-nowrap" href="/Survey/Index">
@@ -270,6 +262,110 @@
                 dateFormat: "M j",
                 minDate: "today"
             });
+
+            // Nominatim Autocomplete Logic
+            const destInput = document.getElementById('destination-input');
+            const dropdown = document.getElementById('autocomplete-dropdown');
+            let timeoutId;
+
+            if (destInput && dropdown) {
+                destInput.addEventListener('input', function() {
+                    clearTimeout(timeoutId);
+                    const query = this.value.trim();
+                    
+                    if (query.length < 2) {
+                        dropdown.classList.add('hidden');
+                        return;
+                    }
+
+                    timeoutId = setTimeout(() => {
+                        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=vn&addressdetails=1&limit=5&accept-language=en`)
+                            .then(res => res.json())
+                            .then(data => {
+                                dropdown.innerHTML = '';
+                                
+                                // Default popular destinations in VN to pad the results
+                                const defaultDests = [
+                                    { name: "Hanoi", display_name: "Hanoi, Vietnam" },
+                                    { name: "Da Nang", display_name: "Da Nang, Vietnam" },
+                                    { name: "Hoi An", display_name: "Hoi An, Quang Nam, Vietnam" },
+                                    { name: "Da Lat", display_name: "Da Lat, Lam Dong, Vietnam" },
+                                    { name: "Phu Quoc", display_name: "Phu Quoc, Kien Giang, Vietnam" },
+                                    { name: "Sapa", display_name: "Sapa, Lao Cai, Vietnam" },
+                                    { name: "Nha Trang", display_name: "Nha Trang, Khanh Hoa, Vietnam" },
+                                    { name: "Ha Long", display_name: "Ha Long Bay, Quang Ninh, Vietnam" }
+                                ];
+
+                                let results = [];
+                                if (data && data.length > 0) {
+                                    results = data.map(item => ({
+                                        name: item.address?.city || item.address?.town || item.address?.state || item.name,
+                                        display_name: item.display_name
+                                    }));
+                                }
+                                
+                                // Pad with defaults if less than 5
+                                if (results.length < 5) {
+                                    // Filter out defaults that might already match the user's query or existing results
+                                    const availableDefaults = defaultDests.filter(d => 
+                                        d.name.toLowerCase().includes(query.toLowerCase()) &&
+                                        !results.some(r => r.name.toLowerCase() === d.name.toLowerCase())
+                                    );
+                                    
+                                    // If we still need more, just add random defaults to ensure exactly 5
+                                    let i = 0;
+                                    while (results.length < 5 && i < availableDefaults.length) {
+                                        results.push(availableDefaults[i]);
+                                        i++;
+                                    }
+                                    
+                                    // If still less than 5, force fill from remaining defaults
+                                    let j = 0;
+                                    while (results.length < 5 && j < defaultDests.length) {
+                                        if (!results.some(r => r.name === defaultDests[j].name)) {
+                                            results.push(defaultDests[j]);
+                                        }
+                                        j++;
+                                    }
+                                }
+
+                                // Slice exactly 5
+                                results.slice(0, 5).forEach(item => {
+                                    const div = document.createElement('div');
+                                    div.className = 'px-4 py-3 hover:bg-surface-variant cursor-pointer text-sm text-on-surface border-b border-outline-variant/10 last:border-0 flex items-start gap-2';
+                                    
+                                    div.innerHTML = `
+                                        <span class="material-symbols-outlined text-primary text-sm mt-0.5 shrink-0">location_on</span> 
+                                        <div class="flex flex-col">
+                                            <span class="font-bold">${item.name}</span>
+                                            <span class="text-xs text-on-surface-variant truncate w-48">${item.display_name}</span>
+                                        </div>
+                                    `;
+                                    div.addEventListener('click', () => {
+                                        destInput.value = item.name;
+                                        dropdown.classList.add('hidden');
+                                        // Auto-submit the form for a better UX
+                                        destInput.closest('form').submit();
+                                    });
+                                    dropdown.appendChild(div);
+                                });
+                                
+                                dropdown.classList.remove('hidden');
+                            })
+                            .catch(err => {
+                                console.error('Nominatim error:', err);
+                                dropdown.classList.add('hidden');
+                            });
+                    }, 400); // debounce
+                });
+
+                // Close dropdown when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!destInput.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+            }
         });
     </script>
 </body>

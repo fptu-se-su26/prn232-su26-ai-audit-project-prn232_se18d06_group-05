@@ -12,13 +12,13 @@ public class ExperiencePackageEntity : BaseModel
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
     [Column("guide_profile_id")]
-    public string GuideProfileId { get; set; }
+    public string GuideProfileId { get; set; } = string.Empty;
 
     [Column("title")]
-    public string Title { get; set; }
+    public string Title { get; set; } = string.Empty;
 
     [Column("description")]
-    public string Description { get; set; }
+    public string Description { get; set; } = string.Empty;
 
     [Column("duration_hours")]
     public decimal DurationHours { get; set; }

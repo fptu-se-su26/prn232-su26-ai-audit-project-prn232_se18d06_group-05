@@ -59,21 +59,14 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Home/Explore
-        public async Task<IActionResult> Explore(string? destination = null)
+        public async Task<IActionResult> Explore(string? destination = null, string? specialty = null)
         {
             try
             {
-                List<GuideProfileEntity> guides;
-                if (string.IsNullOrEmpty(destination))
-                {
-                    guides = await _guideRepository.GetAllGuidesAsync();
-                }
-                else
-                {
-                    guides = await _guideRepository.GetGuidesByDestinationAsync(destination);
-                }
+                var guides = await _guideRepository.GetGuidesFilteredAsync(destination, specialty);
                 
                 ViewBag.Destination = destination;
+                ViewBag.Specialty = specialty;
                 return View(guides);
             }
             catch (Exception ex)

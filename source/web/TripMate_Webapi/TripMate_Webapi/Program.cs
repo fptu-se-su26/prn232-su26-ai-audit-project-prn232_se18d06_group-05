@@ -33,11 +33,13 @@ var issuer      = builder.Configuration["Supabase:Issuer"]!;
 
 builder.Services.AddSingleton(_ =>
 {
-    var client = new Client(supabaseUrl, supabaseKey, new SupabaseOptions
+    var options = new SupabaseOptions
     {
         AutoRefreshToken = true,
         AutoConnectRealtime = false,
-    });
+    };
+    options.Headers.Add("Authorization", $"Bearer {supabaseKey}");
+    var client = new Client(supabaseUrl, supabaseKey, options);
     client.InitializeAsync().GetAwaiter().GetResult();
     return client;
 });

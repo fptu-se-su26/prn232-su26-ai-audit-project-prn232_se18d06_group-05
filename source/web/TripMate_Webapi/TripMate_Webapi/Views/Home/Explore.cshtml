@@ -2,9 +2,10 @@
 @{
     ViewData["Title"] = "Explore Guides & Destinations";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    string searchDest = ViewBag.Destination as string;
-    string searchWhen = ViewBag.SearchWhen as string;
-    bool hasSearch = !string.IsNullOrEmpty(searchDest) || !string.IsNullOrEmpty(searchWhen);
+    string? searchDest = ViewBag.Destination as string;
+    string? searchWhen = ViewBag.SearchWhen as string;
+    string currentSpecialty = ViewBag.Specialty as string ?? "All";
+    bool hasSearch = !string.IsNullOrEmpty(searchDest) || !string.IsNullOrEmpty(searchWhen) || currentSpecialty != "All";
 }
 
 <div class="bg-surface min-h-screen pt-8 pb-20">
@@ -49,11 +50,11 @@
 
         <!-- Filter Tags -->
         <div class="flex flex-wrap gap-3 mb-10">
-            <button class="px-4 py-2 rounded-full bg-primary text-white font-bold text-sm shadow-sm">All</button>
-            <button class="px-4 py-2 rounded-full bg-white border border-outline-variant/30 text-on-surface-variant font-bold text-sm hover:bg-surface-variant transition-colors">Photography</button>
-            <button class="px-4 py-2 rounded-full bg-white border border-outline-variant/30 text-on-surface-variant font-bold text-sm hover:bg-surface-variant transition-colors">Street Food</button>
-            <button class="px-4 py-2 rounded-full bg-white border border-outline-variant/30 text-on-surface-variant font-bold text-sm hover:bg-surface-variant transition-colors">Culture & History</button>
-            <button class="px-4 py-2 rounded-full bg-white border border-outline-variant/30 text-on-surface-variant font-bold text-sm hover:bg-surface-variant transition-colors">Adventure</button>
+            <a href="/Home/Explore?destination=@searchDest&specialty=All" class="px-4 py-2 rounded-full @(currentSpecialty == "All" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm shadow-sm hover:bg-surface-variant transition-colors">All</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Photography" class="px-4 py-2 rounded-full @(currentSpecialty == "Photography" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Photography</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Street Food" class="px-4 py-2 rounded-full @(currentSpecialty == "Street Food" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Street Food</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Culture" class="px-4 py-2 rounded-full @(currentSpecialty == "Culture" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Culture & History</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Adventure" class="px-4 py-2 rounded-full @(currentSpecialty == "Adventure" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Adventure</a>
         </div>
 
         <!-- Guides Grid -->

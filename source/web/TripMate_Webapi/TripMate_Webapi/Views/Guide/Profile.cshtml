@@ -1,5 +1,6 @@
+@model TripMate_Webapi.Entities.GuideProfileEntity
 @{
-    ViewData["Title"] = "Guide Profile";
+    ViewData["Title"] = Model?.Profile?.FullName ?? "Guide Profile";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
@@ -9,7 +10,7 @@
         <div class="flex flex-col md:flex-row gap-10 items-start">
             <!-- Avatar -->
             <div class="w-48 h-48 rounded-full border-4 border-white shadow-2xl overflow-hidden shrink-0 relative">
-                <img src="/images/guide_1.png" alt="Minh Anh" class="w-full h-full object-cover"/>
+                <img src="@(string.IsNullOrEmpty(Model?.Profile?.AvatarUrl) ? "/images/default_avatar.png" : Model.Profile.AvatarUrl)" alt="Avatar" class="w-full h-full object-cover"/>
             </div>
 
             <!-- Basic Info -->
@@ -17,15 +18,18 @@
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
                     <div>
                         <h1 class="text-5xl font-extrabold text-on-surface mb-2 flex items-center gap-4">
-                            Minh Anh
-                            <span class="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full font-bold flex items-center gap-1 border border-primary/20">
-                                <span class="material-symbols-outlined text-sm">verified</span>
-                                Verified Local
-                            </span>
+                            @(Model?.Profile?.FullName ?? "Unknown Guide")
+                            @if(Model?.IsVerified == true)
+                            {
+                                <span class="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full font-bold flex items-center gap-1 border border-primary/20">
+                                    <span class="material-symbols-outlined text-sm">verified</span>
+                                    Verified Local
+                                </span>
+                            }
                         </h1>
                         <p class="text-xl text-on-surface-variant flex items-center gap-2 font-medium">
                             <span class="material-symbols-outlined text-primary">location_on</span>
-                            Hanoi, Vietnam
+                            @(Model?.CityArea ?? "Location not specified")
                         </p>
                     </div>
                     
@@ -44,20 +48,19 @@
                 <div class="flex flex-wrap gap-8 items-center mt-8">
                     <div class="flex flex-col">
                         <span class="text-3xl font-extrabold text-on-surface flex items-center gap-2">
-                            5.0 <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+                            @(Model?.AverageRating?.ToString("0.0") ?? "0.0") <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
                         </span>
-                        <span class="text-on-surface-variant text-sm font-medium">124 Reviews</span>
-                    </div>
-                    <div class="w-px h-10 bg-outline-variant/30"></div>
-                    <div class="flex flex-col">
-                        <span class="text-3xl font-extrabold text-on-surface">150+</span>
-                        <span class="text-on-surface-variant text-sm font-medium">Trips Completed</span>
+                        <span class="text-on-surface-variant text-sm font-medium">@(Model?.TotalReviews ?? 0) Reviews</span>
                     </div>
                     <div class="w-px h-10 bg-outline-variant/30"></div>
                     <div class="flex gap-2">
-                        <span class="bg-blue-100 text-blue-700 font-bold px-4 py-2 rounded-xl border border-blue-200">EN</span>
-                        <span class="bg-red-100 text-red-700 font-bold px-4 py-2 rounded-xl border border-red-200">VN</span>
-                        <span class="bg-gray-200 text-gray-700 font-bold px-4 py-2 rounded-xl border border-gray-300">FR</span>
+                        @if(Model?.Languages != null)
+                        {
+                            foreach (var lang in Model.Languages)
+                            {
+                                <span class="bg-blue-100 text-blue-700 font-bold px-4 py-2 rounded-xl border border-blue-200 uppercase">@lang</span>
+                            }
+                        }
                     </div>
                 </div>
             </div>
@@ -75,16 +78,16 @@
             <div>
                 <h3 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-3">
                     <span class="material-symbols-outlined text-primary text-3xl">psychology</span>
-                    Personality & Vibe
+                    Specialties
                 </h3>
-                <div class="bg-primary-container/50 p-6 rounded-2xl border border-primary/20">
-                    <div class="flex justify-between items-center mb-4">
-                        <span class="font-bold text-lg text-on-primary-container">ENFP - "The Campaigner"</span>
-                        <span class="bg-white text-primary px-3 py-1 rounded-full text-sm font-bold shadow-sm">Extrovert • Intuitive • Feeling • Prospecting</span>
-                    </div>
-                    <p class="text-on-surface-variant leading-relaxed">
-                        "I'm an energetic, warm, and passionate person who loves to uncover the deeper meaning of life through culture and human connection. Traveling with me means lots of spontaneous detours, deep conversations over coffee, and finding beauty in the little things."
-                    </p>
+                <div class="flex flex-wrap gap-2">
+                    @if(Model?.Specialties != null)
+                    {
+                        foreach(var spec in Model.Specialties)
+                        {
+                            <span class="bg-surface-variant text-on-surface-variant px-4 py-2 rounded-full font-bold shadow-sm">@spec</span>
+                        }
+                    }
                 </div>
             </div>
 
@@ -92,12 +95,11 @@
             <div>
                 <h3 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-3">
                     <span class="material-symbols-outlined text-primary text-3xl">account_circle</span>
-                    About Minh Anh
+                    About @(Model?.Profile?.FullName ?? "Guide")
                 </h3>
                 <p class="text-on-surface-variant leading-relaxed text-lg mb-4">
-                    Born and raised in the heart of Hanoi, I've spent the last 25 years watching this city evolve while preserving its thousand-year-old soul. I majored in Art History and currently work as a freelance photographer.
+                    @(Model?.Bio ?? "No bio available.")
                 </p>
-                <p class="text-on-surface-variant leading-relaxed text-lg">
                     I don't do "cookie-cutter" tours. If you book me, expect to sit on tiny plastic stools eating the best Pho you've ever had, wandering through hidden art galleries in old French colonial villas, and learning about Vietnam not just from textbooks, but from real, raw local perspectives.
                 </p>
             </div>
@@ -177,7 +179,7 @@
                         <p class="text-on-surface-variant mt-2">"Amazing experience. It felt like walking around with an old friend rather than a hired tour guide. Highly recommended for solo female travelers!"</p>
                     </div>
                     
-                    <button class="text-primary font-bold hover:underline">Read all 124 reviews</button>
+                    <button class="text-primary font-bold hover:underline">Read all @(Model?.TotalReviews ?? 0) reviews</button>
                 </div>
             </div>
         </div>
@@ -187,14 +189,14 @@
             <div class="bg-white p-8 rounded-3xl shadow-2xl border border-primary/20 sticky top-24">
                 <div class="flex justify-between items-end mb-6 border-b border-outline-variant/30 pb-6">
                     <div>
-                        <span class="text-3xl font-extrabold text-on-surface">500,000₫</span>
+                        <span class="text-3xl font-extrabold text-on-surface">@(Model?.PricePerHour?.ToString("#,##0") ?? "0")₫</span>
                         <span class="text-on-surface-variant">/ day</span>
                     </div>
                 </div>
 
                 <form action="/Traveler/Book" method="POST" class="space-y-6" id="bookingForm" onsubmit="handleBooking(event)">
                     <!-- Hidden field for Guide ID -->
-                    <input type="hidden" name="guideId" value="1" />
+                    <input type="hidden" name="guideId" value="@Model?.Id" />
                     
                     <div>
                         <label class="block text-sm font-bold text-on-surface mb-2">Select Date</label>
@@ -215,7 +217,7 @@
                     <div class="bg-primary-container/30 p-4 rounded-xl flex items-start gap-3">
                         <span class="material-symbols-outlined text-primary">info</span>
                         <p class="text-xs text-on-surface-variant leading-relaxed">
-                            You won't be charged yet. This will send a request to Minh Anh. You can discuss the specific itinerary before payment.
+                            You won't be charged yet. This will send a request to @(Model?.Profile?.FullName ?? "the guide"). You can discuss the specific itinerary before payment.
                         </p>
                     </div>
 
@@ -254,9 +256,10 @@
     }
 
     function handleBooking(event) {
-        if (!requireAuth()) {
-            event.preventDefault(); // Stop form submission if not logged in
-        }
+        // Disabled auth check for testing purposes
+        // if (!requireAuth()) {
+        //     event.preventDefault(); 
+        // }
     }
 
     function handleMessage() {

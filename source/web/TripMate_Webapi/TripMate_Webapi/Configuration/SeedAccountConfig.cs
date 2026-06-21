@@ -13,4 +13,5 @@ public class SeedAccountConfig
     public string? Bio { get; set; }
     public string? AvatarUrl { get; set; }
     public string? CoverPhotoUrl { get; set; }
+    public string? CityArea { get; set; }
 }

@@ -1,3 +1,4 @@
+@model TripMate_Webapi.Entities.BookingEntity
 @{
     ViewData["Title"] = "Checkout";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -7,7 +8,7 @@
     <div class="max-w-[1000px] mx-auto">
         
         <div class="mb-8 flex items-center gap-4">
-            <a href="/Traveler/BookingDetails/1" class="w-10 h-10 rounded-full bg-white border border-outline-variant/50 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all shadow-sm">
+            <a href="/Traveler/BookingDetails/@Model.Id" class="w-10 h-10 rounded-full bg-white border border-outline-variant/50 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all shadow-sm">
                 <span class="material-symbols-outlined">arrow_back</span>
             </a>
             <h1 class="text-3xl font-extrabold text-on-surface">Secure Checkout</h1>
@@ -84,51 +85,56 @@
 
             <!-- Right Column: Order Summary -->
             <div>
-                <div class="bg-white rounded-3xl p-8 shadow-2xl border-2 border-primary/20 sticky top-24">
-                    <h3 class="text-2xl font-bold text-on-surface mb-6">Order Summary</h3>
-                    
-                    <div class="flex items-start gap-4 mb-8 pb-6 border-b border-outline-variant/30">
-                        <div class="w-20 h-20 bg-gray-200 rounded-xl shrink-0 overflow-hidden relative">
-                             <img src="/images/hoian.png" alt="Tour" class="w-full h-full object-cover"/>
-                        </div>
-                        <div>
-                            <h4 class="font-bold text-on-surface text-lg">Hanoi Art & Culture Walk</h4>
-                            <p class="text-sm text-on-surface-variant">Jun 15 - Jun 17 • 2 Guests</p>
-                            <p class="text-sm text-primary font-bold mt-1">Guide: Minh Anh</p>
-                        </div>
-                    </div>
-                    
-                    <div class="space-y-4 mb-6 border-b border-outline-variant/30 pb-6">
-                        <div class="flex justify-between text-on-surface-variant">
-                            <span>Subtotal</span>
-                            <span class="font-medium text-on-surface">1,400,000₫</span>
-                        </div>
-                        <div class="flex justify-between text-on-surface-variant">
-                            <span>Service Fee</span>
-                            <span class="font-medium text-on-surface">100,000₫</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex justify-between items-end mb-8">
-                        <span class="font-bold text-on-surface">Total to Pay</span>
-                        <span class="text-4xl font-extrabold text-primary">1,500,000₫</span>
-                    </div>
+                <form action="/Traveler/ProcessPayment" method="POST" id="paymentForm">
+                    <input type="hidden" name="id" value="@Model.Id" />
+                    <input type="hidden" name="paymentMethod" x-bind:value="method" />
 
-                    <button @@click="processPayment()" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold text-xl shadow-lg hover:-translate-y-1 transition-all flex justify-center items-center gap-2 relative overflow-hidden group">
-                        <span x-show="!processing" class="flex items-center gap-2">
-                            <span class="material-symbols-outlined">lock</span> Confirm & Pay
-                        </span>
-                        <span x-show="processing" class="flex items-center gap-2">
-                            <span class="material-symbols-outlined animate-spin">sync</span> Processing...
-                        </span>
-                        <!-- Button Glow Effect -->
-                        <div class="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
-                    </button>
+                    <div class="bg-white rounded-3xl p-8 shadow-2xl border-2 border-primary/20 sticky top-24">
+                        <h3 class="text-2xl font-bold text-on-surface mb-6">Order Summary</h3>
+                        
+                        <div class="flex items-start gap-4 mb-8 pb-6 border-b border-outline-variant/30">
+                            <div class="w-20 h-20 bg-gray-200 rounded-xl shrink-0 overflow-hidden relative border-2 border-outline-variant/20">
+                                <img src="@(string.IsNullOrEmpty(Model.GuideProfile?.Profile?.AvatarUrl) ? "/images/default_avatar.png" : Model.GuideProfile.Profile.AvatarUrl)" alt="Guide" class="w-full h-full object-cover"/>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-on-surface text-lg">@(Model.ExperiencePackage?.Title ?? "Custom Tour")</h4>
+                                <p class="text-sm text-on-surface-variant">@Model.BookingDate.ToString("MMM dd") • @Model.GuestCount Guests</p>
+                                <p class="text-sm text-primary font-bold mt-1">Guide: @(Model.GuideProfile?.Profile?.FullName ?? "Unknown Guide")</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4 mb-6 border-b border-outline-variant/30 pb-6">
+                            <div class="flex justify-between text-on-surface-variant">
+                                <span>Subtotal</span>
+                                <span class="font-medium text-on-surface">@((Model.TotalAmount - Model.PlatformFee).ToString("#,##0")) ₫</span>
+                            </div>
+                            <div class="flex justify-between text-on-surface-variant">
+                                <span>Service Fee</span>
+                                <span class="font-medium text-on-surface">@(Model.PlatformFee.ToString("#,##0")) ₫</span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-end mb-8">
+                            <span class="font-bold text-on-surface">Total to Pay</span>
+                            <span class="text-4xl font-extrabold text-primary">@(Model.TotalAmount.ToString("#,##0")) ₫</span>
+                        </div>
 
-                    <p class="text-xs text-center text-on-surface-variant mt-4 flex items-center justify-center gap-1">
-                        <span class="material-symbols-outlined text-sm">verified_user</span> Payments are secure and encrypted.
-                    </p>
-                </div>
+                        <button type="submit" @@click.prevent="processPayment()" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold text-xl shadow-lg hover:-translate-y-1 transition-all flex justify-center items-center gap-2 relative overflow-hidden group">
+                            <span x-show="!processing" class="flex items-center gap-2">
+                                <span class="material-symbols-outlined">lock</span> Confirm & Pay
+                            </span>
+                            <span x-show="processing" class="flex items-center gap-2" style="display: none;">
+                                <span class="material-symbols-outlined animate-spin">sync</span> Processing...
+                            </span>
+                            <!-- Button Glow Effect -->
+                            <div class="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
+                        </button>
+
+                        <p class="text-xs text-center text-on-surface-variant mt-4 flex items-center justify-center gap-1">
+                            <span class="material-symbols-outlined text-sm">verified_user</span> Payments are secure and encrypted.
+                        </p>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -148,9 +154,8 @@
                 
                 // Simulate payment processing
                 setTimeout(() => {
-                    alert('Payment successful! Redirecting to your Trips...');
-                    window.location.href = '/Traveler/Trips';
-                }, 2000);
+                    document.getElementById('paymentForm').submit();
+                }, 1500);
             }
         }))
     })

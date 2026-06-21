@@ -7,19 +7,19 @@ namespace TripMate_Webapi.Entities
     public class ProfileEntity : BaseModel
     {
         [PrimaryKey("id", false)]
-        public string Id { get; set; }
+        public string Id { get; set; } = string.Empty;
 
         [Column("email")]
-        public string Email { get; set; }
+        public string Email { get; set; } = string.Empty;
 
         [Column("full_name")]
-        public string FullName { get; set; }
+        public string FullName { get; set; } = string.Empty;
 
         [Column("role")]
-        public string Role { get; set; }
+        public string Role { get; set; } = string.Empty;
 
         [Column("avatar_url")]
-        public string AvatarUrl { get; set; }
+        public string AvatarUrl { get; set; } = string.Empty;
 
 
         [Column("phone_number")]
