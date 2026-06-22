@@ -136,6 +136,14 @@
 
 <!-- Alpine.js is included in _Layout.cshtml -->
 
+@* M2: Server truyền quiz data đã lưu trong Session (nếu có) *@
+@if (ViewBag.PendingQuizJson != null)
+{
+    <script>
+        window.__serverQuizData = @Html.Raw(ViewBag.PendingQuizJson);
+    </script>
+}
+
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('matchingResults', () => ({
@@ -145,36 +153,64 @@
                 vibe: 'Chill & Relax'
             },
             init() {
-                // Read preferences from localStorage
-                const savedPrefs = localStorage.getItem('tripPreferences');
-                if (savedPrefs) {
-                    this.preferences = JSON.parse(savedPrefs);
+                // M2: Ưu tiên đọc từ Server Session (không bị mất sau login)
+                // Fallback về localStorage nếu server không có
+                if (window.__serverQuizData) {
+                    this.preferences = window.__serverQuizData;
+                    // Đồng bộ ngược về localStorage để các component khác dùng
+                    localStorage.setItem('tripPreferences', JSON.stringify(this.preferences));
+                } else {
+                    const savedPrefs = localStorage.getItem('tripPreferences');
+                    if (savedPrefs) {
+                        this.preferences = JSON.parse(savedPrefs);
+                    }
                 }
 
                 // Simulate matching algorithm loading
                 setTimeout(() => {
                     this.isLoading = false;
-                }, 2500); // 2.5 seconds loading screen
+                }, 2500);
             }
         }))
     })
 </script>
 
-<!-- Authentication Script -->
+<!-- Authentication Script with Ghost Booking (M1 Feature) -->
 <script>
-    function handleConnect(event, redirectUrl) {
+    function handleConnect(event, guideId, packageTitle) {
+        event.preventDefault();
+        
         const token = localStorage.getItem('accessToken');
         const userEmail = localStorage.getItem('userEmail');
         
         if (!token || !userEmail) {
-            event.preventDefault();
-            // Save destination URL to redirect back after login
-            localStorage.setItem('redirectAfterLogin', redirectUrl);
-            // Redirect to Login page
-            window.location.href = '/Auth/Login';
+            // M1 — Ghost Booking: Lưu booking intent vào server Session
+            // Traveler sẽ thấy "đang giữ chỗ" thông báo sau khi login xong
+            const prefs = JSON.parse(localStorage.getItem('tripPreferences') || '{}');
+            const ghostBooking = {
+                guideId: guideId,
+                packageTitle: packageTitle || 'Tour trải nghiệm',
+                destination: prefs.destination || '',
+                savedAt: new Date().toISOString(),
+                expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 phút
+            };
+            
+            // Lưu Ghost Booking lên server Session (không bị mất khi đổi tab)
+            fetch('/Survey/HoldBooking', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(ghostBooking)
+            }).catch(err => console.warn('[Ghost Booking] Could not save to session:', err));
+            
+            // Lưu returnUrl để sau login quay về Guide profile
+            localStorage.setItem('redirectAfterLogin', `/Guide/Profile/${guideId}`);
+            localStorage.setItem('ghostBookingGuideId', guideId);
+            
+            // Redirect đến login với returnUrl
+            window.location.href = `/Auth/Login?returnUrl=${encodeURIComponent('/Guide/Profile/' + guideId)}`;
         } else {
-            // Already logged in, go to profile to book
-            window.location.href = redirectUrl;
+            // Đã đăng nhập → đến Guide profile
+            window.location.href = `/Guide/Profile/${guideId}`;
         }
     }
 </script>
