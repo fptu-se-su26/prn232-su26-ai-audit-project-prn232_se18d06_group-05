@@ -1,271 +1,341 @@
 @model TripMate_Webapi.Entities.GuideProfileEntity
 @{
-    ViewData["Title"] = Model?.Profile?.FullName ?? "Guide Profile";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Hồ Sơ Của Tôi";
+    ViewData["ActivePage"] = "Profile";
+    Layout = "_GuideLayout";
+    
+    var profile = ViewBag.Profile as dynamic;
 }
 
-<!-- Profile Header Section -->
-<section class="bg-surface-variant relative pt-12 pb-24">
-    <div class="px-12 max-w-[1440px] mx-auto">
-        <div class="flex flex-col md:flex-row gap-10 items-start">
-            <!-- Avatar -->
-            <div class="w-48 h-48 rounded-full border-4 border-white shadow-2xl overflow-hidden shrink-0 relative">
-                <img src="@(string.IsNullOrEmpty(Model?.Profile?.AvatarUrl) ? "/images/default_avatar.png" : Model.Profile.AvatarUrl)" alt="Avatar" class="w-full h-full object-cover"/>
-            </div>
-
-            <!-- Basic Info -->
-            <div class="flex-1 mt-4">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                    <div>
-                        <h1 class="text-5xl font-extrabold text-on-surface mb-2 flex items-center gap-4">
-                            @(Model?.Profile?.FullName ?? "Unknown Guide")
-                            @if(Model?.IsVerified == true)
-                            {
-                                <span class="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full font-bold flex items-center gap-1 border border-primary/20">
-                                    <span class="material-symbols-outlined text-sm">verified</span>
-                                    Verified Local
-                                </span>
-                            }
-                        </h1>
-                        <p class="text-xl text-on-surface-variant flex items-center gap-2 font-medium">
-                            <span class="material-symbols-outlined text-primary">location_on</span>
-                            @(Model?.CityArea ?? "Location not specified")
-                        </p>
-                    </div>
-                    
-                    <!-- Actions -->
-                    <div class="flex gap-4">
-                        <button class="w-14 h-14 rounded-full bg-white shadow-md flex items-center justify-center text-on-surface-variant hover:text-red-500 hover:bg-red-50 transition-all">
-                            <span class="material-symbols-outlined">favorite</span>
-                        </button>
-                        <button class="w-14 h-14 rounded-full bg-white shadow-md flex items-center justify-center text-on-surface-variant hover:text-primary hover:bg-primary-container transition-all">
-                            <span class="material-symbols-outlined">share</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Stats & Tags -->
-                <div class="flex flex-wrap gap-8 items-center mt-8">
-                    <div class="flex flex-col">
-                        <span class="text-3xl font-extrabold text-on-surface flex items-center gap-2">
-                            @(Model?.AverageRating?.ToString("0.0") ?? "0.0") <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
-                        </span>
-                        <span class="text-on-surface-variant text-sm font-medium">@(Model?.TotalReviews ?? 0) Reviews</span>
-                    </div>
-                    <div class="w-px h-10 bg-outline-variant/30"></div>
-                    <div class="flex gap-2">
-                        @if(Model?.Languages != null)
-                        {
-                            foreach (var lang in Model.Languages)
-                            {
-                                <span class="bg-blue-100 text-blue-700 font-bold px-4 py-2 rounded-xl border border-blue-200 uppercase">@lang</span>
-                            }
-                        }
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Main Content -->
-<section class="py-16 px-12 max-w-[1440px] mx-auto -mt-16 relative z-10">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        <!-- Left Column: Details -->
-        <div class="lg:col-span-2 space-y-12 bg-white p-10 rounded-3xl shadow-xl border border-outline-variant/20 tonal-elevation">
-            
-            <!-- Personality / MBTI Match -->
-            <div>
-                <h3 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-primary text-3xl">psychology</span>
-                    Specialties
-                </h3>
-                <div class="flex flex-wrap gap-2">
-                    @if(Model?.Specialties != null)
-                    {
-                        foreach(var spec in Model.Specialties)
-                        {
-                            <span class="bg-surface-variant text-on-surface-variant px-4 py-2 rounded-full font-bold shadow-sm">@spec</span>
-                        }
-                    }
-                </div>
-            </div>
-
-            <!-- About Me -->
-            <div>
-                <h3 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-primary text-3xl">account_circle</span>
-                    About @(Model?.Profile?.FullName ?? "Guide")
-                </h3>
-                <p class="text-on-surface-variant leading-relaxed text-lg mb-4">
-                    @(Model?.Bio ?? "No bio available.")
-                </p>
-                    I don't do "cookie-cutter" tours. If you book me, expect to sit on tiny plastic stools eating the best Pho you've ever had, wandering through hidden art galleries in old French colonial villas, and learning about Vietnam not just from textbooks, but from real, raw local perspectives.
-                </p>
-            </div>
-
-            <!-- Specialities -->
-            <div>
-                <h3 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-primary text-3xl">local_activity</span>
-                    Travel Specialties
-                </h3>
-                <div class="flex flex-wrap gap-4">
-                    <div class="flex items-center gap-2 bg-surface-variant px-5 py-3 rounded-xl">
-                        <span class="material-symbols-outlined text-secondary">camera_alt</span>
-                        <span class="font-bold text-on-surface">Photography Walks</span>
-                    </div>
-                    <div class="flex items-center gap-2 bg-surface-variant px-5 py-3 rounded-xl">
-                        <span class="material-symbols-outlined text-secondary">coffee</span>
-                        <span class="font-bold text-on-surface">Hidden Cafes</span>
-                    </div>
-                    <div class="flex items-center gap-2 bg-surface-variant px-5 py-3 rounded-xl">
-                        <span class="material-symbols-outlined text-secondary">palette</span>
-                        <span class="font-bold text-on-surface">Art & History</span>
-                    </div>
-                    <div class="flex items-center gap-2 bg-surface-variant px-5 py-3 rounded-xl">
-                        <span class="material-symbols-outlined text-secondary">ramen_dining</span>
-                        <span class="font-bold text-on-surface">Street Food Tasting</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reviews -->
-            <div>
-                <h3 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-3">
-                    <span class="material-symbols-outlined text-primary text-3xl">forum</span>
-                    Traveler Reviews
-                </h3>
-                <div class="space-y-6">
-                    <!-- Review 1 -->
-                    <div class="border-b border-outline-variant/30 pb-6">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center font-bold">JD</div>
-                                <div>
-                                    <p class="font-bold text-on-surface">John Doe</p>
-                                    <p class="text-xs text-on-surface-variant">May 2026</p>
-                                </div>
-                            </div>
-                            <div class="flex text-primary">
-                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
-                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
-                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
-                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
-                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
-                            </div>
-                        </div>
-                        <p class="text-on-surface-variant mt-2">"Minh Anh was exactly the Soulmate I needed for my trip! She took me to places I would have never found on Google Maps. Her photography skills are a huge plus too!"</p>
-                    </div>
-                    
-                    <!-- Review 2 -->
-                    <div class="border-b border-outline-variant/30 pb-6">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center font-bold">SL</div>
-                                <div>
-                                    <p class="font-bold text-on-surface">Sarah Lee</p>
-                                    <p class="text-xs text-on-surface-variant">April 2026</p>
-                                </div>
-                            </div>
-                            <div class="flex text-primary">
-                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
-                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
-                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
-                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
-                                <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">star</span>
-                            </div>
-                        </div>
-                        <p class="text-on-surface-variant mt-2">"Amazing experience. It felt like walking around with an old friend rather than a hired tour guide. Highly recommended for solo female travelers!"</p>
-                    </div>
-                    
-                    <button class="text-primary font-bold hover:underline">Read all @(Model?.TotalReviews ?? 0) reviews</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Column: Booking Widget -->
-        <div class="lg:col-span-1">
-            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-primary/20 sticky top-24">
-                <div class="flex justify-between items-end mb-6 border-b border-outline-variant/30 pb-6">
-                    <div>
-                        <span class="text-3xl font-extrabold text-on-surface">@(Model?.PricePerHour?.ToString("#,##0") ?? "0")₫</span>
-                        <span class="text-on-surface-variant">/ day</span>
-                    </div>
-                </div>
-
-                <form action="/Traveler/Book" method="POST" class="space-y-6" id="bookingForm" onsubmit="handleBooking(event)">
-                    <!-- Hidden field for Guide ID -->
-                    <input type="hidden" name="guideId" value="@Model?.Id" />
-                    
-                    <div>
-                        <label class="block text-sm font-bold text-on-surface mb-2">Select Date</label>
-                        <input type="date" name="date" required class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
-                    </div>
-                    
-                    <div>
-                        <label class="block text-sm font-bold text-on-surface mb-2">Number of Guests</label>
-                        <select name="guests" class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
-                            <option value="1">1 Person</option>
-                            <option value="2">2 People</option>
-                            <option value="3">3 People</option>
-                            <option value="4">4 People</option>
-                            <option value="5">5+ People</option>
-                        </select>
-                    </div>
-
-                    <div class="bg-primary-container/30 p-4 rounded-xl flex items-start gap-3">
-                        <span class="material-symbols-outlined text-primary">info</span>
-                        <p class="text-xs text-on-surface-variant leading-relaxed">
-                            You won't be charged yet. This will send a request to @(Model?.Profile?.FullName ?? "the guide"). You can discuss the specific itinerary before payment.
-                        </p>
-                    </div>
-
-                    <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-on-primary py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2 transition-all shadow-lg hover:-translate-y-1">
-                        Send Booking Request
-                        <span class="material-symbols-outlined">send</span>
-                    </button>
-                    
-                    <button type="button" onclick="handleMessage()" class="w-full bg-white border-2 border-primary text-primary hover:bg-primary-container py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2 transition-all">
-                        Message First
-                        <span class="material-symbols-outlined">chat</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Authentication Script -->
+<!-- JSON data cho AlpineJS -->
 <script>
-    function checkIsLoggedIn() {
-        const token = localStorage.getItem('accessToken');
-        const userEmail = localStorage.getItem('userEmail');
-        return token && userEmail;
-    }
-
-    function requireAuth() {
-        if (!checkIsLoggedIn()) {
-            // Save current URL to redirect back after login
-            localStorage.setItem('redirectAfterLogin', window.location.pathname + window.location.search);
-            // Redirect to Login page
-            window.location.href = '/Auth/Login';
-            return false;
-        }
-        return true;
-    }
-
-    function handleBooking(event) {
-        // Disabled auth check for testing purposes
-        // if (!requireAuth()) {
-        //     event.preventDefault(); 
-        // }
-    }
-
-    function handleMessage() {
-        if (requireAuth()) {
-            // User is logged in, redirect to chat interface
-            window.location.href = '/Traveler/Messages'; 
-        }
-    }
+    window.initialProfile = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(profile));
 </script>
+
+<div class="max-w-7xl mx-auto" x-data="profileSettings()">
+    
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-900 mb-2">Hồ Sơ Của Tôi</h2>
+            <p class="text-gray-500 text-sm">Xây dựng hồ sơ ấn tượng để thu hút nhiều du khách hơn.</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
+                <span class="material-symbols-outlined text-[18px]">visibility</span>
+                Xem hồ sơ công khai
+            </button>
+            <div class="bg-green-50 text-green-700 px-3 py-2 rounded-xl text-sm font-bold border border-green-100 flex items-center gap-1">
+                <span class="material-symbols-outlined text-[18px]">verified</span>
+                Đã xác minh
+            </div>
+        </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-8">
+        
+        <!-- LEFT: FORM -->
+        <div class="flex-grow space-y-6 w-full lg:w-2/3">
+            
+            <!-- Tabs -->
+            <div class="flex gap-1 bg-gray-50 p-1 rounded-xl border border-gray-200 w-max">
+                <button @@click="currentTab = 'basic'" 
+                        :class="currentTab === 'basic' ? 'bg-white shadow-sm font-bold text-gray-900' : 'text-gray-500 font-medium'" 
+                        class="px-6 py-2.5 rounded-lg text-sm transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">person</span> Thông tin cơ bản
+                </button>
+                <button @@click="currentTab = 'expertise'" 
+                        :class="currentTab === 'expertise' ? 'bg-white shadow-sm font-bold text-gray-900' : 'text-gray-500 font-medium'" 
+                        class="px-6 py-2.5 rounded-lg text-sm transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">workspace_premium</span> Chuyên môn & Ngôn ngữ
+                </button>
+            </div>
+
+            <form @@submit.prevent="saveProfile">
+                
+                <!-- TAB 1: THÔNG TIN CƠ BẢN -->
+                <div x-show="currentTab === 'basic'" class="space-y-6" x-transition.opacity>
+                    
+                    <!-- Cover Photo -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-900 mb-4 uppercase tracking-wider">Ảnh Bìa (Cover)</h3>
+                        <div class="relative h-48 rounded-xl overflow-hidden group bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                            <template x-if="form.CoverUrl">
+                                <img :src="form.CoverUrl" class="absolute inset-0 w-full h-full object-cover">
+                            </template>
+                            <div class="absolute inset-0 bg-gray-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
+                                <span class="material-symbols-outlined text-3xl mb-1">upload_file</span>
+                                <span class="text-sm font-medium">Thay đổi ảnh bìa</span>
+                            </div>
+                            <template x-if="!form.CoverUrl">
+                                <div class="text-center text-gray-500">
+                                    <span class="material-symbols-outlined text-3xl mb-1">image</span>
+                                    <p class="text-sm">Tải ảnh lên (16:9)</p>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Avatar & Info -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <div class="flex flex-col sm:flex-row gap-8 mb-6">
+                            <!-- Avatar -->
+                            <div class="flex flex-col items-center gap-3">
+                                <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider w-full">Ảnh Đại Diện</h3>
+                                <div class="relative w-32 h-32 rounded-full overflow-hidden group bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                                    <img :src="form.AvatarUrl" class="absolute inset-0 w-full h-full object-cover" x-show="form.AvatarUrl">
+                                    <div class="absolute inset-0 bg-gray-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
+                                        <span class="material-symbols-outlined text-2xl">photo_camera</span>
+                                    </div>
+                                </div>
+                                <span class="text-xs text-gray-500">JPG/PNG, Tỷ lệ 1:1</span>
+                            </div>
+
+                            <!-- Basic Info -->
+                            <div class="flex-grow space-y-4">
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Họ và tên <span class="text-red-500">*</span></label>
+                                    <input type="text" x-model="form.FullName" required
+                                           class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Số điện thoại</label>
+                                    <input type="tel" x-model="form.PhoneNumber"
+                                           class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Khu vực hoạt động <span class="text-red-500">*</span></label>
+                                    <select x-model="form.CityArea" required class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                                        <option value="Hội An">Hội An</option>
+                                        <option value="Đà Nẵng">Đà Nẵng</option>
+                                        <option value="Huế">Huế</option>
+                                        <option value="Hà Nội">Hà Nội</option>
+                                        <option value="TP.HCM">TP.HCM</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bio -->
+                        <div>
+                            <div class="flex justify-between items-end mb-2">
+                                <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider">Giới thiệu bản thân (Bio) <span class="text-red-500">*</span></label>
+                                <span class="text-xs text-gray-400" x-text="`${form.Bio.length}/1000`"></span>
+                            </div>
+                            <textarea x-model="form.Bio" required maxlength="1000" rows="5"
+                                      placeholder="Kể về bản thân bạn — bạn là ai, điều gì làm bạn trở thành người hướng dẫn đặc biệt..." 
+                                      class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: CHUYÊN MÔN & NGÔN NGỮ -->
+                <div x-show="currentTab === 'expertise'" class="space-y-6" style="display: none;" x-transition.opacity>
+                    
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-900 mb-4 uppercase tracking-wider">Ngôn ngữ sử dụng</h3>
+                        <div class="flex flex-wrap gap-3">
+                            <template x-for="lang in availableLanguages" :key="lang">
+                                <label class="flex items-center gap-2 p-2.5 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
+                                       :class="{'border-primary bg-orange-50': form.Languages.includes(lang)}">
+                                    <input type="checkbox" :value="lang" x-model="form.Languages" class="hidden">
+                                    <div class="w-5 h-5 rounded border border-gray-300 flex items-center justify-center"
+                                         :class="{'bg-primary border-primary text-white': form.Languages.includes(lang)}">
+                                        <span class="material-symbols-outlined text-[14px]" x-show="form.Languages.includes(lang)">check</span>
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-700" x-text="lang"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-900 mb-4 uppercase tracking-wider">Chuyên môn (Specialties)</h3>
+                        <div class="flex flex-wrap gap-3">
+                            <template x-for="spec in availableSpecialties" :key="spec">
+                                <label class="flex items-center gap-2 p-2.5 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors"
+                                       :class="{'border-primary bg-orange-50': form.Specialties.includes(spec)}">
+                                    <input type="checkbox" :value="spec" x-model="form.Specialties" class="hidden">
+                                    <div class="w-5 h-5 rounded border border-gray-300 flex items-center justify-center"
+                                         :class="{'bg-primary border-primary text-white': form.Specialties.includes(spec)}">
+                                        <span class="material-symbols-outlined text-[14px]" x-show="form.Specialties.includes(spec)">check</span>
+                                    </div>
+                                    <span class="text-sm font-medium text-gray-700" x-text="spec"></span>
+                                </label>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                        <h3 class="text-sm font-bold text-gray-900 mb-4 uppercase tracking-wider">Giá cơ bản mỗi giờ</h3>
+                        <div class="relative max-w-sm mb-2">
+                            <input type="number" x-model.number="form.BaseRate" required min="50000" step="10000"
+                                   class="w-full bg-gray-50 border border-gray-200 text-gray-900 font-bold rounded-xl px-4 py-3 pl-10 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₫</span>
+                        </div>
+                        <div class="flex items-start gap-2 text-amber-600 bg-amber-50 p-3 rounded-lg text-sm">
+                            <span class="material-symbols-outlined text-[18px]">warning</span>
+                            <span>Giá theo gói cụ thể sẽ được thiết lập chi tiết trong phần <b>My Tours</b>. Giá cơ bản chỉ dùng để hiển thị mức giá tối thiểu trên hồ sơ của bạn.</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sticky Form Footer -->
+                <div class="mt-6 flex justify-end gap-4 sticky bottom-6 bg-white/90 backdrop-blur-md p-4 rounded-2xl border border-gray-200 shadow-lg z-20">
+                    <button type="button" @@click="resetForm" class="px-6 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">
+                        Hủy
+                    </button>
+                    <button type="submit" class="px-8 py-2.5 rounded-xl font-bold bg-primary text-white hover:bg-primary-dark transition-colors shadow-sm flex items-center gap-2" :disabled="isSaving">
+                        <span class="material-symbols-outlined text-[20px]" x-show="!isSaving">save</span>
+                        <span class="material-symbols-outlined text-[20px] animate-spin" x-show="isSaving">autorenew</span>
+                        <span x-text="isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi'"></span>
+                    </button>
+                </div>
+
+            </form>
+        </div>
+
+        <!-- RIGHT: LIVE PREVIEW (Desktop Only) -->
+        <div class="hidden lg:block lg:w-1/3">
+            <div class="sticky top-24">
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 ml-1 flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[16px]">preview</span> Xem trước (Bản Mobile)
+                </h3>
+                
+                <!-- Mockup Phone Frame -->
+                <div class="w-[320px] bg-white rounded-[2rem] shadow-2xl border-8 border-gray-900 overflow-hidden relative mx-auto h-[650px] flex flex-col">
+                    
+                    <!-- Cover -->
+                    <div class="h-40 bg-gray-200 relative shrink-0">
+                        <img :src="form.CoverUrl" class="w-full h-full object-cover" x-show="form.CoverUrl">
+                        <!-- Top actions -->
+                        <div class="absolute top-4 left-4 right-4 flex justify-between">
+                            <div class="w-8 h-8 rounded-full bg-white/50 backdrop-blur-sm flex items-center justify-center text-gray-800">
+                                <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <div class="w-8 h-8 rounded-full bg-white/50 backdrop-blur-sm flex items-center justify-center text-gray-800">
+                                    <span class="material-symbols-outlined text-[18px]">share</span>
+                                </div>
+                                <div class="w-8 h-8 rounded-full bg-white/50 backdrop-blur-sm flex items-center justify-center text-gray-800">
+                                    <span class="material-symbols-outlined text-[18px]">favorite</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Avatar overlap -->
+                    <div class="px-5 relative shrink-0">
+                        <div class="w-20 h-20 rounded-full border-4 border-white overflow-hidden bg-gray-100 absolute -top-10 shadow-sm">
+                            <img :src="form.AvatarUrl" class="w-full h-full object-cover" x-show="form.AvatarUrl">
+                        </div>
+                        <div class="flex justify-end pt-3">
+                            <span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-0.5">
+                                <span class="material-symbols-outlined text-[12px]">workspace_premium</span> LOCAL GUIDE
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Info Scrollable -->
+                    <div class="px-5 pb-5 pt-2 flex-grow overflow-y-auto hide-scrollbar">
+                        <!-- Name & Rating -->
+                        <div class="mb-4">
+                            <h2 class="text-xl font-bold text-gray-900 flex items-center gap-1">
+                                <span x-text="form.FullName || 'Tên của bạn'"></span>
+                                <span class="material-symbols-outlined text-blue-500 text-[16px]" title="Đã xác minh">verified</span>
+                            </h2>
+                            <div class="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                                <span class="flex items-center text-amber-400 font-medium">
+                                    <span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+                                    <span x-text="form.Rating" class="text-gray-800 ml-0.5"></span>
+                                </span>
+                                <span>•</span>
+                                <span x-text="`${form.ReviewsCount} đánh giá`"></span>
+                            </div>
+                            <div class="flex items-center gap-1 mt-1.5 text-sm text-gray-500">
+                                <span class="material-symbols-outlined text-[16px]">location_on</span>
+                                <span x-text="form.CityArea"></span>
+                            </div>
+                        </div>
+
+                        <!-- Price & Lang -->
+                        <div class="flex flex-wrap gap-2 mb-5">
+                            <div class="bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 text-xs text-gray-700 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[14px]">payments</span>
+                                <span>Từ <strong x-text="formatCurrency(form.BaseRate)"></strong> /giờ</span>
+                            </div>
+                            <div class="bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 text-xs text-gray-700 flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[14px]">language</span>
+                                <span x-text="form.Languages.join(', ') || 'Chưa chọn'"></span>
+                            </div>
+                        </div>
+
+                        <!-- Bio excerpt -->
+                        <div class="mb-5">
+                            <h3 class="text-sm font-bold text-gray-900 mb-2">Giới thiệu</h3>
+                            <p class="text-sm text-gray-600 leading-relaxed line-clamp-4" x-text="form.Bio || 'Chưa có thông tin giới thiệu...'"></p>
+                            <button class="text-primary text-xs font-bold mt-1">Đọc thêm</button>
+                        </div>
+
+                        <!-- Specialties -->
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900 mb-2">Chuyên môn</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <template x-for="spec in form.Specialties" :key="spec">
+                                    <span class="bg-orange-50 text-orange-700 border border-orange-100 px-2.5 py-1 rounded-md text-xs font-medium" x-text="spec"></span>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function profileSettings() {
+            return {
+                currentTab: 'basic',
+                isSaving: false,
+                
+                availableLanguages: ['Tiếng Việt', 'Tiếng Anh', 'Tiếng Hàn', 'Tiếng Nhật', 'Tiếng Pháp', 'Tiếng Trung'],
+                availableSpecialties: ['Ẩm thực đường phố', 'Văn hóa - Lịch sử', 'Nhiếp ảnh', 'Mạo hiểm', 'Nightlife', 'Thiên nhiên', 'Nghệ thuật địa phương', 'Mua sắm'],
+                
+                // Deep copy initial data
+                form: JSON.parse(JSON.stringify(window.initialProfile || {})),
+
+                formatCurrency(val) {
+                    if (!val) return '0 ₫';
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+                },
+
+                resetForm() {
+                    if (confirm('Bạn có chắc muốn hủy các thay đổi chưa lưu?')) {
+                        this.form = JSON.parse(JSON.stringify(window.initialProfile));
+                    }
+                },
+
+                saveProfile() {
+                    this.isSaving = true;
+                    
+                    // Validate
+                    if (this.form.Languages.length === 0) {
+                        showToast('error', 'Vui lòng chọn ít nhất 1 ngôn ngữ!');
+                        this.isSaving = false;
+                        this.currentTab = 'expertise';
+                        return;
+                    }
+
+                    // Simulate API Call
+                    setTimeout(() => {
+                        this.isSaving = false;
+                        window.initialProfile = JSON.parse(JSON.stringify(this.form));
+                        showToast('success', 'Đã lưu thông tin hồ sơ thành công!');
+                    }, 800);
+                }
+            }
+        }
+    </script>
+}

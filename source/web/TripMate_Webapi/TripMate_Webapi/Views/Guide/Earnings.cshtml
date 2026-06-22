@@ -1,0 +1,301 @@
+@{
+    ViewData["Title"] = "Báo Cáo Thu Nhập";
+    ViewData["ActivePage"] = "Earnings";
+    Layout = "_GuideLayout";
+    
+    var stats = ViewBag.Stats as dynamic;
+    var chartData = ViewBag.ChartData as dynamic;
+    var transactions = ViewBag.Transactions as IEnumerable<dynamic>;
+}
+
+<!-- JSON data cho Chart & Alpine -->
+<script>
+    window.chartData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(chartData));
+    window.transactions = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(transactions));
+</script>
+
+<div x-data="earningsApp()">
+    
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-900 mb-1">Báo Cáo Thu Nhập</h2>
+            <p class="text-gray-500 text-sm">Theo dõi doanh thu, lịch sử thanh toán và thống kê hoạt động.</p>
+        </div>
+        <div class="flex items-center bg-white rounded-xl shadow-sm border border-gray-200 p-1">
+            <button @@click="period = 'week'" :class="period === 'week' ? 'bg-gray-100 font-bold text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm transition-colors">Tuần này</button>
+            <button @@click="period = 'month'" :class="period === 'month' ? 'bg-gray-100 font-bold text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm transition-colors">Tháng này</button>
+            <button @@click="period = 'year'" :class="period === 'year' ? 'bg-gray-100 font-bold text-gray-900' : 'text-gray-500 hover:text-gray-700'" class="px-4 py-2 rounded-lg text-sm transition-colors">Năm này</button>
+        </div>
+    </div>
+
+    <!-- STATS CARDS -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Đã nhận -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-green-50 rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
+                <span class="material-symbols-outlined text-green-500 text-[40px] opacity-20">account_balance_wallet</span>
+            </div>
+            <p class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Đã Nhận</p>
+            <h3 class="text-3xl font-bold text-gray-900 mb-1">@string.Format("{0:N0} ₫", stats.Received)</h3>
+            <div class="flex items-center gap-1 text-sm text-green-600 font-medium">
+                <span class="material-symbols-outlined text-[16px]">trending_up</span>
+                <span>+12.5%</span> <span class="text-gray-400 font-normal ml-1">so với kỳ trước</span>
+            </div>
+        </div>
+
+        <!-- Đang tạm giữ -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-amber-50 rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
+                <span class="material-symbols-outlined text-amber-500 text-[40px] opacity-20">hourglass_empty</span>
+            </div>
+            <div class="flex items-center gap-1 mb-2">
+                <p class="text-sm font-bold text-gray-500 uppercase tracking-wider">Đang Tạm Giữ</p>
+                <span class="material-symbols-outlined text-[16px] text-gray-400 cursor-help" title="Tiền sẽ được giải ngân vào ví của bạn sau khi Tour hoàn thành">info</span>
+            </div>
+            <h3 class="text-3xl font-bold text-gray-900 mb-1">@string.Format("{0:N0} ₫", stats.Pending)</h3>
+            <p class="text-sm text-gray-400">Từ các booking đã xác nhận</p>
+        </div>
+
+        <!-- Tour hoàn thành -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
+                <span class="material-symbols-outlined text-blue-500 text-[40px] opacity-20">tour</span>
+            </div>
+            <p class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Tour Hoàn Thành</p>
+            <h3 class="text-3xl font-bold text-gray-900 mb-1">@stats.CompletedTours</h3>
+            <p class="text-sm text-gray-400">Số chuyến đi thành công</p>
+        </div>
+
+        <!-- Đánh giá TB -->
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 relative overflow-hidden group">
+            <div class="absolute -right-4 -top-4 w-24 h-24 bg-orange-50 rounded-full flex items-center justify-center transition-transform group-hover:scale-110">
+                <span class="material-symbols-outlined text-amber-500 text-[40px] opacity-20" style="font-variation-settings: 'FILL' 1;">star</span>
+            </div>
+            <p class="text-sm font-bold text-gray-500 uppercase tracking-wider mb-2">Đánh Giá Trung Bình</p>
+            <div class="flex items-baseline gap-2">
+                <h3 class="text-3xl font-bold text-gray-900 mb-1">@stats.AverageRating</h3>
+                <span class="material-symbols-outlined text-[24px] text-amber-400" style="font-variation-settings: 'FILL' 1;">star</span>
+            </div>
+            <p class="text-sm text-gray-400">Dựa trên tất cả phản hồi</p>
+        </div>
+    </div>
+
+    <!-- CHART AREA -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold text-gray-900">Biểu Đồ Thu Nhập (12 Tháng)</h3>
+            <button class="text-gray-400 hover:text-primary transition-colors">
+                <span class="material-symbols-outlined">more_horiz</span>
+            </button>
+        </div>
+        <div class="w-full h-80 relative">
+            <canvas id="earningsChart"></canvas>
+        </div>
+    </div>
+
+    <!-- TRANSACTION HISTORY -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <h3 class="text-lg font-bold text-gray-900">Lịch Sử Giao Dịch</h3>
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="relative flex-grow md:flex-grow-0">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">search</span>
+                    <input type="text" x-model="searchQuery" placeholder="Tìm theo mã, tên khách..." class="w-full md:w-64 bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl py-2 pl-9 pr-4 focus:ring-2 focus:ring-primary/50 outline-none">
+                </div>
+                <button class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-bold hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2 flex-shrink-0">
+                    <span class="material-symbols-outlined text-[18px]">download</span>
+                    Xuất CSV
+                </button>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-gray-600">
+                <thead class="bg-gray-50/50 text-gray-500 font-medium border-b border-gray-100">
+                    <tr>
+                        <th class="px-6 py-4">Mã Booking / Ngày</th>
+                        <th class="px-6 py-4">Gói Tour & Khách</th>
+                        <th class="px-6 py-4 text-right">Tổng Tour</th>
+                        <th class="px-6 py-4 text-right">Phí nền tảng (15%)</th>
+                        <th class="px-6 py-4 text-right">Thực nhận</th>
+                        <th class="px-6 py-4">Trạng thái</th>
+                        <th class="px-6 py-4"></th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <template x-for="t in filteredTransactions" :key="t.Id">
+                        <tr class="hover:bg-gray-50 transition-colors group cursor-pointer" @@click="t.expanded = !t.expanded">
+                            <td class="px-6 py-4">
+                                <div class="font-mono font-bold text-gray-900" x-text="t.Id"></div>
+                                <div class="text-xs text-gray-500 mt-0.5" x-text="t.Date"></div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="font-medium text-gray-900" x-text="t.TourName"></div>
+                                <div class="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">person</span>
+                                    <span x-text="t.TravelerName"></span>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-right text-gray-500" x-text="formatCurrency(t.TotalAmount)"></td>
+                            <td class="px-6 py-4 text-right text-red-500" x-text="'-' + formatCurrency(t.PlatformFee)"></td>
+                            <td class="px-6 py-4 text-right font-bold text-green-600" x-text="formatCurrency(t.NetEarnings)"></td>
+                            <td class="px-6 py-4">
+                                <span x-show="t.Status === 'Completed'" class="inline-flex items-center gap-1.5 bg-green-50 text-green-700 px-2.5 py-1 rounded-full text-xs font-bold border border-green-100">
+                                    <span class="material-symbols-outlined text-[14px]">check_circle</span> Đã nhận
+                                </span>
+                                <span x-show="t.Status === 'Pending'" class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full text-xs font-bold border border-amber-100">
+                                    <span class="material-symbols-outlined text-[14px]">hourglass_empty</span> Tạm giữ
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-right">
+                                <button class="text-gray-400 hover:text-primary transition-colors">
+                                    <span class="material-symbols-outlined transition-transform duration-200" :class="t.expanded ? 'rotate-180' : ''">expand_more</span>
+                                </button>
+                            </td>
+                        </tr>
+                        
+                        <!-- Expanded Details Row -->
+                        <tr x-show="t.expanded" style="display: none;" class="bg-gray-50/50">
+                            <td colspan="7" class="px-6 py-4 border-b border-gray-100">
+                                <div class="flex flex-col md:flex-row gap-8 pl-4 border-l-2 border-primary">
+                                    <div>
+                                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Payment Reference</p>
+                                        <p class="font-mono text-sm font-bold text-gray-900" x-text="'TXN-' + t.Id.split('-')[1] + '998X'"></p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Ngày giải ngân</p>
+                                        <p class="text-sm font-bold text-gray-900" x-text="t.ReleaseDate"></p>
+                                    </div>
+                                    <div class="flex-grow"></div>
+                                    <div>
+                                        <button class="text-primary text-sm font-bold hover:underline flex items-center gap-1">
+                                            Xem chi tiết Booking <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+                    
+                    <template x-if="filteredTransactions.length === 0">
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center text-gray-500">
+                                Không tìm thấy giao dịch nào phù hợp.
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="p-4 border-t border-gray-100 flex items-center justify-between">
+            <span class="text-sm text-gray-500">Hiển thị <span x-text="filteredTransactions.length"></span> giao dịch</span>
+            <div class="flex gap-1">
+                <button class="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-50" disabled>
+                    <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                </button>
+                <button class="w-8 h-8 rounded-lg bg-primary text-white font-bold shadow-sm">1</button>
+                <button class="w-8 h-8 rounded-lg border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50">
+                    <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        function earningsApp() {
+            return {
+                period: 'month',
+                searchQuery: '',
+                transactions: window.transactions.map(t => ({...t, expanded: false})),
+
+                get filteredTransactions() {
+                    if (!this.searchQuery) return this.transactions;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.transactions.filter(t => 
+                        t.Id.toLowerCase().includes(q) || 
+                        t.TravelerName.toLowerCase().includes(q) ||
+                        t.TourName.toLowerCase().includes(q)
+                    );
+                },
+
+                formatCurrency(val) {
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+                },
+
+                init() {
+                    this.initChart();
+                },
+
+                initChart() {
+                    const ctx = document.getElementById('earningsChart').getContext('2d');
+                    
+                    // Gradient fill
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+                    gradient.addColorStop(0, 'rgba(234, 88, 12, 0.8)'); // primary color (orange-600)
+                    gradient.addColorStop(1, 'rgba(234, 88, 12, 0.2)');
+
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: window.chartData.Labels,
+                            datasets: [{
+                                label: 'Thu nhập thực nhận (VND)',
+                                data: window.chartData.Data,
+                                backgroundColor: gradient,
+                                borderRadius: 6,
+                                borderSkipped: false,
+                                hoverBackgroundColor: 'rgba(234, 88, 12, 1)',
+                                barPercentage: 0.6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                                    padding: 12,
+                                    titleFont: { size: 14, family: "'Inter', sans-serif" },
+                                    bodyFont: { size: 14, family: "'Inter', sans-serif", weight: 'bold' },
+                                    callbacks: {
+                                        label: (context) => this.formatCurrency(context.parsed.y)
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    grid: {
+                                        color: 'rgba(243, 244, 246, 1)',
+                                        drawBorder: false
+                                    },
+                                    ticks: {
+                                        font: { family: "'Inter', sans-serif", size: 12 },
+                                        color: '#6B7280',
+                                        callback: (value) => {
+                                            if (value >= 1000000) return (value / 1000000) + 'Tr';
+                                            if (value >= 1000) return (value / 1000) + 'K';
+                                            return value;
+                                        }
+                                    }
+                                },
+                                x: {
+                                    grid: { display: false, drawBorder: false },
+                                    ticks: {
+                                        font: { family: "'Inter', sans-serif", size: 12 },
+                                        color: '#6B7280'
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    </script>
+}
