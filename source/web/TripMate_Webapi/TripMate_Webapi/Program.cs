@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Supabase;
 using TripMate_WebAPI.Services;
+using TripMate_Webapi.Repositories;
 using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -44,11 +45,13 @@ var issuer = $"{supabaseUrl.TrimEnd('/')}/auth/v1";
 
 builder.Services.AddSingleton(_ =>
 {
-    var client = new Client(supabaseUrl, supabaseKey, new SupabaseOptions
+    var options = new SupabaseOptions
     {
         AutoRefreshToken = true,
         AutoConnectRealtime = false,
-    });
+    };
+    options.Headers.Add("Authorization", $"Bearer {supabaseKey}");
+    var client = new Client(supabaseUrl, supabaseKey, options);
     client.InitializeAsync().GetAwaiter().GetResult();
     return client;
 });
@@ -72,6 +75,11 @@ builder.Services.AddScoped<TourService>();
 // ── Booking Service ───────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<BookingService>();
 builder.Services.AddScoped<BookingService>();
+
+// ── Repositories ──────────────────────────────────────────────────────────────
+builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddScoped<IGuideRepository, GuideRepository>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();
@@ -191,7 +199,7 @@ app.UseAuthorization();
 app.MapControllers(); // Map API controllers
 app.MapControllerRoute( // Map MVC routes
     name: "default",
-    pattern: "{controller=LandingPage}/{action=LandingPage}/{id?}");
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 // Seed database
 using (var scope = app.Services.CreateScope())

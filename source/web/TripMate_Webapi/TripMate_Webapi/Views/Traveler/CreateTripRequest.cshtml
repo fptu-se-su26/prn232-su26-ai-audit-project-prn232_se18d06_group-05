@@ -1,0 +1,99 @@
+@{
+    ViewData["Title"] = "Post a Trip Request";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="bg-surface min-h-screen py-12">
+    <div class="max-w-3xl mx-auto px-6">
+        <!-- Breadcrumb -->
+        <nav class="flex text-sm text-on-surface-variant mb-8" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                <li class="inline-flex items-center">
+                    <a href="/" class="hover:text-primary transition-colors">Home</a>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <span class="material-symbols-outlined text-[16px] mx-1">chevron_right</span>
+                        <a href="/Guide/Index" class="hover:text-primary transition-colors">Guides</a>
+                    </div>
+                </li>
+                <li aria-current="page">
+                    <div class="flex items-center">
+                        <span class="material-symbols-outlined text-[16px] mx-1">chevron_right</span>
+                        <span class="text-on-surface font-medium">Post Request</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-outline-variant/30">
+            <div class="bg-gradient-to-r from-primary to-orange-500 p-8 text-white">
+                <h1 class="text-3xl font-extrabold mb-2">Post a Trip Request</h1>
+                <p class="text-white/90">Tell us what you're looking for, and local guides will reach out to you with their best offers and itineraries.</p>
+            </div>
+            
+            <form action="/Traveler/CreateTripRequest" method="post" class="p-8 space-y-6">
+                <!-- Location & Dates -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Where do you want to go?</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">location_on</span>
+                            <input type="text" name="destination" list="vietnam_locations" required placeholder="e.g. Ha Long Bay, Vietnam" class="w-full pl-10 pr-4 py-3 bg-surface border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">When are you traveling?</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">calendar_month</span>
+                            <input type="text" name="dates" required placeholder="e.g. Oct 12 - Oct 15" class="date-picker cursor-pointer w-full pl-10 pr-4 py-3 bg-surface border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group Size & Budget -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Group Size</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">group</span>
+                            <select name="groupSize" class="w-full pl-10 pr-4 py-3 bg-surface border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all appearance-none cursor-pointer">
+                                <option value="1">Just me (1 person)</option>
+                                <option value="2">Couple (2 people)</option>
+                                <option value="3-5">Small Group (3-5 people)</option>
+                                <option value="6+">Large Group (6+ people)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Expected Budget (per day)</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">payments</span>
+                            <select name="budget" class="w-full pl-10 pr-4 py-3 bg-surface border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all appearance-none cursor-pointer">
+                                <option value="economy">Economy (< 1M VND)</option>
+                                <option value="standard">Standard (1M - 2M VND)</option>
+                                <option value="premium">Premium (2M - 5M VND)</option>
+                                <option value="luxury">Luxury (> 5M VND)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes / Description -->
+                <div>
+                    <label class="block text-sm font-bold text-on-surface mb-2">What's your travel vibe & preferences?</label>
+                    <textarea name="notes" rows="4" placeholder="e.g. I love trying local street food, hate crowded tourist spots, and want to learn about the history. I need an English-speaking guide." class="w-full p-4 bg-surface border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"></textarea>
+                    <p class="text-xs text-on-surface-variant mt-2">The more details you provide, the better matches you will get.</p>
+                </div>
+
+                <!-- Submit -->
+                <div class="pt-4 border-t border-outline-variant/30 flex justify-end gap-4">
+                    <button type="button" onclick="history.back()" class="px-6 py-3 rounded-xl font-bold text-on-surface-variant hover:bg-surface-variant transition-colors">Cancel</button>
+                    <button type="submit" class="px-8 py-3 rounded-xl font-bold bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/30 transition-all hover:-translate-y-1">
+                        Post Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

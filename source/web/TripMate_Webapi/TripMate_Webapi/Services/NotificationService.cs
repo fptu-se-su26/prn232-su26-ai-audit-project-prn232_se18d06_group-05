@@ -20,6 +20,7 @@ namespace TripMate_WebAPI.Services
         private readonly IEmailService _emailService;
         private readonly string _supabaseUrl;
         private readonly string _anonKey;
+        private readonly string _serviceRoleKey;
         private readonly ILogger<NotificationService> _logger;
         private readonly JsonSerializerOptions _json;
 
@@ -33,6 +34,7 @@ namespace TripMate_WebAPI.Services
             _emailService = emailService;
             _supabaseUrl = config["Supabase:Url"] ?? throw new Exception("Supabase URL not configured");
             _anonKey = config["Supabase:AnonKey"] ?? throw new Exception("Supabase Anon Key not configured");
+            _serviceRoleKey = config["Supabase:ServiceRoleKey"] ?? throw new Exception("Supabase Service Role Key not configured");
             _logger = logger;
             _json = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
         }
@@ -142,6 +144,7 @@ namespace TripMate_WebAPI.Services
                     $"{_supabaseUrl}/rest/v1/admin_notifications");
 
                 request.Headers.Add("apikey", _anonKey);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _serviceRoleKey);
                 request.Content = new StringContent(
                     JsonSerializer.Serialize(notification),
                     Encoding.UTF8,
@@ -195,6 +198,7 @@ namespace TripMate_WebAPI.Services
                     $"{_supabaseUrl}/rest/v1/profiles?role=eq.admin&select=id,email,full_name");
 
                 request.Headers.Add("apikey", _anonKey);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _serviceRoleKey);
 
                 var response = await _http.SendAsync(request);
                 var content = await response.Content.ReadAsStringAsync();
