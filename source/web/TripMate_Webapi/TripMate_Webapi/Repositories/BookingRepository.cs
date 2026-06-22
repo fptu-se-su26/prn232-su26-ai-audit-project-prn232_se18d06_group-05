@@ -1,0 +1,98 @@
+using Supabase;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using TripMate_Webapi.Entities;
+
+namespace TripMate_Webapi.Repositories
+{
+    public class BookingRepository : IBookingRepository
+    {
+        private readonly Client _supabase;
+
+        public BookingRepository(Client supabase)
+        {
+            _supabase = supabase;
+        }
+
+        public async Task<BookingEntity> CreateBookingAsync(BookingEntity booking, string? userToken = null)
+        {
+            var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
+            var anonKey = Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
+            var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+            var tokenToUse = userToken ?? serviceKey ?? anonKey;
+            
+            using var http = new System.Net.Http.HttpClient();
+            var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, $"{supabaseUrl}/rest/v1/bookings");
+            req.Headers.Add("apikey", anonKey);
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenToUse);
+            req.Headers.Add("Prefer", "return=representation");
+            
+            var bodyObj = new System.Collections.Generic.Dictionary<string, object?>
+            {
+                { "traveler_id", booking.TravelerId },
+                { "guide_profile_id", booking.GuideProfileId },
+                { "booking_date", booking.BookingDate.ToString("yyyy-MM-dd") },
+                { "start_time", booking.StartTime.ToString("HH:mm:ss") },
+                { "guest_count", booking.GuestCount },
+                { "total_amount", booking.TotalAmount },
+                { "platform_fee", booking.PlatformFee },
+                { "guide_earnings", booking.GuideEarnings },
+                { "status", booking.Status },
+                { "traveler_notes", booking.TravelerNotes }
+            };
+
+            if (booking.ExperiencePackageId != "00000000-0000-0000-0000-000000000000")
+            {
+                bodyObj.Add("experience_package_id", booking.ExperiencePackageId);
+            }
+            
+            var json = System.Text.Json.JsonSerializer.Serialize(bodyObj);
+            req.Content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            
+            var response = await http.SendAsync(req);
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var created = System.Text.Json.JsonSerializer.Deserialize<List<BookingEntity>>(content);
+                return created?.FirstOrDefault() ?? booking;
+            }
+            else 
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Failed to insert booking: {error}");
+            }
+        }
+
+        public async Task<List<BookingEntity>> GetBookingsByTravelerAsync(string travelerId)
+        {
+            var response = await _supabase.From<BookingEntity>()
+                .Where(b => b.TravelerId == travelerId)
+                .Get();
+                
+            return response.Models;
+        }
+
+        public async Task<BookingEntity?> GetBookingByIdAsync(string id)
+        {
+            var response = await _supabase.From<BookingEntity>()
+                .Where(b => b.Id == id)
+                .Single();
+                
+            return response;
+        }
+
+        public async Task<BookingEntity> UpdateBookingAsync(BookingEntity booking)
+        {
+            var response = await _supabase.From<BookingEntity>().Update(booking);
+            return response.Models.FirstOrDefault() ?? booking;
+        }
+
+        public async Task<string?> GetAnyTravelerProfileIdAsync()
+        {
+            var response = await _supabase.From<ProfileEntity>()
+                .Where(p => p.Role == "traveler")
+                .Get();
+            return response.Models.FirstOrDefault()?.Id;
+        }
+    }
+}
