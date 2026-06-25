@@ -24,7 +24,7 @@
 
         <div class="flex justify-between items-end mb-10">
             <div>
-                <h1 class="text-4xl font-extrabold text-on-surface mb-2">Welcome back, @(ViewBag.TravelerName ?? "Traveler")!</h1>
+                <h1 class="text-4xl font-extrabold text-on-surface mb-2" data-welcome>Welcome back, @(ViewBag.TravelerName ?? "Traveler")!</h1>
                 <p class="text-lg text-on-surface-variant">Ready for your next adventure?</p>
             </div>
             <a href="/Traveler/CreateTripRequest" class="bg-primary text-on-primary px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-primary/90 transition-all shadow-md">
@@ -159,3 +159,45 @@
         to { opacity: 1; transform: translateY(0); }
     }
 </style>
+
+<script>
+    // Cập nhật tên hiển thị từ localStorage nếu server không có claim
+    document.addEventListener('DOMContentLoaded', () => {
+        const userEmail = localStorage.getItem('userEmail');
+        if (userEmail) {
+            const atIdx = userEmail.indexOf('\u0040');
+            const displayName = atIdx > 0 ? userEmail.substring(0, atIdx) : userEmail;
+            const welcomeEl = document.querySelector('h1[data-welcome]');
+            if (welcomeEl) {
+                welcomeEl.textContent = 'Welcome back, ' + displayName + '!';
+            }
+        }
+
+        // Ghost Booking: Kiểm tra nếu có pending booking intent từ trước khi login
+        const ghostGuideId = localStorage.getItem('ghostBookingGuideId');
+        if (ghostGuideId) {
+            const notifBanner = document.createElement('div');
+            notifBanner.className = 'mb-6 bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-center justify-between gap-4 animate-fade-in';
+            notifBanner.innerHTML =
+                '<div class="flex items-center gap-3">' +
+                    '<span class="material-symbols-outlined text-orange-500">schedule</span>' +
+                    '<div>' +
+                        '<p class="font-bold text-orange-800">You have a pending booking request!</p>' +
+                        '<p class="text-sm text-orange-600">You were browsing a guide before logging in. Continue your booking now.</p>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="flex gap-2 shrink-0">' +
+                    '<a href="/Guide/Profile/' + ghostGuideId + '" class="bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-primary/90 transition-all">Continue Booking</a>' +
+                    '<button onclick="dismissGhostBooking()" class="border border-orange-200 text-orange-600 px-4 py-2 rounded-xl text-sm font-bold hover:bg-orange-100 transition-all">Dismiss</button>' +
+                '</div>';
+            const mainContent = document.querySelector('main');
+            mainContent?.insertBefore(notifBanner, mainContent.firstChild);
+        }
+    });
+
+    function dismissGhostBooking() {
+        localStorage.removeItem('ghostBookingGuideId');
+        fetch('/Survey/ClearSession', { method: 'POST' }).catch(() => {});
+        document.querySelector('.bg-orange-50')?.remove();
+    }
+</script>

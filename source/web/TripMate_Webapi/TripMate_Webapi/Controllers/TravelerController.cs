@@ -17,6 +17,7 @@ namespace TripMate_Webapi.Controllers
         private readonly ITripRequestRepository _tripRequestRepository;
         private readonly IBookingRepository _bookingRepository;
         private readonly TourService _tourService;
+        private readonly IReviewRepository _reviewRepository;
 
         private const string LOGIN_URL = "/Auth/Login";
 
@@ -25,13 +26,15 @@ namespace TripMate_Webapi.Controllers
             SupabaseAuthService authService,
             ITripRequestRepository tripRequestRepository,
             IBookingRepository bookingRepository,
-            TourService tourService)
+            TourService tourService,
+            IReviewRepository reviewRepository)
         {
             _logger = logger;
             _authService = authService;
             _tripRequestRepository = tripRequestRepository;
             _bookingRepository = bookingRepository;
             _tourService = tourService;
+            _reviewRepository = reviewRepository;
         }
 
         // ────────────────────────────────────────────────────────────────────
@@ -346,32 +349,73 @@ namespace TripMate_Webapi.Controllers
 
         /// <summary>
         /// POST: /Traveler/SubmitReview
-        /// M5: Lưu review vào DB (hiện trả về thành công, cần bảng Reviews).
+        /// M5: Lưu review vào bảng reviews trên Supabase.
+        /// Validation: rating 1-5, comment >= 10 chars, duplicate check per booking.
         /// </summary>
         [HttpPost]
-        public IActionResult SubmitReview(string id, int rating, string comment)
+        public async Task<IActionResult> SubmitReview(string id, int rating, string comment)
         {
             var travelerId = GetCurrentUserId();
             if (string.IsNullOrEmpty(travelerId))
                 return Redirect($"{LOGIN_URL}?returnUrl=/Traveler/Review/{id}");
 
+            // Validate rating
             if (rating < 1 || rating > 5)
             {
                 TempData["ErrorMessage"] = "Vui lòng chọn số sao từ 1 đến 5.";
                 return RedirectToAction("Review", new { id });
             }
 
+            // Validate comment length
             if (string.IsNullOrWhiteSpace(comment) || comment.Length < 10)
             {
                 TempData["ErrorMessage"] = "Nhận xét phải có ít nhất 10 ký tự.";
                 return RedirectToAction("Review", new { id });
             }
 
-            // TODO (M5): Lưu vào bảng Reviews trên Supabase
-            // await _reviewRepository.CreateReviewAsync(new ReviewEntity { BookingId = id, TravelerId = travelerId, Rating = rating, Comment = comment });
-            _logger.LogInformation("[Review] TravelerId={TravelerId} submitted review for BookingId={BookingId}, Rating={Rating}", travelerId, id, rating);
+            // Lấy booking để lấy guideProfileId
+            var booking = await _bookingRepository.GetBookingByIdAsync(id);
+            if (booking == null)
+            {
+                TempData["ErrorMessage"] = "Không tìm thấy booking. Vui lòng thử lại.";
+                return RedirectToAction("Trips");
+            }
 
-            TempData["SuccessMessage"] = "Cảm ơn bạn đã để lại đánh giá!";
+            // M5: Duplicate check — mỗi booking chỉ được review 1 lần
+            var alreadyReviewed = await _reviewRepository.HasReviewForBookingAsync(id);
+            if (alreadyReviewed)
+            {
+                TempData["ErrorMessage"] = "Bạn đã đánh giá chuyến đi này rồi.";
+                return RedirectToAction("Trips");
+            }
+
+            // M5: Lưu review vào DB
+            var review = new TripMate_Webapi.Entities.ReviewEntity
+            {
+                Id = Guid.NewGuid().ToString(),
+                BookingId = id,
+                TravelerId = travelerId,
+                GuideProfileId = booking.GuideProfileId,
+                Rating = rating,
+                Comment = comment.Trim(),
+                IsVisible = true,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            try
+            {
+                await _reviewRepository.CreateReviewAsync(review);
+                _logger.LogInformation("[Review] Traveler={TravelerId} rated Guide={GuideId} with {Rating}★ for Booking={BookingId}",
+                    travelerId, booking.GuideProfileId, rating, id);
+
+                TempData["SuccessMessage"] = $"Cảm ơn bạn đã để lại đánh giá {rating}★! Guide sẽ nhận được phản hồi của bạn.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[Review] Failed to save review for BookingId={BookingId}", id);
+                TempData["ErrorMessage"] = "Không thể lưu đánh giá lúc này. Vui lòng thử lại sau.";
+            }
+
             return RedirectToAction("Trips");
         }
 

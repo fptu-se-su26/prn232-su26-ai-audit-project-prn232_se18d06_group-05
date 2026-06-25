@@ -33,6 +33,7 @@
             </div>
             
             <form action="/Traveler/CreateTripRequest" method="post" class="p-8 space-y-6">
+                @Html.AntiForgeryToken()
                 <!-- Location & Dates -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -60,8 +61,8 @@
                             <select name="groupSize" class="w-full pl-10 pr-4 py-3 bg-surface border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all appearance-none cursor-pointer">
                                 <option value="1">Just me (1 person)</option>
                                 <option value="2">Couple (2 people)</option>
-                                <option value="3-5">Small Group (3-5 people)</option>
-                                <option value="6+">Large Group (6+ people)</option>
+                                <option value="4">Small Group (3-5 people)</option>
+                                <option value="6">Large Group (6+ people)</option>
                             </select>
                         </div>
                     </div>

@@ -68,6 +68,7 @@ builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IGuideRepository, GuideRepository>();
+builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();

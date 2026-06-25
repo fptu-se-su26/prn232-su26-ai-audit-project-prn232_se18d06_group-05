@@ -3,124 +3,211 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+@* M2: Server truyền quiz data đã lưu trong Session (nếu có) *@
+@if (ViewBag.PendingQuizJson != null)
+{
+    <script>
+        window.__serverQuizData = @Html.Raw(ViewBag.PendingQuizJson);
+    </script>
+}
+
 <div class="min-h-screen bg-surface" x-data="matchingResults()">
     <!-- Loading State -->
     <div x-show="isLoading" class="flex flex-col items-center justify-center h-[80vh]">
         <div class="relative w-32 h-32 mb-8">
-            <!-- Ripple Effect -->
             <div class="absolute inset-0 border-4 border-primary/20 rounded-full animate-ping"></div>
             <div class="absolute inset-2 border-4 border-primary/40 rounded-full animate-ping" style="animation-delay: 0.2s"></div>
-            <!-- Center Icon -->
             <div class="absolute inset-4 bg-primary text-on-primary rounded-full flex items-center justify-center shadow-xl z-10">
                 <span class="material-symbols-outlined text-5xl animate-pulse">magic_button</span>
             </div>
         </div>
         <h2 class="text-3xl font-bold text-on-surface mb-2">Analyzing your preferences...</h2>
         <p class="text-on-surface-variant text-lg">Finding the perfect Local Soulmates for your trip to <strong class="text-primary" x-text="preferences.destination === 'Other' ? preferences.customDestination : preferences.destination"></strong></p>
+        <p class="text-sm text-on-surface-variant mt-2 animate-pulse">Calculating compatibility scores...</p>
+    </div>
+
+    <!-- Error State -->
+    <div x-show="hasError && !isLoading" style="display: none;" class="flex flex-col items-center justify-center h-[60vh] text-center px-6">
+        <span class="material-symbols-outlined text-6xl text-on-surface-variant mb-4">wifi_off</span>
+        <h3 class="text-2xl font-bold text-on-surface mb-2">Could not load matches</h3>
+        <p class="text-on-surface-variant mb-6" x-text="errorMessage">Please try again.</p>
+        <button @@click="fetchMatches()" class="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all">
+            Try Again
+        </button>
     </div>
 
     <!-- Results State -->
-    <div x-show="!isLoading" style="display: none;" class="py-16 px-12 max-w-[1440px] mx-auto" x-transition.opacity.duration.1000ms>
-        
+    <div x-show="!isLoading && !hasError" style="display: none;" class="py-16 px-6 md:px-12 max-w-[1440px] mx-auto" x-transition.opacity.duration.1000ms>
+
         <div class="text-center mb-16">
             <span class="bg-primary-container text-primary px-4 py-1.5 rounded-full text-sm font-bold mb-4 inline-block tracking-widest uppercase">Matches Found</span>
             <h2 class="text-5xl font-extrabold text-on-surface mb-4">Meet Your Local Soulmates</h2>
-            <p class="text-xl text-on-surface-variant">We've found <span class="font-bold text-primary">3</span> perfect guides for your upcoming <span class="lowercase" x-text="preferences.vibe === 'Other' ? preferences.customVibe : preferences.vibe"></span> trip to <span class="font-bold" x-text="preferences.destination === 'Other' ? preferences.customDestination : preferences.destination"></span>.</p>
+            <p class="text-xl text-on-surface-variant">
+                We've found <span class="font-bold text-primary" x-text="guides.length"></span> perfect guides for your
+                <span class="lowercase" x-text="preferences.vibe || 'travel'"></span> trip to
+                <span class="font-bold" x-text="preferences.destination || 'Vietnam'"></span>.
+            </p>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
-            <!-- Top Match Card -->
-            <div class="md:col-span-3 bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 flex flex-col md:flex-row relative">
-                <!-- Top Match Badge -->
-                <div class="absolute top-4 left-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1 z-10">
-                    <span class="material-symbols-outlined text-sm">local_fire_department</span>
-                    98% Match
-                </div>
+        <!-- No matches fallback -->
+        <div x-show="guides.length === 0" class="text-center py-20">
+            <span class="material-symbols-outlined text-7xl text-on-surface-variant mb-4">search_off</span>
+            <h3 class="text-2xl font-bold text-on-surface mb-2">No guides found for this destination</h3>
+            <p class="text-on-surface-variant mb-6">Try a different destination or browse all guides.</p>
+            <a href="/Guide/Index" class="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all">Browse All Guides</a>
+        </div>
 
-                <div class="md:w-2/5 h-80 md:h-auto relative bg-gray-200">
-                    <!-- Placeholder Avatar -->
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <span class="material-symbols-outlined text-9xl text-gray-400">face_3</span>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-10" x-show="guides.length > 0">
+
+            <!-- Top Match Card (first guide — full width) -->
+            <template x-if="guides.length > 0">
+                <div class="md:col-span-3 bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 flex flex-col md:flex-row relative">
+                    <!-- Match Badge -->
+                    <div class="absolute top-4 left-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1 z-10">
+                        <span class="material-symbols-outlined text-sm">local_fire_department</span>
+                        <span x-text="guides[0].matchScore + '% Match'"></span>
                     </div>
-                </div>
-                
-                <div class="md:w-3/5 p-8 md:p-12 flex flex-col justify-center">
-                    <div class="flex justify-between items-start mb-2">
-                        <h3 class="text-4xl font-bold text-on-surface">Minh Anh</h3>
-                        <div class="flex items-center gap-1">
-                            <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
-                            <span class="font-bold text-lg">5.0</span>
-                            <span class="text-on-surface-variant text-sm">(124 trips)</span>
+
+                    <!-- Guide Photo -->
+                    <div class="md:w-2/5 h-80 md:h-auto relative overflow-hidden bg-gray-100">
+                        <template x-if="guides[0].coverPhotoUrl">
+                            <img :src="guides[0].coverPhotoUrl" :alt="guides[0].name"
+                                 class="w-full h-full object-cover" />
+                        </template>
+                        <template x-if="!guides[0].coverPhotoUrl">
+                            <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-container to-surface-variant">
+                                <span class="material-symbols-outlined text-9xl text-primary/40">face_3</span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="md:w-3/5 p-8 md:p-12 flex flex-col justify-center">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-4xl font-bold text-on-surface" x-text="guides[0].name"></h3>
+                            <div class="flex items-center gap-1">
+                                <span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="font-bold text-lg" x-text="guides[0].averageRating.toFixed(1)"></span>
+                                <span class="text-on-surface-variant text-sm" x-text="'(' + guides[0].totalReviews + ' reviews)'"></span>
+                            </div>
+                        </div>
+
+                        <p class="text-primary font-medium mb-2 text-lg flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">location_on</span>
+                            <span x-text="guides[0].cityArea || 'Vietnam'"></span>
+                        </p>
+
+                        <p class="text-on-surface-variant leading-relaxed mb-6 line-clamp-3" x-text="guides[0].bio || 'A passionate local guide ready to show you the hidden gems of Vietnam.'"></p>
+
+                        <!-- Specialties Tags -->
+                        <div class="flex flex-wrap gap-2 mb-6">
+                            <template x-for="tag in (guides[0].specialties || []).slice(0, 4)" :key="tag">
+                                <span class="bg-surface-variant text-on-surface-variant px-3 py-1.5 rounded-lg text-sm font-medium" x-text="tag"></span>
+                            </template>
+                        </div>
+
+                        <!-- Package Info -->
+                        <template x-if="guides[0].packageTitle">
+                            <div class="flex items-center gap-3 mb-6 bg-primary-container/30 rounded-xl p-4">
+                                <span class="material-symbols-outlined text-primary">sell</span>
+                                <div>
+                                    <p class="font-bold text-on-surface text-sm" x-text="guides[0].packageTitle"></p>
+                                    <p class="text-primary font-bold" x-text="guides[0].pricePerSession > 0 ? formatPrice(guides[0].pricePerSession) + '/buổi' : (guides[0].pricePerPerson ? formatPrice(guides[0].pricePerPerson) + '/người' : 'Liên hệ')"></p>
+                                </div>
+                            </div>
+                        </template>
+
+                        <div class="flex items-center gap-4 mt-auto">
+                            <button @@click="handleConnect(guides[0].guideId, guides[0].name)"
+                                    class="bg-primary hover:bg-primary/90 text-on-primary px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
+                                Connect Now
+                                <span class="material-symbols-outlined">send</span>
+                            </button>
+                            <a :href="'/Guide/Profile/' + guides[0].guideId"
+                               class="text-on-surface-variant hover:text-primary font-bold px-6 py-4 rounded-xl hover:bg-primary-container transition-all">
+                                View Profile
+                            </a>
+                            <!-- Save Button (Top Card) -->
+                            <button @@click="toggleSave(guides[0])"
+                                    :title="isSaved(guides[0].guideId) ? 'Unsave guide' : 'Save guide'"
+                                    class="ml-auto w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all"
+                                    :class="isSaved(guides[0].guideId) ? 'bg-red-50 border-red-300 text-red-500' : 'border-outline-variant/50 text-on-surface-variant hover:border-red-300 hover:text-red-400'">
+                                <span class="material-symbols-outlined"
+                                      :style="isSaved(guides[0].guideId) ? 'font-variation-settings: FILL 1' : ''">favorite</span>
+                            </button>
                         </div>
                     </div>
-                    
-                    <p class="text-primary font-medium mb-6 text-lg">Art Enthusiast & Coffee Lover</p>
-                    
-                    <p class="text-on-surface-variant leading-relaxed mb-8">
-                        "I love showing travelers the hidden alleys and secret cafes that only locals know. Since you're looking for a chill vibe, I have the perfect itinerary combining vintage bookstores, lakeside walks, and the absolute best egg coffee in town."
-                    </p>
-                    
-                    <div class="flex flex-wrap gap-2 mb-8">
-                        <span class="bg-surface-variant text-on-surface-variant px-3 py-1.5 rounded-lg text-sm font-medium">Photography</span>
-                        <span class="bg-surface-variant text-on-surface-variant px-3 py-1.5 rounded-lg text-sm font-medium">History</span>
-                        <span class="bg-surface-variant text-on-surface-variant px-3 py-1.5 rounded-lg text-sm font-medium">Street Food</span>
+                </div>
+            </template>
+
+            <!-- Other Match Cards (guides[1..n]) -->
+            <template x-for="(guide, index) in guides.slice(1)" :key="guide.guideId">
+                <div class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col group">
+                    <!-- Match Badge -->
+                    <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 z-10">
+                        <span x-text="guide.matchScore + '% Match'"></span>
                     </div>
 
-                    <div class="flex items-center gap-4 mt-auto">
-                        <button onclick="handleConnect(event, '/Guide/Profile/1')" class="bg-primary hover:bg-primary/90 text-on-primary px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
-                            Connect Now
-                            <span class="material-symbols-outlined">send</span>
-                        </button>
-                        <a href="/Guide/Profile/1" class="text-on-surface-variant hover:text-primary font-bold px-6 py-4 rounded-xl hover:bg-primary-container transition-all">
-                            View Profile
-                        </a>
+                    <!-- Photo -->
+                    <div class="h-64 relative bg-gray-100 overflow-hidden">
+                        <template x-if="guide.coverPhotoUrl">
+                            <img :src="guide.coverPhotoUrl" :alt="guide.name"
+                                 class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        </template>
+                        <template x-if="!guide.coverPhotoUrl">
+                            <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-container to-surface-variant">
+                                <span class="material-symbols-outlined text-7xl text-primary/40">face_4</span>
+                            </div>
+                        </template>
                     </div>
-                </div>
-            </div>
 
-            <!-- Other Matches -->
-            <div class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col">
-                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 z-10">
-                    92% Match
-                </div>
-                <div class="h-64 relative bg-gray-200">
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <span class="material-symbols-outlined text-7xl text-gray-400">face_4</span>
-                    </div>
-                </div>
-                <div class="p-8 flex-1 flex flex-col">
-                    <h4 class="text-2xl font-bold text-on-surface mb-1">Tuan Kiet</h4>
-                    <p class="text-primary text-sm mb-4">Local Food Expert</p>
-                    <p class="text-on-surface-variant text-sm line-clamp-3 mb-6">"If you want to eat like a local, I'm your guy. I know all the spots that aren't on Google Maps."</p>
-                    <div class="mt-auto">
-                        <button class="w-full border-2 border-primary text-primary hover:bg-primary hover:text-on-primary py-3 rounded-xl font-bold transition-all">
-                            View Profile
-                        </button>
-                    </div>
-                </div>
-            </div>
+                    <div class="p-6 flex-1 flex flex-col">
+                        <div class="flex justify-between items-start mb-1">
+                            <h4 class="text-xl font-bold text-on-surface" x-text="guide.name"></h4>
+                            <div class="flex items-center gap-1 text-sm">
+                                <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+                                <span class="font-bold" x-text="guide.averageRating.toFixed(1)"></span>
+                            </div>
+                        </div>
+                        <p class="text-primary text-sm mb-3 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm">location_on</span>
+                            <span x-text="guide.cityArea || 'Vietnam'"></span>
+                        </p>
+                        <p class="text-on-surface-variant text-sm line-clamp-2 mb-4" x-text="guide.bio || 'Local guide ready to show you the best of Vietnam.'"></p>
 
-            <div class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col">
-                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 z-10">
-                    89% Match
-                </div>
-                <div class="h-64 relative bg-gray-200">
-                    <div class="absolute inset-0 flex items-center justify-center">
-                        <span class="material-symbols-outlined text-7xl text-gray-400">face_5</span>
+                        <!-- Specialties -->
+                        <div class="flex flex-wrap gap-1 mb-4">
+                            <template x-for="tag in (guide.specialties || []).slice(0, 3)" :key="tag">
+                                <span class="bg-surface-variant text-xs font-bold px-2 py-1 rounded" x-text="tag"></span>
+                            </template>
+                        </div>
+
+                        <!-- Price -->
+                        <template x-if="guide.pricePerSession > 0">
+                            <p class="text-sm text-on-surface-variant mb-4">
+                                From <span class="font-bold text-primary" x-text="formatPrice(guide.pricePerSession)"></span>/buổi
+                            </p>
+                        </template>
+
+                        <div class="mt-auto grid grid-cols-2 gap-2">
+                            <button @@click="handleConnect(guide.guideId, guide.name)"
+                                    class="col-span-1 bg-primary hover:bg-primary/90 text-on-primary py-3 rounded-xl font-bold transition-all text-sm">
+                                Connect
+                            </button>
+                            <!-- Save Button (Small Card) -->
+                            <button @@click="toggleSave(guide)"
+                                    :title="isSaved(guide.guideId) ? 'Unsave' : 'Save'"
+                                    class="col-span-1 py-3 rounded-xl font-bold transition-all text-sm border-2 flex items-center justify-center gap-1"
+                                    :class="isSaved(guide.guideId) ? 'bg-red-50 border-red-300 text-red-500' : 'border-outline-variant/50 text-on-surface-variant hover:border-red-300 hover:text-red-400'">
+                                <span class="material-symbols-outlined text-sm"
+                                      :style="isSaved(guide.guideId) ? 'font-variation-settings: FILL 1' : ''">favorite</span>
+                                <span x-text="isSaved(guide.guideId) ? 'Saved' : 'Save'"></span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="p-8 flex-1 flex flex-col">
-                    <h4 class="text-2xl font-bold text-on-surface mb-1">Linh Chi</h4>
-                    <p class="text-primary text-sm mb-4">History Student & Photographer</p>
-                    <p class="text-on-surface-variant text-sm line-clamp-3 mb-6">"I can show you the historical depths of the city while capturing your best moments."</p>
-                    <div class="mt-auto">
-                        <button class="w-full border-2 border-primary text-primary hover:bg-primary hover:text-on-primary py-3 rounded-xl font-bold transition-all">
-                            View Profile
-                        </button>
-                    </div>
-                </div>
-            </div>
-            
+            </template>
+
+            <!-- CTA Card: Personality Test -->
             <div class="bg-primary-container rounded-3xl p-8 flex flex-col items-center justify-center text-center border-2 border-dashed border-primary/30">
                 <span class="material-symbols-outlined text-6xl text-primary mb-4">psychology</span>
                 <h4 class="text-xl font-bold text-on-primary-container mb-2">Want better matches?</h4>
@@ -134,83 +221,142 @@
     </div>
 </div>
 
-<!-- Alpine.js is included in _Layout.cshtml -->
-
-@* M2: Server truyền quiz data đã lưu trong Session (nếu có) *@
-@if (ViewBag.PendingQuizJson != null)
-{
-    <script>
-        window.__serverQuizData = @Html.Raw(ViewBag.PendingQuizJson);
-    </script>
-}
-
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('matchingResults', () => ({
             isLoading: true,
+            hasError: false,
+            errorMessage: '',
+            guides: [],
+            savedIds: [],
             preferences: {
                 destination: 'Vietnam',
-                vibe: 'Chill & Relax'
+                vibe: '',
+                budget: ''
             },
+
             init() {
-                // M2: Ưu tiên đọc từ Server Session (không bị mất sau login)
-                // Fallback về localStorage nếu server không có
+                // Load saved guides từ localStorage
+                const raw = localStorage.getItem('savedGuides');
+                this.savedIds = raw ? JSON.parse(raw).map(g => g.guideId) : [];
+
+                // M2: Ưu tiên đọc từ Server Session, fallback localStorage
                 if (window.__serverQuizData) {
                     this.preferences = window.__serverQuizData;
-                    // Đồng bộ ngược về localStorage để các component khác dùng
                     localStorage.setItem('tripPreferences', JSON.stringify(this.preferences));
                 } else {
-                    const savedPrefs = localStorage.getItem('tripPreferences');
-                    if (savedPrefs) {
-                        this.preferences = JSON.parse(savedPrefs);
-                    }
+                    const saved = localStorage.getItem('tripPreferences');
+                    if (saved) this.preferences = JSON.parse(saved);
                 }
 
-                // Simulate matching algorithm loading
-                setTimeout(() => {
-                    this.isLoading = false;
-                }, 2500);
+                // M3: Gọi Real Matching API
+                this.fetchMatches();
+            },
+
+            async fetchMatches() {
+                this.isLoading = true;
+                this.hasError = false;
+
+                try {
+                    const dest = this.preferences.destination !== 'Other'
+                        ? this.preferences.destination
+                        : (this.preferences.customDestination || '');
+                    const vibe = this.preferences.vibe !== 'Other'
+                        ? this.preferences.vibe
+                        : (this.preferences.customVibe || '');
+                    const budget = this.preferences.budget || '';
+
+                    const params = new URLSearchParams({ limit: 6 });
+                    if (dest) params.set('destination', dest);
+                    if (vibe) params.set('vibe', vibe);
+                    if (budget) params.set('budget', budget);
+
+                    const response = await fetch(`/Survey/CalculateMatches?${params.toString()}`);
+
+                    if (!response.ok) throw new Error('Server error: ' + response.status);
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.guides = data.guides || [];
+                    } else {
+                        throw new Error(data.message || 'Could not load matches');
+                    }
+                } catch (err) {
+                    console.error('[Matching] Error:', err);
+                    this.hasError = true;
+                    this.errorMessage = 'Could not load guides. Please check your connection and try again.';
+                } finally {
+                    // Minimum 2.5s loading cho hiệu ứng "đang phân tích"
+                    setTimeout(() => { this.isLoading = false; }, 2500);
+                }
+            },
+
+            formatPrice(price) {
+                if (!price) return '';
+                return new Intl.NumberFormat('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND',
+                    maximumFractionDigits: 0
+                }).format(price);
+            },
+
+            isSaved(guideId) {
+                return this.savedIds.includes(guideId);
+            },
+
+            toggleSave(guide) {
+                const raw = localStorage.getItem('savedGuides');
+                let list = raw ? JSON.parse(raw) : [];
+
+                if (this.isSaved(guide.guideId)) {
+                    // Remove from saved
+                    list = list.filter(g => g.guideId !== guide.guideId);
+                    this.savedIds = this.savedIds.filter(id => id !== guide.guideId);
+                } else {
+                    // Add to saved
+                    list.push({
+                        guideId: guide.guideId,
+                        name: guide.name,
+                        coverPhotoUrl: guide.coverPhotoUrl || '',
+                        cityArea: guide.cityArea || '',
+                        specialties: guide.specialties || [],
+                        averageRating: guide.averageRating || 0,
+                        totalReviews: guide.totalReviews || 0,
+                        savedAt: new Date().toISOString()
+                    });
+                    this.savedIds = [...this.savedIds, guide.guideId];
+                }
+
+                localStorage.setItem('savedGuides', JSON.stringify(list));
+            },
+
+            handleConnect(guideId, guideName) {
+                const token = localStorage.getItem('accessToken');
+                const userEmail = localStorage.getItem('userEmail');
+
+                if (!token || !userEmail) {
+                    // Ghost Booking: Lưu intent vào server Session
+                    const ghostBooking = {
+                        guideId: guideId,
+                        packageTitle: guideName + ' - Tour trải nghiệm',
+                        destination: this.preferences.destination || '',
+                        savedAt: new Date().toISOString(),
+                        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+                    };
+
+                    fetch('/Survey/HoldBooking', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(ghostBooking)
+                    }).catch(err => console.warn('[Ghost Booking]', err));
+
+                    localStorage.setItem('redirectAfterLogin', `/Guide/Profile/${guideId}`);
+                    window.location.href = `/Auth/Login?returnUrl=${encodeURIComponent('/Guide/Profile/' + guideId)}`;
+                } else {
+                    window.location.href = `/Guide/Profile/${guideId}`;
+                }
             }
         }))
     })
-</script>
-
-<!-- Authentication Script with Ghost Booking (M1 Feature) -->
-<script>
-    function handleConnect(event, guideId, packageTitle) {
-        event.preventDefault();
-        
-        const token = localStorage.getItem('accessToken');
-        const userEmail = localStorage.getItem('userEmail');
-        
-        if (!token || !userEmail) {
-            // M1 — Ghost Booking: Lưu booking intent vào server Session
-            // Traveler sẽ thấy "đang giữ chỗ" thông báo sau khi login xong
-            const prefs = JSON.parse(localStorage.getItem('tripPreferences') || '{}');
-            const ghostBooking = {
-                guideId: guideId,
-                packageTitle: packageTitle || 'Tour trải nghiệm',
-                destination: prefs.destination || '',
-                savedAt: new Date().toISOString(),
-                expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 phút
-            };
-            
-            // Lưu Ghost Booking lên server Session (không bị mất khi đổi tab)
-            fetch('/Survey/HoldBooking', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(ghostBooking)
-            }).catch(err => console.warn('[Ghost Booking] Could not save to session:', err));
-            
-            // Lưu returnUrl để sau login quay về Guide profile
-            localStorage.setItem('redirectAfterLogin', `/Guide/Profile/${guideId}`);
-            localStorage.setItem('ghostBookingGuideId', guideId);
-            
-            // Redirect đến login với returnUrl
-            window.location.href = `/Auth/Login?returnUrl=${encodeURIComponent('/Guide/Profile/' + guideId)}`;
-        } else {
-            // Đã đăng nhập → đến Guide profile
-            window.location.href = `/Guide/Profile/${guideId}`;
-        }
-    }
 </script>

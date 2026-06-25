@@ -4,97 +4,156 @@
 }
 
 <div class="min-h-screen bg-surface flex">
-    
+
     <partial name="_TravelerSidebar" />
 
     <!-- Main Content -->
-    <main class="flex-1 p-8 md:p-12 overflow-y-auto h-[calc(100vh-80px)]">
-        
-        <div class="mb-10">
-            <h1 class="text-4xl font-extrabold text-on-surface mb-2 flex items-center gap-3">
-                <span class="material-symbols-outlined text-red-500 text-4xl" style="font-variation-settings: 'FILL' 1;">favorite</span>
-                Saved Local Soulmates
-            </h1>
-            <p class="text-lg text-on-surface-variant">Guides you've bookmarked for future adventures.</p>
+    <main class="flex-1 p-8 md:p-12 overflow-y-auto h-[calc(100vh-80px)]" x-data="savedGuides()">
+
+        <div class="mb-10 flex justify-between items-end">
+            <div>
+                <h1 class="text-4xl font-extrabold text-on-surface mb-2 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-red-500 text-4xl" style="font-variation-settings: 'FILL' 1;">favorite</span>
+                    Saved Local Soulmates
+                </h1>
+                <p class="text-lg text-on-surface-variant">
+                    Guides you've bookmarked for future adventures.
+                    <span class="font-bold text-primary" x-text="saved.length > 0 ? '(' + saved.length + ' saved)' : ''"></span>
+                </p>
+            </div>
+            <button x-show="saved.length > 0" @@click="clearAll()"
+                    class="text-sm text-on-surface-variant hover:text-red-500 font-bold flex items-center gap-1 transition-colors">
+                <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                Clear All
+            </button>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            
-            <!-- Saved Guide Card 1 -->
-            <div class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col group">
-                <!-- Unfavorite Button -->
-                <button class="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 transition-all z-10 shadow-sm">
-                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">favorite</span>
-                </button>
-                
-                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-on-surface flex items-center gap-1 z-10 shadow-sm">
-                    <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">star</span> 5.0 (124)
-                </div>
+        <!-- Empty State -->
+        <div x-show="saved.length === 0" class="flex flex-col items-center justify-center h-[60vh] text-center">
+            <span class="material-symbols-outlined text-7xl text-on-surface-variant/40 mb-4">favorite_border</span>
+            <h3 class="text-2xl font-bold text-on-surface mb-2">No saved guides yet</h3>
+            <p class="text-on-surface-variant max-w-sm mb-8">
+                Tap the ♡ heart button on any Guide Profile to save them here for quick access later.
+            </p>
+            <a href="/Guide/Index" class="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md">
+                Browse Guides
+            </a>
+        </div>
 
-                <div class="h-64 relative bg-gray-200 overflow-hidden">
-                    <img src="/images/guide_1.png" alt="Minh Anh" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"/>
-                </div>
+        <!-- Saved Guide Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" x-show="saved.length > 0">
+            <template x-for="(guide, index) in saved" :key="guide.guideId">
+                <div class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col group">
 
-                <div class="p-8 flex-1 flex flex-col">
-                    <div class="flex justify-between items-center mb-1">
-                        <h4 class="text-2xl font-bold text-on-surface">Minh Anh</h4>
-                        <span class="text-xs font-bold bg-primary-container text-primary px-2 py-1 rounded-md border border-primary/20">ENFP</span>
+                    <!-- Remove button -->
+                    <button @@click="removeGuide(guide.guideId)"
+                            class="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 transition-all z-10 shadow-sm"
+                            title="Remove from saved">
+                        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">favorite</span>
+                    </button>
+
+                    <!-- Rating badge -->
+                    <template x-if="guide.averageRating > 0">
+                        <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-on-surface flex items-center gap-1 z-10 shadow-sm">
+                            <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+                            <span x-text="guide.averageRating.toFixed(1)"></span>
+                            <span class="text-on-surface-variant" x-text="guide.totalReviews ? '(' + guide.totalReviews + ')' : ''"></span>
+                        </div>
+                    </template>
+
+                    <!-- Photo -->
+                    <div class="h-64 relative bg-gray-200 overflow-hidden">
+                        <template x-if="guide.coverPhotoUrl">
+                            <img :src="guide.coverPhotoUrl" :alt="guide.name"
+                                 class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                        </template>
+                        <template x-if="!guide.coverPhotoUrl">
+                            <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-container to-surface-variant">
+                                <span class="material-symbols-outlined text-6xl text-primary/40">face_4</span>
+                            </div>
+                        </template>
                     </div>
-                    <p class="text-on-surface-variant text-sm mb-4 flex items-center gap-1 font-medium">
-                        <span class="material-symbols-outlined text-sm">location_on</span> Hanoi, Vietnam
-                    </p>
-                    
-                    <div class="flex flex-wrap gap-2 mb-6">
-                        <span class="bg-surface-variant text-xs font-bold px-2 py-1 rounded">Photography</span>
-                        <span class="bg-surface-variant text-xs font-bold px-2 py-1 rounded">Hidden Cafes</span>
-                        <span class="bg-surface-variant text-xs font-bold px-2 py-1 rounded">Art</span>
-                    </div>
-                    
-                    <div class="mt-auto grid grid-cols-2 gap-3">
-                        <a href="/Guide/Profile/1" class="col-span-2 bg-primary hover:bg-primary/90 text-white text-center py-3 rounded-xl font-bold transition-all shadow-md">
-                            View Profile
-                        </a>
+
+                    <div class="p-6 flex-1 flex flex-col">
+                        <div class="flex justify-between items-center mb-1">
+                            <h4 class="text-2xl font-bold text-on-surface" x-text="guide.name"></h4>
+                            <span class="text-xs font-bold bg-primary-container text-primary px-2 py-1 rounded-md border border-primary/20"
+                                  x-show="guide.personalityType"
+                                  x-text="guide.personalityType || ''"></span>
+                        </div>
+                        <p class="text-on-surface-variant text-sm mb-4 flex items-center gap-1 font-medium">
+                            <span class="material-symbols-outlined text-sm">location_on</span>
+                            <span x-text="guide.cityArea || 'Vietnam'"></span>
+                        </p>
+
+                        <!-- Specialties -->
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <template x-for="tag in (guide.specialties || []).slice(0, 3)" :key="tag">
+                                <span class="bg-surface-variant text-xs font-bold px-2 py-1 rounded" x-text="tag"></span>
+                            </template>
+                        </div>
+
+                        <!-- Saved date -->
+                        <p class="text-xs text-on-surface-variant mb-4" x-text="'Saved ' + formatDate(guide.savedAt)"></p>
+
+                        <div class="mt-auto">
+                            <a :href="'/Guide/Profile/' + guide.guideId"
+                               class="block w-full bg-primary hover:bg-primary/90 text-white text-center py-3 rounded-xl font-bold transition-all shadow-md">
+                                View Profile
+                            </a>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </template>
+        </div>
 
-            <!-- Saved Guide Card 2 -->
-            <div class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col group">
-                <button class="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 transition-all z-10 shadow-sm">
-                    <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">favorite</span>
-                </button>
-                
-                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-on-surface flex items-center gap-1 z-10 shadow-sm">
-                    <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">star</span> 4.9 (86)
-                </div>
-
-                <div class="h-64 relative bg-gray-200 overflow-hidden">
-                    <img src="/images/guide_2.png" alt="Linh Chi" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"/>
-                </div>
-
-                <div class="p-8 flex-1 flex flex-col">
-                    <div class="flex justify-between items-center mb-1">
-                        <h4 class="text-2xl font-bold text-on-surface">Linh Chi</h4>
-                        <span class="text-xs font-bold bg-primary-container text-primary px-2 py-1 rounded-md border border-primary/20">INFJ</span>
-                    </div>
-                    <p class="text-on-surface-variant text-sm mb-4 flex items-center gap-1 font-medium">
-                        <span class="material-symbols-outlined text-sm">location_on</span> Da Lat, Vietnam
-                    </p>
-                    
-                    <div class="flex flex-wrap gap-2 mb-6">
-                        <span class="bg-surface-variant text-xs font-bold px-2 py-1 rounded">Nature Walks</span>
-                        <span class="bg-surface-variant text-xs font-bold px-2 py-1 rounded">Local History</span>
-                    </div>
-                    
-                    <div class="mt-auto grid grid-cols-2 gap-3">
-                        <a href="/Guide/Profile/2" class="col-span-2 bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white text-center py-3 rounded-xl font-bold transition-all shadow-sm">
-                            View Profile
-                        </a>
-                    </div>
-                </div>
-            </div>
-
+        <!-- Browse More CTA -->
+        <div x-show="saved.length > 0" class="mt-12 text-center">
+            <p class="text-on-surface-variant mb-4">Looking for more guides?</p>
+            <a href="/Guide/Index" class="border-2 border-primary text-primary px-8 py-3 rounded-xl font-bold hover:bg-primary-container transition-all">
+                Browse All Guides
+            </a>
         </div>
 
     </main>
 </div>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('savedGuides', () => ({
+            saved: [],
+
+            init() {
+                // Đọc danh sách guide đã save từ localStorage
+                const raw = localStorage.getItem('savedGuides');
+                this.saved = raw ? JSON.parse(raw) : [];
+
+                // Sort by savedAt mới nhất trước
+                this.saved.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+            },
+
+            removeGuide(guideId) {
+                this.saved = this.saved.filter(g => g.guideId !== guideId);
+                localStorage.setItem('savedGuides', JSON.stringify(this.saved));
+            },
+
+            clearAll() {
+                if (confirm('Remove all saved guides?')) {
+                    this.saved = [];
+                    localStorage.removeItem('savedGuides');
+                }
+            },
+
+            formatDate(isoString) {
+                if (!isoString) return '';
+                const d = new Date(isoString);
+                const now = new Date();
+                const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+                if (diffDays === 0) return 'today';
+                if (diffDays === 1) return 'yesterday';
+                if (diffDays < 7) return diffDays + ' days ago';
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
+        }))
+    })
+</script>
