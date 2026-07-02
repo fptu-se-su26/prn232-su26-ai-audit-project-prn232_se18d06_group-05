@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
+using TripMate_Webapi.Repositories;
 
 namespace TripMate_Webapi.Controllers
 {
@@ -7,16 +8,31 @@ namespace TripMate_Webapi.Controllers
     {
         private readonly TourService _tourService;
         private readonly BookingService _bookingService;
+        private readonly IGuideRepository _guideRepository;
         private readonly ILogger<GuideController> _logger;
 
         public GuideController(
             TourService tourService,
             BookingService bookingService,
+            IGuideRepository guideRepository,
             ILogger<GuideController> logger)
         {
             _tourService = tourService;
             _bookingService = bookingService;
+            _guideRepository = guideRepository;
             _logger = logger;
+        }
+
+        // GET: /Guide/Index (List of all Guides for Traveler)
+        public IActionResult Index()
+        {
+            return View();
+        }
+
+        // GET: /Guide/TripRequests (For Guides to see public requests)
+        public IActionResult TripRequests()
+        {
+            return View();
         }
 
         // GET: /Guide/Dashboard

@@ -1,0 +1,81 @@
+@{
+    var currentPath = Context.Request.Path.ToString().ToLower();
+}
+<aside id="traveler-sidebar" class="hidden md:flex w-64 bg-white border-r border-outline-variant/30 flex-col shrink-0 sticky top-20 h-[calc(100vh-80px)] transition-all duration-300 z-40">
+    <!-- Collapse Toggle -->
+    <div id="sidebar-header" class="p-4 flex justify-end border-b border-outline-variant/30">
+        <button id="toggle-sidebar" class="text-on-surface-variant hover:text-primary transition-colors focus:outline-none">
+            <span class="material-symbols-outlined" id="toggle-icon">menu_open</span>
+        </button>
+    </div>
+    
+    <nav class="p-4 flex-1 space-y-2 mt-4">
+        <a href="/Traveler/Dashboard" class="flex items-center gap-4 px-6 py-3 @(currentPath.Contains("/dashboard") ? "bg-primary-container text-primary font-bold" : "text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-medium") rounded-xl transition-all group" title="My Dashboard">
+            <span class="material-symbols-outlined">dashboard</span>
+            <span class="sidebar-text whitespace-nowrap">My Dashboard</span>
+        </a>
+        <a href="/Traveler/Trips" class="flex items-center gap-4 px-6 py-3 @(currentPath.Contains("/trips") ? "bg-primary-container text-primary font-bold" : "text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-medium") rounded-xl transition-all group" title="My Trips">
+            <span class="material-symbols-outlined">calendar_month</span>
+            <span class="sidebar-text whitespace-nowrap">My Trips</span>
+        </a>
+        <a href="/Traveler/Saved" class="flex items-center gap-4 px-6 py-3 @(currentPath.Contains("/saved") ? "bg-primary-container text-primary font-bold" : "text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-medium") rounded-xl transition-all group" title="Saved Guides">
+            <span class="material-symbols-outlined">favorite</span>
+            <span class="sidebar-text whitespace-nowrap">Saved Guides</span>
+        </a>
+        <a href="/Traveler/Messages" class="flex items-center gap-4 px-6 py-3 @(currentPath.Contains("/messages") ? "bg-primary-container text-primary font-bold" : "text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-medium") rounded-xl transition-all group" title="Messages">
+            <span class="material-symbols-outlined">chat</span>
+            <span class="sidebar-text whitespace-nowrap">Messages</span>
+            <span class="sidebar-text ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">2</span>
+        </a>
+        <a href="/Traveler/CreateTripRequest" class="flex items-center gap-4 px-6 py-3 @(currentPath.Contains("/createtrip") ? "bg-primary-container text-primary font-bold" : "text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-medium") rounded-xl transition-all group" title="New Trip">
+            <span class="material-symbols-outlined">travel_explore</span>
+            <span class="sidebar-text whitespace-nowrap">New Trip</span>
+        </a>
+    </nav>
+    
+    <div class="p-4 border-t border-outline-variant/30">
+        <a href="/Traveler/Settings" class="flex items-center gap-4 px-6 py-3 @(currentPath.Contains("/settings") ? "bg-primary-container text-primary font-bold" : "text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-medium") rounded-xl transition-all group" title="Settings">
+            <span class="material-symbols-outlined">settings</span>
+            <span class="sidebar-text whitespace-nowrap">Settings</span>
+        </a>
+    </div>
+</aside>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const toggleBtn = document.getElementById('toggle-sidebar');
+        const sidebar = document.getElementById('traveler-sidebar');
+        const toggleIcon = document.getElementById('toggle-icon');
+        const textElements = document.querySelectorAll('.sidebar-text');
+        const navLinks = document.querySelectorAll('nav a, .border-t a');
+        const sidebarHeader = document.getElementById('sidebar-header');
+        
+        let isCollapsed = localStorage.getItem('traveler_sidebar_collapsed') === 'true';
+
+        function updateSidebarState() {
+            if (isCollapsed) {
+                sidebar.classList.remove('w-64');
+                sidebar.classList.add('w-20');
+                toggleIcon.textContent = 'menu';
+                textElements.forEach(el => el.classList.add('hidden'));
+                navLinks.forEach(el => { el.classList.remove('px-6'); el.classList.add('justify-center'); });
+                if (sidebarHeader) { sidebarHeader.classList.remove('justify-end'); sidebarHeader.classList.add('justify-center'); }
+            } else {
+                sidebar.classList.remove('w-20');
+                sidebar.classList.add('w-64');
+                toggleIcon.textContent = 'menu_open';
+                textElements.forEach(el => el.classList.remove('hidden'));
+                navLinks.forEach(el => { el.classList.add('px-6'); el.classList.remove('justify-center'); });
+                if (sidebarHeader) { sidebarHeader.classList.add('justify-end'); sidebarHeader.classList.remove('justify-center'); }
+            }
+        }
+
+        updateSidebarState();
+
+        toggleBtn.addEventListener('click', () => {
+            isCollapsed = !isCollapsed;
+            localStorage.setItem('traveler_sidebar_collapsed', isCollapsed);
+            updateSidebarState();
+        });
+    });
+</script>

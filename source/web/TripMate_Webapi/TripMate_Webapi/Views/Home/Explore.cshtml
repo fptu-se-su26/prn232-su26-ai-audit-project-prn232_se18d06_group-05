@@ -1,0 +1,118 @@
+@model List<TripMate_Webapi.Entities.GuideProfileEntity>
+@{
+    ViewData["Title"] = "Explore Guides & Destinations";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    string? searchDest = ViewBag.Destination as string;
+    string? searchWhen = ViewBag.SearchWhen as string;
+    string currentSpecialty = ViewBag.Specialty as string ?? "All";
+    bool hasSearch = !string.IsNullOrEmpty(searchDest) || !string.IsNullOrEmpty(searchWhen) || currentSpecialty != "All";
+}
+
+<div class="bg-surface min-h-screen pt-8 pb-20">
+    <div class="max-w-[1440px] mx-auto px-12">
+        <!-- Header Section -->
+        <div class="mb-12 flex flex-col md:flex-row justify-between items-end border-b border-outline-variant/30 pb-6">
+            <div>
+                <a href="javascript:history.back()" class="inline-flex items-center text-sm font-bold text-on-surface-variant hover:text-primary mb-4 transition-colors">
+                    <span class="material-symbols-outlined mr-1 text-[18px]">arrow_back</span>
+                    Back
+                </a>
+                @if (hasSearch)
+                {
+                    <h1 class="text-4xl font-extrabold text-on-surface">
+                        Search Results for <span class="text-primary">@(string.IsNullOrEmpty(searchDest) ? "Anywhere" : searchDest)</span>
+                    </h1>
+                    @if (!string.IsNullOrEmpty(searchWhen))
+                    {
+                        <p class="text-on-surface-variant text-lg mt-2 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-sm">calendar_month</span> @searchWhen
+                        </p>
+                    }
+                }
+                else
+                {
+                    <h1 class="text-4xl font-extrabold text-on-surface">Explore All Guides</h1>
+                    <p class="text-on-surface-variant text-lg mt-2">Find the perfect local expert for your next adventure.</p>
+                }
+            </div>
+            
+            <div class="mt-6 md:mt-0 flex gap-4">
+                <button class="px-5 py-2 rounded-full border border-outline-variant/50 bg-white font-bold text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-2 shadow-sm">
+                    <span class="material-symbols-outlined text-[20px]">filter_list</span> Filters
+                </button>
+                <select class="px-5 py-2 rounded-full border border-outline-variant/50 bg-white font-bold text-on-surface hover:bg-surface-variant transition-colors shadow-sm outline-none cursor-pointer">
+                    <option>Recommended</option>
+                    <option>Highest Rated</option>
+                    <option>Price: Low to High</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Filter Tags -->
+        <div class="flex flex-wrap gap-3 mb-10">
+            <a href="/Home/Explore?destination=@searchDest&specialty=All" class="px-4 py-2 rounded-full @(currentSpecialty == "All" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm shadow-sm hover:bg-surface-variant transition-colors">All</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Photography" class="px-4 py-2 rounded-full @(currentSpecialty == "Photography" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Photography</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Street Food" class="px-4 py-2 rounded-full @(currentSpecialty == "Street Food" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Street Food</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Culture" class="px-4 py-2 rounded-full @(currentSpecialty == "Culture" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Culture & History</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Adventure" class="px-4 py-2 rounded-full @(currentSpecialty == "Adventure" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Adventure</a>
+        </div>
+
+        <!-- Guides Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            @if (Model != null && Model.Any())
+            {
+                foreach (var guide in Model)
+                {
+                    <a href="/Guide/Profile/@guide.UserId" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 relative flex flex-col">
+                        <div class="h-64 overflow-hidden relative">
+                            <img src="@(string.IsNullOrEmpty(guide.CoverPhotoUrl) ? "/images/halong.jpg" : guide.CoverPhotoUrl)" alt="Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                            
+                            <!-- Floating Avatar -->
+                            <div class="absolute top-4 left-4 z-10 w-16 h-16 rounded-full border-2 border-white overflow-hidden shadow-lg">
+                                <img src="@(string.IsNullOrEmpty(guide.Profile?.AvatarUrl) ? "/images/default_avatar.png" : guide.Profile.AvatarUrl)" alt="@guide.Profile?.FullName" class="w-full h-full object-cover"/>
+                            </div>
+                            
+                            <div class="absolute bottom-0 left-0 right-0 p-5 pt-16 z-10">
+                                <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">@(guide.Profile?.FullName ?? "Unknown Guide")</h3>
+                                <p class="text-sm text-white/90 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> @guide.CityArea</p>
+                            </div>
+                            @if (guide.IsVerified == true)
+                            {
+                                <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center gap-1 shadow-sm">
+                                    <span class="material-symbols-outlined text-[14px]">verified</span> Verified
+                                </div>
+                            }
+                        </div>
+                        <div class="p-6 flex-1 flex flex-col">
+                            <div class="flex justify-between items-center mb-4">
+                                <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
+                                    <span class="material-symbols-outlined text-[20px] text-yellow-500" style="font-variation-settings: 'FILL' 1;">star</span> @(guide.AverageRating?.ToString("0.0") ?? "0.0") <span class="text-on-surface-variant font-normal">(@(guide.TotalReviews ?? 0))</span>
+                                </div>
+                                <div class="text-primary font-bold bg-primary-container px-3 py-1 rounded-lg text-sm">@(guide.PricePerHour?.ToString("#,##0") ?? "0") ₫ / hr</div>
+                            </div>
+                            <p class="text-on-surface-variant italic mb-5 line-clamp-2 leading-relaxed">"@guide.Bio"</p>
+                            <div class="flex flex-wrap gap-2 mt-auto">
+                                @if (guide.Specialties != null)
+                                {
+                                    foreach (var spec in guide.Specialties.Take(3))
+                                    {
+                                        <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">@spec</span>
+                                    }
+                                }
+                            </div>
+                        </div>
+                    </a>
+                }
+            }
+            else
+            {
+                <div class="col-span-full text-center py-20">
+                    <span class="material-symbols-outlined text-6xl text-outline mb-4">search_off</span>
+                    <h3 class="text-2xl font-bold text-on-surface mb-2">No guides found</h3>
+                    <p class="text-on-surface-variant">Try adjusting your search criteria or explore other destinations.</p>
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,494 @@
+@model List<TripMate_WebAPI.Services.AdminGuideProfileRow>
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Guide Management";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TripMate | Guide Management</title>
+    <script>
+        // Front-end JWT and role authorization check
+        (function() {
+            const token = localStorage.getItem('accessToken');
+            const role = localStorage.getItem('userRole');
+            const email = localStorage.getItem('userEmail');
+            
+            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com')) {
+                window.location.href = '/Auth/Login';
+            }
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',
+                        'primary-dark': '#E55A2B',
+                        secondary: '#004E89',
+                        accent: '#F7B801',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+        [x-cloak] { display: none !important; }
+    </style>
+    <script id="guides-data" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(Model))
+    </script>
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('guidesComponent', (initialGuides) => ({
+                guides: initialGuides,
+                search: '',
+                statusFilter: '',
+                verifyFilter: '',
+                selectedGuide: null,
+                showBioModal: false,
+                
+                get filteredGuides() {
+                    return this.guides.filter(g => {
+                        const name = (g.profiles?.full_name || '').toLowerCase();
+                        const email = (g.profiles?.email || '').toLowerCase();
+                        const searchKeyword = this.search.toLowerCase();
+                        const matchesSearch = name.includes(searchKeyword) || email.includes(searchKeyword);
+                        
+                        const isGuideActive = g.profiles?.is_active;
+                        const matchesStatus = this.statusFilter === '' || 
+                                              (this.statusFilter === 'active' && isGuideActive) || 
+                                              (this.statusFilter === 'suspended' && !isGuideActive);
+                        const matchesVerify = this.verifyFilter === '' || 
+                                              (this.verifyFilter === 'verified' && g.is_verified) || 
+                                              (this.verifyFilter === 'unverified' && !g.is_verified);
+                        
+                        return matchesSearch && matchesStatus && matchesVerify;
+                    });
+                },
+
+                async toggleVerification(g) {
+                    const nextState = !g.is_verified;
+                    const confirmText = nextState ? 'Grant verification badge to this guide?' : 'Revoke verification badge from this guide?';
+                    if (!confirm(confirmText)) return;
+
+                    try {
+                        const res = await fetch(`/api/admin/guides/${g.id}/toggle-verify`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                            },
+                            body: JSON.stringify({ isVerified: nextState })
+                        });
+                        const data = await res.json();
+                        alert(data.message);
+                        if (res.ok) {
+                            g.is_verified = nextState;
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('An error occurred while updating verification.');
+                    }
+                },
+
+                async updateStatus(g, nextStatus) {
+                    const confirmText = nextStatus === 'active' ? 'Activate this guide account?' : 'Suspend this guide account?';
+                    if (!confirm(confirmText)) return;
+
+                    try {
+                        const res = await fetch(`/api/admin/guides/${g.id}/status`, {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                            },
+                            body: JSON.stringify({ status: nextStatus })
+                        });
+                        const data = await res.json();
+                        alert(data.message || 'Status updated successfully.');
+                        if (res.ok) {
+                            if (!g.profiles) g.profiles = {};
+                            g.profiles.is_active = (nextStatus === 'active');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        alert('An error occurred while updating status.');
+                    }
+                },
+
+                showBio(g) {
+                    this.selectedGuide = g;
+                    this.showBioModal = true;
+                }
+            }));
+        });
+    </script>
+</head>
+<body class="bg-gray-50 flex" x-data="guidesComponent(JSON.parse(document.getElementById('guides-data').textContent))">
+
+    <!-- Side Navigation Bar -->
+    <aside class="fixed left-0 top-0 h-screen w-[280px] bg-white border-r border-gray-200 flex flex-col py-8 pr-4 z-50">
+        <div class="px-6 mb-10">
+            <div class="flex items-center gap-3 mb-2">
+                <img src="/images/logo.svg" alt="TripMate" class="w-10 h-10">
+                <h1 class="text-2xl font-bold text-primary">TripMate</h1>
+            </div>
+            <p class="text-sm text-gray-600">Admin Portal</p>
+        </div>
+
+        <nav class="flex-grow flex flex-col gap-1">
+            <a id="nav-dashboard" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Dashboard">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span>Dashboard</span>
+            </a>
+            <a id="nav-approvals" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200 relative" href="/Admin/GuideApprovals">
+                <span class="material-symbols-outlined">badge</span>
+                <span>Guide Approvals</span>
+                <span id="guideBadge" class="hidden absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                <span id="guideCount" class="hidden absolute top-1 right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"></span>
+            </a>
+            <a id="nav-escrow" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Escrow">
+                <span class="material-symbols-outlined">payments</span>
+                <span>Escrow & Finance</span>
+            </a>
+            <a id="nav-moderation" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Moderation">
+                <span class="material-symbols-outlined">gavel</span>
+                <span>Content & Disputes</span>
+            </a>
+            <a id="nav-guides" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Guides">
+                <span class="material-symbols-outlined">group</span>
+                <span>Guides</span>
+            </a>
+            <a id="nav-analytics" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Analytics">
+                <span class="material-symbols-outlined">insights</span>
+                <span>Analytics</span>
+            </a>
+        </nav>
+
+        <div class="px-4 mt-auto">
+            <div class="mt-6 px-4 py-4 flex items-center gap-3 border-t border-gray-200">
+                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">person</span>
+                </div>
+                <div class="flex-1">
+                    <p id="sidebarAdminName" class="font-medium text-gray-900">Admin User</p>
+                    <p id="sidebarAdminRole" class="text-xs text-gray-500">Super Admin</p>
+                </div>
+                <button onclick="logout()" class="p-2 hover:bg-red-50 rounded-lg transition-all group" title="Logout">
+                    <span class="material-symbols-outlined text-gray-400 group-hover:text-red-600">logout</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="ml-[280px] w-[calc(100%-280px)] min-h-screen p-12 bg-gray-50">
+        <!-- Header -->
+        <header class="mb-10">
+            <h2 class="text-5xl font-bold text-gray-900 mb-2">Guide Directory</h2>
+            <p class="text-lg text-gray-600">Manage local guides directory, view ratings, verify identity, and moderate account status.</p>
+        </header>
+
+        <!-- Controls Toolbar (Search & Filter) -->
+        <div class="glass-panel p-6 rounded-2xl mb-8 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 shadow-sm">
+            <div class="flex-1 relative">
+                <span class="material-symbols-outlined absolute left-4 top-3 text-gray-400">search</span>
+                <input type="text" x-model="search" placeholder="Search by guide name or email..." 
+                       class="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-sm transition-all outline-none">
+            </div>
+            
+            <div class="flex flex-wrap gap-3">
+                <select x-model="statusFilter" class="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary text-sm outline-none transition-all">
+                    <option value="">-- Account Status --</option>
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                </select>
+                
+                <select x-model="verifyFilter" class="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary text-sm outline-none transition-all">
+                    <option value="">-- Verification Badge --</option>
+                    <option value="verified">Verified</option>
+                    <option value="unverified">Unverified</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Table Card -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="px-8 py-5 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-900">Local Guides Directory</h3>
+                <span class="bg-orange-50 text-primary border border-orange-200 px-3 py-1 rounded-full text-xs font-semibold" x-text="`${filteredGuides.length} results`"></span>
+            </div>
+
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-200">
+                        <th class="py-4 px-6">Full Name / Email</th>
+                        <th class="py-4 px-6">Area / Languages</th>
+                        <th class="py-4 px-6">Experience / Specialties</th>
+                        <th class="py-4 px-6 text-center">Rating</th>
+                        <th class="py-4 px-6 text-center">Verification</th>
+                        <th class="py-4 px-6 text-center">Status</th>
+                        <th class="py-4 px-6 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-sm">
+                    <template x-for="g in filteredGuides" :key="g.id">
+                        <tr class="hover:bg-gray-50/50 transition-colors">
+                            <!-- Name & Email -->
+                            <td class="py-4 px-6">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center text-primary font-bold overflow-hidden">
+                                        <template x-if="g.cover_photo_url">
+                                            <img :src="g.cover_photo_url" class="w-full h-full object-cover">
+                                        </template>
+                                        <template x-if="!g.cover_photo_url">
+                                            <span x-text="g.profiles?.full_name ? g.profiles.full_name[0] : 'G'"></span>
+                                        </template>
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-gray-900" x-text="g.profiles?.full_name || 'N/A'"></p>
+                                        <p class="text-xs text-gray-400" x-text="g.profiles?.email || 'N/A'"></p>
+                                    </div>
+                                </div>
+                            </td>
+                            
+                            <!-- Area & Languages -->
+                            <td class="py-4 px-6">
+                                <p class="font-medium text-gray-900" x-text="g.city_area || 'Not updated'"></p>
+                                <p class="text-xs text-gray-500" x-text="Array.isArray(g.languages) ? g.languages.join(', ') : (g.languages || 'N/A')"></p>
+                            </td>
+
+                            <!-- Experience & Specialties -->
+                            <td class="py-4 px-6">
+                                <p class="text-gray-900 font-medium" x-text="g.experience || 'N/A'"></p>
+                                <p class="text-xs text-gray-500" x-text="Array.isArray(g.specialties) ? g.specialties.join(', ') : (g.specialties || 'N/A')"></p>
+                            </td>
+
+                            <!-- Rating -->
+                            <td class="py-4 px-6 text-center">
+                                <div class="inline-flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-lg text-xs font-semibold">
+                                    <span class="material-symbols-outlined text-xs">star</span>
+                                    <span x-text="g.average_rating ? Number(g.average_rating).toFixed(1) : '0.0'"></span>
+                                    <span class="text-amber-400">|</span>
+                                    <span x-text="`${g.total_reviews} reviews`"></span>
+                                </div>
+                            </td>
+
+                            <!-- Verification Badge Toggle -->
+                            <td class="py-4 px-6 text-center">
+                                <button @@click="toggleVerification(g)" class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold transition-all"
+                                        :class="g.is_verified ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-500 border border-gray-200'">
+                                    <span class="material-symbols-outlined text-xs">verified</span>
+                                    <span x-text="g.is_verified ? 'Verified' : 'Unverified'"></span>
+                                </button>
+                            </td>
+
+                            <!-- Status Badge -->
+                            <td class="py-4 px-6 text-center">
+                                <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider"
+                                      :class="{
+                                          'bg-green-50 text-green-700 border border-green-200': g.profiles?.is_active,
+                                          'bg-red-50 text-red-700 border border-red-200': !g.profiles?.is_active
+                                      }"
+                                      x-text="g.profiles?.is_active ? 'Active' : 'Suspended'">
+                                </span>
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="py-4 px-6 text-center">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button @@click="showBio(g)" class="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-primary transition-all" title="View Detailed Profile">
+                                        <span class="material-symbols-outlined">visibility</span>
+                                    </button>
+                                    
+                                    <!-- Toggle Suspend / Active -->
+                                    <template x-if="!g.profiles?.is_active">
+                                        <button @@click="updateStatus(g, 'active')" class="px-3 py-1 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg text-xs font-semibold transition-all border border-green-200">
+                                            Unlock
+                                        </button>
+                                    </template>
+                                    <template x-if="g.profiles?.is_active">
+                                        <button @@click="updateStatus(g, 'suspended')" class="px-3 py-1 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs font-semibold transition-all border border-red-200">
+                                            Suspend
+                                        </button>
+                                    </template>
+                                </div>
+                            </td>
+                        </tr>
+                    </template>
+
+                    <template x-if="filteredGuides.length === 0">
+                        <tr>
+                            <td colspan="7" class="text-center py-16 text-gray-500">
+                                <span class="material-symbols-outlined text-4xl block mb-2 text-gray-400">group_off</span>
+                                No matching local guides found.
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Bio Modal -->
+    <div x-show="showBioModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 transition-all" x-cloak>
+        <div class="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl transform border border-gray-100" @@click.away="showBioModal = false">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-2xl font-bold text-gray-900">Local Guide Details</h3>
+                <button @@click="showBioModal = false" class="p-1.5 hover:bg-gray-200 rounded-full text-gray-500 transition-all">
+                    <span class="material-symbols-outlined text-xl">close</span>
+                </button>
+            </div>
+            <div class="p-8 max-h-[70vh] overflow-y-auto space-y-6" x-data="{ g: null }" x-init="$watch('selectedGuide', val => g = val)">
+                <template x-if="g">
+                    <div class="space-y-6">
+                        <!-- Cover Image & Avatar Info -->
+                        <div class="flex items-center gap-4">
+                            <div class="w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center text-primary text-2xl font-bold overflow-hidden border-2 border-primary">
+                                <img x-show="g.cover_photo_url" :src="g.cover_photo_url" class="w-full h-full object-cover">
+                                <span x-show="!g.cover_photo_url" x-text="g.profiles?.full_name ? g.profiles.full_name[0] : 'G'"></span>
+                            </div>
+                            <div>
+                                <h4 class="text-xl font-bold text-gray-900" x-text="g.profiles?.full_name"></h4>
+                                <p class="text-sm text-gray-500" x-text="g.profiles?.email"></p>
+                            </div>
+                        </div>
+
+                        <!-- Grid Info -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-gray-50 p-4 rounded-xl">
+                                <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">City / Area</p>
+                                <p class="text-sm font-semibold text-gray-900" x-text="g.city_area || 'Not updated'"></p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-xl">
+                                <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Experience</p>
+                                <p class="text-sm font-semibold text-gray-900" x-text="g.experience || 'N/A'"></p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-xl">
+                                <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Specialties</p>
+                                <p class="text-sm font-semibold text-gray-900" x-text="Array.isArray(g.specialties) ? g.specialties.join(', ') : (g.specialties || 'N/A')"></p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-xl">
+                                <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Languages</p>
+                                <p class="text-sm font-semibold text-gray-900" x-text="Array.isArray(g.languages) ? g.languages.join(', ') : (g.languages || 'N/A')"></p>
+                            </div>
+                        </div>
+
+                        <!-- Bio Statement -->
+                        <div>
+                            <h5 class="text-sm font-bold text-gray-900 mb-2 uppercase tracking-wider">Biography (Bio)</h5>
+                            <div class="bg-gray-50 p-4 rounded-xl text-sm text-gray-700 leading-relaxed max-h-32 overflow-y-auto" x-text="g.bio || 'No biography provided.'"></div>
+                        </div>
+
+                        <!-- Document Link -->
+                        <template x-if="g.certificate_url">
+                            <div class="flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-xl">
+                                <span class="flex items-center gap-2 text-sm font-semibold text-primary">
+                                    <span class="material-symbols-outlined">article</span>
+                                    Verification Documents & Certificates
+                                </span>
+                                <a :href="g.certificate_url" target="_blank" class="px-4 py-1.5 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-primary-dark transition-all">
+                                    View PDF
+                                </a>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Set active tab styling dynamically based on path
+            const path = window.location.pathname;
+            let activeEl = null;
+            if (path.includes("/Admin/Dashboard") || path === "/Admin" || path === "/admin") {
+                activeEl = document.getElementById("nav-dashboard");
+            } else if (path.includes("/Admin/GuideApprovals")) {
+                activeEl = document.getElementById("nav-approvals");
+            } else if (path.includes("/Admin/Escrow")) {
+                activeEl = document.getElementById("nav-escrow");
+            } else if (path.includes("/Admin/Moderation")) {
+                activeEl = document.getElementById("nav-moderation");
+            } else if (path.includes("/Admin/Guides")) {
+                activeEl = document.getElementById("nav-guides");
+            } else if (path.includes("/Admin/Analytics")) {
+                activeEl = document.getElementById("nav-analytics");
+            }
+            
+            if (activeEl) {
+                activeEl.className = "flex items-center gap-4 px-6 py-3 bg-orange-100 text-primary border-l-4 border-primary rounded-r-full my-1 font-medium transition-all duration-200";
+            }
+
+            // Render Admin User Profile info
+            const email = localStorage.getItem("userEmail");
+            const role = localStorage.getItem("userRole");
+            if (email) {
+                const nameEl = document.getElementById("sidebarAdminName");
+                if (nameEl) nameEl.textContent = email.split('@@')[0];
+            }
+            if (role) {
+                const roleEl = document.getElementById("sidebarAdminRole");
+                if (roleEl) roleEl.textContent = role === "admin" ? "Super Admin" : role;
+            }
+
+            // Load pending guide count and update badge
+            async function loadPendingGuideCount() {
+                try {
+                    const response = await fetch('/Admin/GetPendingCount');
+                    const data = await response.json();
+                    
+                    if (data.count > 0) {
+                        const badge = document.getElementById('guideBadge');
+                        const countBadge = document.getElementById('guideCount');
+                        
+                        if (badge) badge.classList.remove('hidden');
+                        if (countBadge) {
+                            countBadge.classList.remove('hidden');
+                            countBadge.textContent = data.count;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading pending count:', error);
+                }
+            }
+
+            loadPendingGuideCount();
+            setInterval(loadPendingGuideCount, 30000);
+        });
+
+        // Logout function
+        window.logout = function() {
+            if (confirm('Are you sure you want to log out?')) {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('userRole');
+                window.location.href = '/Auth/Login';
+            }
+        }
+    </script>
+</body>
+</html>
