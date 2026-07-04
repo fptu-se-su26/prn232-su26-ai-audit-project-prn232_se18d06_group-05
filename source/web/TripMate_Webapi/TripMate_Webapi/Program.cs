@@ -2,12 +2,21 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Supabase;
 using TripMate_WebAPI.Services;
+using TripMate_Webapi.Repositories;
 using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Load environment variables from .env file
-Env.Load();
+var envPath = System.IO.Path.Combine(builder.Environment.ContentRootPath, ".env");
+if (System.IO.File.Exists(envPath))
+{
+    Env.Load(envPath);
+}
+else
+{
+    Env.Load();
+}
 
 // Override configuration with environment variables
 builder.Configuration["Supabase:Url"] = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? builder.Configuration["Supabase:Url"];
@@ -21,22 +30,28 @@ builder.Configuration["SerpApi:ApiKey"] = Environment.GetEnvironmentVariable("SE
 builder.Configuration["Cloudinary:CloudName"] = Environment.GetEnvironmentVariable("CLOUDINARY_CLOUD_NAME") ?? builder.Configuration["Cloudinary:CloudName"];
 builder.Configuration["Cloudinary:ApiKey"] = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY") ?? builder.Configuration["Cloudinary:ApiKey"];
 builder.Configuration["Cloudinary:ApiSecret"] = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET") ?? builder.Configuration["Cloudinary:ApiSecret"];
+builder.Configuration["EmailSettings:SmtpHost"] = Environment.GetEnvironmentVariable("SMTP_HOST") ?? builder.Configuration["EmailSettings:SmtpHost"];
+builder.Configuration["EmailSettings:SmtpPort"] = Environment.GetEnvironmentVariable("SMTP_PORT") ?? builder.Configuration["EmailSettings:SmtpPort"];
 builder.Configuration["EmailSettings:SmtpUser"] = Environment.GetEnvironmentVariable("SMTP_USER") ?? builder.Configuration["EmailSettings:SmtpUser"];
 builder.Configuration["EmailSettings:SmtpPass"] = Environment.GetEnvironmentVariable("SMTP_PASS") ?? builder.Configuration["EmailSettings:SmtpPass"];
 
 // ── Supabase Client (singleton) ───────────────────────────────────────────────
 var supabaseUrl = builder.Configuration["Supabase:Url"]!;
 var supabaseKey = builder.Configuration["Supabase:AnonKey"]!;
-var jwksUri     = builder.Configuration["Supabase:JwksUri"]!;
-var issuer      = builder.Configuration["Supabase:Issuer"]!;
+
+// Dynamically construct JWKS URI and Issuer from the active Supabase URL
+var jwksUri = $"{supabaseUrl.TrimEnd('/')}/auth/v1/.well-known/jwks.json";
+var issuer = $"{supabaseUrl.TrimEnd('/')}/auth/v1";
 
 builder.Services.AddSingleton(_ =>
 {
-    var client = new Client(supabaseUrl, supabaseKey, new SupabaseOptions
+    var options = new SupabaseOptions
     {
         AutoRefreshToken = true,
         AutoConnectRealtime = false,
-    });
+    };
+    options.Headers.Add("Authorization", $"Bearer {supabaseKey}");
+    var client = new Client(supabaseUrl, supabaseKey, options);
     client.InitializeAsync().GetAwaiter().GetResult();
     return client;
 });
@@ -61,9 +76,18 @@ builder.Services.AddScoped<TourService>();
 builder.Services.AddHttpClient<BookingService>();
 builder.Services.AddScoped<BookingService>();
 
+// ── Repositories ──────────────────────────────────────────────────────────────
+builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
+builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddScoped<IGuideRepository, GuideRepository>();
+
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();
 builder.Services.AddScoped<GuideApprovalService>();
+
+// ── Admin Service ─────────────────────────────────────────────────────────────
+builder.Services.AddHttpClient<AdminService>();
+builder.Services.AddScoped<AdminService>();
 
 // ── Chat & Notification Services ─────────────────────────────────────────────
 builder.Services.AddHttpClient<ChatService>();
@@ -175,7 +199,7 @@ app.UseAuthorization();
 app.MapControllers(); // Map API controllers
 app.MapControllerRoute( // Map MVC routes
     name: "default",
-    pattern: "{controller=LandingPage}/{action=LandingPage}/{id?}");
+    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 // Seed database
 using (var scope = app.Services.CreateScope())

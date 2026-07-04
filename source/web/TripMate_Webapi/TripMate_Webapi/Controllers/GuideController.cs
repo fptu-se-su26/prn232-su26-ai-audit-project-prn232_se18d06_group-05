@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
+using TripMate_Webapi.Repositories;
 
 namespace TripMate_Webapi.Controllers
 {
@@ -7,16 +8,31 @@ namespace TripMate_Webapi.Controllers
     {
         private readonly TourService _tourService;
         private readonly BookingService _bookingService;
+        private readonly IGuideRepository _guideRepository;
         private readonly ILogger<GuideController> _logger;
 
         public GuideController(
             TourService tourService,
             BookingService bookingService,
+            IGuideRepository guideRepository,
             ILogger<GuideController> logger)
         {
             _tourService = tourService;
             _bookingService = bookingService;
+            _guideRepository = guideRepository;
             _logger = logger;
+        }
+
+        // GET: /Guide/Index (List of all Guides for Traveler)
+        public IActionResult Index()
+        {
+            return View();
+        }
+
+        // GET: /Guide/TripRequests (For Guides to see public requests)
+        public IActionResult TripRequests()
+        {
+            return View();
         }
 
         // GET: /Guide/Dashboard
@@ -301,6 +317,32 @@ namespace TripMate_Webapi.Controllers
             ViewBag.ChartData = chartData;
             ViewBag.Transactions = transactions;
 
+            return View();
+        }
+
+        // GET: /Guide/Notifications
+        public IActionResult Notifications()
+        {
+            var notifications = new List<dynamic>
+            {
+                new { Id = 1, Type = "booking_new", Title = "Booking mới từ Trần Thị Bảo Châu", Message = "Đặt 'Bình minh Mỹ Sơn' vào 15/06/2026. Phản hồi trong 24h", Time = "10 phút trước", IsRead = false },
+                new { Id = 2, Type = "payment", Title = "Thanh toán đã được giải ngân", Message = "850,000đ từ booking #BK-2024-008 đã về ví", Time = "1 giờ trước", IsRead = false },
+                new { Id = 3, Type = "review", Title = "Đánh giá mới 5 sao từ Nguyễn Văn An", Message = "\"Guide rất nhiệt tình, rất recommend!\"", Time = "Hôm qua 14:23", IsRead = true },
+                new { Id = 4, Type = "admin", Title = "Tài khoản của bạn đã được xác minh", Message = "Chào mừng bạn đến với TripMate Local Guide. Bắt đầu tạo tour ngay nhé!", Time = "2 ngày trước", IsRead = true }
+            };
+            ViewBag.Notifications = notifications;
+            return View();
+        }
+
+        // GET: /Guide/Support
+        public IActionResult Support()
+        {
+            var tickets = new List<dynamic>
+            {
+                new { Id = "TK-001", Title = "Khách hủy sát giờ", Status = "Pending", Date = "12/06/2026" },
+                new { Id = "TK-002", Title = "Lỗi không nhận được tiền giải ngân", Status = "Resolved", Date = "05/06/2026" }
+            };
+            ViewBag.Tickets = tickets;
             return View();
         }
     }
