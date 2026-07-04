@@ -21,6 +21,11 @@ DROP TABLE IF EXISTS public.survey_options CASCADE;
 DROP TABLE IF EXISTS public.survey_questions CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 
+
+ALTER TABLE public.bookings
+DROP COLUMN payment_reference,
+DROP COLUMN payment_method;
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ==========================================
@@ -218,6 +223,40 @@ CREATE TABLE public.user_personalities (
   CONSTRAINT user_personalities_user_tag_unique UNIQUE (user_id, personality_tag)
 );
 
+CREATE TABLE public.payments (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  
+  booking_id uuid NOT NULL,
+  payer_id uuid NOT NULL, -- traveler
+  
+  amount numeric(14,2) NOT NULL,
+  currency text DEFAULT 'VND',
+  
+  payment_method text NOT NULL, 
+  -- 'stripe', 'momo', 'vnpay', 'paypal', 'cash'
+
+  status text NOT NULL DEFAULT 'pending',
+  -- pending | succeeded | failed | refunded | cancelled
+
+  provider_transaction_id text, -- id từ cổng thanh toán
+
+  payment_intent text, -- optional (Stripe intent / similar)
+  
+  paid_at timestamp with time zone,
+  
+  metadata jsonb DEFAULT '{}'::jsonb,
+
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+
+  CONSTRAINT payments_pkey PRIMARY KEY (id),
+
+  CONSTRAINT payments_booking_fkey
+    FOREIGN KEY (booking_id) REFERENCES public.bookings(id) ON DELETE CASCADE,
+
+  CONSTRAINT payments_payer_fkey
+    FOREIGN KEY (payer_id) REFERENCES public.profiles(id) ON DELETE CASCADE
+);
 -- ==========================================
 -- 3. CẬP NHẬT TRIGGER TẠO USER (AUTH -> PROFILES)
 -- ==========================================
