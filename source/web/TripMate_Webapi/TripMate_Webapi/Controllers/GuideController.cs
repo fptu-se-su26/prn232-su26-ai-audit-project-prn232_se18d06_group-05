@@ -131,7 +131,8 @@ namespace TripMate_Webapi.Controllers
                     Tags = new[] { "food", "culture", "hidden-gems" },
                     Bookings = 12,
                     Rating = 4.9,
-                    IsActive = true
+                    IsActive = true,
+                    ImageUrl = "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
                 },
                 new { 
                     Id = 2, 
@@ -142,7 +143,8 @@ namespace TripMate_Webapi.Controllers
                     Tags = new[] { "nightlife", "photography" },
                     Bookings = 34,
                     Rating = 4.8,
-                    IsActive = true
+                    IsActive = true,
+                    ImageUrl = "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
                 },
                 new { 
                     Id = 3, 
@@ -153,7 +155,8 @@ namespace TripMate_Webapi.Controllers
                     Tags = new[] { "nature", "culture" },
                     Bookings = 8,
                     Rating = 5.0,
-                    IsActive = false
+                    IsActive = false,
+                    ImageUrl = "https://images.unsplash.com/photo-1543881477-83c9ec4172f3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
                 }
             };
             
