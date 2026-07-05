@@ -28,9 +28,6 @@ namespace TripMate_Webapi.Entities
         [Column("comment")]
         public string? Comment { get; set; }
 
-        [Column("is_visible")]
-        public bool IsVisible { get; set; } = true;
-
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

@@ -64,5 +64,14 @@ namespace TripMate_Webapi.Repositories
                 
             return response!;
         }
+
+        public async Task<GuideProfileEntity> GetGuideByProfileIdAsync(string profileId)
+        {
+            var response = await _supabase.From<GuideProfileEntity>()
+                .Where(x => x.Id == profileId)
+                .Single();
+                
+            return response!;
+        }
     }
 }

@@ -18,6 +18,7 @@ namespace TripMate_Webapi.Controllers
         private readonly IBookingRepository _bookingRepository;
         private readonly TourService _tourService;
         private readonly IReviewRepository _reviewRepository;
+        private readonly IGuideRepository _guideRepository;
 
         private const string LOGIN_URL = "/Auth/Login";
 
@@ -27,7 +28,8 @@ namespace TripMate_Webapi.Controllers
             ITripRequestRepository tripRequestRepository,
             IBookingRepository bookingRepository,
             TourService tourService,
-            IReviewRepository reviewRepository)
+            IReviewRepository reviewRepository,
+            IGuideRepository guideRepository)
         {
             _logger = logger;
             _authService = authService;
@@ -35,6 +37,7 @@ namespace TripMate_Webapi.Controllers
             _bookingRepository = bookingRepository;
             _tourService = tourService;
             _reviewRepository = reviewRepository;
+            _guideRepository = guideRepository;
         }
 
         // ────────────────────────────────────────────────────────────────────
@@ -117,8 +120,8 @@ namespace TripMate_Webapi.Controllers
                 bookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
             }
 
-            ViewBag.Bookings = bookings;
-            return View(trips);
+            ViewBag.Trips = trips;
+            return View(bookings);
         }
 
         // GET: /Traveler/BookingDetails/{id} [Auth required]
@@ -144,10 +147,44 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Traveler/Messages [Auth required]
-        public IActionResult Messages()
+        public async Task<IActionResult> Messages()
         {
             ViewBag.RequiresAuth = true;
+            var travelerId = GetCurrentUserId();
+
+            if (!string.IsNullOrEmpty(travelerId))
+            {
+                // Lấy các booking đã confirmed hoặc completed (Status >= 1)
+                var bookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
+                var activeBookings = bookings.Where(b => b.Status >= 1).ToList();
+                
+                // Trích xuất các Guide duy nhất từ các booking này
+                var guideProfiles = activeBookings
+                    .Where(b => b.GuideProfile != null)
+                    .Select(b => b.GuideProfile)
+                    .GroupBy(g => g!.Id)
+                    .Select(g => g.First())
+                    .ToList();
+
+                ViewBag.Guides = guideProfiles;
+            }
+
             return View();
+        }
+
+        // GET: /Traveler/GuideProfile/{id} [Public]
+        public async Task<IActionResult> GuideProfile(string id)
+        {
+            var guide = await _guideRepository.GetGuideByProfileIdAsync(id);
+            if (guide == null) return NotFound();
+
+            var packages = await _tourService.GetToursByGuideAsync(id);
+            var reviews = await _reviewRepository.GetReviewsByGuideAsync(id);
+
+            ViewBag.Packages = packages;
+            ViewBag.Reviews = reviews;
+
+            return View(guide);
         }
 
         // GET: /Traveler/Saved [Auth required]
@@ -216,29 +253,23 @@ namespace TripMate_Webapi.Controllers
                 return RedirectToAction("Dashboard");
             }
 
-            // M4: Lấy package thực từ DB để tính giá đúng
-            var packages = await _tourService.GetToursByGuideAsync(guideId);
-            string packageId;
-            decimal basePrice;
-
-            if (packages != null && packages.Any())
+            // Custom Booking Logic (Luôn tạo Custom Tour thay vì lấy Package đầu tiên)
+            string packageId = "00000000-0000-0000-0000-000000000000";
+            
+            // Duplicate booking check
+            var existingBookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
+            bool hasDuplicate = existingBookings.Any(b => 
+                b.Status < 2 && 
+                b.ExperiencePackageId == packageId && 
+                b.GuideProfileId == guideId && 
+                b.BookingDate.Date == date.Date);
+                
+            if (hasDuplicate)
             {
-                var selectedPackage = packages.First();
-                packageId = selectedPackage.Id!;
+                return BadRequest(new { error = "You already have an active booking for this custom tour on this date." });
+            }
 
-                // Ưu tiên PricePerSession (giá cố định/buổi), nếu không có thì tính theo đầu người
-                if (selectedPackage.PricePerSession > 0)
-                    basePrice = selectedPackage.PricePerSession;
-                else if (selectedPackage.PricePerPerson.HasValue && selectedPackage.PricePerPerson > 0)
-                    basePrice = selectedPackage.PricePerPerson.Value * guests;
-                else
-                    basePrice = 500_000m * guests; // Fallback hợp lý
-            }
-            else
-            {
-                packageId = "00000000-0000-0000-0000-000000000000";
-                basePrice = 500_000m * guests; // Không có package → giá tham khảo
-            }
+            decimal basePrice = 500_000m * guests; // Giá tham khảo cho Custom Tour
 
             // M4: PlatformFee = 15% (theo kiến trúc), GuideEarnings = 85%
             var platformFee = Math.Round(basePrice * 0.15m, 0);
@@ -259,13 +290,83 @@ namespace TripMate_Webapi.Controllers
                 Status = 0 // M4: Pending — chờ Guide Accept (KHÔNG nhảy thẳng Completed)
             };
 
-            await _bookingRepository.CreateBookingAsync(booking);
+            var createdBooking = await _bookingRepository.CreateBookingAsync(booking);
 
             // Xóa Ghost Booking session sau khi booking thật đã tạo
             HttpContext.Session.Remove("GhostBooking");
 
-            TempData["SuccessMessage"] = "Yêu cầu đặt lịch đã được gửi đến Guide thành công! Vui lòng chờ xác nhận.";
-            return RedirectToAction("Dashboard");
+            return Json(new { bookingId = createdBooking.Id });
+        }
+
+        /// <summary>
+        /// POST: /Traveler/BookTour
+        /// Books a specific experience package (tour) — creates booking → redirects to Checkout.
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> BookTour(string guideId, string packageId, DateTime date, int guests = 1)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            if (string.IsNullOrEmpty(guideId) || string.IsNullOrEmpty(packageId))
+                return BadRequest(new { error = "Missing guideId or packageId" });
+
+            var packages = await _tourService.GetToursByGuideAsync(guideId);
+            var selectedPackage = packages?.FirstOrDefault(p => p.Id == packageId);
+
+            decimal basePrice;
+            if (selectedPackage != null)
+            {
+                if (selectedPackage.PricePerSession > 0)
+                    basePrice = selectedPackage.PricePerSession;
+                else if (selectedPackage.PricePerPerson.HasValue && selectedPackage.PricePerPerson > 0)
+                    basePrice = selectedPackage.PricePerPerson.Value * guests;
+                else
+                    basePrice = 500_000m * guests;
+            }
+            else
+            {
+                basePrice = 500_000m * guests;
+                packageId = "00000000-0000-0000-0000-000000000000";
+            }
+
+            var platformFee = Math.Round(basePrice * 0.15m, 0);
+            var guideEarnings = basePrice - platformFee;
+
+            var targetDate = date == default ? DateTime.UtcNow.AddDays(7).Date : date.Date;
+
+            // Duplicate booking check
+            var existingBookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
+            bool hasDuplicate = existingBookings.Any(b => 
+                b.Status < 2 && 
+                b.ExperiencePackageId == packageId && 
+                b.GuideProfileId == guideId && 
+                b.BookingDate.Date == targetDate);
+                
+            if (hasDuplicate)
+            {
+                return BadRequest(new { error = "You already have an active booking for this tour on this date." });
+            }
+
+            var booking = new BookingEntity
+            {
+                TravelerId = travelerId,
+                GuideProfileId = guideId,
+                ExperiencePackageId = packageId,
+                BookingDate = targetDate,
+                StartTime = targetDate.AddHours(9),
+                GuestCount = guests,
+                TotalAmount = basePrice,
+                PlatformFee = platformFee,
+                GuideEarnings = guideEarnings,
+                Status = 0
+            };
+
+            var createdBooking = await _bookingRepository.CreateBookingAsync(booking);
+            HttpContext.Session.Remove("GhostBooking");
+
+            return Json(new { bookingId = createdBooking.Id });
         }
 
         /// <summary>
@@ -398,7 +499,6 @@ namespace TripMate_Webapi.Controllers
                 GuideProfileId = booking.GuideProfileId,
                 Rating = rating,
                 Comment = comment.Trim(),
-                IsVisible = true,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -443,6 +543,103 @@ namespace TripMate_Webapi.Controllers
             await _tripRequestRepository.ToggleTripRequestStatusAsync(id);
             TempData["SuccessMessage"] = "Trạng thái chuyến đi đã được cập nhật.";
             return RedirectToAction("Trips");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // JSON API endpoints — called from client-side JS with Bearer token
+        // ─────────────────────────────────────────────────────────────────────
+
+        // GET: /Traveler/GetMyTrips  [Bearer Auth via header]
+        [HttpGet]
+        public async Task<IActionResult> GetMyTrips()
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            var trips = await _tripRequestRepository.GetTripRequestsByTravelerAsync(travelerId);
+            var result = trips.Select(t => new
+            {
+                id = t.Id,
+                destination = t.Destination,
+                startDate = t.StartDate.ToString("MMM dd, yyyy"),
+                endDate = t.EndDate.ToString("MMM dd, yyyy"),
+                groupSize = t.GroupSize,
+                budget = t.Budget,
+                notes = t.Notes,
+                status = t.Status,
+                createdAt = t.CreatedAt.ToString("MMM dd, yyyy HH:mm")
+            });
+            return Json(result);
+        }
+
+        // GET: /Traveler/GetMyBookings  [Bearer Auth via header]
+        [HttpGet]
+        public async Task<IActionResult> GetMyBookings()
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            var bookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
+            var result = bookings.Select(b => new
+            {
+                id = b.Id,
+                status = b.Status,
+                bookingDate = b.BookingDate.ToString("MMM dd, yyyy"),
+                totalAmount = b.TotalAmount,
+                paymentMethod = b.PaymentMethod,
+                notes = b.TravelerNotes,
+                guideName = b.GuideProfile?.Profile?.FullName ?? "Local Guide",
+                guideAvatar = b.GuideProfile?.Profile?.AvatarUrl ?? "",
+                guideProfileId = b.GuideProfileId,
+                packageTitle = b.ExperiencePackage?.Title ?? "Custom Tour"
+            });
+            return Json(result);
+        }
+
+        // POST: /Traveler/DeleteTripAjax/{id}  [Bearer Auth via header]
+        [HttpPost]
+        public async Task<IActionResult> DeleteTripAjax(string id)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            await _tripRequestRepository.DeleteTripRequestAsync(id);
+            return Json(new { success = true });
+        }
+
+        // POST: /Traveler/CancelBookingAjax/{id}  [Bearer Auth via header]
+        [HttpPost]
+        public async Task<IActionResult> CancelBookingAjax(string id)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            // Ensure booking belongs to this traveler
+            var booking = await _bookingRepository.GetBookingByIdAsync(id);
+            if (booking == null || booking.TravelerId != travelerId)
+                return Unauthorized(new { error = "Not authorized" });
+
+            if (booking.Status != 0)
+                return BadRequest(new { error = "Only pending bookings can be deleted" });
+
+            await _bookingRepository.DeleteBookingAsync(id);
+            return Json(new { success = true });
+        }
+
+        // POST: /Traveler/ToggleTripStatusAjax/{id}  [Bearer Auth via header]
+        [HttpPost]
+        public async Task<IActionResult> ToggleTripStatusAjax(string id)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            await _tripRequestRepository.ToggleTripRequestStatusAsync(id);
+            return Json(new { success = true });
         }
     }
 }

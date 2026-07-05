@@ -57,7 +57,6 @@ namespace TripMate_Webapi.Repositories
                 guide_profile_id = review.GuideProfileId,
                 rating = review.Rating,
                 comment = review.Comment,
-                is_visible = true,
                 created_at = DateTime.UtcNow
             };
 
@@ -78,7 +77,7 @@ namespace TripMate_Webapi.Repositories
         public async Task<List<ReviewEntity>> GetReviewsByGuideAsync(string guideProfileId)
         {
             var response = await _supabase.From<ReviewEntity>()
-                .Where(r => r.GuideProfileId == guideProfileId && r.IsVisible)
+                .Filter("guide_profile_id", Postgrest.Constants.Operator.Equals, guideProfileId)
                 .Order(r => r.CreatedAt, Postgrest.Constants.Ordering.Descending)
                 .Get();
 

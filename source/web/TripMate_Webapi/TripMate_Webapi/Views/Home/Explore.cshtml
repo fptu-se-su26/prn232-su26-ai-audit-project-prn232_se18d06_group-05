@@ -1,118 +1,186 @@
 @model List<TripMate_Webapi.Entities.GuideProfileEntity>
 @{
-    ViewData["Title"] = "Explore Guides & Destinations";
+    ViewData["Title"] = "Explore Guides & Tours";
     Layout = "~/Views/Shared/_Layout.cshtml";
     string? searchDest = ViewBag.Destination as string;
-    string? searchWhen = ViewBag.SearchWhen as string;
+    string? searchStr = ViewBag.Search as string;
     string currentSpecialty = ViewBag.Specialty as string ?? "All";
-    bool hasSearch = !string.IsNullOrEmpty(searchDest) || !string.IsNullOrEmpty(searchWhen) || currentSpecialty != "All";
+    var tours = ViewBag.Tours as List<TripMate_WebAPI.Services.ExperiencePackageRow> ?? new();
+    bool hasSearch = !string.IsNullOrEmpty(searchDest) || !string.IsNullOrEmpty(searchStr) || currentSpecialty != "All";
+    var displaySearch = searchStr ?? searchDest ?? "";
 }
 
-<div class="bg-surface min-h-screen pt-8 pb-20">
-    <div class="max-w-[1440px] mx-auto px-12">
-        <!-- Header Section -->
-        <div class="mb-12 flex flex-col md:flex-row justify-between items-end border-b border-outline-variant/30 pb-6">
-            <div>
-                <a href="javascript:history.back()" class="inline-flex items-center text-sm font-bold text-on-surface-variant hover:text-primary mb-4 transition-colors">
-                    <span class="material-symbols-outlined mr-1 text-[18px]">arrow_back</span>
-                    Back
-                </a>
-                @if (hasSearch)
+<div class="bg-surface min-h-screen" x-data="{ activeTab: 'guides' }">
+
+    <!-- Hero Header -->
+    <div class="bg-gradient-to-br from-on-surface via-gray-800 to-gray-900 pt-12 pb-16 px-6 md:px-12 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1504457047772-27faf1c00561?w=1920')] bg-cover bg-center opacity-20"></div>
+        <div class="max-w-[1440px] mx-auto relative z-10">
+            <a href="javascript:history.back()" class="inline-flex items-center text-white/70 hover:text-white font-bold mb-6 transition-colors text-sm">
+                <span class="material-symbols-outlined mr-1 text-[18px]">arrow_back</span> Back
+            </a>
+            @if (hasSearch)
+            {
+                <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3">
+                    Search Results for <span class="text-primary">@displaySearch</span>
+                </h1>
+                <p class="text-white/70 text-lg">
+                    <span class="font-bold text-white">@Model.Count</span> guides and
+                    <span class="font-bold text-white">@tours.Count</span> tours found
+                </p>
+            }
+            else
+            {
+                <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3">Explore Guides & Tours</h1>
+                <p class="text-white/70 text-lg">Find the perfect local expert or experience for your next adventure.</p>
+            }
+
+        </div>
+    </div>
+
+    <div class="max-w-[1440px] mx-auto px-6 md:px-12 mt-8 pb-20">
+
+        <!-- Filter Tags -->
+        <div class="flex flex-wrap gap-3 mb-6">
+            <a href="/Home/Explore?destination=@searchDest&specialty=All" class="px-4 py-2 rounded-full @(currentSpecialty == "All" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant") font-bold text-sm shadow-sm transition-colors">All</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Photography" class="px-4 py-2 rounded-full @(currentSpecialty == "Photography" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant") font-bold text-sm shadow-sm transition-colors">Photography</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Street Food" class="px-4 py-2 rounded-full @(currentSpecialty == "Street Food" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant") font-bold text-sm shadow-sm transition-colors">Street Food</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Culture" class="px-4 py-2 rounded-full @(currentSpecialty == "Culture" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant") font-bold text-sm shadow-sm transition-colors">Culture & History</a>
+            <a href="/Home/Explore?destination=@searchDest&specialty=Adventure" class="px-4 py-2 rounded-full @(currentSpecialty == "Adventure" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant") font-bold text-sm shadow-sm transition-colors">Adventure</a>
+        </div>
+
+        <!-- Tabs: Guides / Tours -->
+        <div class="flex gap-6 border-b border-outline-variant/30 mb-8">
+            <button @@click="activeTab = 'guides'"
+                    :class="activeTab === 'guides' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'"
+                    class="border-b-2 pb-4 px-2 font-bold text-lg transition-colors">
+                Local Guides <span class="text-sm font-normal">(@Model.Count)</span>
+            </button>
+            <button @@click="activeTab = 'tours'"
+                    :class="activeTab === 'tours' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'"
+                    class="border-b-2 pb-4 px-2 font-bold text-lg transition-colors">
+                Experience Tours <span class="text-sm font-normal">(@tours.Count)</span>
+            </button>
+        </div>
+
+        <!-- ═══ Guides Tab ═══ -->
+        <div x-show="activeTab === 'guides'" x-transition>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                @if (Model != null && Model.Any())
                 {
-                    <h1 class="text-4xl font-extrabold text-on-surface">
-                        Search Results for <span class="text-primary">@(string.IsNullOrEmpty(searchDest) ? "Anywhere" : searchDest)</span>
-                    </h1>
-                    @if (!string.IsNullOrEmpty(searchWhen))
+                    foreach (var guide in Model)
                     {
-                        <p class="text-on-surface-variant text-lg mt-2 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-sm">calendar_month</span> @searchWhen
-                        </p>
+                        <a href="/Traveler/GuideProfile/@guide.Id" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 relative flex flex-col">
+                            <div class="h-64 overflow-hidden relative">
+                                <img src="@(string.IsNullOrEmpty(guide.CoverPhotoUrl) ? "/images/halong.jpg" : guide.CoverPhotoUrl)" alt="Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                <div class="absolute top-4 left-4 z-10 w-16 h-16 rounded-full border-2 border-white overflow-hidden shadow-lg">
+                                    <img src="@(string.IsNullOrEmpty(guide.Profile?.AvatarUrl) ? "/images/default_avatar.png" : guide.Profile.AvatarUrl)" alt="@guide.Profile?.FullName" class="w-full h-full object-cover"/>
+                                </div>
+                                <div class="absolute bottom-0 left-0 right-0 p-5 pt-16 z-10">
+                                    <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">@(guide.Profile?.FullName ?? "Unknown Guide")</h3>
+                                    <p class="text-sm text-white/90 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> @guide.CityArea</p>
+                                </div>
+                                @if (guide.IsVerified == true)
+                                {
+                                    <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center gap-1 shadow-sm">
+                                        <span class="material-symbols-outlined text-[14px]">verified</span> Verified
+                                    </div>
+                                }
+                            </div>
+                            <div class="p-6 flex-1 flex flex-col">
+                                <div class="flex justify-between items-center mb-4">
+                                    <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
+                                        <span class="material-symbols-outlined text-[20px] text-yellow-500" style="font-variation-settings: 'FILL' 1;">star</span> @(guide.AverageRating?.ToString("0.0") ?? "0.0") <span class="text-on-surface-variant font-normal">(@(guide.TotalReviews ?? 0))</span>
+                                    </div>
+                                    <div class="text-primary font-bold bg-primary-container px-3 py-1 rounded-lg text-sm">@(guide.PricePerHour?.ToString("#,##0") ?? "0") ₫ / hr</div>
+                                </div>
+                                <p class="text-on-surface-variant italic mb-5 line-clamp-2 leading-relaxed">"@guide.Bio"</p>
+                                <div class="flex flex-wrap gap-2 mt-auto">
+                                    @if (guide.Specialties != null)
+                                    {
+                                        foreach (var spec in guide.Specialties.Take(3))
+                                        {
+                                            <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">@spec</span>
+                                        }
+                                    }
+                                </div>
+                            </div>
+                        </a>
                     }
                 }
                 else
                 {
-                    <h1 class="text-4xl font-extrabold text-on-surface">Explore All Guides</h1>
-                    <p class="text-on-surface-variant text-lg mt-2">Find the perfect local expert for your next adventure.</p>
+                    <div class="col-span-full text-center py-20">
+                        <span class="material-symbols-outlined text-6xl text-outline mb-4">search_off</span>
+                        <h3 class="text-2xl font-bold text-on-surface mb-2">No guides found</h3>
+                        <p class="text-on-surface-variant">Try adjusting your search criteria or explore other destinations.</p>
+                    </div>
                 }
             </div>
-            
-            <div class="mt-6 md:mt-0 flex gap-4">
-                <button class="px-5 py-2 rounded-full border border-outline-variant/50 bg-white font-bold text-on-surface hover:bg-surface-variant transition-colors flex items-center gap-2 shadow-sm">
-                    <span class="material-symbols-outlined text-[20px]">filter_list</span> Filters
-                </button>
-                <select class="px-5 py-2 rounded-full border border-outline-variant/50 bg-white font-bold text-on-surface hover:bg-surface-variant transition-colors shadow-sm outline-none cursor-pointer">
-                    <option>Recommended</option>
-                    <option>Highest Rated</option>
-                    <option>Price: Low to High</option>
-                </select>
-            </div>
         </div>
 
-        <!-- Filter Tags -->
-        <div class="flex flex-wrap gap-3 mb-10">
-            <a href="/Home/Explore?destination=@searchDest&specialty=All" class="px-4 py-2 rounded-full @(currentSpecialty == "All" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm shadow-sm hover:bg-surface-variant transition-colors">All</a>
-            <a href="/Home/Explore?destination=@searchDest&specialty=Photography" class="px-4 py-2 rounded-full @(currentSpecialty == "Photography" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Photography</a>
-            <a href="/Home/Explore?destination=@searchDest&specialty=Street Food" class="px-4 py-2 rounded-full @(currentSpecialty == "Street Food" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Street Food</a>
-            <a href="/Home/Explore?destination=@searchDest&specialty=Culture" class="px-4 py-2 rounded-full @(currentSpecialty == "Culture" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Culture & History</a>
-            <a href="/Home/Explore?destination=@searchDest&specialty=Adventure" class="px-4 py-2 rounded-full @(currentSpecialty == "Adventure" ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant") font-bold text-sm hover:bg-surface-variant transition-colors">Adventure</a>
-        </div>
-
-        <!-- Guides Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-            @if (Model != null && Model.Any())
-            {
-                foreach (var guide in Model)
+        <!-- ═══ Tours Tab ═══ -->
+        <div x-show="activeTab === 'tours'" style="display: none;" x-transition>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                @if (tours.Any())
                 {
-                    <a href="/Guide/Profile/@guide.UserId" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 relative flex flex-col">
-                        <div class="h-64 overflow-hidden relative">
-                            <img src="@(string.IsNullOrEmpty(guide.CoverPhotoUrl) ? "/images/halong.jpg" : guide.CoverPhotoUrl)" alt="Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                            
-                            <!-- Floating Avatar -->
-                            <div class="absolute top-4 left-4 z-10 w-16 h-16 rounded-full border-2 border-white overflow-hidden shadow-lg">
-                                <img src="@(string.IsNullOrEmpty(guide.Profile?.AvatarUrl) ? "/images/default_avatar.png" : guide.Profile.AvatarUrl)" alt="@guide.Profile?.FullName" class="w-full h-full object-cover"/>
-                            </div>
-                            
-                            <div class="absolute bottom-0 left-0 right-0 p-5 pt-16 z-10">
-                                <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">@(guide.Profile?.FullName ?? "Unknown Guide")</h3>
-                                <p class="text-sm text-white/90 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> @guide.CityArea</p>
-                            </div>
-                            @if (guide.IsVerified == true)
-                            {
-                                <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center gap-1 shadow-sm">
-                                    <span class="material-symbols-outlined text-[14px]">verified</span> Verified
-                                </div>
-                            }
-                        </div>
-                        <div class="p-6 flex-1 flex flex-col">
-                            <div class="flex justify-between items-center mb-4">
-                                <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
-                                    <span class="material-symbols-outlined text-[20px] text-yellow-500" style="font-variation-settings: 'FILL' 1;">star</span> @(guide.AverageRating?.ToString("0.0") ?? "0.0") <span class="text-on-surface-variant font-normal">(@(guide.TotalReviews ?? 0))</span>
-                                </div>
-                                <div class="text-primary font-bold bg-primary-container px-3 py-1 rounded-lg text-sm">@(guide.PricePerHour?.ToString("#,##0") ?? "0") ₫ / hr</div>
-                            </div>
-                            <p class="text-on-surface-variant italic mb-5 line-clamp-2 leading-relaxed">"@guide.Bio"</p>
-                            <div class="flex flex-wrap gap-2 mt-auto">
-                                @if (guide.Specialties != null)
+                    foreach (var tour in tours)
+                    {
+                        var guideName = tour.GuideProfile?.Profile?.FullName ?? "Local Guide";
+                        var guideCover = tour.GuideProfile?.CoverPhotoUrl ?? "";
+                        var guideAvatar = tour.GuideProfile?.Profile?.AvatarUrl ?? "";
+                        var guideCity = tour.GuideProfile?.CityArea ?? "Vietnam";
+                        var priceLabel = tour.PricePerSession > 0
+                            ? string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:C0}", tour.PricePerSession)
+                            : (tour.PricePerPerson > 0 ? string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:C0}", tour.PricePerPerson) + "/person" : "Contact");
+
+                        <a href="/Traveler/GuideProfile/@tour.GuideProfileId" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
+                            <div class="h-52 relative overflow-hidden bg-gray-100">
+                                @if (!string.IsNullOrEmpty(guideCover))
                                 {
-                                    foreach (var spec in guide.Specialties.Take(3))
-                                    {
-                                        <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">@spec</span>
-                                    }
+                                    <img src="@guideCover" alt="@tour.Title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                                 }
+                                else
+                                {
+                                    <div class="w-full h-full bg-gradient-to-br from-primary-container to-surface-variant flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-6xl text-primary/30">landscape</span>
+                                    </div>
+                                }
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                                <div class="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center gap-1 shadow-sm">
+                                    <span class="material-symbols-outlined text-[14px]">schedule</span> @tour.DurationHours hrs
+                                </div>
+                                <div class="absolute bottom-4 left-4 flex items-center gap-3 z-10">
+                                    <div class="w-8 h-8 rounded-full border-2 border-white overflow-hidden shadow-md bg-gray-200">
+                                        @if (!string.IsNullOrEmpty(guideAvatar))
+                                        {
+                                            <img src="@guideAvatar" class="w-full h-full object-cover" />
+                                        }
+                                    </div>
+                                    <p class="text-white text-sm font-bold drop-shadow">@guideName</p>
+                                </div>
                             </div>
-                        </div>
-                    </a>
+                            <div class="p-6 flex-1 flex flex-col">
+                                <h3 class="text-xl font-bold text-on-surface mb-2 group-hover:text-primary transition-colors">@tour.Title</h3>
+                                <p class="text-on-surface-variant text-sm line-clamp-2 mb-4">@tour.Description</p>
+                                <div class="mt-auto flex items-center justify-between pt-4 border-t border-outline-variant/20">
+                                    <p class="text-xl font-bold text-primary">@priceLabel</p>
+                                    <span class="text-primary font-bold text-sm flex items-center gap-1">View <span class="material-symbols-outlined text-[16px]">arrow_forward</span></span>
+                                </div>
+                            </div>
+                        </a>
+                    }
                 }
-            }
-            else
-            {
-                <div class="col-span-full text-center py-20">
-                    <span class="material-symbols-outlined text-6xl text-outline mb-4">search_off</span>
-                    <h3 class="text-2xl font-bold text-on-surface mb-2">No guides found</h3>
-                    <p class="text-on-surface-variant">Try adjusting your search criteria or explore other destinations.</p>
-                </div>
-            }
+                else
+                {
+                    <div class="col-span-full text-center py-20">
+                        <span class="material-symbols-outlined text-6xl text-outline mb-4">explore_off</span>
+                        <h3 class="text-2xl font-bold text-on-surface mb-2">No tours available</h3>
+                        <p class="text-on-surface-variant">Check back later or explore our guides.</p>
+                    </div>
+                }
+            </div>
         </div>
     </div>
 </div>

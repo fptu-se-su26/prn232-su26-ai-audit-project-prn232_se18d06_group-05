@@ -59,20 +59,21 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-10" x-show="guides.length > 0">
 
-            <!-- Top Match Card (first guide — full width) -->
+            <!-- 🏆 Top Match Card (first guide — full width, highlighted) -->
             <template x-if="guides.length > 0">
-                <div class="md:col-span-3 bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 flex flex-col md:flex-row relative">
-                    <!-- Match Badge -->
-                    <div class="absolute top-4 left-4 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg flex items-center gap-1 z-10">
-                        <span class="material-symbols-outlined text-sm">local_fire_department</span>
-                        <span x-text="guides[0].matchScore + '% Match'"></span>
+                <a :href="'/Traveler/GuideProfile/' + guides[0].guideId" class="md:col-span-3 bg-white rounded-3xl overflow-hidden border-2 border-primary/40 flex flex-col md:flex-row relative group cursor-pointer hover:shadow-2xl transition-all duration-300" style="box-shadow: 0 0 30px rgba(255,122,0,0.15), 0 12px 40px -10px rgba(0,0,0,0.1);">
+                    <!-- 🏆 Best Match Crown Badge -->
+                    <div class="absolute top-4 left-4 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2 z-10 animate-pulse">
+                        <span class="text-lg">🏆</span>
+                        <span>Best Match</span>
+                        <span class="bg-white/20 px-2 py-0.5 rounded-full text-xs" x-text="guides[0].matchScore + '%'"></span>
                     </div>
 
                     <!-- Guide Photo -->
                     <div class="md:w-2/5 h-80 md:h-auto relative overflow-hidden bg-gray-100">
                         <template x-if="guides[0].coverPhotoUrl">
                             <img :src="guides[0].coverPhotoUrl" :alt="guides[0].name"
-                                 class="w-full h-full object-cover" />
+                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                         </template>
                         <template x-if="!guides[0].coverPhotoUrl">
                             <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-container to-surface-variant">
@@ -117,17 +118,12 @@
                         </template>
 
                         <div class="flex items-center gap-4 mt-auto">
-                            <button @@click="handleConnect(guides[0].guideId, guides[0].name)"
-                                    class="bg-primary hover:bg-primary/90 text-on-primary px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
-                                Connect Now
-                                <span class="material-symbols-outlined">send</span>
-                            </button>
-                            <a :href="'/Guide/Profile/' + guides[0].guideId"
-                               class="text-on-surface-variant hover:text-primary font-bold px-6 py-4 rounded-xl hover:bg-primary-container transition-all">
+                            <span class="bg-primary hover:bg-primary/90 text-on-primary px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg group-hover:shadow-xl group-hover:-translate-y-1">
                                 View Profile
-                            </a>
+                                <span class="material-symbols-outlined">arrow_forward</span>
+                            </span>
                             <!-- Save Button (Top Card) -->
-                            <button @@click="toggleSave(guides[0])"
+                            <button @@click.prevent="toggleSave(guides[0])"
                                     :title="isSaved(guides[0].guideId) ? 'Unsave guide' : 'Save guide'"
                                     class="ml-auto w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all"
                                     :class="isSaved(guides[0].guideId) ? 'bg-red-50 border-red-300 text-red-500' : 'border-outline-variant/50 text-on-surface-variant hover:border-red-300 hover:text-red-400'">
@@ -136,14 +132,15 @@
                             </button>
                         </div>
                     </div>
-                </div>
+                </a>
             </template>
 
             <!-- Other Match Cards (guides[1..n]) -->
             <template x-for="(guide, index) in guides.slice(1)" :key="guide.guideId">
-                <div class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col group">
+                <a :href="'/Traveler/GuideProfile/' + guide.guideId" class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col group cursor-pointer hover:shadow-xl hover:-translate-y-2 transition-all duration-300">
                     <!-- Match Badge -->
                     <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 z-10">
+                        <span class="material-symbols-outlined text-[14px]">local_fire_department</span>
                         <span x-text="guide.matchScore + '% Match'"></span>
                     </div>
 
@@ -188,23 +185,21 @@
                             </p>
                         </template>
 
-                        <div class="mt-auto grid grid-cols-2 gap-2">
-                            <button @@click="handleConnect(guide.guideId, guide.name)"
-                                    class="col-span-1 bg-primary hover:bg-primary/90 text-on-primary py-3 rounded-xl font-bold transition-all text-sm">
-                                Connect
-                            </button>
+                        <div class="mt-auto flex items-center gap-2">
+                            <span class="flex-1 bg-primary/10 text-primary py-3 rounded-xl font-bold transition-all text-sm text-center group-hover:bg-primary group-hover:text-white">
+                                View Profile
+                            </span>
                             <!-- Save Button (Small Card) -->
-                            <button @@click="toggleSave(guide)"
+                            <button @@click.prevent="toggleSave(guide)"
                                     :title="isSaved(guide.guideId) ? 'Unsave' : 'Save'"
-                                    class="col-span-1 py-3 rounded-xl font-bold transition-all text-sm border-2 flex items-center justify-center gap-1"
+                                    class="w-12 h-12 rounded-xl font-bold transition-all text-sm border-2 flex items-center justify-center shrink-0"
                                     :class="isSaved(guide.guideId) ? 'bg-red-50 border-red-300 text-red-500' : 'border-outline-variant/50 text-on-surface-variant hover:border-red-300 hover:text-red-400'">
                                 <span class="material-symbols-outlined text-sm"
                                       :style="isSaved(guide.guideId) ? 'font-variation-settings: FILL 1' : ''">favorite</span>
-                                <span x-text="isSaved(guide.guideId) ? 'Saved' : 'Save'"></span>
                             </button>
                         </div>
                     </div>
-                </div>
+                </a>
             </template>
 
             <!-- CTA Card: Personality Test -->
@@ -331,31 +326,9 @@
                 localStorage.setItem('savedGuides', JSON.stringify(list));
             },
 
-            handleConnect(guideId, guideName) {
-                const token = localStorage.getItem('accessToken');
-                const userEmail = localStorage.getItem('userEmail');
-
-                if (!token || !userEmail) {
-                    // Ghost Booking: Lưu intent vào server Session
-                    const ghostBooking = {
-                        guideId: guideId,
-                        packageTitle: guideName + ' - Tour trải nghiệm',
-                        destination: this.preferences.destination || '',
-                        savedAt: new Date().toISOString(),
-                        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString()
-                    };
-
-                    fetch('/Survey/HoldBooking', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(ghostBooking)
-                    }).catch(err => console.warn('[Ghost Booking]', err));
-
-                    localStorage.setItem('redirectAfterLogin', `/Guide/Profile/${guideId}`);
-                    window.location.href = `/Auth/Login?returnUrl=${encodeURIComponent('/Guide/Profile/' + guideId)}`;
-                } else {
-                    window.location.href = `/Guide/Profile/${guideId}`;
-                }
+            // Cards are now direct <a> links. This is kept as fallback for any programmatic navigation.
+            navigateToProfile(guideId) {
+                window.location.href = `/Traveler/GuideProfile/${guideId}`;
             }
         }))
     })
