@@ -42,6 +42,7 @@ namespace TripMate_Webapi.Controllers
         public IActionResult Logout()
         {
             // Clear any server-side session if needed
+            Response.Cookies.Delete("access_token");
             // Client-side will clear localStorage
             return RedirectToAction("LandingPage", "LandingPage");
         }

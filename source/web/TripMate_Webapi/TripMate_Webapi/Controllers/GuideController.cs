@@ -1,25 +1,32 @@
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
+using TripMate_WebAPI.DTOs.Tour.Requests;
 using TripMate_Webapi.Repositories;
 
 namespace TripMate_Webapi.Controllers
 {
+    [Route("Guide/[action]")]
     public class GuideController : Controller
     {
         private readonly TourService _tourService;
         private readonly BookingService _bookingService;
         private readonly IGuideRepository _guideRepository;
+        private readonly IExperienceService _experienceService;
         private readonly ILogger<GuideController> _logger;
 
         public GuideController(
             TourService tourService,
             BookingService bookingService,
             IGuideRepository guideRepository,
+            IExperienceService experienceService,
             ILogger<GuideController> logger)
         {
             _tourService = tourService;
             _bookingService = bookingService;
             _guideRepository = guideRepository;
+            _experienceService = experienceService;
             _logger = logger;
         }
 
@@ -36,6 +43,7 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/Dashboard
+        [Authorize(Roles = "guide")]
         public async Task<IActionResult> Dashboard()
         {
             try
@@ -89,6 +97,7 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/Profile
+        [Authorize(Roles = "guide")]
         public IActionResult Profile()
         {
             var profileData = new
@@ -111,66 +120,125 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/Calendar
+        [Authorize(Roles = "guide")]
         public IActionResult Calendar()
         {
             return View();
         }
 
-        // GET: /Guide/MyTours
-        public IActionResult MyTours()
+        // Helper method to get the guide profile ID of the currently logged-in user
+        private async Task<string?> GetCurrentGuideProfileIdAsync()
         {
-            // Mock data for UI
-            var tours = new List<dynamic>
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? User.FindFirst("sub")?.Value;
+
+            if (string.IsNullOrEmpty(userId)) return null;
+
+            try 
             {
-                new { 
-                    Id = 1, 
-                    Name = "Bình minh Mỹ Sơn + Ẩm thực địa phương", 
-                    Duration = 4.5, 
-                    MaxGuests = 6, 
-                    Price = 1200000, 
-                    Tags = new[] { "food", "culture", "hidden-gems" },
-                    Bookings = 12,
-                    Rating = 4.9,
-                    IsActive = true,
-                    ImageUrl = "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                },
-                new { 
-                    Id = 2, 
-                    Name = "Khám phá phố cổ Hội An về đêm", 
-                    Duration = 3.0, 
-                    MaxGuests = 10, 
-                    Price = 850000, 
-                    Tags = new[] { "nightlife", "photography" },
-                    Bookings = 34,
-                    Rating = 4.8,
-                    IsActive = true,
-                    ImageUrl = "https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                },
-                new { 
-                    Id = 3, 
-                    Name = "Đạp xe đồng quê & Làng rau Trà Quế", 
-                    Duration = 5.0, 
-                    MaxGuests = 4, 
-                    Price = 950000, 
-                    Tags = new[] { "nature", "culture" },
-                    Bookings = 8,
-                    Rating = 5.0,
-                    IsActive = false,
-                    ImageUrl = "https://images.unsplash.com/photo-1543881477-83c9ec4172f3?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                }
-            };
+                var guide = await _guideRepository.GetGuideByIdAsync(userId);
+                return guide?.Id;
+            }
+            catch
+            {
+                // In case GetGuideByIdAsync throws when no guide profile exists
+                return null;
+            }
+        }
+
+        // GET: /Guide/MyTours
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> MyTours()
+        {
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (string.IsNullOrEmpty(guideProfileId))
+            {
+                // If the user is logged in but doesn't have a guide profile, they shouldn't be here
+                // Redirecting to an error page or Dashboard
+                return RedirectToAction("Index", "Home"); 
+            }
+
+            var tours = await _experienceService.GetMyToursAsync(guideProfileId);
             
             ViewBag.Tours = tours;
             return View();
         }
 
+        [HttpPatch("ToggleTourStatus/{id}")]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> ToggleTourStatus(string id)
+        {
+            try
+            {
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "Không có quyền thực hiện thao tác này" });
+
+                var success = await _experienceService.ToggleTourStatusAsync(id, guideProfileId);
+                
+                if (success) return Ok(new { success = true, message = "Cập nhật trạng thái thành công" });
+                return BadRequest(new { success = false, message = "Không tìm thấy gói trải nghiệm" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpDelete("DeleteTour/{id}")]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> DeleteTour(string id)
+        {
+            try
+            {
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "Không có quyền thực hiện thao tác này" });
+
+                var success = await _experienceService.DeleteTourAsync(id, guideProfileId);
+                
+                if (success) return Ok(new { success = true, message = "Đã xóa gói trải nghiệm" });
+                return BadRequest(new { success = false, message = "Xóa thất bại" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         // GET: /Guide/CreateTour
+        [Authorize(Roles = "guide")]
         public IActionResult CreateTour()
         {
             return View();
         }
 
+        // POST: /Guide/CreateTour
+        [HttpPost("CreateTour")]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> CreateTour([FromForm] CreateTourDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ." });
+                }
+
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "Bạn cần có hồ sơ hướng dẫn viên để tạo gói trải nghiệm." });
+
+                var createdTour = await _experienceService.CreateTourAsync(dto, guideProfileId);
+
+                return Ok(new { success = true, data = createdTour, message = "Tuyệt vời! Gói trải nghiệm của bạn đã được xuất bản." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating tour");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         // GET: /Guide/Bookings
+        [Authorize(Roles = "guide")]
         public IActionResult Bookings()
         {
             var bookings = new List<dynamic>

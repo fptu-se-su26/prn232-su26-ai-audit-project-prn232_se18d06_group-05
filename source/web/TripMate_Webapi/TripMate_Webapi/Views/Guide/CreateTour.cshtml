@@ -178,7 +178,8 @@
                     <!-- Cover Image -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-900 mb-2">Ảnh bìa (Cover Image) <span class="text-red-500">*</span></label>
-                        <div class="relative border-2 border-dashed border-gray-300 rounded-2xl h-48 flex flex-col items-center justify-center bg-gray-50 hover:bg-orange-50/50 hover:border-primary transition-colors cursor-pointer group overflow-hidden">
+                        <div class="relative border-2 border-dashed border-gray-300 rounded-2xl h-48 flex flex-col items-center justify-center bg-gray-50 hover:bg-orange-50/50 hover:border-primary transition-colors cursor-pointer group overflow-hidden" onclick="document.getElementById('coverImageInput').click()">
+                            <input type="file" id="coverImageInput" accept="image/jpeg, image/png" class="hidden" />
                             <div class="text-center z-10 transition-transform group-hover:-translate-y-1">
                                 <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mx-auto mb-2 text-gray-400 group-hover:text-primary transition-colors">
                                     <span class="material-symbols-outlined text-[24px]">add_photo_alternate</span>
@@ -406,13 +407,56 @@
                     this.formData.tags = this.formData.tags.filter(tag => tag !== tagToRemove);
                 },
 
-                submitForm() {
+                async submitForm() {
+                    if (this.step === 1 && (!this.formData.name || !this.formData.city || !this.formData.meetingPoint)) {
+                        showToast('error', 'Vui lòng điền đủ Tên, Thành phố và Điểm hẹn.');
+                        return;
+                    }
+
                     this.isSubmitting = true;
-                    setTimeout(() => {
+                    
+                    try {
+                        const formData = new FormData();
+                        formData.append("Title", this.formData.name);
+                        formData.append("City", this.formData.city);
+                        formData.append("MeetingPoint", this.formData.meetingPoint);
+                        formData.append("Description", this.formData.description);
+                        formData.append("DurationHours", this.formData.duration);
+                        formData.append("PricePerSession", this.formData.pricePerSession);
+                        formData.append("PricePerGuest", this.formData.pricePerGuest);
+                        formData.append("MaxGroupSize", this.formData.maxGuests);
+                        
+                        formData.append("IncludedServices", JSON.stringify(this.formData.includedServices));
+                        formData.append("Languages", JSON.stringify(this.formData.languages));
+                        formData.append("Tags", JSON.stringify(this.formData.tags));
+                        formData.append("TimelineJson", JSON.stringify(this.formData.timeline));
+
+                        // Mock appending files (since file inputs aren't fully wired to Alpine state yet)
+                        // In a real scenario, you'd get the File objects from the <input type="file"> refs
+                        const coverInput = document.getElementById('coverImageInput');
+                        if (coverInput && coverInput.files[0]) {
+                            formData.append("CoverImage", coverInput.files[0]);
+                        }
+
+                        const response = await fetch('/Guide/CreateTour', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            showToast('success', result.message || 'Tuyệt vời! Gói trải nghiệm của bạn đã được xuất bản.');
+                            setTimeout(() => { window.location.href = '/Guide/MyTours'; }, 1500);
+                        } else {
+                            showToast('error', result.message || 'Có lỗi xảy ra khi lưu.');
+                        }
+                    } catch (error) {
+                        showToast('error', 'Lỗi hệ thống. Vui lòng thử lại sau.');
+                        console.error(error);
+                    } finally {
                         this.isSubmitting = false;
-                        showToast('success', 'Tuyệt vời! Gói trải nghiệm của bạn đã được xuất bản.');
-                        setTimeout(() => { window.location.href = '/Guide/MyTours'; }, 1500);
-                    }, 1500);
+                    }
                 }
             }
         }

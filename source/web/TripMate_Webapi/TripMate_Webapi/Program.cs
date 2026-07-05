@@ -65,12 +65,14 @@ builder.Services.AddHttpClient<SupabasePasswordResetService>();
 builder.Services.AddScoped<ISupabasePasswordResetService, SupabasePasswordResetService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddHttpClient<PasswordResetService>();
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 
 // ── Tour Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<TourService>();
 builder.Services.AddScoped<TourService>();
+builder.Services.AddScoped<IExperienceService, ExperienceService>();
 
 // ── Booking Service ───────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<BookingService>();
@@ -80,6 +82,7 @@ builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IGuideRepository, GuideRepository>();
+builder.Services.AddScoped<IExperiencePackageRepository, ExperiencePackageRepository>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();
@@ -132,6 +135,15 @@ builder.Services
 
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Cookies["access_token"];
+                if (!string.IsNullOrEmpty(token))
+                {
+                    context.Token = token;
+                }
+                return Task.CompletedTask;
+            },
             OnAuthenticationFailed = ctx =>
             {
                 Console.WriteLine($"[JWT] Auth failed: {ctx.Exception.Message}");

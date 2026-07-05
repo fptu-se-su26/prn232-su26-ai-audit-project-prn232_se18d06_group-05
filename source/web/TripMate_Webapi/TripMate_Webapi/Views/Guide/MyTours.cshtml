@@ -1,13 +1,14 @@
+@using TripMate_WebAPI.DTOs.Tour.Responses
 @{
     ViewData["Title"] = "Quản lý Gói Tour";
     ViewData["ActivePage"] = "MyTours";
     Layout = "_GuideLayout";
     
-    var tours = ViewBag.Tours as IEnumerable<dynamic>;
+    var tours = ViewBag.Tours as IEnumerable<MyTourDashboardDto>;
     var activeCount = tours?.Count(t => t.IsActive) ?? 0;
 }
 
-<div x-data="{ filter: 'all', searchQuery: '', openDropdown: null }" @@click.outside="openDropdown = null">
+<div x-data="myToursApp()" @@click.outside="openDropdown = null">
     <!-- Header Area -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
@@ -137,7 +138,7 @@
                                      x-transition.opacity.duration.200ms
                                      style="display: none;"
                                      class="absolute right-0 bottom-12 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-30 overflow-hidden">
-                                    <button class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                    <button @@click="toggleStatus('@tour.Id')" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                         <span class="material-symbols-outlined text-[18px]">visibility</span>
                                         @(tour.IsActive ? "Ẩn gói tour này" : "Hiện gói tour này")
                                     </button>
@@ -146,7 +147,7 @@
                                         Nhân bản (Duplicate)
                                     </button>
                                     <div class="border-t border-gray-100 my-1"></div>
-                                    <button class="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <button @@click="deleteTour('@tour.Id')" class="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-2">
                                         <span class="material-symbols-outlined text-[18px]">delete</span>
                                         Xóa gói tour
                                     </button>
@@ -159,3 +160,49 @@
         }
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('myToursApp', () => ({
+                filter: 'all',
+                searchQuery: '',
+                openDropdown: null,
+                
+                async toggleStatus(tourId) {
+                    this.openDropdown = null;
+                    if(!confirm("Bạn có chắc muốn thay đổi trạng thái gói tour này?")) return;
+                    
+                    try {
+                        const res = await fetch(`/ToggleTourStatus/${tourId}`, { method: 'PATCH' });
+                        const result = await res.json();
+                        if (result.success) {
+                            window.location.reload();
+                        } else {
+                            alert(result.message);
+                        }
+                    } catch(e) {
+                        alert("Lỗi hệ thống");
+                    }
+                },
+                
+                async deleteTour(tourId) {
+                    this.openDropdown = null;
+                    if(!confirm("Bạn có chắc muốn XÓA VĨNH VIỄN gói tour này?")) return;
+                    
+                    try {
+                        const res = await fetch(`/DeleteTour/${tourId}`, { method: 'DELETE' });
+                        const result = await res.json();
+                        if (result.success) {
+                            window.location.reload();
+                        } else {
+                            alert(result.message);
+                        }
+                    } catch(e) {
+                        alert("Lỗi hệ thống");
+                    }
+                }
+            }));
+        });
+    </script>
+}
