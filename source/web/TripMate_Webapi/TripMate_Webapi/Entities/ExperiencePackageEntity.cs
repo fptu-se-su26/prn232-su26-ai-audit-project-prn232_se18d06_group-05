@@ -41,6 +41,24 @@ public class ExperiencePackageEntity : BaseModel
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
 
+    [Column("city")]
+    public string City { get; set; } = string.Empty;
+
+    [Column("meeting_point")]
+    public string MeetingPoint { get; set; } = string.Empty;
+
+    [Column("languages")]
+    public List<string>? Languages { get; set; }
+
+    [Column("cover_image_url")]
+    public string CoverImageUrl { get; set; } = string.Empty;
+
+    [Column("gallery_image_urls")]
+    public List<string>? GalleryImageUrls { get; set; }
+
+    [Column("timeline_json")]
+    public string TimelineJson { get; set; } = "[]";
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
