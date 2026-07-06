@@ -18,7 +18,7 @@
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span>
             </a>
             <div>
-                <h2 class="text-xl font-bold text-gray-900">Tạo Gói Trải Nghiệm Mới</h2>
+                <h2 class="text-xl font-bold text-gray-900">@(ViewBag.IsEdit == true ? "Chỉnh sửa Gói Trải Nghiệm" : "Tạo Gói Trải Nghiệm Mới")</h2>
             </div>
         </div>
         <button type="button" class="text-xs font-semibold text-gray-600 hover:text-gray-900 underline underline-offset-4 transition-colors">
@@ -178,13 +178,17 @@
                     <!-- Cover Image -->
                     <div>
                         <label class="block text-sm font-semibold text-gray-900 mb-2">Ảnh bìa (Cover Image) <span class="text-red-500">*</span></label>
-                        <div class="relative border-2 border-dashed border-gray-300 rounded-2xl h-48 flex flex-col items-center justify-center bg-gray-50 hover:bg-orange-50/50 hover:border-primary transition-colors cursor-pointer group overflow-hidden">
-                            <div class="text-center z-10 transition-transform group-hover:-translate-y-1">
+                        <div class="relative border-2 border-dashed border-gray-300 rounded-2xl h-48 flex flex-col items-center justify-center bg-gray-50 hover:bg-orange-50/50 hover:border-primary transition-colors cursor-pointer group overflow-hidden" onclick="document.getElementById('coverImageInput').click()">
+                            <input type="file" id="coverImageInput" accept="image/jpeg, image/png" class="hidden" @@change="handleCoverImage" />
+                            <template x-if="coverImagePreview">
+                                <img :src="coverImagePreview" class="absolute inset-0 w-full h-full object-cover z-0" />
+                            </template>
+                            <div class="text-center z-10 transition-transform group-hover:-translate-y-1" :class="{'bg-black/40 p-4 rounded-xl backdrop-blur-sm': coverImagePreview}">
                                 <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm mx-auto mb-2 text-gray-400 group-hover:text-primary transition-colors">
                                     <span class="material-symbols-outlined text-[24px]">add_photo_alternate</span>
                                 </div>
-                                <p class="text-sm font-bold text-gray-900">Kéo thả ảnh bìa hoặc duyệt qua</p>
-                                <p class="text-xs text-gray-500 mt-1">Định dạng JPG, PNG (Tối đa 5MB)</p>
+                                <p class="text-sm font-bold" :class="coverImagePreview ? 'text-white' : 'text-gray-900'" x-text="coverImagePreview ? 'Thay đổi ảnh bìa' : 'Kéo thả ảnh bìa hoặc duyệt qua'"></p>
+                                <p class="text-xs mt-1" :class="coverImagePreview ? 'text-gray-200' : 'text-gray-500'">Định dạng JPG, PNG (Tối đa 5MB)</p>
                             </div>
                         </div>
                     </div>
@@ -196,12 +200,25 @@
                             <span class="text-xs font-medium text-gray-500">Tối đa 5 ảnh</span>
                         </div>
                         <div class="grid grid-cols-3 md:grid-cols-5 gap-3">
+                            <input type="file" id="galleryInput" accept="image/jpeg, image/png" multiple class="hidden" @@change="handleGalleryImages" />
+                            
                             <!-- Add button -->
-                            <div class="border-2 border-dashed border-gray-300 rounded-xl aspect-square flex flex-col items-center justify-center bg-white hover:bg-gray-50 hover:border-gray-400 transition-colors cursor-pointer group">
+                            <div x-show="galleryPreviews.length < 5" class="border-2 border-dashed border-gray-300 rounded-xl aspect-square flex flex-col items-center justify-center bg-white hover:bg-gray-50 hover:border-gray-400 transition-colors cursor-pointer group" onclick="document.getElementById('galleryInput').click()">
                                 <span class="material-symbols-outlined text-[24px] text-gray-400 group-hover:text-gray-600">add</span>
                             </div>
+                            
+                            <!-- Real previews -->
+                            <template x-for="(preview, index) in galleryPreviews" :key="index">
+                                <div class="relative border border-gray-200 rounded-xl aspect-square overflow-hidden group">
+                                    <img :src="preview" class="w-full h-full object-cover" />
+                                    <button type="button" @@click.stop="removeGalleryImage(index)" class="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <span class="material-symbols-outlined text-[14px]">close</span>
+                                    </button>
+                                </div>
+                            </template>
+                            
                             <!-- Mock slots -->
-                            <template x-for="i in 4">
+                            <template x-for="i in Math.max(0, 4 - galleryPreviews.length)">
                                 <div class="border border-gray-100 rounded-xl aspect-square bg-gray-50/50 flex items-center justify-center">
                                     <span class="material-symbols-outlined text-gray-200 text-[24px]">image</span>
                                 </div>
@@ -223,7 +240,7 @@
                             <div>
                                 <label class="block text-sm font-semibold text-gray-900 mb-1.5">Giá cơ bản / buổi <span class="text-red-500">*</span></label>
                                 <div class="relative">
-                                    <input type="number" x-model.number="formData.pricePerSession" min="50000" step="10000"
+                                    <input type="text" :value="formatCurrencyValue(formData.pricePerSession)" @@input="formData.pricePerSession = parseCurrencyValue($event.target.value)"
                                            class="w-full bg-white border border-gray-300 text-gray-900 text-base font-bold rounded-xl px-4 py-2.5 pl-10 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition-all shadow-sm">
                                     <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-base">₫</span>
                                 </div>
@@ -231,7 +248,7 @@
                             <div>
                                 <label class="block text-sm font-semibold text-gray-900 mb-1.5">Phụ thu thêm khách</label>
                                 <div class="relative">
-                                    <input type="number" x-model.number="formData.pricePerGuest" min="0" step="10000"
+                                    <input type="text" :value="formatCurrencyValue(formData.pricePerGuest)" @@input="formData.pricePerGuest = parseCurrencyValue($event.target.value)"
                                            class="w-full bg-white border border-gray-300 text-gray-900 text-base font-bold rounded-xl px-4 py-2.5 pl-10 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition-all shadow-sm">
                                     <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-base">₫</span>
                                 </div>
@@ -292,7 +309,7 @@
                                     <button type="button" @@click="removeTag(tag)" class="text-gray-400 hover:text-red-500 focus:outline-none"><span class="material-symbols-outlined text-[14px]">close</span></button>
                                 </span>
                             </template>
-                            <input type="text" x-model="tagInput" @@keydown.enter.prevent="addTag()" @@keydown.space.prevent="addTag()" :disabled="formData.tags.length >= 5" 
+                            <input type="text" x-model="tagInput" @@keydown.enter.prevent="addTag()" :disabled="formData.tags.length >= 5" 
                                    placeholder="Gõ tag và nhấn Enter..." 
                                    class="bg-transparent border-none focus:ring-0 text-sm flex-grow outline-none placeholder-gray-400 disabled:opacity-50">
                         </div>
@@ -341,8 +358,40 @@
             return {
                 step: 1,
                 isSubmitting: false,
+                isEdit: @(ViewBag.IsEdit == true ? "true" : "false"),
                 tagInput: '',
                 customServiceInput: '',
+                
+                coverImagePreview: null,
+                coverImageFile: null,
+                galleryPreviews: [],
+                galleryFiles: [],
+                
+                handleCoverImage(e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        this.coverImageFile = file;
+                        this.coverImagePreview = URL.createObjectURL(file);
+                    }
+                },
+                
+                handleGalleryImages(e) {
+                    const files = Array.from(e.target.files);
+                    const remainingSlots = 5 - this.galleryFiles.length;
+                    const filesToAdd = files.slice(0, remainingSlots);
+                    
+                    filesToAdd.forEach(file => {
+                        this.galleryFiles.push(file);
+                        this.galleryPreviews.push(URL.createObjectURL(file));
+                    });
+                    
+                    e.target.value = '';
+                },
+                
+                removeGalleryImage(index) {
+                    this.galleryFiles.splice(index, 1);
+                    this.galleryPreviews.splice(index, 1);
+                },
                 
                 availableServices: [
                     { id: 'scooter', name: 'Di chuyển', icon: 'two_wheeler' },
@@ -353,16 +402,61 @@
                 ],
                 
                 formData: {
-                    name: '', duration: 4, maxGuests: 5, city: '', meetingPoint: '',
+                    id: '', name: '', duration: 4, maxGuests: 5, city: '', meetingPoint: '',
                     description: '', timeline: [{time: '08:00', activity: ''}], languages: ['Tiếng Việt', 'English'],
                     pricePerSession: 1000000, pricePerGuest: 0, includedServices: ['scooter'], tags: ['explore']
                 },
 
-                nextStep() {
-                    if (this.step === 1 && (!this.formData.name || !this.formData.city || !this.formData.meetingPoint)) {
-                        showToast('error', 'Vui lòng điền đủ Tên, Thành phố và Điểm hẹn.');
-                        return;
+                init() {
+                    if (this.isEdit) {
+                        try {
+                            const tourData = @Html.Raw(ViewBag.TourData ?? "null");
+                            if (tourData) {
+                                this.formData.id = tourData.id;
+                                this.formData.name = tourData.title;
+                                this.formData.duration = tourData.durationHours;
+                                this.formData.maxGuests = tourData.maxGroupSize;
+                                this.formData.city = tourData.city;
+                                this.formData.meetingPoint = tourData.meetingPoint;
+                                this.formData.description = tourData.description;
+                                this.formData.pricePerSession = tourData.pricePerSession;
+                                this.formData.pricePerGuest = tourData.pricePerPerson || 0;
+                                this.formData.timeline = tourData.timelineJson || [{time: '08:00', activity: ''}];
+                                this.formData.languages = tourData.languages || [];
+                                this.formData.includedServices = tourData.includedItems || [];
+                                this.formData.tags = tourData.tags || [];
+                                if (tourData.coverImageUrl) {
+                                    this.coverImagePreview = tourData.coverImageUrl;
+                                }
+                                if (tourData.galleryImageUrls && tourData.galleryImageUrls.length > 0) {
+                                    this.galleryPreviews = [...tourData.galleryImageUrls];
+                                }
+                            }
+                        } catch(e) {
+                            console.error("Failed to parse edit data", e);
+                        }
                     }
+                },
+
+                nextStep() {
+                    if (this.step === 1) {
+                        if (!this.formData.name || !this.formData.city || !this.formData.meetingPoint) {
+                            showToast('error', 'Vui lòng điền đủ Tên, Thành phố và Điểm hẹn.');
+                            return;
+                        }
+                        
+                        // Validate Timeline
+                        for (let i = 0; i < this.formData.timeline.length; i++) {
+                            if (!this.formData.timeline[i].time || !this.formData.timeline[i].activity) {
+                                showToast('error', 'Vui lòng điền đầy đủ Giờ và Hoạt động cho tất cả các mốc thời gian.');
+                                return;
+                            }
+                        }
+                        
+                        // Sort Timeline by time automatically
+                        this.formData.timeline.sort((a, b) => a.time.localeCompare(b.time));
+                    }
+                    
                     if (this.step < 4) this.step++;
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 },
@@ -396,7 +490,7 @@
                 },
 
                 addTag() {
-                    const tag = this.tagInput.trim().toLowerCase().replace(/[^a-z0-9-]/g, '');
+                    const tag = this.tagInput.trim().toLowerCase().replace(/[^\p{L}\p{N}\s-]/gu, '').replace(/\s+/g, '-');
                     if (tag && this.formData.tags.length < 5 && !this.formData.tags.includes(tag)) {
                         this.formData.tags.push(tag);
                     }
@@ -406,13 +500,75 @@
                     this.formData.tags = this.formData.tags.filter(tag => tag !== tagToRemove);
                 },
 
-                submitForm() {
+                formatCurrencyValue(val) {
+                    if (!val && val !== 0) return '';
+                    return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                },
+                
+                parseCurrencyValue(val) {
+                    if (!val) return 0;
+                    return parseInt(val.toString().replace(/,/g, '')) || 0;
+                },
+
+                async submitForm() {
+                    if (this.step === 1 && (!this.formData.name || !this.formData.city || !this.formData.meetingPoint)) {
+                        showToast('error', 'Vui lòng điền đủ Tên, Thành phố và Điểm hẹn.');
+                        return;
+                    }
+
                     this.isSubmitting = true;
-                    setTimeout(() => {
+                    
+                    try {
+                        const formData = new FormData();
+                        if (this.isEdit) formData.append("Id", this.formData.id);
+                        formData.append("Title", this.formData.name);
+                        formData.append("City", this.formData.city);
+                        formData.append("MeetingPoint", this.formData.meetingPoint);
+                        formData.append("Description", this.formData.description);
+                        formData.append("DurationHours", this.formData.duration);
+                        formData.append("PricePerSession", this.formData.pricePerSession);
+                        formData.append("PricePerGuest", this.formData.pricePerGuest);
+                        formData.append("MaxGroupSize", this.formData.maxGuests);
+                        
+                        const selectedServiceNames = this.formData.includedServices.map(id => {
+                            const svc = this.availableServices.find(s => s.id === id);
+                            return svc ? svc.name : id;
+                        });
+                        formData.append("IncludedServices", JSON.stringify(selectedServiceNames));
+                        formData.append("Languages", JSON.stringify(this.formData.languages));
+                        formData.append("Tags", JSON.stringify(this.formData.tags));
+                        formData.append("TimelineJson", JSON.stringify(this.formData.timeline));
+
+                        if (this.coverImageFile) {
+                            formData.append("CoverImage", this.coverImageFile);
+                        }
+                        
+                        this.galleryFiles.forEach((file) => {
+                            formData.append("GalleryImages", file);
+                        });
+
+                        const response = await fetch('/Guide/CreateTour', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            showToast('success', result.message || 'Tuyệt vời! Gói trải nghiệm của bạn đã được xuất bản.');
+                            setTimeout(() => { 
+                                if (window.Turbo) Turbo.visit('/Guide/MyTours');
+                                else window.location.href = '/Guide/MyTours';
+                            }, 1500);
+                        } else {
+                            showToast('error', result.message || 'Có lỗi xảy ra khi lưu.');
+                        }
+                    } catch (error) {
+                        showToast('error', 'Lỗi hệ thống. Vui lòng thử lại sau.');
+                        console.error(error);
+                    } finally {
                         this.isSubmitting = false;
-                        showToast('success', 'Tuyệt vời! Gói trải nghiệm của bạn đã được xuất bản.');
-                        setTimeout(() => { window.location.href = '/Guide/MyTours'; }, 1500);
-                    }, 1500);
+                    }
                 }
             }
         }

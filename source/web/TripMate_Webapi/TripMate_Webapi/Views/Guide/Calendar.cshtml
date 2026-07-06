@@ -4,56 +4,214 @@
     Layout = "_GuideLayout";
 }
 
-@section Styles {
-    <!-- FullCalendar CSS -->
-    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
-    <style>
-        .fc-toolbar-title {
-            font-size: 1.25rem !important;
-            font-weight: 700 !important;
-            color: #1f2937 !important;
+<!-- FullCalendar CSS -->
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+<style>
+    .fc-toolbar-title {
+        font-size: 1.25rem !important;
+        font-weight: 700 !important;
+        color: #1f2937 !important;
+    }
+    .fc-button-primary {
+        background-color: #FF6B35 !important;
+        border-color: #FF6B35 !important;
+    }
+    .fc-button-primary:hover {
+        background-color: #E55A2B !important;
+        border-color: #E55A2B !important;
+    }
+    .fc-button-active {
+        background-color: #E55A2B !important;
+    }
+    .fc-day-today {
+        background-color: #fff7ed !important; /* orange-50 */
+    }
+    .fc-daygrid-day-number {
+        color: #4b5563 !important;
+        font-weight: 500 !important;
+        padding: 8px !important;
+    }
+    /* Custom day states */
+    .fc-blocked-day {
+        background-color: #fee2e2 !important; /* red-100 */
+        cursor: pointer;
+    }
+    .fc-booked-day {
+        background-color: #fef3c7 !important; /* amber-100 */
+        cursor: not-allowed;
+    }
+    .fc-available-day {
+        cursor: pointer;
+    }
+    .fc-available-day:hover {
+        background-color: #f3f4f6 !important;
+    }
+    .fc-scrollgrid {
+        border-color: #f3f4f6 !important;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+</style>
+
+<script>
+    function calendarManager() {
+        return {
+            showBanner: true,
+            calendar: null,
+            currentMonth: new Date().getMonth() + 1,
+            daysInMonth: 30, // Tạm thời
+            
+            // Mock data from server
+            originalBlockedDates: ['2026-06-15', '2026-06-18', '2026-06-19'],
+            bookedDates: ['2026-06-12', '2026-06-20', '2026-06-21'],
+            
+            // Current state
+            blockedDates: [],
+            hasChanges: false,
+            isSaving: false,
+
+            initCalendar() {
+                // Clone original data to state
+                this.blockedDates = [...this.originalBlockedDates];
+                
+                const calendarEl = document.getElementById('calendar');
+                
+                this.calendar = new FullCalendar.Calendar(calendarEl, {
+                    initialView: 'dayGridMonth',
+                    initialDate: '2026-06-01', // Set to target month for demo
+                    locale: 'vi',
+                    headerToolbar: {
+                        left: 'prev,next today',
+                        center: 'title',
+                        right: '' // dayGridMonth,timeGridWeek
+                    },
+                    buttonText: {
+                        today: 'Hôm nay',
+                        month: 'Tháng',
+                        week: 'Tuần'
+                    },
+                    firstDay: 1, // Start on Monday
+                    height: 'auto',
+                    
+                    // Custom rendering for days
+                    dayCellDidMount: (info) => {
+                        const dateStr = info.date.toISOString().split('T')[0];
+                        const cell = info.el;
+                        
+                        // Clear existing classes
+                        cell.classList.remove('fc-blocked-day', 'fc-booked-day', 'fc-available-day');
+                        
+                        if (this.bookedDates.includes(dateStr)) {
+                            cell.classList.add('fc-booked-day');
+                            cell.title = "Đã có booking ngày này";
+                        } else if (this.blockedDates.includes(dateStr)) {
+                            cell.classList.add('fc-blocked-day');
+                            cell.title = "Bạn đã chặn ngày này";
+                        } else {
+                            cell.classList.add('fc-available-day');
+                            cell.title = "Ngày trống, có thể nhận khách";
+                        }
+                    },
+                    
+                    // Handle clicking a date
+                    dateClick: (info) => {
+                        const dateStr = info.dateStr;
+                        
+                        // Cannot block dates that already have bookings
+                        if (this.bookedDates.includes(dateStr)) {
+                            showToast('warning', 'Ngày này đã có tour, không thể chặn!');
+                            return;
+                        }
+                        
+                        this.toggleDate(dateStr);
+                    },
+                    
+                    // Handle changing months
+                    datesSet: (info) => {
+                        const midDate = new Date((info.start.getTime() + info.end.getTime()) / 2);
+                        this.currentMonth = midDate.getMonth() + 1;
+                        this.daysInMonth = new Date(midDate.getFullYear(), midDate.getMonth() + 1, 0).getDate();
+                    }
+                });
+                
+                this.calendar.render();
+            },
+            
+            toggleDate(dateStr) {
+                const index = this.blockedDates.indexOf(dateStr);
+                if (index > -1) {
+                    // Remove from blocked
+                    this.blockedDates.splice(index, 1);
+                } else {
+                    // Add to blocked
+                    this.blockedDates.push(dateStr);
+                }
+                
+                this.checkChanges();
+                
+                // Re-render calendar cells
+                if (this.calendar) {
+                    // Trick to force re-render without changing view
+                    const cells = document.querySelectorAll('.fc-day');
+                    cells.forEach(cell => {
+                        const d = cell.getAttribute('data-date');
+                        if (d === dateStr) {
+                            cell.classList.remove('fc-blocked-day', 'fc-available-day');
+                            cell.classList.add(this.blockedDates.includes(dateStr) ? 'fc-blocked-day' : 'fc-available-day');
+                        }
+                    });
+                }
+            },
+            
+            clearAllBlocked() {
+                if (this.blockedDates.length === 0) return;
+                if (confirm('Bạn chắc chắn muốn bỏ chặn tất cả các ngày trong tháng?')) {
+                    this.blockedDates = [];
+                    this.checkChanges();
+                    this.calendar.render(); // Re-render whole calendar
+                }
+            },
+            
+            checkChanges() {
+                // Check if current blockedDates is different from originalBlockedDates
+                const sortedCurrent = [...this.blockedDates].sort().join(',');
+                const sortedOriginal = [...this.originalBlockedDates].sort().join(',');
+                this.hasChanges = sortedCurrent !== sortedOriginal;
+            },
+            
+            discardChanges() {
+                this.blockedDates = [...this.originalBlockedDates];
+                this.hasChanges = false;
+                this.calendar.render();
+            },
+            
+            async saveChanges() {
+                this.isSaving = true;
+                
+                // Simulate API call
+                setTimeout(() => {
+                    this.originalBlockedDates = [...this.blockedDates];
+                    this.hasChanges = false;
+                    this.isSaving = false;
+                    showToast('success', 'Đã cập nhật lịch rảnh thành công!');
+                }, 1000);
+            },
+            
+            getAvailableDays() {
+                return this.daysInMonth - this.blockedDates.length - this.bookedDates.length;
+            },
+            
+            sortedBlockedDates() {
+                return [...this.blockedDates].sort();
+            },
+            
+            formatDate(dateStr) {
+                const parts = dateStr.split('-');
+                return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
         }
-        .fc-button-primary {
-            background-color: #FF6B35 !important;
-            border-color: #FF6B35 !important;
-        }
-        .fc-button-primary:hover {
-            background-color: #E55A2B !important;
-            border-color: #E55A2B !important;
-        }
-        .fc-button-active {
-            background-color: #E55A2B !important;
-        }
-        .fc-day-today {
-            background-color: #fff7ed !important; /* orange-50 */
-        }
-        .fc-daygrid-day-number {
-            color: #4b5563 !important;
-            font-weight: 500 !important;
-            padding: 8px !important;
-        }
-        /* Custom day states */
-        .fc-blocked-day {
-            background-color: #fee2e2 !important; /* red-100 */
-            cursor: pointer;
-        }
-        .fc-booked-day {
-            background-color: #fef3c7 !important; /* amber-100 */
-            cursor: not-allowed;
-        }
-        .fc-available-day {
-            cursor: pointer;
-        }
-        .fc-available-day:hover {
-            background-color: #f3f4f6 !important;
-        }
-        .fc-scrollgrid {
-            border-color: #f3f4f6 !important;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-    </style>
-}
+    }
+</script>
 
 <div x-data="calendarManager()" x-init="initCalendar()">
     <!-- Banner Hướng Dẫn -->
@@ -177,165 +335,3 @@
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        function calendarManager() {
-            return {
-                showBanner: true,
-                calendar: null,
-                currentMonth: new Date().getMonth() + 1,
-                daysInMonth: 30, // Tạm thời
-                
-                // Mock data from server
-                originalBlockedDates: ['2026-06-15', '2026-06-18', '2026-06-19'],
-                bookedDates: ['2026-06-12', '2026-06-20', '2026-06-21'],
-                
-                // Current state
-                blockedDates: [],
-                hasChanges: false,
-                isSaving: false,
-
-                initCalendar() {
-                    // Clone original data to state
-                    this.blockedDates = [...this.originalBlockedDates];
-                    
-                    const calendarEl = document.getElementById('calendar');
-                    
-                    this.calendar = new FullCalendar.Calendar(calendarEl, {
-                        initialView: 'dayGridMonth',
-                        initialDate: '2026-06-01', // Set to target month for demo
-                        locale: 'vi',
-                        headerToolbar: {
-                            left: 'prev,next today',
-                            center: 'title',
-                            right: '' // dayGridMonth,timeGridWeek
-                        },
-                        buttonText: {
-                            today: 'Hôm nay',
-                            month: 'Tháng',
-                            week: 'Tuần'
-                        },
-                        firstDay: 1, // Start on Monday
-                        height: 'auto',
-                        
-                        // Custom rendering for days
-                        dayCellDidMount: (info) => {
-                            const dateStr = info.date.toISOString().split('T')[0];
-                            const cell = info.el;
-                            
-                            // Clear existing classes
-                            cell.classList.remove('fc-blocked-day', 'fc-booked-day', 'fc-available-day');
-                            
-                            if (this.bookedDates.includes(dateStr)) {
-                                cell.classList.add('fc-booked-day');
-                                cell.title = "Đã có booking ngày này";
-                            } else if (this.blockedDates.includes(dateStr)) {
-                                cell.classList.add('fc-blocked-day');
-                                cell.title = "Bạn đã chặn ngày này";
-                            } else {
-                                cell.classList.add('fc-available-day');
-                                cell.title = "Ngày trống, có thể nhận khách";
-                            }
-                        },
-                        
-                        // Handle clicking a date
-                        dateClick: (info) => {
-                            const dateStr = info.dateStr;
-                            
-                            // Cannot block dates that already have bookings
-                            if (this.bookedDates.includes(dateStr)) {
-                                showToast('warning', 'Ngày này đã có tour, không thể chặn!');
-                                return;
-                            }
-                            
-                            this.toggleDate(dateStr);
-                        },
-                        
-                        // Handle changing months
-                        datesSet: (info) => {
-                            const midDate = new Date((info.start.getTime() + info.end.getTime()) / 2);
-                            this.currentMonth = midDate.getMonth() + 1;
-                            this.daysInMonth = new Date(midDate.getFullYear(), midDate.getMonth() + 1, 0).getDate();
-                        }
-                    });
-                    
-                    this.calendar.render();
-                },
-                
-                toggleDate(dateStr) {
-                    const index = this.blockedDates.indexOf(dateStr);
-                    if (index > -1) {
-                        // Remove from blocked
-                        this.blockedDates.splice(index, 1);
-                    } else {
-                        // Add to blocked
-                        this.blockedDates.push(dateStr);
-                    }
-                    
-                    this.checkChanges();
-                    
-                    // Re-render calendar cells
-                    if (this.calendar) {
-                        // Trick to force re-render without changing view
-                        const cells = document.querySelectorAll('.fc-day');
-                        cells.forEach(cell => {
-                            const d = cell.getAttribute('data-date');
-                            if (d === dateStr) {
-                                cell.classList.remove('fc-blocked-day', 'fc-available-day');
-                                cell.classList.add(this.blockedDates.includes(dateStr) ? 'fc-blocked-day' : 'fc-available-day');
-                            }
-                        });
-                    }
-                },
-                
-                clearAllBlocked() {
-                    if (this.blockedDates.length === 0) return;
-                    if (confirm('Bạn chắc chắn muốn bỏ chặn tất cả các ngày trong tháng?')) {
-                        this.blockedDates = [];
-                        this.checkChanges();
-                        this.calendar.render(); // Re-render whole calendar
-                    }
-                },
-                
-                checkChanges() {
-                    // Check if current blockedDates is different from originalBlockedDates
-                    const sortedCurrent = [...this.blockedDates].sort().join(',');
-                    const sortedOriginal = [...this.originalBlockedDates].sort().join(',');
-                    this.hasChanges = sortedCurrent !== sortedOriginal;
-                },
-                
-                discardChanges() {
-                    this.blockedDates = [...this.originalBlockedDates];
-                    this.hasChanges = false;
-                    this.calendar.render();
-                },
-                
-                async saveChanges() {
-                    this.isSaving = true;
-                    
-                    // Simulate API call
-                    setTimeout(() => {
-                        this.originalBlockedDates = [...this.blockedDates];
-                        this.hasChanges = false;
-                        this.isSaving = false;
-                        showToast('success', 'Đã cập nhật lịch rảnh thành công!');
-                    }, 1000);
-                },
-                
-                getAvailableDays() {
-                    return this.daysInMonth - this.blockedDates.length - this.bookedDates.length;
-                },
-                
-                sortedBlockedDates() {
-                    return [...this.blockedDates].sort();
-                },
-                
-                formatDate(dateStr) {
-                    const parts = dateStr.split('-');
-                    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-                }
-            }
-        }
-    </script>
-}
