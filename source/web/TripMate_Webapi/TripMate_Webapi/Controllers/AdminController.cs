@@ -3,6 +3,7 @@ using TripMate_WebAPI.Services;
 using System.Text.Json;
 using System.Security.Claims;
 using ClosedXML.Excel;
+
 namespace TripMate_Webapi.Controllers
 {
     public class AdminController : Controller
@@ -198,7 +199,7 @@ namespace TripMate_Webapi.Controllers
                 var tourCounts = bookings
                     .Where(b => b.Package != null && !string.IsNullOrEmpty(b.Package.Title))
                     .GroupBy(b => b.Package!.Title)
-                    .Select(g => new { name = g.Key, count = g.Count() })
+                    .Select(g => new { name = g.Key ?? "", count = g.Count() })
                     .OrderByDescending(x => x.count)
                     .Take(5)
                     .ToList();

@@ -21,6 +21,22 @@ namespace TripMate_Webapi.Repositories
             return response.Models.FirstOrDefault() ?? entity;
         }
 
+        public async Task<ExperiencePackageEntity> UpdatePackageAsync(ExperiencePackageEntity entity)
+        {
+            var response = await _supabase.From<ExperiencePackageEntity>()
+                .Where(e => e.Id == entity.Id && e.GuideProfileId == entity.GuideProfileId)
+                .Update(entity);
+            return response.Models.FirstOrDefault() ?? entity;
+        }
+
+        public async Task<ExperiencePackageEntity?> GetPackageByIdAsync(string id, string guideId)
+        {
+            var response = await _supabase.From<ExperiencePackageEntity>()
+                .Where(e => e.Id == id && e.GuideProfileId == guideId)
+                .Single();
+            return response;
+        }
+
         public async Task<List<ExperiencePackageEntity>> GetPackagesByGuideIdAsync(string guideId)
         {
             var response = await _supabase.From<ExperiencePackageEntity>()

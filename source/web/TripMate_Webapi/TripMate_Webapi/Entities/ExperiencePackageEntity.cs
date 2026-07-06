@@ -57,7 +57,7 @@ public class ExperiencePackageEntity : BaseModel
     public List<string>? GalleryImageUrls { get; set; }
 
     [Column("timeline_json")]
-    public string TimelineJson { get; set; } = "[]";
+    public List<Dictionary<string, string>>? TimelineJson { get; set; }
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

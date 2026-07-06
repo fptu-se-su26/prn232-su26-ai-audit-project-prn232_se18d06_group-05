@@ -41,6 +41,20 @@ namespace TripMate_WebAPI.Services
             var languagesList = DeserializeJsonArray(dto.Languages);
             var tagsList = DeserializeJsonArray(dto.Tags);
 
+            List<Dictionary<string, string>>? timelineList = null;
+            try 
+            {
+                if (!string.IsNullOrEmpty(dto.TimelineJson))
+                {
+                    timelineList = System.Text.Json.JsonSerializer.Deserialize<List<Dictionary<string, string>>>(dto.TimelineJson);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ExperienceService] Failed to parse TimelineJson: {ex.Message}");
+                timelineList = new List<Dictionary<string, string>>();
+            }
+
             // 4. Map DTO to Entity
             var entity = new ExperiencePackageEntity
             {
@@ -56,15 +70,37 @@ namespace TripMate_WebAPI.Services
                 IncludedItems = includedServicesList,
                 Languages = languagesList,
                 Tags = tagsList,
-                TimelineJson = dto.TimelineJson,
+                TimelineJson = timelineList,
                 CoverImageUrl = coverUrl,
                 GalleryImageUrls = galleryUrls,
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow
             };
 
+            if (!string.IsNullOrEmpty(dto.Id))
+            {
+                // Is an update
+                var existing = await _repository.GetPackageByIdAsync(dto.Id, guideProfileId);
+                if (existing != null)
+                {
+                    entity.Id = existing.Id;
+                    entity.CreatedAt = existing.CreatedAt;
+                    entity.IsActive = existing.IsActive;
+                    // Preserve old images if not newly uploaded
+                    if (string.IsNullOrEmpty(coverUrl)) entity.CoverImageUrl = existing.CoverImageUrl;
+                    if (galleryUrls == null || galleryUrls.Count == 0) entity.GalleryImageUrls = existing.GalleryImageUrls;
+                    
+                    return await _repository.UpdatePackageAsync(entity);
+                }
+            }
+
             // 5. Save to Database
             return await _repository.CreatePackageAsync(entity);
+        }
+
+        public async Task<ExperiencePackageEntity?> GetPackageByIdAsync(string id, string guideProfileId)
+        {
+            return await _repository.GetPackageByIdAsync(id, guideProfileId);
         }
 
         public async Task<List<MyTourDashboardDto>> GetMyToursAsync(string guideProfileId)
@@ -102,6 +138,19 @@ namespace TripMate_WebAPI.Services
             // Note: You might want to delete images from Cloudinary here as well
             // using _cloudinaryService.DeleteImageAsync(publicId) before deleting the record
             return await _repository.DeletePackageAsync(tourId, guideProfileId);
+        }
+
+        public async Task<ExperiencePackageEntity?> DuplicateTourAsync(string tourId, string guideProfileId)
+        {
+            var existingTour = await _repository.GetPackageByIdAsync(tourId, guideProfileId);
+            if (existingTour == null) return null;
+
+            existingTour.Id = Guid.NewGuid().ToString();
+            existingTour.Title = existingTour.Title + " (Bản sao)";
+            existingTour.IsActive = false; // By default, duplicated tours are inactive until reviewed
+            existingTour.CreatedAt = DateTime.UtcNow;
+
+            return await _repository.CreatePackageAsync(existingTour);
         }
 
         private List<string> DeserializeJsonArray(string json)

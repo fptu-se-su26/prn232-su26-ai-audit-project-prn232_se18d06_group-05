@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
-
+using TripMate_WebAPI.DTOs.Auth;
 
 namespace TripMate_Webapi.Controllers
 {
@@ -46,12 +46,18 @@ namespace TripMate_Webapi.Controllers
         }
 
         [HttpGet("/Auth/Logout")]
-        public IActionResult MvcLogout()
+        public IActionResult MvcLogout() 
         {
-            Response.Cookies.Delete("access_token");
+            Response.Cookies.Delete("access_token", new CookieOptions { Path = "/" });
             return RedirectToAction("LandingPage", "LandingPage");
         }
 
+        [HttpPost("/api/auth/logout")]
+        public IActionResult ApiLogout()
+        {
+            Response.Cookies.Delete("access_token", new CookieOptions { Path = "/" });
+            return Ok(new { message = "Đăng xuất thành công" });
+        }
 
         /// <summary>
         /// Login endpoint
@@ -90,14 +96,13 @@ namespace TripMate_Webapi.Controllers
                     return Unauthorized(new { message = "Tài khoản của bạn đang chờ Admin phê duyệt hoặc đã bị vô hiệu hóa. Vui lòng quay lại sau." });
                 }
 
-                // Set cookie for MVC views to read
                 var cookieOptions = new CookieOptions
                 {
                     HttpOnly = true,
                     Secure = false, // Set to true in production
                     SameSite = SameSiteMode.Lax,
-                    Path = "/",
-                    Expires = DateTime.UtcNow.AddDays(7)
+                    Expires = DateTime.UtcNow.AddDays(7),
+                    Path = "/"
                 };
                 Response.Cookies.Append("access_token", result.AccessToken, cookieOptions);
 
@@ -285,14 +290,13 @@ namespace TripMate_Webapi.Controllers
 
                 _logger.LogInformation("Google login successful for email: {Email}", result.User?.Email);
 
-                // Set cookie for MVC views to read
                 var cookieOptions = new CookieOptions
                 {
                     HttpOnly = true,
                     Secure = false, // Set to true in production
                     SameSite = SameSiteMode.Lax,
-                    Path = "/",
-                    Expires = DateTime.UtcNow.AddDays(7)
+                    Expires = DateTime.UtcNow.AddDays(7),
+                    Path = "/"
                 };
                 Response.Cookies.Append("access_token", result.AccessToken, cookieOptions);
 
@@ -395,15 +399,5 @@ namespace TripMate_Webapi.Controllers
             }
         }
 
-        /// <summary>
-        /// Logout endpoint (optional - mainly client-side)
-        /// POST /api/auth/logout
-        /// </summary>
-        [HttpPost("/api/auth/logout")]
-        public IActionResult Logout()
-        {
-            Response.Cookies.Delete("access_token");
-            return Ok(new { message = "Đăng xuất thành công" });
-        }
     }
 }

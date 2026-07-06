@@ -5,6 +5,7 @@ namespace TripMate_WebAPI.DTOs.Tour.Requests
 {
     public class CreateTourDto
     {
+        public string? Id { get; set; }
         public string Title { get; set; } = string.Empty;
         public string City { get; set; } = string.Empty;
         public string MeetingPoint { get; set; } = string.Empty;
