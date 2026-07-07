@@ -1,13 +1,75 @@
+@using TripMate_WebAPI.DTOs.Tour.Responses
 @{
     ViewData["Title"] = "Quản lý Gói Tour";
     ViewData["ActivePage"] = "MyTours";
     Layout = "_GuideLayout";
     
-    var tours = ViewBag.Tours as IEnumerable<dynamic>;
+    var tours = ViewBag.Tours as IEnumerable<MyTourDashboardDto>;
     var activeCount = tours?.Count(t => t.IsActive) ?? 0;
 }
 
-<div x-data="{ filter: 'all', searchQuery: '', openDropdown: null }" @@click.outside="openDropdown = null">
+<script>
+    function myToursApp() {
+        return {
+            filter: 'all',
+            searchQuery: '',
+            openDropdown: null,
+            
+            async toggleStatus(tourId) {
+                this.openDropdown = null;
+                if(!confirm("Bạn có chắc muốn thay đổi trạng thái gói tour này?")) return;
+                
+                try {
+                    const res = await fetch(`/ToggleTourStatus/${tourId}`, { method: 'PATCH' });
+                    const result = await res.json();
+                    if (result.success) {
+                        if (window.Turbo) Turbo.visit(window.location.href); else window.location.reload();
+                    } else {
+                        alert(result.message);
+                    }
+                } catch(e) {
+                    alert("Lỗi hệ thống");
+                }
+            },
+            
+            async deleteTour(tourId) {
+                this.openDropdown = null;
+                if(!confirm("Bạn có chắc muốn XÓA VĨNH VIỄN gói tour này?")) return;
+                
+                try {
+                    const res = await fetch(`/DeleteTour/${tourId}`, { method: 'DELETE' });
+                    const result = await res.json();
+                    if (result.success) {
+                        if (window.Turbo) Turbo.visit(window.location.href); else window.location.reload();
+                    } else {
+                        alert(result.message);
+                    }
+                } catch(e) {
+                    alert("Lỗi hệ thống");
+                }
+            },
+            
+            async duplicateTour(tourId) {
+                this.openDropdown = null;
+                if(!confirm("Bạn muốn nhân bản gói tour này? Bản sao sẽ ở trạng thái Ẩn.")) return;
+                
+                try {
+                    const res = await fetch(`/DuplicateTour/${tourId}`, { method: 'POST' });
+                    const result = await res.json();
+                    if (result.success) {
+                        if (window.Turbo) Turbo.visit(window.location.href); else window.location.reload();
+                    } else {
+                        alert(result.message);
+                    }
+                } catch(e) {
+                    alert("Lỗi hệ thống");
+                }
+            }
+        };
+    }
+</script>
+
+<div x-data="myToursApp()" @@click.outside="openDropdown = null">
     <!-- Header Area -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
@@ -128,25 +190,25 @@
                                     <span class="material-symbols-outlined text-[18px]">edit</span>
                                 </a>
                                 
-                                <button @@click.stop="openDropdown === @tour.Id ? openDropdown = null : openDropdown = @tour.Id" class="w-9 h-9 rounded-full bg-gray-50 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors" title="Thêm hành động">
+                                <button @@click.stop="openDropdown === '@tour.Id' ? openDropdown = null : openDropdown = '@tour.Id'" class="w-9 h-9 rounded-full bg-gray-50 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors" title="Thêm hành động">
                                     <span class="material-symbols-outlined text-[20px]">more_vert</span>
                                 </button>
                                 
                                 <!-- Dropdown Menu -->
-                                <div x-show="openDropdown === @tour.Id" 
+                                <div x-show="openDropdown === '@tour.Id'" 
                                      x-transition.opacity.duration.200ms
                                      style="display: none;"
                                      class="absolute right-0 bottom-12 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-30 overflow-hidden">
-                                    <button class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                    <button @@click="toggleStatus('@tour.Id')" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                         <span class="material-symbols-outlined text-[18px]">visibility</span>
                                         @(tour.IsActive ? "Ẩn gói tour này" : "Hiện gói tour này")
                                     </button>
-                                    <button class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2">
+                                    <button @@click="duplicateTour('@tour.Id')" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2">
                                         <span class="material-symbols-outlined text-[18px]">content_copy</span>
                                         Nhân bản (Duplicate)
                                     </button>
                                     <div class="border-t border-gray-100 my-1"></div>
-                                    <button class="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-2">
+                                    <button @@click="deleteTour('@tour.Id')" class="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-2">
                                         <span class="material-symbols-outlined text-[18px]">delete</span>
                                         Xóa gói tour
                                     </button>
@@ -158,4 +220,3 @@
             }
         }
     </div>
-</div>

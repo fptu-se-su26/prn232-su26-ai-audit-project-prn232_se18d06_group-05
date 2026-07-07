@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
-
+using TripMate_WebAPI.DTOs.Auth;
 
 namespace TripMate_Webapi.Controllers
 {
@@ -46,8 +46,18 @@ namespace TripMate_Webapi.Controllers
         }
 
         [HttpGet("/Auth/Logout")]
-        public IActionResult MvcLogout() => RedirectToAction("LandingPage", "LandingPage");
+        public IActionResult MvcLogout() 
+        {
+            Response.Cookies.Delete("access_token", new CookieOptions { Path = "/" });
+            return RedirectToAction("LandingPage", "LandingPage");
+        }
 
+        [HttpPost("/api/auth/logout")]
+        public IActionResult ApiLogout()
+        {
+            Response.Cookies.Delete("access_token", new CookieOptions { Path = "/" });
+            return Ok(new { message = "Đăng xuất thành công" });
+        }
 
         /// <summary>
         /// Login endpoint
@@ -85,6 +95,16 @@ namespace TripMate_Webapi.Controllers
                     _logger.LogWarning("Pending or inactive guide login attempt for email: {Email}", request.Email);
                     return Unauthorized(new { message = "Tài khoản của bạn đang chờ Admin phê duyệt hoặc đã bị vô hiệu hóa. Vui lòng quay lại sau." });
                 }
+
+                var cookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = false, // Set to true in production
+                    SameSite = SameSiteMode.Lax,
+                    Expires = DateTime.UtcNow.AddDays(7),
+                    Path = "/"
+                };
+                Response.Cookies.Append("access_token", result.AccessToken, cookieOptions);
 
                 return Ok(new
                 {
@@ -270,6 +290,16 @@ namespace TripMate_Webapi.Controllers
 
                 _logger.LogInformation("Google login successful for email: {Email}", result.User?.Email);
 
+                var cookieOptions = new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = false, // Set to true in production
+                    SameSite = SameSiteMode.Lax,
+                    Expires = DateTime.UtcNow.AddDays(7),
+                    Path = "/"
+                };
+                Response.Cookies.Append("access_token", result.AccessToken, cookieOptions);
+
                 return Ok(new
                 {
                     accessToken = result.AccessToken,
@@ -369,68 +399,5 @@ namespace TripMate_Webapi.Controllers
             }
         }
 
-        /// <summary>
-        /// Logout endpoint (optional - mainly client-side)
-        /// POST /api/auth/logout
-        /// </summary>
-        [HttpPost("/api/auth/logout")]
-        public IActionResult Logout()
-        {
-            // Logout is mainly handled client-side by clearing localStorage
-            // Server-side logout would involve invalidating the token (if using sessions)
-            return Ok(new { message = "Đăng xuất thành công" });
-        }
-    }
-
-    // Request DTOs
-    public class LoginRequest
-    {
-        public string Email { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-    }
-
-    public class GoogleLoginRequest
-    {
-        public string IdToken { get; set; } = string.Empty;
-        public string? AccessToken { get; set; }
-    }
-
-    public class ForgotPasswordRequest
-    {
-        public string Email { get; set; } = string.Empty;
-        public string CaptchaToken { get; set; } = string.Empty;
-    }
-
-    public class ResetPasswordRequest
-    {
-        public string Email { get; set; } = string.Empty;
-        public string Token { get; set; } = string.Empty;
-        public string NewPassword { get; set; } = string.Empty;
-    }
-
-    public class AuthApiRegisterRequest
-    {
-        [FromForm(Name = "email")]
-        public string Email { get; set; } = string.Empty;
-        [FromForm(Name = "password")]
-        public string Password { get; set; } = string.Empty;
-        [FromForm(Name = "fullName")]
-        public string FullName { get; set; } = string.Empty;
-        [FromForm(Name = "phoneNumber")]
-        public string PhoneNumber { get; set; } = string.Empty;
-        [FromForm(Name = "role")]
-        public string? Role { get; set; } = "traveler";
-        
-        // Guide-specific fields
-        [FromForm(Name = "experience")]
-        public string? Experience { get; set; }
-        [FromForm(Name = "specialization")]
-        public string? Specialization { get; set; }
-        [FromForm(Name = "languages")]
-        public string? Languages { get; set; }
-        [FromForm(Name = "bio")]
-        public string? Bio { get; set; }
-        [FromForm(Name = "certificate")]
-        public IFormFile? Certificate { get; set; }
     }
 }

@@ -120,6 +120,10 @@ public class DatabaseSeeder
                         _logger.LogError(syncEx, "Failed to sync profile for existing account {Email}", account.Email);
                     }
                 }
+                else if (ex.Message.Contains("yêu cầu xác thực email") || ex.Message.Contains("Đăng ký thành công"))
+                {
+                    _logger.LogInformation("Successfully created account: {Email} (Requires email confirmation)", account.Email);
+                }
                 else
                 {
                     _logger.LogError(ex, "Failed to seed account {Email}", account.Email);
@@ -307,10 +311,74 @@ public class DatabaseSeeder
                     }
                 }
             }
+
+            // M4: Đảm bảo gói Custom Itinerary (00000000-0000-0000-0000-000000000000) luôn tồn tại
+            await EnsureCustomPackageExistsAsync();
+            
+            _logger.LogInformation("Database seeding completed.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to seed guide profile for {Email}", account.Email);
+            _logger.LogError(ex, "An error occurred while seeding the database.");
+        }
+    }
+
+    private async Task EnsureCustomPackageExistsAsync()
+    {
+        try
+        {
+            var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
+            var anonKey = Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
+            using var http = new System.Net.Http.HttpClient();
+
+            // Check if it exists
+            var checkReq = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, $"{supabaseUrl}/rest/v1/experience_packages?id=eq.00000000-0000-0000-0000-000000000000");
+            checkReq.Headers.Add("apikey", anonKey);
+            checkReq.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", anonKey);
+            var checkRes = await http.SendAsync(checkReq);
+            var content = await checkRes.Content.ReadAsStringAsync();
+            
+            if (content == "[]")
+            {
+                // Find any guide id
+                var guideReq = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, $"{supabaseUrl}/rest/v1/guide_profiles?limit=1");
+                guideReq.Headers.Add("apikey", anonKey);
+                guideReq.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", anonKey);
+                var guideRes = await http.SendAsync(guideReq);
+                var guideContent = await guideRes.Content.ReadAsStringAsync();
+                var guides = System.Text.Json.JsonSerializer.Deserialize<List<TripMate_Webapi.Entities.GuideProfileEntity>>(guideContent);
+                
+                if (guides != null && guides.Any())
+                {
+                    var guideId = guides.First().Id;
+                    var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, $"{supabaseUrl}/rest/v1/experience_packages");
+                    req.Headers.Add("apikey", anonKey);
+                    req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", anonKey);
+                    req.Headers.Add("Prefer", "return=representation");
+                    
+                    var body = new
+                    {
+                        id = "00000000-0000-0000-0000-000000000000",
+                        guide_profile_id = guideId,
+                        title = "Custom Itinerary",
+                        description = "A personalized tour based on your preferences.",
+                        duration_hours = 4,
+                        price_per_session = 0,
+                        price_per_person = 500000,
+                        max_group_size = 10,
+                        is_active = true,
+                        created_at = DateTime.UtcNow
+                    };
+                    
+                    req.Content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(body), System.Text.Encoding.UTF8, "application/json");
+                    await http.SendAsync(req);
+                    _logger.LogInformation("Seeded dummy Custom Package 000...000 successfully.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to ensure custom package exists.");
         }
     }
 }
