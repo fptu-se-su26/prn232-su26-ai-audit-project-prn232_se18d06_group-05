@@ -191,7 +191,7 @@
                         </button>
                         <!-- Dropdown Menu -->
                         <div class="absolute right-0 top-full mt-2 w-56 bg-surface rounded-xl shadow-2xl border border-outline-variant/30 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                            <a href="/Traveler/Dashboard" class="block p-4 border-b border-outline-variant/30 hover:bg-surface-variant transition-colors">
+                            <a href="${userRole === 'guide' ? '/Guide/Dashboard' : '/Traveler/Dashboard'}" class="block p-4 border-b border-outline-variant/30 hover:bg-surface-variant transition-colors">
                                 <p class="font-bold text-on-surface">${displayName}</p>
                                 <p class="text-xs text-on-surface-variant">${userEmail}</p>
                                 <span class="inline-block mt-2 px-3 py-1 bg-primary-container text-primary text-xs font-bold rounded-full capitalize">
@@ -209,11 +209,17 @@
                                     <span class="font-medium">Messages</span>
                                 </a>
                                 ` : ''}
-                                <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                ${userRole === 'guide' ? `
+                                <a href="/Guide/Dashboard" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                    <span class="material-symbols-outlined text-on-surface-variant">dashboard</span>
+                                    <span class="font-medium">Guide Dashboard</span>
+                                </a>
+                                ` : ''}
+                                <a href="${userRole === 'guide' ? '/Guide/Profile' : '#'}" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
                                     <span class="material-symbols-outlined text-on-surface-variant">person</span>
                                     <span class="font-medium">Profile</span>
                                 </a>
-                                <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                <a href="${userRole === 'guide' ? '/Guide/Profile' : '#'}" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
                                     <span class="material-symbols-outlined text-on-surface-variant">settings</span>
                                     <span class="font-medium">Settings</span>
                                 </a>

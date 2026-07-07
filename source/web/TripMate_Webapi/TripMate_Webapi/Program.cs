@@ -78,6 +78,9 @@ builder.Services.AddScoped<IExperienceService, ExperienceService>();
 builder.Services.AddHttpClient<BookingService>();
 builder.Services.AddScoped<BookingService>();
 
+// ── Calendar Service ──────────────────────────────────────────────────────────
+builder.Services.AddScoped<ICalendarService, CalendarService>();
+
 // ── Repositories ──────────────────────────────────────────────────────────────
 builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();

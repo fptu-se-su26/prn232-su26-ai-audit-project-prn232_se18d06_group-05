@@ -65,6 +65,32 @@ namespace TripMate_Webapi.Repositories
             return response!;
         }
 
+
+        public async Task<List<GuideAvailabilityEntity>> GetBlockedDatesInRangeAsync(string guideProfileId, string start, string end)
+        {
+            var response = await _supabase.From<GuideAvailabilityEntity>()
+                .Filter("guide_profile_id", Postgrest.Constants.Operator.Equals, guideProfileId)
+                .Filter("unavailable_date", Postgrest.Constants.Operator.GreaterThanOrEqual, start)
+                .Filter("unavailable_date", Postgrest.Constants.Operator.LessThanOrEqual, end)
+                .Get();
+            return response.Models;
+        }
+
+        public async Task DeleteBlockedDatesInRangeAsync(string guideProfileId, string start, string end)
+        {
+            await _supabase.From<GuideAvailabilityEntity>()
+                .Filter("guide_profile_id", Postgrest.Constants.Operator.Equals, guideProfileId)
+                .Filter("unavailable_date", Postgrest.Constants.Operator.GreaterThanOrEqual, start)
+                .Filter("unavailable_date", Postgrest.Constants.Operator.LessThanOrEqual, end)
+                .Delete();
+        }
+
+        public async Task InsertBlockedDatesAsync(List<GuideAvailabilityEntity> entities)
+        {
+            if (entities == null || !entities.Any()) return;
+            await _supabase.From<GuideAvailabilityEntity>().Insert(entities);
+        }
+        
         public async Task<GuideProfileEntity> GetGuideByProfileIdAsync(string profileId)
         {
             var response = await _supabase.From<GuideProfileEntity>()

@@ -14,6 +14,7 @@ namespace TripMate_Webapi.Controllers
         private readonly BookingService _bookingService;
         private readonly IGuideRepository _guideRepository;
         private readonly IExperienceService _experienceService;
+        private readonly ICalendarService _calendarService;
         private readonly ILogger<GuideController> _logger;
         private readonly Supabase.Client _supabase;
 
@@ -22,6 +23,7 @@ namespace TripMate_Webapi.Controllers
             BookingService bookingService,
             IGuideRepository guideRepository,
             IExperienceService experienceService,
+            ICalendarService calendarService,
             ILogger<GuideController> logger,
             Supabase.Client supabase)
         {
@@ -29,6 +31,7 @@ namespace TripMate_Webapi.Controllers
             _bookingService = bookingService;
             _guideRepository = guideRepository;
             _experienceService = experienceService;
+            _calendarService = calendarService;
             _logger = logger;
             _supabase = supabase;
         }
@@ -127,6 +130,28 @@ namespace TripMate_Webapi.Controllers
         public IActionResult Calendar()
         {
             return View();
+        }
+
+        // GET: /Guide/GetCalendarData
+        [HttpGet, Authorize(Roles = "guide")]
+        public async Task<IActionResult> GetCalendarData(string start, string end)
+        {
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (guideProfileId == null) return Unauthorized();
+            
+            var data = await _calendarService.GetCalendarDataAsync(guideProfileId, start, end);
+            return Json(data);
+        }
+
+        // POST: /Guide/SaveBlockedDates
+        [HttpPost, Authorize(Roles = "guide")]
+        public async Task<IActionResult> SaveBlockedDates([FromBody] TripMate_WebAPI.DTOs.Guide.Requests.SaveBlockedDatesRequest req)
+        {
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (guideProfileId == null) return Unauthorized();
+            
+            await _calendarService.SaveBlockedDatesAsync(guideProfileId, req);
+            return Ok(new { message = "Cập nhật thành công" });
         }
 
         // Helper method to get the guide profile ID of the currently logged-in user
