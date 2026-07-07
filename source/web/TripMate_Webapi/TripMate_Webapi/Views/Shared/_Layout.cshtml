@@ -6,6 +6,11 @@
     <title>@ViewData["Title"] - TripMate</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
@@ -39,6 +44,15 @@
         .hero-gradient {
             background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.5) 100%);
         }
+        /* Fix SweetAlert layout issues */
+        .swal2-container {
+            z-index: 9999 !important;
+            align-items: flex-start !important;
+            padding-top: 15vh !important;
+        }
+        .swal-top-fix {
+            margin: 0 auto !important;
+        }
         .tonal-elevation {
             box-shadow: 0 12px 30px -10px rgba(255, 122, 0, 0.12), 0 4px 10px -5px rgba(0, 0, 0, 0.04);
         }
@@ -61,7 +75,7 @@
         ::-webkit-scrollbar-thumb:hover { background: #ff7a00; }
     </style>
 </head>
-<body class="bg-background text-on-background page-enter">
+<body class="bg-background text-on-background page-enter" data-requires-auth="@(ViewBag.RequiresAuth == true ? "true" : "false")">
     <!-- TopNavBar -->
     <header class="sticky top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm border-b border-outline-variant/30">
         <div class="flex justify-between items-center h-20 px-12 max-w-[1440px] mx-auto">
@@ -93,7 +107,6 @@
                     <span class="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>
                     AI Matchmaker
                 </a>
-
             </nav>
             <div id="headerTools" class="flex items-center gap-6">
                 <a class="text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap font-bold" href="/Home/BecomeAGuide">Become a guide</a>
@@ -254,6 +267,24 @@
 
         // Run on page load
         checkAuth();
+
+        // ── M1: Auth Guard cho các Traveler pages ──────────────────────────
+        // Server set ViewBag.RequiresAuth = true trong Controller
+        // JS đọc flag này từ data attribute và redirect nếu chưa login
+        (function() {
+            const requiresAuth = document.body.dataset.requiresAuth === 'true';
+            if (!requiresAuth) return;
+
+            const token = localStorage.getItem('accessToken');
+            const userId = localStorage.getItem('userId');
+
+            if (!token || !userId) {
+                // Lưu URL hiện tại để sau login quay về
+                localStorage.setItem('redirectAfterLogin', window.location.href);
+                // Redirect về Login
+                window.location.replace('/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search));
+            }
+        })();
 
         // Initialize Flatpickr for date ranges globally
         document.addEventListener('DOMContentLoaded', function() {

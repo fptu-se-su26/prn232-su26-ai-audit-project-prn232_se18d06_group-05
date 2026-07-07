@@ -82,6 +82,7 @@ builder.Services.AddScoped<BookingService>();
 builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IGuideRepository, GuideRepository>();
+builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 builder.Services.AddScoped<IExperiencePackageRepository, ExperiencePackageRepository>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
@@ -189,6 +190,17 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// ── Session (lưu PendingQuiz & Ghost Booking state) ──────────────────────────
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(60); // Quiz state tồn tại 60 phút
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SameSite = SameSiteMode.Lax;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
@@ -235,6 +247,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+app.UseSession();          // Phải trước UseAuthentication để Session sẵn sàng
 app.UseAuthentication();   // phải trước UseAuthorization
 app.UseAuthorization();
 app.MapControllers(); // Map API controllers
