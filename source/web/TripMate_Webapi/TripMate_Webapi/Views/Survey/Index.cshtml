@@ -200,12 +200,24 @@
 
             submitSurvey() {
                 if (this.canProceed()) {
-                    // Save to local storage for the next step (Matching/Auth)
+                    // 1. Lưu vào localStorage (fallback UX cho trình duyệt hiện tại)
                     localStorage.setItem('tripPreferences', JSON.stringify(this.answers));
                     
-                    // Show loading state or redirect
-                    // Redirect to the Matches page
-                    window.location.href = '/Survey/Matches'; 
+                    // 2. M2: Đồng bộ lên Server Session để không mất sau khi đăng nhập
+                    // Dùng sendBeacon để đảm bảo request được gửi ngay cả khi đang redirect
+                    const payload = JSON.stringify(this.answers);
+                    
+                    // Thử dùng fetch async, nếu lỗi vẫn chuyển trang
+                    const saveToSession = fetch('/Survey/SavePreferences', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: payload
+                    }).catch(err => console.warn('[Quiz] Could not sync to server session:', err));
+                    
+                    // Chuyển trang sau 100ms để fetch có thời gian bắt đầu
+                    setTimeout(() => {
+                        window.location.href = '/Survey/Matches';
+                    }, 100);
                 }
             }
         }))

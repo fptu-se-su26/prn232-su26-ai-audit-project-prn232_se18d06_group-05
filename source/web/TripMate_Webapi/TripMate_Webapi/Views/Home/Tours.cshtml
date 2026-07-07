@@ -1,0 +1,302 @@
+@model List<TripMate_WebAPI.Services.ExperiencePackageRow>
+@{
+    ViewData["Title"] = "Browse Tours — TripMate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    string? searchQuery = ViewBag.Search as string;
+    string? destQuery = ViewBag.Destination as string;
+    bool hasSearch = !string.IsNullOrEmpty(searchQuery) || !string.IsNullOrEmpty(destQuery);
+}
+
+<div class="bg-surface min-h-screen" x-data="toursBrowse()">
+
+    <!-- Hero Header -->
+    <div class="bg-gradient-to-br from-primary via-primary/90 to-orange-500 pt-12 pb-16 px-6 md:px-12 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1528127269322-539801943592?w=1920')] bg-cover bg-center opacity-15"></div>
+        <div class="max-w-[1440px] mx-auto relative z-10">
+            <a href="javascript:history.back()" class="inline-flex items-center text-white/80 hover:text-white font-bold mb-6 transition-colors text-sm">
+                <span class="material-symbols-outlined mr-1 text-[18px]">arrow_back</span> Back
+            </a>
+            @if (hasSearch)
+            {
+                <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3">
+                    Tours in <span class="text-yellow-200">@(searchQuery ?? destQuery)</span>
+                </h1>
+                <p class="text-white/80 text-lg">@Model.Count tours found for your destination.</p>
+            }
+            else
+            {
+                <h1 class="text-4xl md:text-5xl font-extrabold text-white mb-3">Explore All Tours</h1>
+                <p class="text-white/80 text-lg">Handcrafted experiences by verified local guides.</p>
+            }
+
+        </div>
+    </div>
+
+    <!-- Filter Tags -->
+    <div class="max-w-[1440px] mx-auto px-6 md:px-12 mt-8 mb-6">
+        <div class="flex flex-wrap gap-3">
+            <a href="/Home/Tours" class="px-4 py-2 rounded-full @(!hasSearch ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant") font-bold text-sm shadow-sm transition-colors">All Tours</a>
+            <a href="/Home/Tours?destination=Ha Long" class="px-4 py-2 rounded-full @(destQuery?.Contains("Ha Long") == true ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant") font-bold text-sm shadow-sm transition-colors">Ha Long Bay</a>
+            <a href="/Home/Tours?destination=Hoi An" class="px-4 py-2 rounded-full @(destQuery?.Contains("Hoi An") == true ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant") font-bold text-sm shadow-sm transition-colors">Hoi An</a>
+            <a href="/Home/Tours?destination=Da Nang" class="px-4 py-2 rounded-full @(destQuery?.Contains("Da Nang") == true ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant") font-bold text-sm shadow-sm transition-colors">Da Nang</a>
+            <a href="/Home/Tours?destination=Sapa" class="px-4 py-2 rounded-full @(destQuery?.Contains("Sapa") == true ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant") font-bold text-sm shadow-sm transition-colors">Sapa</a>
+            <a href="/Home/Tours?destination=Phu Quoc" class="px-4 py-2 rounded-full @(destQuery?.Contains("Phu Quoc") == true ? "bg-primary text-white" : "bg-white border border-outline-variant/30 text-on-surface-variant hover:bg-surface-variant") font-bold text-sm shadow-sm transition-colors">Phu Quoc</a>
+        </div>
+    </div>
+
+    <!-- Tours Grid -->
+    <div class="max-w-[1440px] mx-auto px-6 md:px-12 pb-20">
+        @if (Model != null && Model.Any())
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                @foreach (var tour in Model)
+                {
+                    var guideName = tour.GuideProfile?.Profile?.FullName ?? "Local Guide";
+                    var guideCityArea = tour.GuideProfile?.CityArea ?? "Vietnam";
+                    var guideCover = tour.GuideProfile?.CoverPhotoUrl ?? "";
+                    var guideAvatar = tour.GuideProfile?.Profile?.AvatarUrl ?? "";
+                    var guideId = tour.GuideProfileId ?? "";
+                    var priceLabel = tour.PricePerSession > 0
+                        ? string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:C0}", tour.PricePerSession)
+                        : (tour.PricePerPerson > 0 ? string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:C0}", tour.PricePerPerson) + "/person" : "Contact");
+
+                    <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 cursor-pointer flex flex-col"
+                         @@click="openTourModal('@System.Web.HttpUtility.JavaScriptStringEncode(tour.Id ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(tour.Title ?? "")', `@System.Web.HttpUtility.JavaScriptStringEncode(tour.Description ?? "")`, @tour.DurationHours, @tour.PricePerSession, @(tour.PricePerPerson ?? 0), @tour.MaxGroupSize, '@System.Web.HttpUtility.JavaScriptStringEncode(string.Join(",", tour.IncludedItems ?? new List<string>()))', '@System.Web.HttpUtility.JavaScriptStringEncode(guideName)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideAvatar)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideId)')">
+                        <!-- Cover Image -->
+                        <div class="h-52 relative overflow-hidden bg-gray-100">
+                            @if (!string.IsNullOrEmpty(guideCover))
+                            {
+                                <img src="@guideCover" alt="@tour.Title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                            }
+                            else
+                            {
+                                <div class="w-full h-full bg-gradient-to-br from-primary-container to-surface-variant flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-6xl text-primary/30">landscape</span>
+                                </div>
+                            }
+                            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+                            <!-- Duration Badge -->
+                            <div class="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center gap-1 shadow-sm">
+                                <span class="material-symbols-outlined text-[14px]">schedule</span> @tour.DurationHours hrs
+                            </div>
+                            <!-- Guide Avatar -->
+                            <div class="absolute bottom-4 left-4 flex items-center gap-3 z-10">
+                                <div class="w-10 h-10 rounded-full border-2 border-white overflow-hidden shadow-md bg-gray-200">
+                                    @if (!string.IsNullOrEmpty(guideAvatar))
+                                    {
+                                        <img src="@guideAvatar" class="w-full h-full object-cover" />
+                                    }
+                                    else
+                                    {
+                                        <span class="material-symbols-outlined text-xl text-gray-400 mt-1 block text-center">person</span>
+                                    }
+                                </div>
+                                <div>
+                                    <p class="text-white text-sm font-bold drop-shadow">@guideName</p>
+                                    <p class="text-white/80 text-xs flex items-center gap-0.5"><span class="material-symbols-outlined text-[12px]">location_on</span> @guideCityArea</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card Content -->
+                        <div class="p-6 flex-1 flex flex-col">
+                            <h3 class="text-xl font-bold text-on-surface mb-2 group-hover:text-primary transition-colors">@tour.Title</h3>
+                            <p class="text-on-surface-variant text-sm line-clamp-2 mb-4">@tour.Description</p>
+
+                            @if (tour.Tags != null && tour.Tags.Any())
+                            {
+                                <div class="flex flex-wrap gap-1 mb-4">
+                                    @foreach (var tag in tour.Tags.Take(3))
+                                    {
+                                        <span class="px-2 py-1 bg-surface-variant text-on-surface-variant text-[10px] rounded font-bold uppercase tracking-wider">@tag</span>
+                                    }
+                                </div>
+                            }
+
+                            <div class="mt-auto flex items-center justify-between pt-4 border-t border-outline-variant/20">
+                                <div>
+                                    <p class="text-xs text-on-surface-variant">From</p>
+                                    <p class="text-xl font-bold text-primary">@priceLabel</p>
+                                </div>
+                                <span class="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold text-sm group-hover:bg-primary group-hover:text-white transition-all flex items-center gap-1">
+                                    View Details <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-20">
+                <span class="material-symbols-outlined text-6xl text-on-surface-variant/50 mb-4">search_off</span>
+                <h3 class="text-2xl font-bold text-on-surface mb-2">No tours found</h3>
+                <p class="text-on-surface-variant mb-6">Try adjusting your search or explore other destinations.</p>
+                <a href="/Home/Tours" class="bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors inline-block">Browse All Tours</a>
+            </div>
+        }
+    </div>
+
+    <!-- ═══ Tour Detail Modal ═══ -->
+    <div x-show="showModal" x-transition.opacity class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;" @@click.self="showModal = false">
+        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" @@click.stop x-transition.scale.95>
+            <div class="sticky top-0 bg-white border-b border-outline-variant/30 p-6 rounded-t-3xl flex items-center justify-between z-10">
+                <h2 class="text-2xl font-bold text-on-surface" x-text="modal.title"></h2>
+                <button @@click="showModal = false" class="w-10 h-10 rounded-full hover:bg-surface-variant flex items-center justify-center transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div class="p-6 md:p-8 space-y-6">
+                <div class="flex flex-wrap gap-4">
+                    <div class="flex items-center gap-2 bg-primary-container/50 px-4 py-2 rounded-xl">
+                        <span class="material-symbols-outlined text-primary text-sm">schedule</span>
+                        <span class="font-bold text-sm" x-text="modal.duration + ' hours'"></span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-surface-variant px-4 py-2 rounded-xl">
+                        <span class="material-symbols-outlined text-on-surface-variant text-sm">group</span>
+                        <span class="font-bold text-sm" x-text="'Max ' + modal.maxGroup + ' people'"></span>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="text-lg font-bold text-on-surface mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-xl">route</span> Tour Description
+                    </h3>
+                    <p class="text-on-surface-variant leading-relaxed whitespace-pre-line" x-text="modal.description"></p>
+                </div>
+
+                <div x-show="modal.includedItems.length > 0">
+                    <h3 class="text-lg font-bold text-on-surface mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-xl">check_circle</span> What's Included
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <template x-for="item in modal.includedItems" :key="item">
+                            <div class="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-2 rounded-lg">
+                                <span class="material-symbols-outlined text-green-600 text-sm">check</span>
+                                <span class="text-sm text-green-800 font-medium" x-text="item"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Guide Info -->
+                <a :href="'/Traveler/GuideProfile/' + modal.guideId" class="bg-surface-variant/50 rounded-2xl p-5 flex items-center gap-4 hover:bg-surface-variant transition-colors group/guide">
+                    <div class="w-14 h-14 rounded-full overflow-hidden border-2 border-primary/20 shrink-0 bg-gray-100">
+                        <img x-show="modal.guideAvatar" :src="modal.guideAvatar" class="w-full h-full object-cover" />
+                        <span x-show="!modal.guideAvatar" class="material-symbols-outlined text-3xl text-gray-400 mt-2 block text-center">person</span>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm text-on-surface-variant">Created by</p>
+                        <p class="font-bold text-on-surface text-lg group-hover/guide:text-primary transition-colors" x-text="modal.guideName"></p>
+                    </div>
+                    <span class="material-symbols-outlined text-on-surface-variant group-hover/guide:text-primary transition-colors">arrow_forward</span>
+                </a>
+
+                <!-- Price & Book -->
+                <div class="bg-white border-2 border-primary/30 rounded-2xl p-6 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-on-surface-variant">Price</p>
+                        <p class="text-3xl font-extrabold text-primary" x-text="modal.priceLabel"></p>
+                    </div>
+                    <button @@click="bookTour(modal.id, modal.guideId)"
+                            class="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
+                        <span class="material-symbols-outlined">lock</span>
+                        Book This Tour
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('toursBrowse', () => ({
+            showModal: false,
+            bookingInProgress: false,
+            modal: {
+                id: '', title: '', description: '', duration: 0,
+                pricePerSession: 0, pricePerPerson: 0, maxGroup: 6,
+                includedItems: [], priceLabel: '',
+                guideName: '', guideAvatar: '', guideId: ''
+            },
+
+            openTourModal(id, title, description, duration, pricePerSession, pricePerPerson, maxGroup, includedItemsStr, guideName, guideAvatar, guideId) {
+                this.modal.id = id;
+                this.modal.title = title;
+                this.modal.description = description;
+                this.modal.duration = duration;
+                this.modal.pricePerSession = pricePerSession;
+                this.modal.pricePerPerson = pricePerPerson;
+                this.modal.maxGroup = maxGroup;
+                this.modal.includedItems = includedItemsStr ? includedItemsStr.split(',').map(s => s.trim()).filter(s => s) : [];
+                this.modal.guideName = guideName || 'Local Guide';
+                this.modal.guideAvatar = guideAvatar || '';
+                this.modal.guideId = guideId || '';
+
+                const fmt = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
+                this.modal.priceLabel = pricePerSession > 0
+                    ? fmt.format(pricePerSession) + '/session'
+                    : (pricePerPerson > 0 ? fmt.format(pricePerPerson) + '/person' : 'Contact');
+
+                this.showModal = true;
+            },
+
+            async bookTour(packageId, guideId) {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.href);
+                    return;
+                }
+                if (this.bookingInProgress) return;
+                this.bookingInProgress = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('guideId', guideId);
+                    formData.append('packageId', packageId);
+                    formData.append('date', new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+                    formData.append('guests', '1');
+
+                    const res = await fetch('/Traveler/BookTour', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.bookingId) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: 'Booking request sent successfully!',
+                                icon: 'success',
+                                showCancelButton: true,
+                                confirmButtonText: 'Proceed to Pay',
+                                cancelButtonText: 'Close',
+                                confirmButtonColor: '#ff7a00',
+                                cancelButtonColor: '#6b7280',
+                                customClass: { popup: 'swal-top-fix' }
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = '/Traveler/Checkout/' + data.bookingId;
+                                }
+                            });
+                        }
+                    } else if (res.status === 400) {
+                        const errorData = await res.json();
+                        Swal.fire({ title: 'Notice', text: errorData.error || 'Booking failed.', icon: 'info', customClass: { popup: 'swal-top-fix' } });
+                    } else {
+                        Swal.fire({ title: 'Error', text: 'Booking failed. Please try again.', icon: 'error', customClass: { popup: 'swal-top-fix' } });
+                    }
+                } catch(err) {
+                    console.error('BookTour error:', err);
+                    Swal.fire('Error', 'Connection error. Please try again.', 'error');
+                } finally {
+                    this.bookingInProgress = false;
+                }
+            }
+        }))
+    })
+</script>

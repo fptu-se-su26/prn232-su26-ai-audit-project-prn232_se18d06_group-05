@@ -106,10 +106,16 @@
                     <p class="text-sm text-primary font-bold mb-4">Your Local Expert</p>
                     
                     <div class="flex flex-col gap-3">
-                        <button class="w-full bg-primary-container text-primary hover:bg-primary hover:text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
-                            <span class="material-symbols-outlined">chat</span> Message Guide
-                        </button>
-                        <a href="/Guide/Profile/@Model.GuideProfile?.UserId" class="w-full border-2 border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+                        @if(Model.Status == 0) {
+                            <button class="w-full bg-surface-variant text-on-surface-variant py-3 rounded-xl font-bold flex items-center justify-center gap-2 cursor-not-allowed opacity-70" title="Messaging unlocks after payment" disabled>
+                                <span class="material-symbols-outlined">lock</span> Messaging Locked
+                            </button>
+                        } else {
+                            <button class="w-full bg-primary-container text-primary hover:bg-primary hover:text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+                                <span class="material-symbols-outlined">chat</span> Message Guide
+                            </button>
+                        }
+                        <a href="/Traveler/GuideProfile/@Model.GuideProfile?.Id" class="w-full border-2 border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
                             <span class="material-symbols-outlined">person</span> View Profile
                         </a>
                     </div>
