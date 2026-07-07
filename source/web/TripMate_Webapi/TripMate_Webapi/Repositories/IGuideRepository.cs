@@ -11,5 +11,6 @@ namespace TripMate_Webapi.Repositories
         Task<List<GuideAvailabilityEntity>> GetBlockedDatesInRangeAsync(string guideProfileId, string start, string end);
         Task DeleteBlockedDatesInRangeAsync(string guideProfileId, string start, string end);
         Task InsertBlockedDatesAsync(List<GuideAvailabilityEntity> entities);
+        Task<GuideProfileEntity> GetGuideByProfileIdAsync(string profileId);
     }
 }
