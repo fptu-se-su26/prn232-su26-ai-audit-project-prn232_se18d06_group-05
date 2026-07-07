@@ -51,6 +51,7 @@ builder.Services.AddSingleton(_ =>
         AutoConnectRealtime = false,
     };
     options.Headers.Add("Authorization", $"Bearer {supabaseKey}");
+    options.Headers.Add("apikey", supabaseKey);
     var client = new Client(supabaseUrl, supabaseKey, options);
     client.InitializeAsync().GetAwaiter().GetResult();
     return client;
