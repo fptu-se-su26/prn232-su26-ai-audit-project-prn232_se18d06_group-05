@@ -94,5 +94,15 @@ namespace TripMate_Webapi.Repositories
                 .Get();
             return response.Models.FirstOrDefault()?.Id;
         }
+
+        public async Task<List<BookingEntity>> GetGuideBookingsInRangeAsync(string guideProfileId, string start, string end)
+        {
+            var response = await _supabase.From<BookingEntity>()
+                .Filter("guide_profile_id", Postgrest.Constants.Operator.Equals, guideProfileId)
+                .Filter("booking_date", Postgrest.Constants.Operator.GreaterThanOrEqual, start)
+                .Filter("booking_date", Postgrest.Constants.Operator.LessThanOrEqual, end)
+                .Get();
+            return response.Models;
+        }
     }
 }
