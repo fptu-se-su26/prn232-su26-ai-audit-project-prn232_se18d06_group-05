@@ -8,7 +8,15 @@ using DotNetEnv;
 var builder = WebApplication.CreateBuilder(args);
 
 // Load environment variables from .env file
-Env.Load();
+var envPath = System.IO.Path.Combine(builder.Environment.ContentRootPath, ".env");
+if (System.IO.File.Exists(envPath))
+{
+    Env.Load(envPath);
+}
+else
+{
+    Env.Load();
+}
 
 // Override configuration with environment variables
 builder.Configuration["Supabase:Url"] = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? builder.Configuration["Supabase:Url"];
@@ -22,14 +30,18 @@ builder.Configuration["SerpApi:ApiKey"] = Environment.GetEnvironmentVariable("SE
 builder.Configuration["Cloudinary:CloudName"] = Environment.GetEnvironmentVariable("CLOUDINARY_CLOUD_NAME") ?? builder.Configuration["Cloudinary:CloudName"];
 builder.Configuration["Cloudinary:ApiKey"] = Environment.GetEnvironmentVariable("CLOUDINARY_API_KEY") ?? builder.Configuration["Cloudinary:ApiKey"];
 builder.Configuration["Cloudinary:ApiSecret"] = Environment.GetEnvironmentVariable("CLOUDINARY_API_SECRET") ?? builder.Configuration["Cloudinary:ApiSecret"];
+builder.Configuration["EmailSettings:SmtpHost"] = Environment.GetEnvironmentVariable("SMTP_HOST") ?? builder.Configuration["EmailSettings:SmtpHost"];
+builder.Configuration["EmailSettings:SmtpPort"] = Environment.GetEnvironmentVariable("SMTP_PORT") ?? builder.Configuration["EmailSettings:SmtpPort"];
 builder.Configuration["EmailSettings:SmtpUser"] = Environment.GetEnvironmentVariable("SMTP_USER") ?? builder.Configuration["EmailSettings:SmtpUser"];
 builder.Configuration["EmailSettings:SmtpPass"] = Environment.GetEnvironmentVariable("SMTP_PASS") ?? builder.Configuration["EmailSettings:SmtpPass"];
 
 // ── Supabase Client (singleton) ───────────────────────────────────────────────
 var supabaseUrl = builder.Configuration["Supabase:Url"]!;
 var supabaseKey = builder.Configuration["Supabase:ServiceRoleKey"]!;
-var jwksUri     = builder.Configuration["Supabase:JwksUri"]!;
-var issuer      = builder.Configuration["Supabase:Issuer"]!;
+
+// Dynamically construct JWKS URI and Issuer from the active Supabase URL
+var jwksUri = $"{supabaseUrl.TrimEnd('/')}/auth/v1/.well-known/jwks.json";
+var issuer = $"{supabaseUrl.TrimEnd('/')}/auth/v1";
 
 builder.Services.AddSingleton(_ =>
 {
@@ -53,12 +65,14 @@ builder.Services.AddHttpClient<SupabasePasswordResetService>();
 builder.Services.AddScoped<ISupabasePasswordResetService, SupabasePasswordResetService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddHttpClient<PasswordResetService>();
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 
 // ── Tour Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<TourService>();
 builder.Services.AddScoped<TourService>();
+builder.Services.AddScoped<IExperienceService, ExperienceService>();
 
 // ── Booking Service ───────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<BookingService>();
@@ -69,10 +83,15 @@ builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IGuideRepository, GuideRepository>();
 builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
+builder.Services.AddScoped<IExperiencePackageRepository, ExperiencePackageRepository>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();
 builder.Services.AddScoped<GuideApprovalService>();
+
+// ── Admin Service ─────────────────────────────────────────────────────────────
+builder.Services.AddHttpClient<AdminService>();
+builder.Services.AddScoped<AdminService>();
 
 // ── Chat & Notification Services ─────────────────────────────────────────────
 builder.Services.AddHttpClient<ChatService>();
@@ -117,6 +136,15 @@ builder.Services
 
         options.Events = new JwtBearerEvents
         {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Cookies["access_token"];
+                if (!string.IsNullOrEmpty(token))
+                {
+                    context.Token = token;
+                }
+                return Task.CompletedTask;
+            },
             OnAuthenticationFailed = ctx =>
             {
                 Console.WriteLine($"[JWT] Auth failed: {ctx.Exception.Message}");
@@ -125,7 +153,36 @@ builder.Services
             OnTokenValidated = ctx =>
             {
                 var sub = ctx.Principal?.FindFirst("sub")?.Value;
-                Console.WriteLine($"[JWT] Token valid — sub: {sub}");
+                var email = ctx.Principal?.FindFirst("email")?.Value 
+                         ?? ctx.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+                
+                Console.WriteLine($"[JWT] Token valid — sub: {sub}, email: {email}");
+
+                string? roleToAdd = null;
+
+                // Get role from user_metadata in JWT
+                    // 2. Lấy role từ user_metadata trong JWT
+                    var userMetadataJson = ctx.Principal?.FindFirst("user_metadata")?.Value;
+                    if (!string.IsNullOrEmpty(userMetadataJson))
+                    {
+                        try
+                        {
+                            var metadata = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonObject>(userMetadataJson);
+                            roleToAdd = metadata?["role"]?.ToString();
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"[JWT] Error parsing user_metadata: {ex.Message}");
+                        }
+                    }
+
+                if (!string.IsNullOrEmpty(roleToAdd))
+                {
+                    var identity = ctx.Principal?.Identity as System.Security.Claims.ClaimsIdentity;
+                    identity?.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, roleToAdd));
+                    Console.WriteLine($"[JWT] Added ClaimTypes.Role = {roleToAdd}");
+                }
+
                 return Task.CompletedTask;
             },
         };
@@ -198,11 +255,11 @@ app.MapControllerRoute( // Map MVC routes
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Seed database
-using (var scope = app.Services.CreateScope())
-{
-    var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
-    await seeder.SeedAsync();
-}
+// Seed database (Removed to use real DB data only)
+// using (var scope = app.Services.CreateScope())
+// {
+//     var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
+//     await seeder.SeedAsync();
+// }
 
 app.Run();

@@ -8,8 +8,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block" rel="stylesheet">
     <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script>
+    <script defer src="https://cdn.jsdelivr.net/npm/@@alpinejs/collapse@3.x.x/dist/cdn.min.js" data-turbo-track="reload"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" data-turbo-track="reload"></script>
+    
+    <!-- Hotwire Turbo -->
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@@hotwired/turbo@8.0.4/dist/turbo.es2017-esm.js" data-turbo-track="reload"></script>
+    
+    <script data-turbo-track="reload">
         tailwind.config = {
             theme: {
                 extend: {
@@ -173,30 +178,53 @@
 
     <script>
         // Global Toast Notification function
-        function showToast(type, message, duration = 4000) {
-            const colors = {
-                success: 'bg-green-600',
-                error:   'bg-red-600',
-                warning: 'bg-amber-500',
-                info:    'bg-blue-600',
+        function showToast(type, message, title = null, duration = 4000) {
+            // Ensure toast container exists
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'fixed top-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none';
+                document.body.appendChild(container);
+            }
+
+            const config = {
+                success: { color: 'bg-[#00B232]', defaultTitle: 'Thành công' },
+                error:   { color: 'bg-[#FF0000]', defaultTitle: 'Đã xảy ra lỗi' },
+                warning: { color: 'bg-[#FFB800]', defaultTitle: 'Hành động yêu cầu' },
+                info:    { color: 'bg-[#2E77F2]', defaultTitle: 'Bạn có biết?' },
             };
-            const icons = {
-                success: 'check_circle',
-                error:   'error',
-                warning: 'warning',
-                info:    'info',
-            };
+            
+            const currentConfig = config[type] || config.info;
+            const displayTitle = title || currentConfig.defaultTitle;
             
             const toast = document.createElement('div');
-            toast.className = `fixed bottom-6 right-6 z-[100] flex items-center gap-3 text-white px-5 py-3 rounded-xl shadow-xl ${colors[type]} transition-all duration-300 transform translate-y-0 opacity-100`;
-            toast.innerHTML = `<span class="material-symbols-outlined">${icons[type]}</span><span class="font-medium">${message}</span>`;
+            toast.className = `relative flex items-center w-80 bg-white rounded-lg shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-gray-100 overflow-hidden transform transition-all duration-300 translate-x-10 opacity-0 pointer-events-auto`;
             
-            // Append and animate in
-            document.body.appendChild(toast);
+            toast.innerHTML = `
+                <div class="absolute left-0 top-0 bottom-0 w-1.5 ${currentConfig.color}"></div>
+                <div class="flex-1 py-3 px-4 pl-6">
+                    <h4 class="text-[15px] font-bold text-gray-900 leading-tight">${displayTitle}</h4>
+                    <p class="text-[13px] text-gray-500 mt-1 leading-snug">${message}</p>
+                </div>
+                <button class="px-4 text-gray-400 hover:text-gray-700 transition-colors focus:outline-none" onclick="this.closest('.relative').style.opacity='0'; setTimeout(() => this.closest('.relative').remove(), 300)">
+                    <span class="material-symbols-outlined text-[20px]">close</span>
+                </button>
+            `;
+            
+            // Append
+            container.appendChild(toast);
+            
+            // Animate in
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    toast.classList.remove('translate-x-10', 'opacity-0');
+                });
+            });
             
             // Animate out
             setTimeout(() => { 
-                toast.classList.add('opacity-0', 'translate-y-2'); 
+                toast.classList.add('opacity-0', 'translate-x-10'); 
                 setTimeout(() => toast.remove(), 300); 
             }, duration);
         }

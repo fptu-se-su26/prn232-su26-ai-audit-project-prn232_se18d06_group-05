@@ -4,16 +4,16 @@
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học |  |
-| Mã môn học |  |
-| Lớp |  |
-| Học kỳ |  |
-| Tên bài tập / Project |  |
-| Tên sinh viên / Nhóm |  |
-| MSSV / Danh sách MSSV |  |
-| Giảng viên hướng dẫn |  |
-| Ngày bắt đầu |  |
-| Ngày hoàn thành |  |
+| Môn học | dotnet .Prn232 |
+| Mã môn học | PRN2332 |
+| Lớp | se18d06 |
+| Học kỳ | 8 |
+| Tên bài tập / Project | TripMate - Tour Guide Booking Platform |
+| Tên sinh viên / Nhóm | Nguyễn Hữu Sơn – Nhóm 5 |
+| MSSV / Danh sách MSSV | DE180845 |
+| Giảng viên hướng dẫn | quangltn3 |
+| Ngày bắt đầu | 19/06/2026 |
+| Ngày hoàn thành | 21/06/2026 |
 
 ---
 
@@ -22,7 +22,7 @@
 Đánh dấu các công cụ AI đã sử dụng trong quá trình thực hiện bài tập/project.
 
 - [ ] ChatGPT
-- [ ] Gemini
+- [x] Gemini
 - [ ] Claude
 - [ ] GitHub Copilot
 - [ ] Cursor
@@ -55,7 +55,14 @@ Ví dụ:
 ### Mô tả mục tiêu sử dụng AI
 
 ```text
-Viết tại đây...
+Trong dự án này, chúng tôi sử dụng AI (chủ yếu là Gemini) để hỗ trợ các công việc sau:
+- Phân tích yêu cầu và tổng hợp danh sách tính năng.
+- Thiết kế kiến trúc hệ thống, mô hình dữ liệu và ERD.
+- Tạo scaffold backend (controller, service, repository) và migration cho database.
+- Viết mẫu UI cho trang quản trị bằng Tailwind CSS và Razor.
+- Đề xuất tối ưu query và validation.
+- Sinh các test case và gợi ý chiến lược kiểm thử.
+- Hỗ trợ viết tài liệu README, báo cáo và slide thuyết trình.
 
 ## 4. Nhật ký sử dụng AI chi tiết
 
@@ -77,7 +84,7 @@ Viết tại đây...
 #### 4.1. Prompt đã sử dụng
 
 ```text
-Dán nguyên văn prompt đã hỏi AI tại đây.
+Generate a scaffold for a .NET 6 Web API project named "TripMate" with a "Tour" entity, including controller, service, repository, EF Core migration, and basic CRUD endpoints.
 ```
 
 #### 4.2. Kết quả AI gợi ý
@@ -85,7 +92,12 @@ Dán nguyên văn prompt đã hỏi AI tại đây.
 Tóm tắt nội dung AI đã trả lời hoặc gợi ý.
 
 ```text
-Viết tại đây...
+AI đã tạo mã mẫu cho các file:
+- Controllers/TourController.cs với các phương thức GET, POST, PUT, DELETE.
+- Services/ITourService.cs và TourService.cs chứa logic nghiệp vụ cơ bản.
+- Repositories/ITourRepository.cs và TourRepository.cs cho truy cập dữ liệu.
+- Migration tạo bảng Tours với các cột Id, Name, Description, Price, CreatedAt.
+Ngoài ra, AI cung cấp mẫu Razor view cho danh sách tour và form tạo/sửa.
 ```
 
 #### 4.3. Phần sinh viên/nhóm đã sử dụng từ AI
@@ -93,7 +105,7 @@ Viết tại đây...
 Mô tả rõ phần nào được sử dụng lại từ gợi ý của AI.
 
 ```text
-Viết tại đây...
+Chúng tôi đã sao chép toàn bộ mã controller và service được AI sinh ra, đồng thời sử dụng migration để tạo bảng Tours trong cơ sở dữ liệu.
 ```
 
 #### 4.4. Phần sinh viên/nhóm tự chỉnh sửa hoặc cải tiến
@@ -101,7 +113,11 @@ Viết tại đây...
 Mô tả sinh viên/nhóm đã thay đổi, kiểm tra, sửa lỗi hoặc cải tiến gì so với gợi ý ban đầu của AI.
 
 ```text
-Viết tại đây...
+- Đổi tên thuộc tính "Price" thành "Cost" để phù hợp với yêu cầu đề bài.
+- Thêm validation cho trường Name (không để trống) và Price (phải > 0) trong Service.
+- Sửa lỗi cấu hình DbContext để kết nối đúng tới SQL Server.
+- Tối ưu query bằng việc thêm index cho cột Name.
+- Thêm unit test cho các hành động CRUD.
 ```
 
 #### 4.5. Minh chứng
@@ -120,7 +136,11 @@ Viết tại đây...
 Sinh viên/nhóm học được gì sau lần sử dụng AI này?
 
 ```text
-Viết tại đây...
+Qua lần sử dụng AI, chúng tôi học được:
+- Cách nhanh chóng tạo cấu trúc dự án và giảm thời gian viết boilerplate.
+- Quan trọng của việc review lại code AI để phát hiện lỗi và cải thiện thiết kế.
+- Kỹ năng viết prompt rõ ràng giúp AI đưa ra kết quả chính xác hơn.
+- Hiểu được giới hạn của AI và cần tự kiểm tra, chỉnh sửa để đáp ứng yêu cầu thực tế.
 ```
 
 ---
