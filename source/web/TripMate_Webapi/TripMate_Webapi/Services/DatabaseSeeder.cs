@@ -126,6 +126,15 @@ public class DatabaseSeeder
                 }
             }
         }
+
+        try
+        {
+            await SeedBookingsAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error seeding bookings at startup");
+        }
     }
 
     private async Task SeedGuideProfileAsync(string userId, SeedAccountConfig account)
@@ -152,8 +161,8 @@ public class DatabaseSeeder
                     Specialties = (account.Specialization ?? "Culture, Food").Split(',').Select(s => s.Trim()).ToList(),
                     CityArea = account.CityArea ?? cities[random.Next(cities.Length)],
                     PricePerHour = random.Next(150000, 500000), // Random price 150k - 500k
-                    IsVerified = true,
-                    VerifiedAt = DateTime.UtcNow,
+                    IsVerified = account.Email != "guide2@tripmate.com" && account.Email != "minhtuan2@tripmate.com",
+                    VerifiedAt = (account.Email != "guide2@tripmate.com" && account.Email != "minhtuan2@tripmate.com") ? (DateTime?)DateTime.UtcNow : null,
                     AverageRating = (decimal)(4.0 + random.NextDouble()),
                     TotalReviews = random.Next(5, 50),
                     CreatedAt = DateTime.UtcNow,
@@ -311,6 +320,194 @@ public class DatabaseSeeder
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to seed guide profile for {Email}", account.Email);
+        }
+    }
+
+    private async Task SeedBookingsAsync()
+    {
+        try
+        {
+            var supabaseUrl = _config.GetValue<string>("Supabase:Url");
+            var serviceKey = _config.GetValue<string>("Supabase:ServiceRoleKey");
+            var anonKey = _config.GetValue<string>("Supabase:AnonKey");
+            var tokenToUse = string.IsNullOrEmpty(serviceKey) ? anonKey : serviceKey;
+
+            _logger.LogInformation("SUPABASE CONFIG - URL: '{Url}', ServiceKey Length: {ServiceKeyLength}, AnonKey Length: {AnonKeyLength}", 
+                supabaseUrl, 
+                serviceKey?.Length ?? 0, 
+                anonKey?.Length ?? 0);
+
+            using var http = new System.Net.Http.HttpClient();
+            
+            // 1. Check if bookings table is empty
+            var checkReq = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, $"{supabaseUrl}/rest/v1/bookings?select=id&limit=1");
+            checkReq.Headers.Add("apikey", tokenToUse);
+            checkReq.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenToUse);
+            var checkRes = await http.SendAsync(checkReq);
+            if (checkRes.IsSuccessStatusCode)
+            {
+                var checkContent = await checkRes.Content.ReadAsStringAsync();
+                using var doc = System.Text.Json.JsonDocument.Parse(checkContent);
+                if (doc.RootElement.GetArrayLength() > 0)
+                {
+                    _logger.LogInformation("Bookings table is not empty, skipping bookings seed.");
+                    return;
+                }
+            }
+
+            _logger.LogInformation("Bookings table is empty. Seeding mock bookings...");
+
+            // 2. Get any traveler profile ID
+            var travReq = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, $"{supabaseUrl}/rest/v1/profiles?role=eq.traveler&select=id&limit=1");
+            travReq.Headers.Add("apikey", tokenToUse);
+            travReq.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenToUse);
+            var travRes = await http.SendAsync(travReq);
+            if (!travRes.IsSuccessStatusCode)
+            {
+                var errContent = await travRes.Content.ReadAsStringAsync();
+                _logger.LogInformation("Failed to query traveler. Status: {Status}, Error: {Error}", travRes.StatusCode, errContent);
+                return;
+            }
+            var travContent = await travRes.Content.ReadAsStringAsync();
+            using var travDoc = System.Text.Json.JsonDocument.Parse(travContent);
+            if (travDoc.RootElement.GetArrayLength() == 0)
+            {
+                _logger.LogInformation("No travelers found in database to seed bookings.");
+                return;
+            }
+            var travelerId = travDoc.RootElement[0].GetProperty("id").GetString();
+            if (string.IsNullOrEmpty(travelerId)) return;
+
+            // 3. Get all guide profiles
+            var guideReq = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, $"{supabaseUrl}/rest/v1/guide_profiles?select=id");
+            guideReq.Headers.Add("apikey", tokenToUse);
+            guideReq.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenToUse);
+            var guideRes = await http.SendAsync(guideReq);
+            if (!guideRes.IsSuccessStatusCode)
+            {
+                var errContent = await guideRes.Content.ReadAsStringAsync();
+                _logger.LogInformation("Failed to query guide profiles. Status: {Status}, Error: {Error}", guideRes.StatusCode, errContent);
+                return;
+            }
+            var guideContent = await guideRes.Content.ReadAsStringAsync();
+            using var guideDoc = System.Text.Json.JsonDocument.Parse(guideContent);
+            var guideProfiles = guideDoc.RootElement;
+            if (guideProfiles.GetArrayLength() == 0)
+            {
+                _logger.LogInformation("No guide profiles found in database to seed bookings.");
+                return;
+            }
+
+            var random = new Random();
+            int createdCount = 0;
+            for (int i = 0; i < Math.Min(guideProfiles.GetArrayLength(), 3); i++)
+            {
+                var guideId = guideProfiles[i].GetProperty("id").GetString();
+                if (string.IsNullOrEmpty(guideId)) continue;
+                _logger.LogInformation("Processing guide {GuideId} for bookings seeding...", guideId);
+
+                // 4. Get experience package for this guide
+                var pkgReq = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Get, $"{supabaseUrl}/rest/v1/experience_packages?guide_profile_id=eq.{guideId}&select=id,price_per_session&limit=1");
+                pkgReq.Headers.Add("apikey", tokenToUse);
+                pkgReq.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenToUse);
+                var pkgRes = await http.SendAsync(pkgReq);
+                if (!pkgRes.IsSuccessStatusCode)
+                {
+                    var errContent = await pkgRes.Content.ReadAsStringAsync();
+                    _logger.LogInformation("Failed to query experience package for guide {GuideId}. Status: {Status}, Error: {Error}", guideId, pkgRes.StatusCode, errContent);
+                    continue;
+                }
+                var pkgContent = await pkgRes.Content.ReadAsStringAsync();
+                using var pkgDoc = System.Text.Json.JsonDocument.Parse(pkgContent);
+                string pkgId;
+                decimal pricePerSession = 500000;
+                if (pkgDoc.RootElement.GetArrayLength() == 0)
+                {
+                    _logger.LogInformation("Guide {GuideId} has no experience packages. Seeding a mock package first...", guideId);
+                    pkgId = Guid.NewGuid().ToString();
+                    
+                    var pkgPostReq = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, $"{supabaseUrl}/rest/v1/experience_packages");
+                    pkgPostReq.Headers.Add("apikey", tokenToUse);
+                    pkgPostReq.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenToUse);
+                    pkgPostReq.Headers.Add("Prefer", "return=minimal");
+                    
+                    var pkgBody = new
+                    {
+                        id = pkgId,
+                        guide_profile_id = guideId,
+                        title = "City Discovery Tour",
+                        description = "Explore the best hidden gems and popular spots in the city with a local expert.",
+                        duration_hours = 4.0m,
+                        price_per_session = pricePerSession,
+                        max_group_size = 5,
+                        is_active = true,
+                        created_at = DateTime.UtcNow.ToString("o")
+                    };
+                    
+                    pkgPostReq.Content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(pkgBody), System.Text.Encoding.UTF8, "application/json");
+                    var pkgPostRes = await http.SendAsync(pkgPostReq);
+                    if (!pkgPostRes.IsSuccessStatusCode)
+                    {
+                        var pkgPostErr = await pkgPostRes.Content.ReadAsStringAsync();
+                        _logger.LogInformation("Failed to seed mock experience package for Guide {GuideId}: {Error}", guideId, pkgPostErr);
+                        continue;
+                    }
+                    _logger.LogInformation("Successfully seeded mock experience package for Guide {GuideId}.", guideId);
+                }
+                else
+                {
+                    pkgId = pkgDoc.RootElement[0].GetProperty("id").GetString() ?? Guid.NewGuid().ToString();
+                    var priceVal = pkgDoc.RootElement[0].GetProperty("price_per_session");
+                    pricePerSession = priceVal.ValueKind == System.Text.Json.JsonValueKind.Number ? priceVal.GetDecimal() : 500000;
+                }
+                
+                decimal totalAmount = pricePerSession;
+                
+                var platformFee = totalAmount * 0.15m;
+                var guideEarnings = totalAmount - platformFee;
+                var status = random.Next(0, 4); // 0=Pending, 1=Confirmed, 2=Completed, 3=Cancelled
+
+                // 5. Post to bookings
+                var postReq = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, $"{supabaseUrl}/rest/v1/bookings");
+                postReq.Headers.Add("apikey", tokenToUse);
+                postReq.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenToUse);
+                postReq.Headers.Add("Prefer", "return=minimal");
+
+                var body = new
+                {
+                    id = Guid.NewGuid().ToString(),
+                    traveler_id = travelerId,
+                    guide_profile_id = guideId,
+                    experience_package_id = pkgId,
+                    booking_date = DateTime.UtcNow.AddDays(random.Next(1, 10)).ToString("o"),
+                    start_time = DateTime.UtcNow.AddHours(random.Next(1, 8)).ToString("HH:mm:ss"),
+                    guest_count = random.Next(1, 4),
+                    total_amount = totalAmount,
+                    platform_fee = platformFee,
+                    guide_earnings = guideEarnings,
+                    status = status,
+                    escrow_released = status == 2,
+                    cancel_reason = status == 3 ? "Change of plans" : null
+                };
+
+                postReq.Content = new System.Net.Http.StringContent(System.Text.Json.JsonSerializer.Serialize(body), System.Text.Encoding.UTF8, "application/json");
+                var postRes = await http.SendAsync(postReq);
+                if (postRes.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("Seeded Booking via bypass for Guide {GuideId} with status {Status}", guideId, status);
+                    createdCount++;
+                }
+                else
+                {
+                    var err = await postRes.Content.ReadAsStringAsync();
+                    _logger.LogInformation("Failed to seed Booking via bypass: {Error}", err);
+                }
+            }
+            _logger.LogInformation("Bookings seeding complete. Created {Count} bookings.", createdCount);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to seed bookings via bypass");
         }
     }
 }

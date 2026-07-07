@@ -16,7 +16,7 @@
             const role = localStorage.getItem('userRole');
             const email = localStorage.getItem('userEmail');
             
-            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com')) {
+            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com' && email !== 'admin2@tripmate.com')) {
                 window.location.href = '/Auth/Login';
             }
         })();
@@ -261,8 +261,16 @@
                 <span>Content & Disputes</span>
             </a>
             <a id="nav-guides" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Guides">
-                <span class="material-symbols-outlined">group</span>
+                <span class="material-symbols-outlined">assignment_ind</span>
                 <span>Guides</span>
+            </a>
+            <a id="nav-users" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Users">
+                <span class="material-symbols-outlined">group</span>
+                <span>Users</span>
+            </a>
+            <a id="nav-bookings" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Bookings">
+                <span class="material-symbols-outlined">explore</span>
+                <span>Bookings</span>
             </a>
             <a id="nav-analytics" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Analytics">
                 <span class="material-symbols-outlined">insights</span>
@@ -505,6 +513,10 @@
                 activeEl = document.getElementById("nav-moderation");
             } else if (path.includes("/Admin/Guides")) {
                 activeEl = document.getElementById("nav-guides");
+            } else if (path.includes("/Admin/Users")) {
+                activeEl = document.getElementById("nav-users");
+            } else if (path.includes("/Admin/Bookings")) {
+                activeEl = document.getElementById("nav-bookings");
             } else if (path.includes("/Admin/Analytics")) {
                 activeEl = document.getElementById("nav-analytics");
             }

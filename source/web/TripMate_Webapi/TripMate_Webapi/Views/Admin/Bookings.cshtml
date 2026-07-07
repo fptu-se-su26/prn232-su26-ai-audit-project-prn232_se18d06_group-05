@@ -1,0 +1,402 @@
+@model List<TripMate_WebAPI.Services.AdminBookingRow>
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Booking Management";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TripMate | Booking Tracking</title>
+    <script>
+        // Front-end JWT and role check
+        (function() {
+            const token = localStorage.getItem('accessToken');
+            const role = localStorage.getItem('userRole');
+            const email = localStorage.getItem('userEmail');
+            
+            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com' && email !== 'admin2@tripmate.com')) {
+                window.location.href = '/Auth/Login';
+            }
+        })();
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF6B35',
+                        'primary-dark': '#E55A2B',
+                        secondary: '#004E89',
+                        accent: '#F7B801',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(226, 232, 240, 0.5);
+        }
+        [x-cloak] { display: none !important; }
+    </style>
+    <script id="bookings-data" type="application/json">
+        @Html.Raw(JsonSerializer.Serialize(Model))
+    </script>
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('bookingsComponent', (initialBookings) => ({
+                bookings: initialBookings,
+                search: '',
+                statusFilter: '',
+                selectedBooking: null,
+                showDetailsModal: false,
+                
+                get filteredBookings() {
+                    return this.bookings.filter(b => {
+                        const tourTitle = (b.experience_packages?.title || '').toLowerCase();
+                        const traveler = (b.profiles?.full_name || '').toLowerCase();
+                        const guide = (b.experience_packages?.guide_profiles?.profiles?.full_name || '').toLowerCase();
+                        const searchKeyword = this.search.toLowerCase();
+                        const matchesSearch = tourTitle.includes(searchKeyword) || traveler.includes(searchKeyword) || guide.includes(searchKeyword);
+                        
+                        const matchesStatus = this.statusFilter === '' || b.status === parseInt(this.statusFilter);
+                        
+                        return matchesSearch && matchesStatus;
+                    });
+                },
+
+                getBookingStatusText(status) {
+                    return ['Pending', 'Confirmed', 'Completed', 'Cancelled'][status] || 'Unknown';
+                },
+
+                showDetails(b) {
+                    this.selectedBooking = b;
+                    this.showDetailsModal = true;
+                }
+            }));
+        });
+    </script>
+</head>
+<body class="bg-gray-50 flex" x-data="bookingsComponent(JSON.parse(document.getElementById('bookings-data').textContent))">
+
+    <!-- Side Navigation Bar -->
+    <aside class="fixed left-0 top-0 h-screen w-[280px] bg-white border-r border-gray-200 flex flex-col py-8 pr-4 z-50">
+        <div class="px-6 mb-10">
+            <div class="flex items-center gap-3 mb-2">
+                <img src="/images/logo.svg" alt="TripMate" class="w-10 h-10">
+                <h1 class="text-2xl font-bold text-primary">TripMate</h1>
+            </div>
+            <p class="text-sm text-gray-600">Admin Portal</p>
+        </div>
+
+        <nav class="flex-grow flex flex-col gap-1">
+            <a id="nav-dashboard" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Dashboard">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span>Dashboard</span>
+            </a>
+            <a id="nav-approvals" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200 relative" href="/Admin/GuideApprovals">
+                <span class="material-symbols-outlined">badge</span>
+                <span>Guide Approvals</span>
+                <span id="guideBadge" class="hidden absolute top-2 right-4 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                <span id="guideCount" class="hidden absolute top-1 right-2 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center"></span>
+            </a>
+            <a id="nav-escrow" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Escrow">
+                <span class="material-symbols-outlined">payments</span>
+                <span>Escrow & Finance</span>
+            </a>
+            <a id="nav-moderation" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Moderation">
+                <span class="material-symbols-outlined">gavel</span>
+                <span>Content & Disputes</span>
+            </a>
+            <a id="nav-guides" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Guides">
+                <span class="material-symbols-outlined">assignment_ind</span>
+                <span>Guides</span>
+            </a>
+            <a id="nav-users" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Users">
+                <span class="material-symbols-outlined">group</span>
+                <span>Users</span>
+            </a>
+            <a id="nav-bookings" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Bookings">
+                <span class="material-symbols-outlined">explore</span>
+                <span>Bookings</span>
+            </a>
+            <a id="nav-analytics" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Analytics">
+                <span class="material-symbols-outlined">insights</span>
+                <span>Analytics</span>
+            </a>
+        </nav>
+
+        <div class="px-4 mt-auto">
+            <div class="mt-6 px-4 py-4 flex items-center gap-3 border-t border-gray-200">
+                <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                    <span class="material-symbols-outlined text-primary">person</span>
+                </div>
+                <div class="flex-1">
+                    <p id="sidebarAdminName" class="font-medium text-gray-900">Admin User</p>
+                    <p id="sidebarAdminRole" class="text-xs text-gray-500">Super Admin</p>
+                </div>
+                <button onclick="logout()" class="p-2 hover:bg-red-50 rounded-lg transition-all group" title="Logout">
+                    <span class="material-symbols-outlined text-gray-400 group-hover:text-red-600">logout</span>
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="ml-[280px] w-[calc(100%-280px)] min-h-screen p-12 bg-gray-50">
+        <!-- Header -->
+        <header class="mb-10">
+            <h2 class="text-5xl font-bold text-gray-900 mb-2">Booking Tracking</h2>
+            <p class="text-lg text-gray-600">View and monitor the progress of tours and booking status across the system.</p>
+        </header>
+
+        <!-- Controls Toolbar (Search & Filter) -->
+        <div class="glass-panel p-6 rounded-2xl mb-8 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 shadow-sm">
+            <div class="flex-1 relative">
+                <span class="material-symbols-outlined absolute left-4 top-3 text-gray-400">search</span>
+                <input type="text" x-model="search" placeholder="Search by Tour Title, Traveler or Guide name..." 
+                       class="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-sm transition-all outline-none">
+            </div>
+            
+            <div class="flex flex-wrap gap-3">
+                <select x-model="statusFilter" class="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary text-sm outline-none transition-all">
+                    <option value="">-- All Statuses --</option>
+                    <option value="0">Pending</option>
+                    <option value="1">Confirmed</option>
+                    <option value="2">Completed</option>
+                    <option value="3">Cancelled</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Table Card -->
+        <div class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div class="px-8 py-5 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-900">Bookings List</h3>
+                <span class="bg-orange-50 text-primary border border-orange-200 px-3 py-1 rounded-full text-xs font-semibold" x-text="`${filteredBookings.length} bookings`"></span>
+            </div>
+
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-200">
+                        <th class="py-4 px-6">Tour Title</th>
+                        <th class="py-4 px-6">Traveler</th>
+                        <th class="py-4 px-6">Guide</th>
+                        <th class="py-4 px-6 text-center">Date</th>
+                        <th class="py-4 px-6 text-right">Amount</th>
+                        <th class="py-4 px-6 text-center">Status</th>
+                        <th class="py-4 px-6 text-center">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-sm">
+                    <template x-for="b in filteredBookings" :key="b.id">
+                        <tr class="hover:bg-gray-50/50 transition-colors">
+                            <!-- Tour Title -->
+                            <td class="py-4 px-6">
+                                <p class="font-bold text-gray-900" x-text="b.experience_packages?.title || 'Custom Tour'"></p>
+                                <p class="text-xs text-gray-400 mt-0.5" x-text="'ID: ' + b.id.substring(0, 8) + '...'"></p>
+                            </td>
+
+                            <!-- Traveler -->
+                            <td class="py-4 px-6">
+                                <p class="font-semibold text-gray-800" x-text="b.profiles?.full_name || 'N/A'"></p>
+                                <p class="text-xs text-gray-400" x-text="b.profiles?.email || 'N/A'"></p>
+                            </td>
+
+                            <!-- Guide -->
+                            <td class="py-4 px-6">
+                                <p class="font-semibold text-gray-800" x-text="b.experience_packages?.guide_profiles?.profiles?.full_name || 'N/A'"></p>
+                            </td>
+
+                            <!-- Date -->
+                            <td class="py-4 px-6 text-center">
+                                <span class="font-medium text-gray-700" x-text="new Date(b.booking_date).toLocaleDateString('en-US')"></span>
+                            </td>
+
+                            <!-- Amount -->
+                            <td class="py-4 px-6 text-right font-bold text-gray-900" x-text="b.total_amount.toLocaleString('en-US') + '₫'"></td>
+
+                            <!-- Status -->
+                            <td class="py-4 px-6 text-center">
+                                <span :class="{
+                                    'bg-yellow-50 text-yellow-700 border-yellow-200': b.status === 0,
+                                    'bg-blue-50 text-blue-700 border-blue-200': b.status === 1,
+                                    'bg-green-50 text-green-700 border-green-200': b.status === 2,
+                                    'bg-red-50 text-red-700 border-red-200': b.status === 3,
+                                }" class="px-2.5 py-1 rounded-full text-xs font-bold border uppercase tracking-wider" x-text="getBookingStatusText(b.status)"></span>
+                            </td>
+
+                            <!-- Actions -->
+                            <td class="py-4 px-6 text-center">
+                                <button @@click="showDetails(b)" class="p-2 hover:bg-gray-100 rounded-lg text-gray-500 hover:text-primary transition-all" title="View Detailed Info">
+                                    <span class="material-symbols-outlined">visibility</span>
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+
+                    <template x-if="filteredBookings.length === 0">
+                        <tr>
+                            <td colspan="7" class="text-center py-16 text-gray-500">
+                                <span class="material-symbols-outlined text-4xl block mb-2 text-gray-400">explore_off</span>
+                                No bookings found.
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <!-- Details Modal -->
+    <div x-show="showDetailsModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4" x-cloak>
+        <div class="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl border border-gray-100" @@click.away="showDetailsModal = false">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-2xl font-bold text-gray-900">Booking Tracking Details</h3>
+                <button @@click="showDetailsModal = false" class="p-1.5 hover:bg-gray-200 rounded-full text-gray-500 transition-all">
+                    <span class="material-symbols-outlined text-xl">close</span>
+                </button>
+            </div>
+            <div class="p-8 max-h-[70vh] overflow-y-auto space-y-6" x-data="{ b: null }" x-init="$watch('selectedBooking', val => b = val)">
+                <template x-if="b">
+                    <div class="space-y-6 text-sm">
+                        <!-- Info Card -->
+                        <div class="bg-gray-50 p-6 rounded-2xl border border-gray-250/30">
+                            <h4 class="text-lg font-bold text-primary mb-2" x-text="b.experience_packages?.title || 'Tour booking'"></h4>
+                            <p class="text-xs text-gray-400 mb-4" x-text="'Booking Reference ID: ' + b.id"></p>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <span class="text-gray-400 text-xs font-bold uppercase tracking-wider block">Booking Date</span>
+                                    <span class="font-bold text-gray-900" x-text="new Date(b.booking_date).toLocaleDateString('en-US')"></span>
+                                </div>
+                                <div>
+                                    <span class="text-gray-400 text-xs font-bold uppercase tracking-wider block">Guests Count</span>
+                                    <span class="font-bold text-gray-900" x-text="b.guest_count + ' travelers'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- User Parties Info -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200/50">
+                                <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Traveler</p>
+                                <p class="font-bold text-gray-900" x-text="b.profiles?.full_name || 'N/A'"></p>
+                                <p class="text-xs text-gray-500" x-text="b.profiles?.email || ''"></p>
+                            </div>
+                            <div class="bg-gray-50 p-4 rounded-xl border border-gray-200/50">
+                                <p class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-2">Guide</p>
+                                <p class="font-bold text-gray-900" x-text="b.experience_packages?.guide_profiles?.profiles?.full_name || 'N/A'"></p>
+                            </div>
+                        </div>
+
+                        <!-- Financials Split -->
+                        <div>
+                            <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Finance Breakdown</h4>
+                            <div class="space-y-2 bg-gray-50 p-4 rounded-xl border border-gray-200/50">
+                                <div class="flex justify-between font-medium">
+                                    <span class="text-gray-500">Gross Total Amount</span>
+                                    <span class="text-gray-950 font-bold" x-text="b.total_amount.toLocaleString('en-US') + '₫'"></span>
+                                </div>
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-gray-400">Platform Commission (15%)</span>
+                                    <span class="text-orange-600 font-bold" x-text="b.platform_fee.toLocaleString('en-US') + '₫'"></span>
+                                </div>
+                                <div class="flex justify-between text-xs">
+                                    <span class="text-gray-400">Net Guide Earnings</span>
+                                    <span class="text-green-600 font-bold" x-text="b.guide_earnings.toLocaleString('en-US') + '₫'"></span>
+                                </div>
+                                <div class="border-t border-gray-200 pt-2 flex justify-between text-xs">
+                                    <span class="text-gray-400">Escrow Payment State</span>
+                                    <span class="font-bold" :class="b.escrow_released ? 'text-green-700' : 'text-blue-600'" x-text="b.escrow_released ? 'Released (Paid to Guide)' : 'Held in Escrow'"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Cancellation info -->
+                        <template x-if="b.status === 3 && b.cancel_reason">
+                            <div class="bg-red-50 text-red-800 border border-red-200 p-4 rounded-xl">
+                                <span class="font-bold block mb-1">Cancellation Reason</span>
+                                <p class="text-xs leading-relaxed" x-text="b.cancel_reason"></p>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Set active tab styling dynamically based on path
+            const activeEl = document.getElementById("nav-bookings");
+            if (activeEl) {
+                activeEl.className = "flex items-center gap-4 px-6 py-3 bg-orange-100 text-primary border-l-4 border-primary rounded-r-full my-1 font-medium transition-all duration-200";
+            }
+
+            // Render Admin User Profile info
+            const email = localStorage.getItem("userEmail");
+            const role = localStorage.getItem("userRole");
+            if (email) {
+                const nameEl = document.getElementById("sidebarAdminName");
+                if (nameEl) nameEl.textContent = email.split('@@')[0];
+            }
+            if (role) {
+                const roleEl = document.getElementById("sidebarAdminRole");
+                if (roleEl) roleEl.textContent = role === "admin" ? "Super Admin" : role;
+            }
+
+            // Load pending guide count
+            async function loadPendingGuideCount() {
+                try {
+                    const response = await fetch('/Admin/GetPendingCount');
+                    const data = await response.json();
+                    
+                    if (data.count > 0) {
+                        const badge = document.getElementById('guideBadge');
+                        const countBadge = document.getElementById('guideCount');
+                        
+                        if (badge) badge.classList.remove('hidden');
+                        if (countBadge) {
+                            countBadge.classList.remove('hidden');
+                            countBadge.textContent = data.count;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading pending count:', error);
+                }
+            }
+
+            loadPendingGuideCount();
+            setInterval(loadPendingGuideCount, 30000);
+        });
+
+        // Logout
+        window.logout = function() {
+            if (confirm('Are you sure you want to log out?')) {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('userEmail');
+                localStorage.removeItem('userId');
+                localStorage.removeItem('userRole');
+                window.location.href = '/Auth/Login';
+            }
+        }
+    </script>
+</body>
+</html>

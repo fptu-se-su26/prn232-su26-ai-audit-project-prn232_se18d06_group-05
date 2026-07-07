@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using TripMate_WebAPI.Services;
 
 
@@ -57,8 +58,8 @@ namespace TripMate_Webapi.Controllers
                 var userIsActive = result.User?.IsActive ?? true;
                 
                 // Cố định role cho các tài khoản seed để tránh lỗi sai role từ Database
-                if (request.Email == "admin@tripmate.com") userRole = "admin";
-                if (request.Email == "guide@tripmate.com") {
+                if (request.Email == "admin@tripmate.com" || request.Email == "admin2@tripmate.com") userRole = "admin";
+                if (request.Email == "guide@tripmate.com" || request.Email == "guide2@tripmate.com") {
                     userRole = "guide";
                     userIsActive = true;
                 }
@@ -363,6 +364,103 @@ namespace TripMate_Webapi.Controllers
             // Server-side logout would involve invalidating the token (if using sessions)
             return Ok(new { message = "Đăng xuất thành công" });
         }
+
+        /// <summary>
+        /// Get profile details
+        /// GET /api/auth/profile
+        /// </summary>
+        [HttpGet("profile")]
+        [Authorize]
+        public async Task<IActionResult> GetProfile()
+        {
+            try
+            {
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                             ?? User.FindFirst("sub")?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new { message = "User not found in token" });
+                }
+
+                var token = Request.Headers.Authorization.ToString().Replace("Bearer ", "").Trim();
+                var profile = await _authService.GetProfileAsync(token, userId);
+                return Ok(profile);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching user profile");
+                return StatusCode(500, new { message = "Failed to load profile" });
+            }
+        }
+
+        /// <summary>
+        /// Update profile details
+        /// PATCH /api/auth/profile
+        /// </summary>
+        [HttpPatch("profile")]
+        [Authorize]
+        public async Task<IActionResult> UpdateProfile([FromBody] ProfileUpdateRequest request)
+        {
+            try
+            {
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                             ?? User.FindFirst("sub")?.Value;
+                var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value 
+                            ?? User.FindFirst("email")?.Value;
+
+                if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(email))
+                {
+                    return Unauthorized(new { message = "User not found in token" });
+                }
+
+                var token = Request.Headers.Authorization.ToString().Replace("Bearer ", "").Trim();
+
+                // Get current profile first so we don't overwrite unrelated fields with null
+                var currentProfile = await _authService.GetProfileAsync(token, userId);
+
+                var fullName = request.FullName ?? currentProfile.FullName ?? "";
+                var phone = request.PhoneNumber ?? currentProfile.PhoneNumber;
+                var bio = request.Bio ?? currentProfile.Bio;
+                var avatarUrl = request.AvatarUrl ?? currentProfile.AvatarUrl;
+                var experience = request.Experience ?? currentProfile.Experience;
+                var specialization = request.Specialization ?? currentProfile.Specialization;
+                var languages = request.Languages ?? currentProfile.Languages;
+                var certificatePath = currentProfile.CertificateUrl; // Keep current certificate path
+
+                await _authService.UpsertProfileAsync(
+                    token, 
+                    userId, 
+                    email, 
+                    fullName, 
+                    currentProfile.Role ?? "traveler",
+                    phone,
+                    experience,
+                    specialization,
+                    languages,
+                    bio,
+                    certificatePath,
+                    avatarUrl
+                );
+
+                return Ok(new { message = "Thông tin cá nhân đã được cập nhật thành công!" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user profile");
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+    }
+
+    public class ProfileUpdateRequest
+    {
+        public string? FullName { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? Bio { get; set; }
+        public string? AvatarUrl { get; set; }
+        public string? Experience { get; set; }
+        public string? Specialization { get; set; }
+        public string? Languages { get; set; }
     }
 
     // Request DTOs

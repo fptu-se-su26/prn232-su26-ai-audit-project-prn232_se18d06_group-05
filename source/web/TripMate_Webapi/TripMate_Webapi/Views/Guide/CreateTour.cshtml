@@ -243,23 +243,61 @@
                     }
                 },
 
-                submitForm() {
+                async submitForm() {
                     this.isSubmitting = true;
                     // Validate
-                    if(this.formData.description.length < 100) {
+                    if (this.formData.description.length < 100) {
                         showToast('error', 'Mô tả chi tiết phải có ít nhất 100 ký tự!');
                         this.isSubmitting = false;
                         return;
                     }
                     
-                    // Simulate API POST
-                    setTimeout(() => {
+                    const payload = {
+                        title: this.formData.name,
+                        description: this.formData.description,
+                        durationHours: parseFloat(this.formData.duration),
+                        pricePerSession: parseFloat(this.formData.pricePerSession),
+                        pricePerPerson: this.formData.pricePerGuest > 0 ? parseFloat(this.formData.pricePerGuest) : null,
+                        maxGroupSize: parseInt(this.formData.maxGuests),
+                        includedItems: this.formData.includedServices.map(id => {
+                            const found = this.availableServices.find(s => s.id === id);
+                            return found ? found.name : id;
+                        }),
+                        tags: this.formData.tags
+                    };
+
+                    try {
+                        const token = localStorage.getItem('accessToken');
+                        if (!token) {
+                            showToast('error', 'Phiên làm việc hết hạn. Vui lòng đăng nhập lại.');
+                            window.location.href = '/Auth/Login';
+                            return;
+                        }
+                        
+                        const res = await fetch('/api/Tours', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            },
+                            body: JSON.stringify(payload)
+                        });
+                        
+                        const data = await res.json();
+                        if (res.ok) {
+                            showToast('success', 'Tạo gói trải nghiệm thành công!');
+                            setTimeout(() => {
+                                window.location.href = '/Guide/MyTours';
+                            }, 1500);
+                        } else {
+                            showToast('error', data.message || 'Tạo gói trải nghiệm thất bại');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        showToast('error', 'Có lỗi xảy ra kết nối đến server');
+                    } finally {
                         this.isSubmitting = false;
-                        showToast('success', 'Tạo gói trải nghiệm thành công!');
-                        setTimeout(() => {
-                            window.location.href = '/Guide/MyTours';
-                        }, 1500);
-                    }, 1000);
+                    }
                 }
             }
         }

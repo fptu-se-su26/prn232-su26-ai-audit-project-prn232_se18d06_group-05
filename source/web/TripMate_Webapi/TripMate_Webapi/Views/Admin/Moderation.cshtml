@@ -16,7 +16,7 @@
             const role = localStorage.getItem('userRole');
             const email = localStorage.getItem('userEmail');
             
-            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com')) {
+            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com' && email !== 'admin2@tripmate.com')) {
                 window.location.href = '/Auth/Login';
             }
         })();
@@ -52,7 +52,7 @@
     </style>
 </head>
 <body class="bg-gray-50 flex" x-data="{
-    activeTab: 'users',
+    activeTab: 'reviews',
     users: [],
     reviews: [],
     disputes: [],
@@ -184,7 +184,6 @@
     },
 
     init() {
-        this.loadUsers();
         this.loadReviews();
         this.loadDisputes();
     }
@@ -220,8 +219,16 @@
                 <span>Content & Disputes</span>
             </a>
             <a id="nav-guides" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Guides">
-                <span class="material-symbols-outlined">group</span>
+                <span class="material-symbols-outlined">assignment_ind</span>
                 <span>Guides</span>
+            </a>
+            <a id="nav-users" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Users">
+                <span class="material-symbols-outlined">group</span>
+                <span>Users</span>
+            </a>
+            <a id="nav-bookings" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Bookings">
+                <span class="material-symbols-outlined">explore</span>
+                <span>Bookings</span>
             </a>
             <a id="nav-analytics" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Analytics">
                 <span class="material-symbols-outlined">insights</span>
@@ -253,12 +260,7 @@
             <p class="text-lg text-gray-600">Moderate content, resolve booking disputes, view chat logs, manage user accounts, and review reports.</p>
         </header>
 
-        <!-- Sub Tabs -->
         <div class="flex gap-4 border-b border-gray-200 pb-4">
-            <button @@click="activeTab = 'users'" :class="activeTab === 'users' ? 'bg-primary text-white font-bold' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'" class="px-6 py-2.5 rounded-lg shadow-sm transition-all text-sm flex items-center gap-2">
-                <span class="material-symbols-outlined text-sm">group</span>
-                User Management
-            </button>
             <button @@click="activeTab = 'reviews'" :class="activeTab === 'reviews' ? 'bg-primary text-white font-bold' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'" class="px-6 py-2.5 rounded-lg shadow-sm transition-all text-sm flex items-center gap-2">
                 <span class="material-symbols-outlined text-sm">reviews</span>
                 Review Moderation
@@ -273,59 +275,6 @@
             </button>
         </div>
 
-        <!-- TAB CONTENT: User Management -->
-        <div x-show="activeTab === 'users'" class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" x-cloak>
-            <div class="px-8 py-5 border-b border-gray-200">
-                <h3 class="text-xl font-bold text-gray-900">User Account Management</h3>
-                <p class="text-xs text-gray-500 mt-1">Activate/suspend users or force role updates.</p>
-            </div>
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-200">
-                        <th class="py-4 px-6">Full Name / Email</th>
-                        <th class="py-4 px-6">Role</th>
-                        <th class="py-4 px-6 text-center">Status</th>
-                        <th class="py-4 px-6 text-center">Change Role</th>
-                        <th class="py-4 px-6 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 text-sm">
-                    <template x-for="u in users" :key="u.id">
-                        <tr class="hover:bg-gray-50/50 transition-colors">
-                            <td class="py-4 px-6">
-                                <p class="font-bold text-gray-900" x-text="u.full_name || 'No Name'"></p>
-                                <p class="text-xs text-gray-400" x-text="u.email"></p>
-                            </td>
-                            <td class="py-4 px-6">
-                                <span :class="{
-                                    'bg-orange-100 text-orange-800 border-orange-200': u.role === 'guide',
-                                    'bg-blue-100 text-blue-800 border-blue-200': u.role === 'traveler',
-                                    'bg-purple-100 text-purple-800 border-purple-200': u.role === 'admin'
-                                }" class="px-2 py-0.5 rounded-full text-xs font-bold border uppercase" x-text="u.role"></span>
-                            </td>
-                            <td class="py-4 px-6 text-center">
-                                <span :class="u.is_active ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'" class="px-2.5 py-0.5 rounded-full text-xs font-semibold" x-text="u.is_active ? 'Active' : 'Suspended'"></span>
-                            </td>
-                            <!-- Force Role -->
-                            <td class="py-4 px-6 text-center">
-                                <select @@change="changeUserRole(u.id, $event.target.value)" class="bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-primary focus:border-primary p-2">
-                                    <option value="">-- Choose Role --</option>
-                                    <option value="traveler">Traveler</option>
-                                    <option value="guide">Guide</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                            </td>
-                            <!-- Status Toggle -->
-                            <td class="py-4 px-6 text-center">
-                                <button @@click="toggleUserStatus(u.id, !u.is_active)" :class="u.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'" class="px-4 py-1.5 rounded-lg font-bold text-xs transition-all">
-                                    <span x-text="u.is_active ? 'Suspend' : 'Activate'"></span>
-                                </button>
-                            </td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-        </div>
 
         <!-- TAB CONTENT: Review Moderation -->
         <div x-show="activeTab === 'reviews'" class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" x-cloak>
@@ -502,6 +451,10 @@
                 activeEl = document.getElementById("nav-moderation");
             } else if (path.includes("/Admin/Guides")) {
                 activeEl = document.getElementById("nav-guides");
+            } else if (path.includes("/Admin/Users")) {
+                activeEl = document.getElementById("nav-users");
+            } else if (path.includes("/Admin/Bookings")) {
+                activeEl = document.getElementById("nav-bookings");
             } else if (path.includes("/Admin/Analytics")) {
                 activeEl = document.getElementById("nav-analytics");
             }

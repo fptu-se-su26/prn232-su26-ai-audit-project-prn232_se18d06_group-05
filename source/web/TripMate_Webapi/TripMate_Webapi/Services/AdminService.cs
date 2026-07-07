@@ -557,6 +557,44 @@ namespace TripMate_WebAPI.Services
                 return false;
             }
         }
+
+        public async Task<bool> DeleteUserAsync(string userId)
+        {
+            try
+            {
+                var url = $"{_supabaseUrl}/auth/v1/admin/users/{userId}";
+                var req = BuildAdminRequest(HttpMethod.Delete, url);
+                
+                var response = await _http.SendAsync(req);
+                var content = await response.Content.ReadAsStringAsync();
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("User {UserId} deleted successfully from Supabase Auth", userId);
+                    return true;
+                }
+                else
+                {
+                    _logger.LogError("Failed to delete user {UserId}: {StatusCode} - {Content}", userId, response.StatusCode, content);
+                    
+                    // Fallback: if auth deletion fails or is restricted, try deleting from profiles directly
+                    var profileUrl = $"{_supabaseUrl}/rest/v1/profiles?id=eq.{userId}";
+                    var profileReq = BuildAdminRequest(HttpMethod.Delete, profileUrl);
+                    var profileResponse = await _http.SendAsync(profileReq);
+                    if (profileResponse.IsSuccessStatusCode)
+                    {
+                        _logger.LogInformation("Deleted profile row for user {UserId} from public.profiles directly", userId);
+                        return true;
+                    }
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user {UserId}", userId);
+                return false;
+            }
+        }
     }
 
     public class AdminGuideProfileRow

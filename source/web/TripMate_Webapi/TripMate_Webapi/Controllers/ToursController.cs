@@ -131,12 +131,10 @@ public class ToursController : ControllerBase
     // Helper: lookup guide_profile_id from auth user_id
     private async Task<string?> GetGuideProfileIdAsync(string userId)
     {
-        // This could be moved to a dedicated GuideProfileService
         try
         {
-            var rows = await _tourService.GetToursByGuideAsync(""); // We need a direct lookup
-            // For now, we use a simple approach - the TourService can be extended
-            return null; // Will be resolved after full integration
+            if (string.IsNullOrEmpty(UserToken)) return null;
+            return await _tourService.GetGuideProfileIdByUserIdAsync(userId, UserToken);
         }
         catch
         {

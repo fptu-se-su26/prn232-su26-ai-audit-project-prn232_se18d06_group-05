@@ -304,7 +304,39 @@
                 availableSpecialties: ['Ẩm thực đường phố', 'Văn hóa - Lịch sử', 'Nhiếp ảnh', 'Mạo hiểm', 'Nightlife', 'Thiên nhiên', 'Nghệ thuật địa phương', 'Mua sắm'],
                 
                 // Deep copy initial data
-                form: JSON.parse(JSON.stringify(window.initialProfile || {})),
+                form: {
+                    FullName: '', PhoneNumber: '', Bio: '', AvatarUrl: '', CoverUrl: '', CityArea: 'Hội An',
+                    Languages: [], Specialties: [], Rating: 5.0, ReviewsCount: 0, BaseRate: 50000
+                },
+
+                async init() {
+                    const token = localStorage.getItem('accessToken');
+                    if (!token) {
+                        window.location.href = '/Auth/Login';
+                        return;
+                    }
+                    try {
+                        const res = await fetch('/api/auth/profile', {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            this.form.FullName = data.full_name || '';
+                            this.form.PhoneNumber = data.phone_number || '';
+                            this.form.Bio = data.bio || '';
+                            this.form.AvatarUrl = data.avatar_url || '/images/AVATAR.png';
+                            this.form.CoverUrl = data.cover_photo_url || '';
+                            this.form.CityArea = data.specialization || 'Hội An';
+                            this.form.Languages = data.languages ? (typeof data.languages === 'string' ? data.languages.split(',').map(s => s.trim()) : data.languages) : [];
+                            this.form.Specialties = data.specialization ? data.specialization.split(',').map(s => s.trim()) : [];
+                            this.form.Rating = data.average_rating || 5.0;
+                            this.form.ReviewsCount = data.total_reviews || 0;
+                            window.initialProfile = JSON.parse(JSON.stringify(this.form));
+                        }
+                    } catch (err) {
+                        console.error('Error loading profile:', err);
+                    }
+                },
 
                 formatCurrency(val) {
                     if (!val) return '0 ₫';
@@ -317,23 +349,41 @@
                     }
                 },
 
-                saveProfile() {
+                async saveProfile() {
                     this.isSaving = true;
-                    
-                    // Validate
                     if (this.form.Languages.length === 0) {
                         showToast('error', 'Vui lòng chọn ít nhất 1 ngôn ngữ!');
                         this.isSaving = false;
                         this.currentTab = 'expertise';
                         return;
                     }
-
-                    // Simulate API Call
-                    setTimeout(() => {
+                    const token = localStorage.getItem('accessToken');
+                    try {
+                        const res = await fetch('/api/auth/profile', {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({
+                                fullName: this.form.FullName,
+                                phoneNumber: this.form.PhoneNumber,
+                                bio: this.form.Bio,
+                                languages: this.form.Languages.join(', '),
+                                specialization: this.form.Specialties.join(', '),
+                                avatarUrl: this.form.AvatarUrl
+                            })
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                            showToast('success', 'Đã lưu thông tin hồ sơ thành công!');
+                            window.initialProfile = JSON.parse(JSON.stringify(this.form));
+                        } else {
+                            showToast('error', data.message || 'Lỗi khi lưu thông tin');
+                        }
+                    } catch (err) {
+                        console.error('Error saving profile:', err);
+                        showToast('error', 'Không thể kết nối đến máy chủ');
+                    } finally {
                         this.isSaving = false;
-                        window.initialProfile = JSON.parse(JSON.stringify(this.form));
-                        showToast('success', 'Đã lưu thông tin hồ sơ thành công!');
-                    }, 800);
+                    }
                 }
             }
         }

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ClosedXML.Excel;
@@ -33,7 +34,7 @@ namespace TripMate_Webapi.Controllers
         {
             // 1. Fallback for seed user email
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
-            if (email == "admin@tripmate.com") return true;
+            if (email == "admin@tripmate.com" || email == "admin2@tripmate.com") return true;
 
             // 2. Main claim check (JWT user_metadata claim)
             var metadataClaim = User.FindFirst("user_metadata")?.Value;
@@ -237,6 +238,52 @@ namespace TripMate_Webapi.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error exporting transactions");
+                return StatusCode(500, new { message = "File export error" });
+            }
+        }
+
+        // GET: /api/admin/users/export
+        [HttpGet("users/export")]
+        public async Task<IActionResult> ExportUsers()
+        {
+            if (!IsAdmin()) return Forbid();
+
+            try
+            {
+                var users = await _adminService.GetUsersAsync();
+
+                var builder = new StringBuilder();
+                builder.AppendLine("ID,Email,Full Name,Phone Number,Role,Is Active,Created At");
+
+                foreach (var u in users)
+                {
+                    var id = u.Id ?? "";
+                    var email = u.Email ?? "";
+                    var fullName = (u.FullName ?? "").Replace("\"", "\"\"");
+                    if (fullName.Contains(",")) fullName = $"\"{fullName}\"";
+                    var phone = u.PhoneNumber ?? "";
+                    var role = u.Role ?? "";
+                    var isActive = u.IsActive ? "Yes" : "No";
+                    var createdAt = u.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss");
+
+                    builder.AppendLine($"{id},{email},{fullName},{phone},{role},{isActive},{createdAt}");
+                }
+
+                var content = Encoding.UTF8.GetBytes(builder.ToString());
+                var bom = new byte[] { 0xEF, 0xBB, 0xBF };
+                var fileContent = new byte[bom.Length + content.Length];
+                Buffer.BlockCopy(bom, 0, fileContent, 0, bom.Length);
+                Buffer.BlockCopy(content, 0, fileContent, bom.Length, content.Length);
+
+                return File(
+                    fileContent,
+                    "text/csv",
+                    $"users_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv"
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting users");
                 return StatusCode(500, new { message = "File export error" });
             }
         }
