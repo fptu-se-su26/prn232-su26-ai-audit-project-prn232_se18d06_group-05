@@ -225,7 +225,7 @@ public class SupabaseAuthService
                 id = userId,
                 email,
                 full_name = fullName,
-                phone_number = phoneNumber,         // schema mới dùng 'phone_number'
+                phone_number = phoneNumber,
                 role = role,
                 experience = experience,
                 specialization = specialization,

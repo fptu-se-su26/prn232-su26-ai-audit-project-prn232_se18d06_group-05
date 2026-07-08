@@ -1,26 +1,39 @@
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
+using TripMate_WebAPI.DTOs.Tour.Requests;
 using TripMate_Webapi.Repositories;
 
 namespace TripMate_Webapi.Controllers
 {
+    [Route("Guide/[action]")]
     public class GuideController : Controller
     {
         private readonly TourService _tourService;
         private readonly BookingService _bookingService;
         private readonly IGuideRepository _guideRepository;
+        private readonly IExperienceService _experienceService;
+        private readonly ICalendarService _calendarService;
         private readonly ILogger<GuideController> _logger;
+        private readonly Supabase.Client _supabase;
 
         public GuideController(
             TourService tourService,
             BookingService bookingService,
             IGuideRepository guideRepository,
-            ILogger<GuideController> logger)
+            IExperienceService experienceService,
+            ICalendarService calendarService,
+            ILogger<GuideController> logger,
+            Supabase.Client supabase)
         {
             _tourService = tourService;
             _bookingService = bookingService;
             _guideRepository = guideRepository;
+            _experienceService = experienceService;
+            _calendarService = calendarService;
             _logger = logger;
+            _supabase = supabase;
         }
 
         // GET: /Guide/Index (List of all Guides for Traveler)
@@ -36,6 +49,7 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/Dashboard
+        [Authorize(Roles = "guide")]
         public async Task<IActionResult> Dashboard()
         {
             try
@@ -89,6 +103,7 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/Profile
+        [Authorize(Roles = "guide")]
         public IActionResult Profile()
         {
             var profileData = new
@@ -111,63 +126,205 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/Calendar
+        [Authorize(Roles = "guide")]
         public IActionResult Calendar()
         {
             return View();
         }
 
-        // GET: /Guide/MyTours
-        public IActionResult MyTours()
+        // GET: /Guide/GetCalendarData
+        [HttpGet, Authorize(Roles = "guide")]
+        public async Task<IActionResult> GetCalendarData(string start, string end)
         {
-            // Mock data for UI
-            var tours = new List<dynamic>
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (guideProfileId == null) return Unauthorized();
+            
+            var data = await _calendarService.GetCalendarDataAsync(guideProfileId, start, end);
+            return Json(data);
+        }
+
+        // POST: /Guide/SaveBlockedDates
+        [HttpPost, Authorize(Roles = "guide")]
+        public async Task<IActionResult> SaveBlockedDates([FromBody] TripMate_WebAPI.DTOs.Guide.Requests.SaveBlockedDatesRequest req)
+        {
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (guideProfileId == null) return Unauthorized();
+            
+            await _calendarService.SaveBlockedDatesAsync(guideProfileId, req);
+            return Ok(new { message = "Cập nhật thành công" });
+        }
+
+        // Helper method to get the guide profile ID of the currently logged-in user
+        private async Task<string?> GetCurrentGuideProfileIdAsync()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                      ?? User.FindFirst("sub")?.Value;
+
+            Console.WriteLine($"[GetCurrentGuideProfileIdAsync] Extracted userId: '{userId}'");
+
+            if (string.IsNullOrEmpty(userId)) return null;
+
+            try 
             {
-                new { 
-                    Id = 1, 
-                    Name = "Bình minh Mỹ Sơn + Ẩm thực địa phương", 
-                    Duration = 4.5, 
-                    MaxGuests = 6, 
-                    Price = 1200000, 
-                    Tags = new[] { "food", "culture", "hidden-gems" },
-                    Bookings = 12,
-                    Rating = 4.9,
-                    IsActive = true
-                },
-                new { 
-                    Id = 2, 
-                    Name = "Khám phá phố cổ Hội An về đêm", 
-                    Duration = 3.0, 
-                    MaxGuests = 10, 
-                    Price = 850000, 
-                    Tags = new[] { "nightlife", "photography" },
-                    Bookings = 34,
-                    Rating = 4.8,
-                    IsActive = true
-                },
-                new { 
-                    Id = 3, 
-                    Name = "Đạp xe đồng quê & Làng rau Trà Quế", 
-                    Duration = 5.0, 
-                    MaxGuests = 4, 
-                    Price = 950000, 
-                    Tags = new[] { "nature", "culture" },
-                    Bookings = 8,
-                    Rating = 5.0,
-                    IsActive = false
-                }
-            };
+                var guide = await _guideRepository.GetGuideByIdAsync(userId);
+                Console.WriteLine($"[GetCurrentGuideProfileIdAsync] Found guide profile with Id: '{guide?.Id}' for userId: '{userId}'");
+                return guide?.Id;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[GetCurrentGuideProfileIdAsync] Exception fetching guide profile for userId '{userId}': {ex.Message}");
+                return null;
+            }
+        }
+
+        // GET: /Guide/MyTours
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> MyTours()
+        {
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (string.IsNullOrEmpty(guideProfileId))
+            {
+                // If the user is logged in but doesn't have a guide profile, they shouldn't be here
+                // Redirecting to an error page or Dashboard
+                return RedirectToAction("Index", "Home"); 
+            }
+
+            var tours = await _experienceService.GetMyToursAsync(guideProfileId);
             
             ViewBag.Tours = tours;
             return View();
         }
 
-        // GET: /Guide/CreateTour
-        public IActionResult CreateTour()
+        [HttpPatch("/ToggleTourStatus/{id}")]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> ToggleTourStatus(string id)
         {
+            try
+            {
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "Không có quyền thực hiện thao tác này" });
+
+                var success = await _experienceService.ToggleTourStatusAsync(id, guideProfileId);
+                
+                if (success) return Ok(new { success = true, message = "Cập nhật trạng thái thành công" });
+                return BadRequest(new { success = false, message = "Không tìm thấy gói trải nghiệm" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpDelete("/DeleteTour/{id}")]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> DeleteTour(string id)
+        {
+            try
+            {
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "Không có quyền thực hiện thao tác này" });
+
+                var success = await _experienceService.DeleteTourAsync(id, guideProfileId);
+                
+                if (success) return Ok(new { success = true, message = "Đã xóa gói trải nghiệm" });
+                return BadRequest(new { success = false, message = "Xóa thất bại" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost("/DuplicateTour/{id}")]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> DuplicateTour(string id)
+        {
+            try
+            {
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "Không có quyền thực hiện thao tác này" });
+
+                var newTour = await _experienceService.DuplicateTourAsync(id, guideProfileId);
+                
+                if (newTour != null) return Ok(new { success = true, message = "Nhân bản thành công" });
+                return BadRequest(new { success = false, message = "Không tìm thấy gói trải nghiệm" });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        // GET: /Guide/CreateTour
+        [HttpGet]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> CreateTour(string? id = null)
+        {
+            if (string.IsNullOrEmpty(id))
+            {
+                ViewBag.IsEdit = false;
+                return View();
+            }
+
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
+
+            var tour = await _experienceService.GetPackageByIdAsync(id, guideProfileId);
+            if (tour == null) return NotFound();
+
+            ViewBag.IsEdit = true;
+            
+            var tourDto = new 
+            {
+                id = tour.Id,
+                title = tour.Title,
+                durationHours = tour.DurationHours,
+                maxGroupSize = tour.MaxGroupSize,
+                city = tour.City,
+                meetingPoint = tour.MeetingPoint,
+                description = tour.Description,
+                pricePerSession = tour.PricePerSession,
+                pricePerPerson = tour.PricePerPerson,
+                timelineJson = tour.TimelineJson,
+                languages = tour.Languages,
+                includedItems = tour.IncludedItems,
+                tags = tour.Tags,
+                coverImageUrl = tour.CoverImageUrl,
+                galleryImageUrls = tour.GalleryImageUrls
+            };
+            
+            ViewBag.TourData = System.Text.Json.JsonSerializer.Serialize(tourDto, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
             return View();
         }
 
+        // POST: /Guide/CreateTour
+        [HttpPost]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> CreateTour([FromForm] CreateTourDto dto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ." });
+                }
+
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "Bạn cần có hồ sơ hướng dẫn viên để tạo gói trải nghiệm." });
+
+                var createdTour = await _experienceService.CreateTourAsync(dto, guideProfileId);
+
+                return Ok(new { success = true, data = new { id = createdTour.Id }, message = "Tuyệt vời! Gói trải nghiệm của bạn đã được xuất bản." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating tour");
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         // GET: /Guide/Bookings
+        [Authorize(Roles = "guide")]
         public IActionResult Bookings()
         {
             var bookings = new List<dynamic>
@@ -317,6 +474,32 @@ namespace TripMate_Webapi.Controllers
             ViewBag.ChartData = chartData;
             ViewBag.Transactions = transactions;
 
+            return View();
+        }
+
+        // GET: /Guide/Notifications
+        public IActionResult Notifications()
+        {
+            var notifications = new List<dynamic>
+            {
+                new { Id = 1, Type = "booking_new", Title = "Booking mới từ Trần Thị Bảo Châu", Message = "Đặt 'Bình minh Mỹ Sơn' vào 15/06/2026. Phản hồi trong 24h", Time = "10 phút trước", IsRead = false },
+                new { Id = 2, Type = "payment", Title = "Thanh toán đã được giải ngân", Message = "850,000đ từ booking #BK-2024-008 đã về ví", Time = "1 giờ trước", IsRead = false },
+                new { Id = 3, Type = "review", Title = "Đánh giá mới 5 sao từ Nguyễn Văn An", Message = "\"Guide rất nhiệt tình, rất recommend!\"", Time = "Hôm qua 14:23", IsRead = true },
+                new { Id = 4, Type = "admin", Title = "Tài khoản của bạn đã được xác minh", Message = "Chào mừng bạn đến với TripMate Local Guide. Bắt đầu tạo tour ngay nhé!", Time = "2 ngày trước", IsRead = true }
+            };
+            ViewBag.Notifications = notifications;
+            return View();
+        }
+
+        // GET: /Guide/Support
+        public IActionResult Support()
+        {
+            var tickets = new List<dynamic>
+            {
+                new { Id = "TK-001", Title = "Khách hủy sát giờ", Status = "Pending", Date = "12/06/2026" },
+                new { Id = "TK-002", Title = "Lỗi không nhận được tiền giải ngân", Status = "Resolved", Date = "05/06/2026" }
+            };
+            ViewBag.Tickets = tickets;
             return View();
         }
     }

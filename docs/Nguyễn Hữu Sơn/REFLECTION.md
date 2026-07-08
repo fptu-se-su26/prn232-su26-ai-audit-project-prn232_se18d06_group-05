@@ -4,15 +4,15 @@
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học |  |
-| Mã môn học |  |
-| Lớp |  |
-| Học kỳ |  |
-| Tên bài tập / Project |  |
-| Tên sinh viên / Nhóm |  |
-| MSSV / Danh sách MSSV |  |
-| Giảng viên hướng dẫn |  |
-| Ngày hoàn thành reflection |  |
+| Môn học | dotnet .Prn232 |
+| Mã môn học | PRN2332 |
+| Lớp | SE18D06 |
+| Học kỳ | Summer 2026 |
+| Tên bài tập / Project | TripMate - Tour Guide Booking Platform |
+| Tên sinh viên / Nhóm | Nguyễn Hữu Sơn – Nhóm 5 |
+| MSSV / Danh sách MSSV | DE180845 |
+| Giảng viên hướng dẫn | quangltn3 |
+| Ngày hoàn thành reflection | 21/06/2026 |
 
 ---
 
@@ -28,6 +28,9 @@ Reflection cần thể hiện:
 - Sinh viên/nhóm học được gì về môn học.
 - Sinh viên/nhóm học được gì về cách sử dụng AI minh bạch và có trách nhiệm.
 
+**Prompt là gì?**
+Prompt là câu hỏi hoặc yêu cầu người dùng đưa ra cho công cụ AI để nhận được câu trả lời, gợi ý hoặc mã nguồn. Prompt cần ngắn gọn, rõ ràng và cung cấp đủ ngữ cảnh để AI có thể hiểu và hỗ trợ đúng nhu cầu.
+
 ---
 
 ## 3. Tóm tắt quá trình sử dụng AI
@@ -35,7 +38,7 @@ Reflection cần thể hiện:
 Mô tả ngắn gọn quá trình sử dụng AI trong bài tập/project này.
 
 ```text
-Viết tại đây...
+Trong dự án này, chúng tôi đã sử dụng Gemini để tạo cấu trúc dự án, viết các component UI, tạo migration cho database, và viết các API endpoint. Gemini cung cấp các đoạn mã mẫu, giúp giảm thời gian triển khai và giảm lỗi cú pháp.
 ```
 
 Gợi ý:
@@ -65,7 +68,7 @@ Gợi ý:
 ### Công cụ được sử dụng nhiều nhất
 
 ```text
-Viết tại đây...
+Gemini
 ```
 
 ### Lý do sử dụng công cụ đó
@@ -126,7 +129,9 @@ Gợi ý:
 ### 6.2. Những điểm AI chưa giúp tốt hoặc gây khó khăn
 
 ```text
-Viết tại đây...
+- AI đôi khi cung cấp code không tương thích với phiên bản .NET
+- Một số gợi ý thiếu bối cảnh thực tế của dự án
+- Đôi khi đề xuất quá phức tạp, cần đơn giản hoá
 ```
 
 Gợi ý:
@@ -149,7 +154,7 @@ Gợi ý:
 Giải thích:
 
 ```text
-Viết tại đây...
+Chúng tôi không phụ thuộc quá mức vào AI. Các quyết định kiến trúc và thiết kế luôn được thảo luận nội bộ và xác nhận bởi giảng viên.
 ```
 
 ---
@@ -174,7 +179,7 @@ Viết tại đây...
 ### Mô tả quá trình kiểm chứng
 
 ```text
-Viết tại đây...
+Sau khi nhận được code mẫu từ AI, chúng tôi đã thực thi, kiểm tra lỗi biên dịch, và sửa lại các phần không phù hợp với kiến trúc dự án.
 ```
 
 ### Ví dụ cụ thể về một lần kiểm chứng
