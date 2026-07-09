@@ -4,6 +4,10 @@
     Layout = "_GuideLayout";
 }
 
+@section Styles {
+    <meta name="turbo-cache-control" content="no-cache">
+}
+
 <div class="min-h-screen pb-10" x-data="tourWizardApp()">
     
     <!-- Top Thin Stepper -->
@@ -403,7 +407,7 @@
                 
                 formData: {
                     id: '', name: '', duration: 4, maxGuests: 5, city: '', meetingPoint: '',
-                    description: '', timeline: [{time: '08:00', activity: ''}], languages: ['Tiếng Việt', 'English'],
+                    description: '', timeline: [{time: '', activity: ''}], languages: ['Tiếng Việt', 'English'],
                     pricePerSession: 1000000, pricePerGuest: 0, includedServices: ['scooter'], tags: ['explore']
                 },
 
@@ -421,9 +425,21 @@
                                 this.formData.description = tourData.description;
                                 this.formData.pricePerSession = tourData.pricePerSession;
                                 this.formData.pricePerGuest = tourData.pricePerPerson || 0;
-                                this.formData.timeline = tourData.timelineJson || [{time: '08:00', activity: ''}];
+                                this.formData.timeline = tourData.timelineJson || [{time: '', activity: ''}];
                                 this.formData.languages = tourData.languages || [];
-                                this.formData.includedServices = tourData.includedItems || [];
+                                const loadedServices = tourData.includedItems || [];
+                                this.formData.includedServices = [];
+                                
+                                loadedServices.forEach(svcName => {
+                                    const existing = this.availableServices.find(s => s.name === svcName);
+                                    if (existing) {
+                                        this.formData.includedServices.push(existing.id);
+                                    } else {
+                                        const customId = 'custom_' + Math.random().toString(36).substr(2, 9);
+                                        this.availableServices.push({ id: customId, name: svcName, icon: 'star' });
+                                        this.formData.includedServices.push(customId);
+                                    }
+                                });
                                 this.formData.tags = tourData.tags || [];
                                 if (tourData.coverImageUrl) {
                                     this.coverImagePreview = tourData.coverImageUrl;
@@ -445,10 +461,13 @@
                             return;
                         }
                         
-                        // Validate Timeline
+                        // Lọc bỏ các mốc thời gian trống hoàn toàn (cả giờ và hoạt động đều rỗng)
+                        this.formData.timeline = this.formData.timeline.filter(t => t.time.trim() !== '' || t.activity.trim() !== '');
+                        
+                        // Validate Timeline (nếu có mốc thời gian bị điền thiếu 1 trong 2)
                         for (let i = 0; i < this.formData.timeline.length; i++) {
                             if (!this.formData.timeline[i].time || !this.formData.timeline[i].activity) {
-                                showToast('error', 'Vui lòng điền đầy đủ Giờ và Hoạt động cho tất cả các mốc thời gian.');
+                                showToast('error', 'Vui lòng điền đầy đủ Giờ và Hoạt động cho các mốc thời gian bạn đã nhập.');
                                 return;
                             }
                         }

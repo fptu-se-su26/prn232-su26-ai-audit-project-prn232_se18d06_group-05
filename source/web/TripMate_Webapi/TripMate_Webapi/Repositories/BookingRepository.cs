@@ -104,5 +104,24 @@ namespace TripMate_Webapi.Repositories
                 .Get();
             return response.Models;
         }
+
+        public async Task<List<BookingEntity>> GetBookingsForGuideAsync(string guideProfileId)
+        {
+            var response = await _supabase.From<BookingEntity>()
+                .Where(b => b.GuideProfileId == guideProfileId)
+                .Order(b => b.CreatedAt, Postgrest.Constants.Ordering.Descending)
+                .Get();
+                
+            return response.Models;
+        }
+
+        public async Task UpdateBookingStatusAsync(string bookingId, int status)
+        {
+            await _supabase.From<BookingEntity>()
+                .Where(b => b.Id == bookingId)
+                .Set(b => b.Status, status)
+                .Set(b => b.UpdatedAt, DateTime.UtcNow)
+                .Update();
+        }
     }
 }

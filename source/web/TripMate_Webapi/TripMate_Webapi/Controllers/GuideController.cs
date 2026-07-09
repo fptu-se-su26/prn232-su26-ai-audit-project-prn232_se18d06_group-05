@@ -325,64 +325,55 @@ namespace TripMate_Webapi.Controllers
 
         // GET: /Guide/Bookings
         [Authorize(Roles = "guide")]
-        public IActionResult Bookings()
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> Bookings()
         {
-            var bookings = new List<dynamic>
-            {
-                new {
-                    Id = "BK-2026-001A",
-                    TravelerName = "Trần Thị Bảo Châu",
-                    TravelerAvatar = "/images/AVATAR.png",
-                    TravelerRating = 4.8,
-                    TravelerLocation = "TP.HCM",
-                    TourName = "Bình minh Mỹ Sơn + Ẩm thực địa phương",
-                    Date = "15/06/2026",
-                    Time = "06:00",
-                    Guests = 2,
-                    TotalAmount = 1000000,
-                    PlatformFee = 150000,
-                    NetEarnings = 850000,
-                    Note = "Chúng tôi muốn chụp ảnh hoàng hôn",
-                    Status = "Pending",
-                    SecondsRemaining = 3600 // For countdown
-                },
-                new {
-                    Id = "BK-2026-002B",
-                    TravelerName = "Nguyễn Văn A",
-                    TravelerAvatar = "/images/AVATAR.png",
-                    TravelerRating = 5.0,
-                    TravelerLocation = "Hà Nội",
-                    TourName = "Khám phá phố cổ Hội An về đêm",
-                    Date = "16/06/2026",
-                    Time = "18:00",
-                    Guests = 4,
-                    TotalAmount = 1500000,
-                    PlatformFee = 225000,
-                    NetEarnings = 1275000,
-                    Note = "",
-                    Status = "Confirmed",
-                    SecondsRemaining = 0
-                },
-                new {
-                    Id = "BK-2026-003C",
-                    TravelerName = "Lê Thị C",
-                    TravelerAvatar = "/images/AVATAR.png",
-                    TravelerRating = 4.5,
-                    TravelerLocation = "Đà Nẵng",
-                    TourName = "Đạp xe đồng quê & Làng rau Trà Quế",
-                    Date = "10/06/2026",
-                    Time = "08:00",
-                    Guests = 2,
-                    TotalAmount = 950000,
-                    PlatformFee = 142500,
-                    NetEarnings = 807500,
-                    Note = "",
-                    Status = "Completed",
-                    SecondsRemaining = 0
-                }
-            };
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (string.IsNullOrEmpty(guideProfileId)) return RedirectToAction("Dashboard");
+
+            var bookings = await _bookingService.GetGuideBookingsAsync(guideProfileId);
             ViewBag.Bookings = bookings;
             return View();
+        }
+
+        // POST: /Guide/AcceptBooking/{id}
+        [HttpPost("/Guide/AcceptBooking/{id}")]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> AcceptBooking(string id)
+        {
+            try
+            {
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
+
+                await _bookingService.UpdateGuideBookingStatusAsync(id, guideProfileId, 1); // 1 = Confirmed
+                return Ok(new { success = true, message = "Đã chấp nhận booking thành công" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error accepting booking {BookingId}", id);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        // POST: /Guide/RejectBooking/{id}
+        [HttpPost("/Guide/RejectBooking/{id}")]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> RejectBooking(string id)
+        {
+            try
+            {
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
+
+                await _bookingService.UpdateGuideBookingStatusAsync(id, guideProfileId, 3); // 3 = Cancelled
+                return Ok(new { success = true, message = "Đã từ chối booking" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting booking {BookingId}", id);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
         }
 
         // GET: /Guide/Messages

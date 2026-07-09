@@ -140,10 +140,20 @@ builder.Services
         {
             OnMessageReceived = context =>
             {
-                var token = context.Request.Cookies["access_token"];
-                if (!string.IsNullOrEmpty(token))
+                // Ưu tiên đọc từ Header trước (để lấy token mới nếu AutoRefreshMiddleware vừa làm mới token)
+                var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 {
-                    context.Token = token;
+                    context.Token = authHeader.Substring("Bearer ".Length).Trim();
+                }
+                else
+                {
+                    // Đọc từ Cookie nếu Header không có
+                    var token = context.Request.Cookies["access_token"];
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        context.Token = token;
+                    }
                 }
                 return Task.CompletedTask;
             },
@@ -238,6 +248,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+app.UseMiddleware<TripMate_Webapi.Middlewares.AutoRefreshMiddleware>();
 app.UseAuthentication();   // phải trước UseAuthorization
 app.UseAuthorization();
 app.MapControllers(); // Map API controllers

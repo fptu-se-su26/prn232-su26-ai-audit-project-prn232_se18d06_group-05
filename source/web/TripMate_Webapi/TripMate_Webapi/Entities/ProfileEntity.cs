@@ -25,6 +25,12 @@ namespace TripMate_Webapi.Entities
         [Column("phone_number")]
         public string? Phone { get; set; }
 
+        [Column("location")]
+        public string? Location { get; set; }
+
+        [Column("average_rating")]
+        public decimal? AverageRating { get; set; }
+
         [Column("is_active")]
         public bool IsActive { get; set; }
 
