@@ -1,0 +1,476 @@
+@model TripMate_Webapi.Entities.GuideProfileEntity
+@{
+    ViewData["Title"] = Model.Profile?.FullName ?? "Guide Profile";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var packages = ViewBag.Packages as List<TripMate_WebAPI.Services.ExperiencePackageRow> ?? new();
+    var reviews = ViewBag.Reviews as List<TripMate_Webapi.Entities.ReviewEntity> ?? new();
+}
+
+<div class="min-h-screen bg-surface" x-data="guideProfilePage()">
+    <!-- Cover Photo -->
+    <div class="w-full h-80 bg-gray-200 relative">
+        @if (!string.IsNullOrEmpty(Model.CoverPhotoUrl))
+        {
+            <img src="@Model.CoverPhotoUrl" alt="Cover" class="w-full h-full object-cover" />
+        }
+        else
+        {
+            <div class="absolute inset-0 bg-gradient-to-br from-primary-container to-surface-variant flex items-center justify-center">
+                <span class="material-symbols-outlined text-9xl text-primary/40">landscape</span>
+            </div>
+        }
+    </div>
+
+    <div class="max-w-[1200px] mx-auto px-6 md:px-12 pb-24 relative -top-20">
+        
+        <div class="flex flex-col md:flex-row gap-8">
+            <!-- Left Column: Guide Info -->
+            <div class="w-full md:w-1/3">
+                <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 text-center relative">
+                    <!-- Avatar -->
+                    <div class="w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-white shadow-md relative -top-16 mb-[-3rem] bg-gray-100">
+                        @if (!string.IsNullOrEmpty(Model.Profile?.AvatarUrl))
+                        {
+                            <img src="@Model.Profile.AvatarUrl" alt="@Model.Profile.FullName" class="w-full h-full object-cover" />
+                        }
+                        else
+                        {
+                            <span class="material-symbols-outlined text-6xl text-gray-400 mt-6">person</span>
+                        }
+                    </div>
+
+                    <h1 class="text-3xl font-bold text-on-surface mb-2">@Model.Profile?.FullName</h1>
+                    <p class="text-primary font-medium flex items-center justify-center gap-1 mb-4">
+                        <span class="material-symbols-outlined text-sm">location_on</span>
+                        @(string.IsNullOrEmpty(Model.CityArea) ? "Vietnam" : Model.CityArea)
+                    </p>
+
+                    @if (Model.IsVerified == true)
+                    {
+                        <div class="inline-flex items-center gap-1 bg-green-50 text-green-700 px-3 py-1 rounded-full text-sm font-bold border border-green-100 mb-6">
+                            <span class="material-symbols-outlined text-sm">verified</span> Verified Guide
+                        </div>
+                    }
+
+                    <div class="flex justify-center gap-6 border-y border-outline-variant/30 py-4 mb-6">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-on-surface flex items-center justify-center gap-1">
+                                <span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">star</span>
+                                @(Model.AverageRating?.ToString("0.0") ?? "0.0")
+                            </div>
+                            <div class="text-xs text-on-surface-variant font-medium uppercase tracking-wider">Rating</div>
+                        </div>
+                        <div class="w-px bg-outline-variant/30"></div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-on-surface">@(Model.TotalReviews ?? 0)</div>
+                            <div class="text-xs text-on-surface-variant font-medium uppercase tracking-wider">Reviews</div>
+                        </div>
+                    </div>
+
+                    <!-- Book Now Primary CTA -->
+                    <button @@click="bookGuide()"
+                            class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold transition-all mb-3 flex justify-center items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5 text-lg">
+                        <span class="material-symbols-outlined">lock</span>
+                        Book Now — Escrow Payment
+                    </button>
+                    <p class="text-xs text-on-surface-variant mb-4 flex items-center justify-center gap-1">
+                        <span class="material-symbols-outlined text-sm text-green-600">verified_user</span>
+                        Money held securely until tour completion
+                    </p>
+
+                    <!-- Message (only visible if booking exists — hint text) -->
+                    <div class="text-center text-xs text-on-surface-variant bg-surface-variant/50 rounded-lg p-3">
+                        <span class="material-symbols-outlined text-sm align-middle">chat</span>
+                        Messaging unlocks after booking & payment
+                    </div>
+                </div>
+
+                <!-- Languages & Specialties -->
+                <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 mt-8">
+                    <h3 class="text-lg font-bold text-on-surface mb-4">Languages</h3>
+                    <div class="flex flex-wrap gap-2 mb-8">
+                        @if (Model.Languages != null && Model.Languages.Any())
+                        {
+                            foreach (var lang in Model.Languages)
+                            {
+                                <span class="bg-surface-variant text-on-surface-variant px-3 py-1.5 rounded-lg text-sm font-medium">@lang</span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-sm text-on-surface-variant">Vietnamese, English</span>
+                        }
+                    </div>
+
+                    <h3 class="text-lg font-bold text-on-surface mb-4">Specialties</h3>
+                    <div class="flex flex-wrap gap-2">
+                        @if (Model.Specialties != null && Model.Specialties.Any())
+                        {
+                            foreach (var spec in Model.Specialties)
+                            {
+                                <span class="bg-surface-variant text-on-surface-variant px-3 py-1.5 rounded-lg text-sm font-medium">@spec</span>
+                            }
+                        }
+                        else
+                        {
+                            <span class="text-sm text-on-surface-variant">General Tourism</span>
+                        }
+                    </div>
+                </div>
+
+                <!-- Price Info -->
+                <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 mt-8">
+                    <h3 class="text-lg font-bold text-on-surface mb-4">Pricing</h3>
+                    <div class="flex items-center justify-between">
+                        <span class="text-on-surface-variant">Hourly Rate</span>
+                        <span class="text-2xl font-bold text-primary">@(Model.PricePerHour?.ToString("#,##0") ?? "0") ₫/hr</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Content -->
+            <div class="w-full md:w-2/3 pt-8 md:pt-0">
+                <!-- Bio -->
+                <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 mb-8 mt-20 md:mt-0">
+                    <h2 class="text-2xl font-bold text-on-surface mb-4">About Me</h2>
+                    <p class="text-on-surface-variant leading-relaxed whitespace-pre-line">
+                        @(string.IsNullOrEmpty(Model.Bio) ? "This guide hasn't added a bio yet. But they are ready to show you the best of the city!" : Model.Bio)
+                    </p>
+                </div>
+
+                <!-- Experience Packages / Tours -->
+                <h2 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">explore</span>
+                    Experience Packages
+                </h2>
+                <div class="space-y-4 mb-12">
+                    @if (packages.Any())
+                    {
+                        foreach (var pkg in packages)
+                        {
+                            <div class="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-md transition-shadow cursor-pointer group"
+                                 @@click="openTourModal('@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Id ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Title ?? "")', `@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Description ?? "")`, @pkg.DurationHours, @pkg.PricePerSession, @(pkg.PricePerPerson ?? 0), @pkg.MaxGroupSize, '@System.Web.HttpUtility.JavaScriptStringEncode(string.Join(",", pkg.IncludedItems ?? new List<string>()))')">
+                                <div class="flex-1">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <h3 class="text-xl font-bold text-on-surface group-hover:text-primary transition-colors">@pkg.Title</h3>
+                                        <span class="bg-primary-container text-primary px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap">@pkg.DurationHours hours</span>
+                                    </div>
+                                    <p class="text-on-surface-variant text-sm mb-4 line-clamp-2">@pkg.Description</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        @if (pkg.IncludedItems != null)
+                                        {
+                                            foreach (var item in pkg.IncludedItems.Take(3))
+                                            {
+                                                <span class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded"><span class="material-symbols-outlined text-[12px] align-text-bottom">check</span> @item</span>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                                <div class="md:w-48 shrink-0 flex flex-col items-end border-t md:border-t-0 md:border-l border-outline-variant/30 pt-4 md:pt-0 md:pl-6 text-right">
+                                    <p class="text-sm text-on-surface-variant mb-1">From</p>
+                                    <p class="text-2xl font-bold text-primary mb-4">
+                                        @(pkg.PricePerSession > 0 ? string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:C0}", pkg.PricePerSession) + "/session" : (pkg.PricePerPerson > 0 ? string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:C0}", pkg.PricePerPerson) + "/person" : "Contact"))
+                                    </p>
+                                    <span class="text-primary font-bold text-sm flex items-center gap-1 group-hover:underline">
+                                        View Details <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                                    </span>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <!-- Fallback Package if Guide hasn't created one -->
+                        <div class="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div class="flex-1">
+                                <h3 class="text-xl font-bold text-on-surface mb-2">Custom Itinerary</h3>
+                                <p class="text-on-surface-variant text-sm mb-4">A personalized tour based on your preferences. Book this guide and discuss your dream trip!</p>
+                            </div>
+                            <div class="md:w-48 shrink-0 flex flex-col items-end border-t md:border-t-0 md:border-l border-outline-variant/30 pt-4 md:pt-0 md:pl-6 text-right">
+                                <button @@click="bookGuide()"
+                                        class="w-full text-center bg-primary text-white py-3 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-sm hover:shadow-md">
+                                    Book Custom
+                                </button>
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <!-- Reviews -->
+                <h2 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">reviews</span>
+                    Traveler Reviews
+                </h2>
+                <div class="space-y-6">
+                    @if (reviews.Any())
+                    {
+                        foreach (var review in reviews)
+                        {
+                            <div class="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/30">
+                                <div class="flex items-center justify-between mb-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center text-primary font-bold">
+                                            T
+                                        </div>
+                                        <div>
+                                            <p class="font-bold text-on-surface">Traveler</p>
+                                            <p class="text-xs text-on-surface-variant">@(review.CreatedAt.ToString("MMMM yyyy"))</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        @for (int i = 0; i < review.Rating; i++)
+                                        {
+                                            <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+                                        }
+                                    </div>
+                                </div>
+                                <p class="text-on-surface-variant leading-relaxed">
+                                    "@review.Comment"
+                                </p>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="bg-surface-variant rounded-3xl p-8 text-center text-on-surface-variant">
+                            <span class="material-symbols-outlined text-4xl mb-2">reviews</span>
+                            <p>No reviews yet. Be the first to book and review this guide!</p>
+                        </div>
+                    }
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══ Tour Detail Modal ═══ -->
+    <div x-show="showModal" x-transition.opacity class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;" @@click.self="showModal = false">
+        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" @@click.stop x-transition.scale.95>
+            <!-- Modal Header -->
+            <div class="sticky top-0 bg-white border-b border-outline-variant/30 p-6 rounded-t-3xl flex items-center justify-between z-10">
+                <h2 class="text-2xl font-bold text-on-surface" x-text="modal.title"></h2>
+                <button @@click="showModal = false" class="w-10 h-10 rounded-full hover:bg-surface-variant flex items-center justify-center transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <div class="p-6 md:p-8 space-y-6">
+                <!-- Tour Meta -->
+                <div class="flex flex-wrap gap-4">
+                    <div class="flex items-center gap-2 bg-primary-container/50 px-4 py-2 rounded-xl">
+                        <span class="material-symbols-outlined text-primary text-sm">schedule</span>
+                        <span class="font-bold text-sm" x-text="modal.duration + ' hours'"></span>
+                    </div>
+                    <div class="flex items-center gap-2 bg-surface-variant px-4 py-2 rounded-xl">
+                        <span class="material-symbols-outlined text-on-surface-variant text-sm">group</span>
+                        <span class="font-bold text-sm" x-text="'Max ' + modal.maxGroup + ' people'"></span>
+                    </div>
+                </div>
+
+                <!-- Description / Itinerary -->
+                <div>
+                    <h3 class="text-lg font-bold text-on-surface mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-xl">route</span> Tour Description
+                    </h3>
+                    <p class="text-on-surface-variant leading-relaxed whitespace-pre-line" x-text="modal.description"></p>
+                </div>
+
+                <!-- Included Items -->
+                <div x-show="modal.includedItems.length > 0">
+                    <h3 class="text-lg font-bold text-on-surface mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-xl">check_circle</span> What's Included
+                    </h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <template x-for="item in modal.includedItems" :key="item">
+                            <div class="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-2 rounded-lg">
+                                <span class="material-symbols-outlined text-green-600 text-sm">check</span>
+                                <span class="text-sm text-green-800 font-medium" x-text="item"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Guide Info -->
+                <div class="bg-surface-variant/50 rounded-2xl p-5 flex items-center gap-4">
+                    <div class="w-14 h-14 rounded-full overflow-hidden border-2 border-primary/20 shrink-0 bg-gray-100">
+                        @if (!string.IsNullOrEmpty(Model.Profile?.AvatarUrl))
+                        {
+                            <img src="@Model.Profile.AvatarUrl" alt="@Model.Profile.FullName" class="w-full h-full object-cover" />
+                        }
+                        else
+                        {
+                            <span class="material-symbols-outlined text-3xl text-gray-400 mt-2 block text-center">person</span>
+                        }
+                    </div>
+                    <div>
+                        <p class="text-sm text-on-surface-variant">Created by</p>
+                        <p class="font-bold text-on-surface text-lg">@Model.Profile?.FullName</p>
+                        <div class="flex items-center gap-1 text-sm">
+                            <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+                            <span class="font-bold">@(Model.AverageRating?.ToString("0.0") ?? "0.0")</span>
+                            <span class="text-on-surface-variant">(@(Model.TotalReviews ?? 0) reviews)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Price & Book -->
+                <div class="bg-white border-2 border-primary/30 rounded-2xl p-6 flex items-center justify-between">
+                    <div>
+                        <p class="text-sm text-on-surface-variant">Price</p>
+                        <p class="text-3xl font-extrabold text-primary" x-text="modal.priceLabel"></p>
+                    </div>
+                    <button @@click="bookTour(modal.id)"
+                            class="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
+                        <span class="material-symbols-outlined">lock</span>
+                        Book This Tour
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('guideProfilePage', () => ({
+            showModal: false,
+            bookingInProgress: false,
+            modal: {
+                id: '', title: '', description: '', duration: 0,
+                pricePerSession: 0, pricePerPerson: 0, maxGroup: 6,
+                includedItems: [], priceLabel: ''
+            },
+
+            openTourModal(id, title, description, duration, pricePerSession, pricePerPerson, maxGroup, includedItemsStr) {
+                this.modal.id = id;
+                this.modal.title = title;
+                this.modal.description = description;
+                this.modal.duration = duration;
+                this.modal.pricePerSession = pricePerSession;
+                this.modal.pricePerPerson = pricePerPerson;
+                this.modal.maxGroup = maxGroup;
+                this.modal.includedItems = includedItemsStr ? includedItemsStr.split(',').map(s => s.trim()).filter(s => s) : [];
+
+                const fmt = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
+                if (pricePerSession > 0) {
+                    this.modal.priceLabel = fmt.format(pricePerSession) + '/session';
+                } else if (pricePerPerson > 0) {
+                    this.modal.priceLabel = fmt.format(pricePerPerson) + '/person';
+                } else {
+                    this.modal.priceLabel = 'Contact';
+                }
+                this.showModal = true;
+            },
+
+            async bookGuide() {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                if (this.bookingInProgress) return;
+                this.bookingInProgress = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('guideId', '@Model.Id');
+                    formData.append('date', new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+                    formData.append('guests', '1');
+
+                    const res = await fetch('/Traveler/Book', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.bookingId) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: 'Booking request sent successfully!',
+                                icon: 'success',
+                                showCancelButton: true,
+                                confirmButtonText: 'Proceed to Pay',
+                                cancelButtonText: 'Close',
+                                confirmButtonColor: '#ff7a00',
+                                cancelButtonColor: '#6b7280',
+                                customClass: { popup: 'swal-top-fix' }
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = '/Traveler/Checkout/' + data.bookingId;
+                                }
+                            });
+                        }
+                    } else if (res.status === 400) {
+                        const errorData = await res.json();
+                        Swal.fire({ title: 'Notice', text: errorData.error || 'Booking failed.', icon: 'info', customClass: { popup: 'swal-top-fix' } });
+                    } else {
+                        Swal.fire({ title: 'Error', text: 'Booking failed. Please try again.', icon: 'error', customClass: { popup: 'swal-top-fix' } });
+                    }
+                } catch(err) {
+                    console.error('Book error:', err);
+                    Swal.fire('Error', 'Connection error. Please try again.', 'error');
+                } finally {
+                    this.bookingInProgress = false;
+                }
+            },
+
+            async bookTour(packageId) {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                if (this.bookingInProgress) return;
+                this.bookingInProgress = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('guideId', '@Model.Id');
+                    formData.append('packageId', packageId);
+                    formData.append('date', new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
+                    formData.append('guests', '1');
+
+                    const res = await fetch('/Traveler/BookTour', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.bookingId) {
+                            Swal.fire({
+                                title: 'Success!',
+                                text: 'Booking request sent successfully!',
+                                icon: 'success',
+                                showCancelButton: true,
+                                confirmButtonText: 'Proceed to Pay',
+                                cancelButtonText: 'Close',
+                                confirmButtonColor: '#ff7a00',
+                                cancelButtonColor: '#6b7280',
+                                customClass: { popup: 'swal-top-fix' }
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    window.location.href = '/Traveler/Checkout/' + data.bookingId;
+                                }
+                            });
+                        }
+                    } else if (res.status === 400) {
+                        const errorData = await res.json();
+                        Swal.fire({ title: 'Notice', text: errorData.error || 'Booking failed.', icon: 'info', customClass: { popup: 'swal-top-fix' } });
+                    } else {
+                        Swal.fire({ title: 'Error', text: 'Booking failed. Please try again.', icon: 'error', customClass: { popup: 'swal-top-fix' } });
+                    }
+                } catch(err) {
+                    console.error('BookTour error:', err);
+                    Swal.fire('Error', 'Connection error. Please try again.', 'error');
+                } finally {
+                    this.bookingInProgress = false;
+                }
+            }
+        }))
+    })
+</script>

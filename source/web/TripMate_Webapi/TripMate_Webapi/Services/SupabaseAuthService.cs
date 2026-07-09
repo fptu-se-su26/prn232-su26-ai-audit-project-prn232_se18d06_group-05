@@ -81,8 +81,7 @@ public class SupabaseAuthService
         if (string.IsNullOrEmpty(session.User?.Id))
             throw new Exception("Đăng ký thất bại");
 
-        if (string.IsNullOrEmpty(session.AccessToken))
-            throw new Exception("Đăng ký thành công nhưng yêu cầu xác thực email. Vui lòng kiểm tra hộp thư của bạn.");
+        bool requiresEmailConfirmation = string.IsNullOrEmpty(session.AccessToken);
 
         // 2. Upsert profile vào bảng profiles với thông tin mở rộng
         if (string.IsNullOrEmpty(session.AccessToken))
@@ -97,6 +96,9 @@ public class SupabaseAuthService
         {
             await _notificationService.NotifyAdminNewGuideApplicationAsync(session.User.Id, fullName, email);
         }
+
+        if (requiresEmailConfirmation)
+            throw new Exception("Đăng ký thành công nhưng yêu cầu xác thực email. Vui lòng kiểm tra hộp thư của bạn.");
 
         var user = await GetProfileAsync(session.AccessToken, session.User.Id);
         return MapToAuthResponse(session, user);

@@ -86,6 +86,7 @@
             <!-- Right Column: Order Summary -->
             <div>
                 <form action="/Traveler/ProcessPayment" method="POST" id="paymentForm">
+                    @Html.AntiForgeryToken()
                     <input type="hidden" name="id" value="@Model.Id" />
                     <input type="hidden" name="paymentMethod" x-bind:value="method" />
 
@@ -119,6 +120,15 @@
                             <span class="text-4xl font-extrabold text-primary">@(Model.TotalAmount.ToString("#,##0")) ₫</span>
                         </div>
 
+                        <!-- Social Proof Nudge (M4 Scarcity Feature) -->
+                        <div class="bg-orange-50 border border-orange-200 rounded-xl p-3 mb-4 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-orange-500 text-sm">local_fire_department</span>
+                            <p class="text-xs text-orange-700 font-medium">
+                                <span id="viewerCount">3</span> others are viewing this guide right now.
+                                Your slot is reserved for <span id="countdown" class="font-bold">15:00</span>.
+                            </p>
+                        </div>
+
                         <button type="submit" @@click.prevent="processPayment()" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold text-xl shadow-lg hover:-translate-y-1 transition-all flex justify-center items-center gap-2 relative overflow-hidden group">
                             <span x-show="!processing" class="flex items-center gap-2">
                                 <span class="material-symbols-outlined">lock</span> Confirm & Pay
@@ -149,14 +159,42 @@
             
             processPayment() {
                 if (this.processing) return;
-                
                 this.processing = true;
-                
-                // Simulate payment processing
+                // Xóa Ghost Booking trước khi submit
+                localStorage.removeItem('ghostBookingGuideId');
                 setTimeout(() => {
                     document.getElementById('paymentForm').submit();
                 }, 1500);
             }
         }))
     })
+
+    // ── Social Proof: Countdown Timer ────────────────────────────────────────
+    (function() {
+        // Random viewer count 2-6
+        const viewers = Math.floor(Math.random() * 5) + 2;
+        const viewerEl = document.getElementById('viewerCount');
+        if (viewerEl) viewerEl.textContent = viewers;
+
+        // 15-minute countdown
+        let totalSeconds = 15 * 60;
+        const countdownEl = document.getElementById('countdown');
+
+        const timer = setInterval(() => {
+            if (!countdownEl) { clearInterval(timer); return; }
+            totalSeconds--;
+            if (totalSeconds <= 0) {
+                clearInterval(timer);
+                countdownEl.textContent = 'Expired';
+                countdownEl.classList.add('text-red-600');
+                return;
+            }
+            const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const s = (totalSeconds % 60).toString().padStart(2, '0');
+            countdownEl.textContent = m + ':' + s;
+
+            // Đổi màu đỏ khi còn < 2 phút
+            if (totalSeconds < 120) countdownEl.classList.add('text-red-600');
+        }, 1000);
+    })();
 </script>

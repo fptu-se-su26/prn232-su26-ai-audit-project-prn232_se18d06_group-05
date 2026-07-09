@@ -29,22 +29,19 @@ namespace TripMate_Webapi.Repositories
             
             var bodyObj = new System.Collections.Generic.Dictionary<string, object?>
             {
+                { "id", booking.Id },
                 { "traveler_id", booking.TravelerId },
                 { "guide_profile_id", booking.GuideProfileId },
                 { "booking_date", booking.BookingDate.ToString("yyyy-MM-dd") },
-                { "start_time", booking.StartTime.ToString("HH:mm:ss") },
+                { "start_time", booking.StartTime.ToString("HH:mm:ssZ") },
                 { "guest_count", booking.GuestCount },
                 { "total_amount", booking.TotalAmount },
                 { "platform_fee", booking.PlatformFee },
                 { "guide_earnings", booking.GuideEarnings },
                 { "status", booking.Status },
-                { "traveler_notes", booking.TravelerNotes }
+                { "traveler_notes", booking.TravelerNotes },
+                { "experience_package_id", booking.ExperiencePackageId }
             };
-
-            if (booking.ExperiencePackageId != "00000000-0000-0000-0000-000000000000")
-            {
-                bodyObj.Add("experience_package_id", booking.ExperiencePackageId);
-            }
             
             var json = System.Text.Json.JsonSerializer.Serialize(bodyObj);
             req.Content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
@@ -104,7 +101,6 @@ namespace TripMate_Webapi.Repositories
                 .Get();
             return response.Models;
         }
-
         public async Task<List<BookingEntity>> GetBookingsForGuideAsync(string guideProfileId)
         {
             var response = await _supabase.From<BookingEntity>()
@@ -122,6 +118,13 @@ namespace TripMate_Webapi.Repositories
                 .Set(b => b.Status, status)
                 .Set(b => b.UpdatedAt, DateTime.UtcNow)
                 .Update();
+        }
+
+        public async Task DeleteBookingAsync(string id)
+        {
+            await _supabase.From<BookingEntity>()
+                .Where(b => b.Id == id)
+                .Delete();
         }
     }
 }

@@ -65,6 +65,7 @@ namespace TripMate_Webapi.Repositories
             return response!;
         }
 
+
         public async Task<List<GuideAvailabilityEntity>> GetBlockedDatesInRangeAsync(string guideProfileId, string start, string end)
         {
             var response = await _supabase.From<GuideAvailabilityEntity>()
@@ -88,6 +89,15 @@ namespace TripMate_Webapi.Repositories
         {
             if (entities == null || !entities.Any()) return;
             await _supabase.From<GuideAvailabilityEntity>().Insert(entities);
+        }
+        
+        public async Task<GuideProfileEntity> GetGuideByProfileIdAsync(string profileId)
+        {
+            var response = await _supabase.From<GuideProfileEntity>()
+                .Where(x => x.Id == profileId)
+                .Single();
+                
+            return response!;
         }
     }
 }

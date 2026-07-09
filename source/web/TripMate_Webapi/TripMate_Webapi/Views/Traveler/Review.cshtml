@@ -1,33 +1,101 @@
+@model TripMate_Webapi.Entities.BookingEntity
+
 @{
     ViewData["Title"] = "Leave a Review";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // M5: Đọc thông tin Guide và Package từ Booking thực tế
+    var guideName = Model?.GuideProfile?.Profile?.FullName ?? "Your Guide";
+    var packageTitle = Model?.ExperiencePackage?.Title ?? "Tour Experience";
+    var bookingDate = Model?.BookingDate.ToString("MMM yyyy") ?? "";
+    var bookingId = Model?.Id ?? "";
+    var cityArea = Model?.GuideProfile?.CityArea ?? "";
 }
 
-<div class="min-h-screen bg-surface py-12 px-4" x-data="{ rating: 0, hovered: 0 }">
+<div class="min-h-screen bg-surface py-12 px-4" x-data="{ rating: 0, hovered: 0, submitted: false }">
     <div class="max-w-2xl mx-auto">
-        
+
         <div class="mb-8 flex items-center gap-4">
-            <a href="/Traveler/Dashboard" class="w-10 h-10 rounded-full bg-white border border-outline-variant/50 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all shadow-sm">
+            <a href="/Traveler/Trips" class="w-10 h-10 rounded-full bg-white border border-outline-variant/50 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all shadow-sm">
                 <span class="material-symbols-outlined">arrow_back</span>
             </a>
             <h1 class="text-3xl font-extrabold text-on-surface">Rate Your Experience</h1>
         </div>
 
+        @* Success Message (TempData) *@
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="bg-green-50 border border-green-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
+                <span class="material-symbols-outlined text-green-500">check_circle</span>
+                <p class="text-green-700 font-medium">@TempData["SuccessMessage"]</p>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-6 flex items-center gap-3">
+                <span class="material-symbols-outlined text-red-500">error</span>
+                <p class="text-red-700 font-medium">@TempData["ErrorMessage"]</p>
+            </div>
+        }
+
         <div class="bg-white rounded-3xl p-8 shadow-xl border border-outline-variant/30 tonal-elevation">
-            
-            <!-- Guide Info -->
+
+            <!-- Guide Info — M5: từ BookingEntity thực -->
             <div class="flex flex-col items-center mb-8 border-b border-outline-variant/30 pb-8 text-center">
-                <div class="w-24 h-24 rounded-full bg-gray-200 mb-4 overflow-hidden shadow-sm">
-                    <div class="w-full h-full flex items-center justify-center">
-                        <span class="material-symbols-outlined text-6xl text-gray-400">face_4</span>
-                    </div>
+                <div class="w-24 h-24 rounded-full bg-primary-container mb-4 overflow-hidden shadow-sm flex items-center justify-center">
+                    @if (!string.IsNullOrEmpty(Model?.GuideProfile?.CoverPhotoUrl))
+                    {
+                        <img src="@Model.GuideProfile.CoverPhotoUrl" alt="@guideName" class="w-full h-full object-cover" />
+                    }
+                    else
+                    {
+                        <span class="material-symbols-outlined text-6xl text-primary">face_4</span>
+                    }
                 </div>
-                <h2 class="text-2xl font-bold text-on-surface">Tuan Kiet</h2>
-                <p class="text-on-surface-variant">Da Lat Coffee & Nature • Oct 2025</p>
+                <h2 class="text-2xl font-bold text-on-surface">@guideName</h2>
+                <p class="text-on-surface-variant">
+                    @packageTitle
+                    @if (!string.IsNullOrEmpty(bookingDate)) { <text>• @bookingDate</text> }
+                    @if (!string.IsNullOrEmpty(cityArea)) { <text>• @cityArea</text> }
+                </p>
+
+                <!-- Booking Status Badge -->
+                @{
+                    var statusClass = Model?.Status switch {
+                        0 => "bg-yellow-100 text-yellow-700 border-yellow-200",
+                        1 => "bg-blue-100 text-blue-700 border-blue-200",
+                        2 => "bg-green-100 text-green-700 border-green-200",
+                        3 => "bg-red-100 text-red-700 border-red-200",
+                        _ => "bg-gray-100 text-gray-700"
+                    };
+                    var statusLabel = Model?.Status switch {
+                        0 => "Pending Confirmation",
+                        1 => "Confirmed",
+                        2 => "Completed",
+                        3 => "Cancelled",
+                        _ => "Unknown"
+                    };
+                }
+                <span class="mt-2 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border @statusClass">
+                    @statusLabel
+                </span>
             </div>
 
+            <!-- Warning nếu booking chưa completed -->
+            @if (Model?.Status != 2)
+            {
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+                    <span class="material-symbols-outlined text-amber-500 mt-0.5">info</span>
+                    <p class="text-sm text-amber-700">
+                        Reviews are available after your tour is completed. You can still submit a review once your guide confirms the experience.
+                    </p>
+                </div>
+            }
+
             <form action="/Traveler/SubmitReview" method="POST" class="space-y-8">
-                <input type="hidden" name="id" value="1" />
+                @Html.AntiForgeryToken()
+                <!-- M5: bookingId thực từ Model -->
+                <input type="hidden" name="id" value="@bookingId" />
                 <input type="hidden" name="rating" x-model="rating" />
 
                 <!-- Star Rating -->
@@ -35,14 +103,14 @@
                     <h3 class="text-xl font-bold text-on-surface mb-4">How was your Soulmate Guide?</h3>
                     <div class="flex justify-center gap-2">
                         <template x-for="i in 5">
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 @@mouseenter="hovered = i"
                                 @@mouseleave="hovered = 0"
                                 @@click="rating = i"
                                 class="transition-transform hover:scale-110 focus:outline-none"
                             >
-                                <span 
+                                <span
                                     class="material-symbols-outlined text-5xl transition-colors"
                                     :class="(hovered >= i || (!hovered && rating >= i)) ? 'text-primary' : 'text-gray-300'"
                                     :style="(hovered >= i || (!hovered && rating >= i)) ? `font-variation-settings: 'FILL' 1;` : `font-variation-settings: 'FILL' 0;`"
@@ -64,24 +132,29 @@
                 <!-- Review Comment -->
                 <div>
                     <label class="block text-sm font-bold text-on-surface mb-2">Write your review</label>
-                    <textarea 
+                    <textarea
                         name="comment"
-                        rows="5" 
+                        rows="5"
                         required
-                        placeholder="Tell others about your experience. What did you love? Was there anything that could be improved?" 
-                        class="w-full bg-surface border-outline-variant/50 rounded-xl p-4 text-on-surface focus:ring-primary focus:border-primary resize-none"
+                        minlength="10"
+                        maxlength="500"
+                        placeholder="Tell others about your experience. What did you love? Was there anything that could be improved?"
+                        class="w-full bg-surface border border-outline-variant/50 rounded-xl p-4 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary resize-none transition-all"
                     ></textarea>
+                    <p class="text-xs text-on-surface-variant mt-1">Minimum 10 characters, maximum 500.</p>
                 </div>
 
+                <!-- Social proof notice -->
                 <div class="bg-primary-container/30 p-4 rounded-xl flex items-start gap-3">
                     <span class="material-symbols-outlined text-primary">verified_user</span>
                     <p class="text-xs text-on-surface-variant leading-relaxed">
-                        Your review will be visible on Tuan Kiet's public profile to help future travelers make their decisions.
+                        Your review will be visible on <strong>@guideName</strong>'s public profile to help future travelers make their decisions.
+                        Only travelers who have booked a session can leave a review.
                     </p>
                 </div>
 
-                <button 
-                    type="submit" 
+                <button
+                    type="submit"
                     :disabled="rating === 0"
                     class="w-full bg-primary hover:bg-primary/90 text-on-primary py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -91,7 +164,14 @@
             </form>
 
         </div>
+
+        <!-- Back to trips -->
+        <div class="text-center mt-6">
+            <a href="/Traveler/Trips" class="text-on-surface-variant hover:text-primary font-medium transition-colors flex items-center justify-center gap-1">
+                <span class="material-symbols-outlined text-sm">arrow_back</span>
+                Back to My Trips
+            </a>
+        </div>
+
     </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
