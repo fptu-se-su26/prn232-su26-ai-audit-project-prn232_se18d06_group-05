@@ -53,5 +53,8 @@ namespace TripMate_Webapi.Entities
 
         [Column("updated_at")]
         public DateTime? UpdatedAt { get; set; }
+
+        [Column("total_views")]
+        public int TotalViews { get; set; }
     }
 }

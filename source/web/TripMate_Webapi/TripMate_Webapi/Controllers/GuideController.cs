@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
 using TripMate_WebAPI.DTOs.Tour.Requests;
 using TripMate_Webapi.Repositories;
+using TripMate_WebAPI.DTOs;
 
 namespace TripMate_Webapi.Controllers
 {
@@ -17,6 +18,7 @@ namespace TripMate_Webapi.Controllers
         private readonly ICalendarService _calendarService;
         private readonly ILogger<GuideController> _logger;
         private readonly Supabase.Client _supabase;
+        private readonly IGuideDashboardService _dashboardService;
 
         public GuideController(
             TourService tourService,
@@ -25,7 +27,8 @@ namespace TripMate_Webapi.Controllers
             IExperienceService experienceService,
             ICalendarService calendarService,
             ILogger<GuideController> logger,
-            Supabase.Client supabase)
+            Supabase.Client supabase,
+            IGuideDashboardService dashboardService)
         {
             _tourService = tourService;
             _bookingService = bookingService;
@@ -34,6 +37,7 @@ namespace TripMate_Webapi.Controllers
             _calendarService = calendarService;
             _logger = logger;
             _supabase = supabase;
+            _dashboardService = dashboardService;
         }
 
         // GET: /Guide/Index (List of all Guides for Traveler)
@@ -54,51 +58,24 @@ namespace TripMate_Webapi.Controllers
         {
             try
             {
-                // Load guide's tours
-                var tours = await _tourService.GetToursAsync();
-                
-                // Prepare view model
-                var viewModel = new GuideDashboardViewModel
+                var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (string.IsNullOrEmpty(userId))
                 {
-                    GuideName = "Guide User", // TODO: Get from auth
-                    GuideRole = "Tour Guide",
-                    DateRange = "Last 30 days",
-                    
-                    // Metrics
-                    TotalEarnings = 45000000, // TODO: Calculate from bookings
-                    EarningsGrowth = 12.5m,
-                    ActiveTours = tours.Count(),
-                    TotalBookings = 24, // TODO: Get from bookings
-                    BookingProgress = 75,
-                    AverageRating = 4.8m,
-                    
-                    // Tours
-                    MyTours = tours.Take(5).ToList(),
-                    
-                    // Recent bookings
-                    RecentBookings = new List<GuideBookingItem>
-                    {
-                        new GuideBookingItem { TravelerName = "Nguyễn Văn A", TourName = "Hà Nội - Hạ Long", Date = "15/06/2026", Status = "Confirmed", Amount = 2500000 },
-                        new GuideBookingItem { TravelerName = "Trần Thị B", TourName = "Sapa 3N2Đ", Date = "18/06/2026", Status = "Pending", Amount = 3200000 },
-                        new GuideBookingItem { TravelerName = "Lê Văn C", TourName = "Đà Nẵng - Hội An", Date = "20/06/2026", Status = "Confirmed", Amount = 1800000 },
-                    },
-                    
-                    // Recent activities
-                    RecentActivities = new List<ActivityItem>
-                    {
-                        new ActivityItem { Icon = "person_add", Title = "New Booking", Description = "Nguyễn Văn A booked Hà Nội tour", TimeAgo = "2 hours ago", IconBgClass = "bg-green-100", IconTextClass = "text-green-600" },
-                        new ActivityItem { Icon = "star", Title = "New Review", Description = "5-star review from Trần Thị B", TimeAgo = "5 hours ago", IconBgClass = "bg-yellow-100", IconTextClass = "text-yellow-600" },
-                        new ActivityItem { Icon = "check_circle", Title = "Tour Completed", Description = "Sapa tour successfully completed", TimeAgo = "1 day ago", IconBgClass = "bg-blue-100", IconTextClass = "text-blue-600" },
-                        new ActivityItem { Icon = "payments", Title = "Payment Received", Description = "₫2,500,000 from booking #1234", TimeAgo = "2 days ago", IconBgClass = "bg-green-100", IconTextClass = "text-green-600" },
-                    }
-                };
+                    return RedirectToAction("Login", "Auth");
+                }
 
+                var viewModel = await _dashboardService.BuildDashboardAsync(userId);
+                
+                // For the sparkline JS in the view
+                var sparklineJson = System.Text.Json.JsonSerializer.Serialize(viewModel.EarningsSparkline);
+                ViewBag.SparklineJson = sparklineJson;
+                
                 return View(viewModel);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error loading guide dashboard");
-                return View(new GuideDashboardViewModel());
+                _logger.LogError(ex, "Error loading Guide Dashboard");
+                return View(new GuideDashboardViewModel()); // Return empty on error to not crash UI
             }
         }
 
@@ -325,64 +302,55 @@ namespace TripMate_Webapi.Controllers
 
         // GET: /Guide/Bookings
         [Authorize(Roles = "guide")]
-        public IActionResult Bookings()
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> Bookings()
         {
-            var bookings = new List<dynamic>
-            {
-                new {
-                    Id = "BK-2026-001A",
-                    TravelerName = "Trần Thị Bảo Châu",
-                    TravelerAvatar = "/images/AVATAR.png",
-                    TravelerRating = 4.8,
-                    TravelerLocation = "TP.HCM",
-                    TourName = "Bình minh Mỹ Sơn + Ẩm thực địa phương",
-                    Date = "15/06/2026",
-                    Time = "06:00",
-                    Guests = 2,
-                    TotalAmount = 1000000,
-                    PlatformFee = 150000,
-                    NetEarnings = 850000,
-                    Note = "Chúng tôi muốn chụp ảnh hoàng hôn",
-                    Status = "Pending",
-                    SecondsRemaining = 3600 // For countdown
-                },
-                new {
-                    Id = "BK-2026-002B",
-                    TravelerName = "Nguyễn Văn A",
-                    TravelerAvatar = "/images/AVATAR.png",
-                    TravelerRating = 5.0,
-                    TravelerLocation = "Hà Nội",
-                    TourName = "Khám phá phố cổ Hội An về đêm",
-                    Date = "16/06/2026",
-                    Time = "18:00",
-                    Guests = 4,
-                    TotalAmount = 1500000,
-                    PlatformFee = 225000,
-                    NetEarnings = 1275000,
-                    Note = "",
-                    Status = "Confirmed",
-                    SecondsRemaining = 0
-                },
-                new {
-                    Id = "BK-2026-003C",
-                    TravelerName = "Lê Thị C",
-                    TravelerAvatar = "/images/AVATAR.png",
-                    TravelerRating = 4.5,
-                    TravelerLocation = "Đà Nẵng",
-                    TourName = "Đạp xe đồng quê & Làng rau Trà Quế",
-                    Date = "10/06/2026",
-                    Time = "08:00",
-                    Guests = 2,
-                    TotalAmount = 950000,
-                    PlatformFee = 142500,
-                    NetEarnings = 807500,
-                    Note = "",
-                    Status = "Completed",
-                    SecondsRemaining = 0
-                }
-            };
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (string.IsNullOrEmpty(guideProfileId)) return RedirectToAction("Dashboard");
+
+            var bookings = await _bookingService.GetGuideBookingsAsync(guideProfileId);
             ViewBag.Bookings = bookings;
             return View();
+        }
+
+        // POST: /Guide/AcceptBooking/{id}
+        [HttpPost("/Guide/AcceptBooking/{id}")]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> AcceptBooking(string id)
+        {
+            try
+            {
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
+
+                await _bookingService.UpdateGuideBookingStatusAsync(id, guideProfileId, 1); // 1 = Confirmed
+                return Ok(new { success = true, message = "Đã chấp nhận booking thành công" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error accepting booking {BookingId}", id);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
+        // POST: /Guide/RejectBooking/{id}
+        [HttpPost("/Guide/RejectBooking/{id}")]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> RejectBooking(string id)
+        {
+            try
+            {
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
+
+                await _bookingService.UpdateGuideBookingStatusAsync(id, guideProfileId, 3); // 3 = Cancelled
+                return Ok(new { success = true, message = "Đã từ chối booking" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting booking {BookingId}", id);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
         }
 
         // GET: /Guide/Messages
@@ -504,33 +472,5 @@ namespace TripMate_Webapi.Controllers
         }
     }
 
-    // View Models
-    public class GuideDashboardViewModel
-    {
-        public string GuideName { get; set; } = string.Empty;
-        public string GuideRole { get; set; } = string.Empty;
-        public string DateRange { get; set; } = string.Empty;
-        
-        // Metrics
-        public decimal TotalEarnings { get; set; }
-        public decimal EarningsGrowth { get; set; }
-        public int ActiveTours { get; set; }
-        public int TotalBookings { get; set; }
-        public int BookingProgress { get; set; }
-        public decimal AverageRating { get; set; }
-        
-        // Data
-        public List<ExperiencePackageRow> MyTours { get; set; } = new();
-        public List<GuideBookingItem> RecentBookings { get; set; } = new();
-        public List<ActivityItem> RecentActivities { get; set; } = new();
-    }
 
-    public class GuideBookingItem
-    {
-        public string TravelerName { get; set; } = string.Empty;
-        public string TourName { get; set; } = string.Empty;
-        public string Date { get; set; } = string.Empty;
-        public string Status { get; set; } = string.Empty;
-        public decimal Amount { get; set; }
-    }
 }

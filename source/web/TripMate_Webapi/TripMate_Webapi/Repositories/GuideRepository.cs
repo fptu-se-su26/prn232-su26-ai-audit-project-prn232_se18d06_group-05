@@ -99,5 +99,24 @@ namespace TripMate_Webapi.Repositories
                 
             return response!;
         }
+
+        public async Task UpdateGuideViewsAsync(string guideProfileId, int delta)
+        {
+            var guide = await _supabase.From<GuideProfileEntity>()
+                .Where(g => g.Id == guideProfileId).Single();
+            
+            if (guide != null)
+            {
+                guide.TotalViews += delta;
+                await _supabase.From<GuideProfileEntity>().Update(guide);
+            }
+        }
+
+        public async Task<GuideProfileEntity?> GetGuideProfileByUserIdAsync(string userId)
+        {
+            var response = await _supabase.From<GuideProfileEntity>()
+                .Where(g => g.UserId == userId).Single();
+            return response;
+        }
     }
 }
