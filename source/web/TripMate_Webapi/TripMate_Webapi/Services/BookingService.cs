@@ -18,6 +18,7 @@ public class BookingService
     private readonly string _anonKey;
     private readonly INotificationService _notif;
     private readonly ChatService _chat;
+    private readonly TripMate_Webapi.Repositories.IBookingRepository _repo;
 
     private static readonly JsonSerializerOptions _json = new()
     {
@@ -28,9 +29,9 @@ public class BookingService
     // Status mapping: smallint ↔ string
     private static readonly Dictionary<int, string> StatusMap = new()
     {
-        { 0, "pending" }, { 1, "confirmed" }, { 2, "completed" }, { 3, "cancelled" }
+        { 0, "Pending" }, { 1, "Confirmed" }, { 2, "Completed" }, { 3, "Cancelled" }
     };
-    private static readonly Dictionary<string, int> StatusReverseMap = new()
+    private static readonly Dictionary<string, int> StatusReverseMap = new(StringComparer.OrdinalIgnoreCase)
     {
         { "pending", 0 }, { "confirmed", 1 }, { "completed", 2 }, { "cancelled", 3 }
     };
@@ -42,13 +43,14 @@ public class BookingService
     private const decimal PlatformFeeRate = 0.15m;
 
     public BookingService(HttpClient http, IConfiguration config,
-        INotificationService notif, ChatService chat)
+        INotificationService notif, ChatService chat, TripMate_Webapi.Repositories.IBookingRepository repo)
     {
         _http = http;
         _supabaseUrl = config["Supabase:Url"]!;
         _anonKey = config["Supabase:AnonKey"]!;
         _notif = notif;
         _chat = chat;
+        _repo = repo;
     }
 
     // ── Create Booking ────────────────────────────────────────────────────────
@@ -185,6 +187,72 @@ public class BookingService
 
         var response = await _http.SendAsync(request);
         EnsureSuccess(response, await response.Content.ReadAsStringAsync());
+    }
+
+    // ── Get Guide Bookings ────────────────────────────────────────────────────
+
+    public async Task<List<TripMate_WebAPI.DTOs.Booking.Responses.GuideBookingViewDto>> GetGuideBookingsAsync(string guideProfileId)
+    {
+        var entities = await _repo.GetBookingsForGuideAsync(guideProfileId);
+        var dtos = new List<TripMate_WebAPI.DTOs.Booking.Responses.GuideBookingViewDto>();
+
+        foreach (var b in entities)
+        {
+            var secondsRemaining = (int)(b.CreatedAt.AddHours(24) - DateTime.UtcNow).TotalSeconds;
+            if (secondsRemaining < 0) secondsRemaining = 0;
+
+            dtos.Add(new TripMate_WebAPI.DTOs.Booking.Responses.GuideBookingViewDto(
+                Id: b.Id,
+                TravelerName: b.Traveler?.FullName ?? "Unknown Traveler",
+                TravelerAvatar: b.Traveler?.AvatarUrl ?? "/images/AVATAR.png",
+                TravelerRating: b.Traveler?.AverageRating ?? 5.0m,
+                TravelerLocation: b.Traveler?.Location ?? "Việt Nam",
+                TourName: b.ExperiencePackage?.Title ?? "Unknown Tour",
+                Date: b.BookingDate.ToString("dd/MM/yyyy"),
+                Time: b.StartTime.ToString("HH:mm"),
+                Guests: b.GuestCount,
+                TotalAmount: b.TotalAmount,
+                PlatformFee: b.PlatformFee,
+                NetEarnings: b.GuideEarnings,
+                Note: b.TravelerNotes,
+                Status: MapStatus(b.Status),
+                SecondsRemaining: secondsRemaining
+            ));
+        }
+
+        return dtos;
+    }
+
+    // ── Update Guide Booking Status ───────────────────────────────────────────
+
+    public async Task UpdateGuideBookingStatusAsync(string bookingId, string guideProfileId, int newStatus)
+    {
+        var booking = await _repo.GetBookingByIdAsync(bookingId);
+        if (booking == null) throw new Exception("Không tìm thấy booking");
+
+        if (booking.GuideProfileId != guideProfileId)
+            throw new UnauthorizedAccessException("Bạn không có quyền cập nhật booking này");
+
+        if (booking.Status != 0)
+            throw new Exception("Chỉ có thể cập nhật trạng thái của booking đang chờ duyệt (Pending)");
+
+        await _repo.UpdateBookingStatusAsync(bookingId, newStatus);
+        
+        // Optional: Send notification to traveler
+        if (newStatus == 1) // Confirmed
+        {
+            _ = _notif.SendAsync(booking.TravelerId, "booking_confirmed",
+                "Booking đã được xác nhận!",
+                $"Guide đã xác nhận yêu cầu đặt tour của bạn.",
+                new { bookingId });
+        }
+        else if (newStatus == 3) // Cancelled
+        {
+            _ = _notif.SendAsync(booking.TravelerId, "booking_rejected",
+                "Booking đã bị từ chối",
+                $"Guide không thể nhận yêu cầu đặt tour này.",
+                new { bookingId });
+        }
     }
 
     // ── Get Guide Unavailable Dates ───────────────────────────────────────────
