@@ -1,5 +1,23 @@
 <!DOCTYPE html>
 <html lang="vi">
+@using System.Security.Claims
+@inject TripMate_Webapi.Repositories.IGuideRepository GuideRepo
+@inject TripMate_Webapi.Repositories.IBookingRepository BookingRepo
+@{
+    int pendingBookingsCount = 0;
+    if (User.Identity?.IsAuthenticated == true)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var profile = await GuideRepo.GetGuideProfileByUserIdAsync(userId);
+            if (profile != null)
+            {
+                pendingBookingsCount = await BookingRepo.GetPendingBookingsCountAsync(profile.Id);
+            }
+        }
+    }
+}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -72,7 +90,10 @@
                     <span class="material-symbols-outlined @(ViewData["ActivePage"]?.ToString() == "Bookings" ? "text-primary" : "text-gray-400 group-hover:text-primary") text-[22px]">bar_chart</span>
                     <span>Bookings</span>
                 </div>
-                <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">10</span>
+                @if (pendingBookingsCount > 0)
+                {
+                    <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">@pendingBookingsCount</span>
+                }
             </a>
 
             <a href="/Guide/Calendar" class="@(ViewData["ActivePage"]?.ToString() == "Calendar" ? "bg-orange-100 text-primary font-bold" : "hover:bg-orange-50 text-gray-600 hover:text-primary font-medium") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group">

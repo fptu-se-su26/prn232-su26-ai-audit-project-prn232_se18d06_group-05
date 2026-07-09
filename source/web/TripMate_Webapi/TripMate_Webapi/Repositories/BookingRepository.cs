@@ -84,6 +84,15 @@ namespace TripMate_Webapi.Repositories
             return response.Models.FirstOrDefault() ?? booking;
         }
 
+        public async Task<int> GetPendingBookingsCountAsync(string guideProfileId)
+        {
+            var response = await _supabase.From<BookingEntity>()
+                .Where(b => b.GuideProfileId == guideProfileId && b.Status == 0) // Status 0 = Pending
+                .Count(Postgrest.Constants.CountType.Exact);
+                
+            return response;
+        }
+
         public async Task<string?> GetAnyTravelerProfileIdAsync()
         {
             var response = await _supabase.From<ProfileEntity>()
