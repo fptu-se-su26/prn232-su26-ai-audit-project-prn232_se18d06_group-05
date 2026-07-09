@@ -367,146 +367,159 @@
     </div>
 </div>
 
-@* ── CHART.JS SCRIPT ─────────────────────────────────────────────────── *@
-<script src="https://cdn.jsdelivr.net/npm/chart.js@@4.4.3/dist/chart.umd.min.js"></script>
-<script>
-(function() {
-    const sparklineData = @Html.Raw(sparklineJson);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
-    // We want the background bars to match the line exactly, so they don't go higher than the line
-    const maxVal = Math.ceil(Math.max(...sparklineData) / 10000000) * 10000000; 
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script>
+        document.addEventListener("turbo:load", function() {
+            const canvas = document.getElementById('earningsChart');
+            if (!canvas) return; // Prevent errors if navigating away
+            
+            // Check if Chart is loaded, if not, wait a bit
+            if (typeof Chart === 'undefined') {
+                setTimeout(initChart, 100);
+                return;
+            }
+            initChart();
 
-    const ctx = document.getElementById('earningsChart').getContext('2d');
+            function initChart() {
+                const sparklineData = @Html.Raw(sparklineJson);
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                
+                const maxVal = Math.ceil(Math.max(...sparklineData) / 10000000) * 10000000; 
 
-    // Soft gradient under the line
-    const gradient = ctx.createLinearGradient(0, 0, 0, 250);
-    gradient.addColorStop(0, 'rgba(255, 107, 53, 0.15)'); // Primary orange
-    gradient.addColorStop(1, 'rgba(255, 107, 53, 0.00)');
+                const ctx = canvas.getContext('2d');
 
-    // Background bar gradient (inactive)
-    const barGradient = ctx.createLinearGradient(0, 0, 0, 250);
-    barGradient.addColorStop(0, 'rgba(255, 107, 53, 0.05)');
-    barGradient.addColorStop(1, 'rgba(255, 107, 53, 0.0)');
+                const gradient = ctx.createLinearGradient(0, 0, 0, 250);
+                gradient.addColorStop(0, 'rgba(255, 107, 53, 0.15)'); 
+                gradient.addColorStop(1, 'rgba(255, 107, 53, 0.00)');
 
-    // Active column gradient (hover)
-    const activeColumnGradient = ctx.createLinearGradient(0, 0, 0, 250);
-    activeColumnGradient.addColorStop(0, 'rgba(255, 107, 53, 0.2)');
-    activeColumnGradient.addColorStop(1, 'rgba(255, 107, 53, 0.02)');
+                const barGradient = ctx.createLinearGradient(0, 0, 0, 250);
+                barGradient.addColorStop(0, 'rgba(255, 107, 53, 0.05)');
+                barGradient.addColorStop(1, 'rgba(255, 107, 53, 0.0)');
 
-    // Plugin for the glowing drop shadow on the line
-    const glowPlugin = {
-        id: 'glowPlugin',
-        beforeDatasetsDraw: (chart) => {
-            const ctx = chart.ctx;
-            ctx.save();
-            ctx.shadowColor = 'rgba(255, 107, 53, 0.4)';
-            ctx.shadowBlur = 15;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 8;
-        },
-        afterDatasetsDraw: (chart) => {
-            chart.ctx.restore();
-        }
-    };
+                const activeColumnGradient = ctx.createLinearGradient(0, 0, 0, 250);
+                activeColumnGradient.addColorStop(0, 'rgba(255, 107, 53, 0.2)');
+                activeColumnGradient.addColorStop(1, 'rgba(255, 107, 53, 0.02)');
 
-    new Chart(ctx, {
-        type: 'line',
-        plugins: [glowPlugin],
-        data: {
-            labels: months,
-            datasets: [
-                {
-                    type: 'line',
-                    label: 'Thu nhập',
-                    data: sparklineData,
-                    fill: true,
-                    backgroundColor: gradient,
-                    borderColor: '#FF6B35', // Primary color
-                    borderWidth: 3.5,
-                    tension: 0.45,
-                    pointRadius: 0,
-                    pointHoverRadius: 8,
-                    pointBackgroundColor: '#FF6B35',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 3,
-                    order: 1
-                },
-                {
-                    type: 'bar',
-                    label: 'Background',
-                    data: sparklineData, // EXACT SAME DATA as line chart so they match height!
-                    backgroundColor: barGradient,
-                    hoverBackgroundColor: activeColumnGradient,
-                    borderRadius: 8,
-                    barPercentage: 0.5,
-                    categoryPercentage: 1.0,
-                    order: 2,
-                    tooltip: false
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: 'transparent',
-                    titleColor: 'transparent',
-                    bodyColor: '#1f2937',
-                    bodyFont: { weight: '900', size: 14, family: "'Inter', sans-serif" },
-                    displayColors: false,
-                    boxShadow: 'none',
-                    yAlign: 'bottom',
-                    caretSize: 0,
-                    padding: 10,
-                    filter: function(tooltipItem) {
-                        return tooltipItem.datasetIndex === 0;
+                const glowPlugin = {
+                    id: 'glowPlugin',
+                    beforeDatasetsDraw: (chart) => {
+                        const ctx = chart.ctx;
+                        ctx.save();
+                        ctx.shadowColor = 'rgba(255, 107, 53, 0.4)';
+                        ctx.shadowBlur = 15;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 8;
                     },
-                    callbacks: {
-                        title: () => null,
-                        label: (item) => {
-                            const val = item.raw;
-                            return (val / 1000000).toFixed(0) + 'M';
+                    afterDatasetsDraw: (chart) => {
+                        chart.ctx.restore();
+                    }
+                };
+
+                // Destroy existing chart if turbo reloaded
+                if (window.myEarningsChart) {
+                    window.myEarningsChart.destroy();
+                }
+
+                window.myEarningsChart = new Chart(ctx, {
+                    type: 'line',
+                    plugins: [glowPlugin],
+                    data: {
+                        labels: months,
+                        datasets: [
+                            {
+                                type: 'line',
+                                label: 'Thu nhập',
+                                data: sparklineData,
+                                fill: true,
+                                backgroundColor: gradient,
+                                borderColor: '#FF6B35', 
+                                borderWidth: 3.5,
+                                tension: 0.45,
+                                pointRadius: 0,
+                                pointHoverRadius: 8,
+                                pointBackgroundColor: '#FF6B35',
+                                pointBorderColor: '#fff',
+                                pointBorderWidth: 3,
+                                order: 1
+                            },
+                            {
+                                type: 'bar',
+                                label: 'Background',
+                                data: sparklineData, 
+                                backgroundColor: barGradient,
+                                hoverBackgroundColor: activeColumnGradient,
+                                borderRadius: 8,
+                                barPercentage: 0.5,
+                                categoryPercentage: 1.0,
+                                order: 2,
+                                tooltip: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: 'transparent',
+                                titleColor: 'transparent',
+                                bodyColor: '#1f2937',
+                                bodyFont: { weight: '900', size: 14, family: "'Inter', sans-serif" },
+                                displayColors: false,
+                                boxShadow: 'none',
+                                yAlign: 'bottom',
+                                caretSize: 0,
+                                padding: 10,
+                                filter: function(tooltipItem) {
+                                    return tooltipItem.datasetIndex === 0;
+                                },
+                                callbacks: {
+                                    title: () => null,
+                                    label: (item) => {
+                                        const val = item.raw;
+                                        return (val / 1000000).toFixed(0) + 'M';
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false, drawBorder: false },
+                                border: { display: false },
+                                ticks: {
+                                    color: '#9ca3af',
+                                    font: { size: 12, family: "'Inter', sans-serif" },
+                                    padding: 15
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                max: maxVal,
+                                grid: { 
+                                    color: '#f3f4f6', 
+                                    tickLength: 0,
+                                    borderDash: [5, 5]
+                                },
+                                border: { display: false },
+                                ticks: {
+                                    color: '#d1d5db',
+                                    font: { size: 12, family: "'Inter', sans-serif" },
+                                    padding: 20,
+                                    stepSize: maxVal / 5,
+                                    callback: v => v === 0 ? '0' : (v / 1000000)
+                                }
+                            }
                         }
                     }
-                }
-            },
-            scales: {
-                x: {
-                    grid: { display: false, drawBorder: false },
-                    border: { display: false },
-                    ticks: {
-                        color: '#9ca3af',
-                        font: { size: 12, family: "'Inter', sans-serif" },
-                        padding: 15
-                    }
-                },
-                y: {
-                    beginAtZero: true,
-                    max: maxVal,
-                    grid: { 
-                        color: '#f3f4f6', 
-                        tickLength: 0,
-                        borderDash: [5, 5]
-                    },
-                    border: { display: false },
-                    ticks: {
-                        color: '#d1d5db',
-                        font: { size: 12, family: "'Inter', sans-serif" },
-                        padding: 20,
-                        stepSize: maxVal / 5,
-                        callback: v => v === 0 ? '0' : (v / 1000000)
-                    }
-                }
+                });
             }
-        }
-    });
-})();
-</script>
+        });
+    </script>
+}
 

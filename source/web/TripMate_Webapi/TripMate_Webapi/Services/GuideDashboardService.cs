@@ -58,11 +58,11 @@ namespace TripMate_WebAPI.Services
 
             // Earnings
             vm.TotalEarnings = currentMonthBookings
-                .Where(b => b.Status == 1 || b.Status == 2) // Confirmed or Completed
+                .Where(b => b.Status == 2) // Completed only
                 .Sum(b => b.GuideEarnings);
 
             var lastMonthEarnings = lastMonthBookings
-                .Where(b => b.Status == 1 || b.Status == 2)
+                .Where(b => b.Status == 2)
                 .Sum(b => b.GuideEarnings);
 
             if (lastMonthEarnings > 0)
@@ -103,7 +103,7 @@ namespace TripMate_WebAPI.Services
             for (int i = 1; i <= 12; i++)
             {
                 var monthEarnings = bookings
-                    .Where(b => b.CreatedAt.Year == now.Year && b.CreatedAt.Month == i && (b.Status == 1 || b.Status == 2))
+                    .Where(b => b.CreatedAt.Year == now.Year && b.CreatedAt.Month == i && b.Status == 2)
                     .Sum(b => b.GuideEarnings);
                 sparkline.Add(monthEarnings);
             }
