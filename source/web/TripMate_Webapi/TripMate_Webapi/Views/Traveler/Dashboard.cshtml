@@ -136,9 +136,11 @@
                             </div>
 
                             <div class="flex flex-col md:flex-row gap-3 w-full md:w-auto mt-4 md:mt-0">
-                                <a :href="'/Traveler/Review/' + booking.id" class="border border-primary bg-primary text-white hover:bg-primary/90 text-center px-6 py-3 rounded-xl font-bold transition-all shadow-md">
-                                    Leave Review
-                                </a>
+                                <template x-if="!booking.hasReviewed">
+                                    <button @@click="leaveReview(booking.id)" class="border border-primary bg-primary text-white hover:bg-primary/90 text-center px-6 py-3 rounded-xl font-bold transition-all shadow-md">
+                                        Leave Review
+                                    </button>
+                                </template>
                                 <button class="border border-outline-variant text-on-surface-variant hover:bg-surface-variant px-6 py-3 rounded-xl font-bold transition-all">
                                     Book Again
                                 </button>
@@ -246,8 +248,7 @@
                     confirmButtonColor: '#ff7a00',
                     cancelButtonColor: '#6b7280',
                     confirmButtonText: 'Yes, cancel it!',
-                    cancelButtonText: 'No, keep it',
-                    customClass: { popup: 'swal-top-fix' }
+                    cancelButtonText: 'No, keep it'
                 }).then(async (result) => {
                     if (result.isConfirmed) {
                         const token = localStorage.getItem('accessToken');
@@ -282,6 +283,59 @@
                         }
                     }
                 });
+            },
+            async leaveReview(id) {
+                const { value: formValues } = await Swal.fire({
+                    title: 'Rate your Trip',
+                    html: `
+                        <div class="mb-4">
+                            <label class="block text-sm font-bold text-on-surface mb-2">Rating (1-5 Stars)</label>
+                            <input id="swal-rating" type="number" min="1" max="5" class="w-full border rounded p-2" value="5">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold text-on-surface mb-2">Comment</label>
+                            <textarea id="swal-comment" class="w-full border rounded p-2" rows="3" placeholder="Tell us about your experience..."></textarea>
+                        </div>
+                    `,
+                    focusConfirm: false,
+                    showCancelButton: true,
+                    confirmButtonText: 'Submit Review',
+                    confirmButtonColor: '#ff7a00',
+                    preConfirm: () => {
+                        return {
+                            rating: document.getElementById('swal-rating').value,
+                            comment: document.getElementById('swal-comment').value
+                        }
+                    }
+                });
+
+                if (formValues) {
+                    const token = localStorage.getItem('accessToken');
+                    try {
+                        const res = await fetch('/Traveler/SubmitReviewAjax', {
+                            method: 'POST',
+                            headers: { 
+                                'Authorization': 'Bearer ' + token,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                bookingId: id,
+                                rating: parseInt(formValues.rating),
+                                comment: formValues.comment
+                            })
+                        });
+
+                        if (res.ok) {
+                            Swal.fire({ title: 'Success', text: 'Thank you for your review!', icon: 'success', customClass: { popup: 'swal-top-fix' }});
+                            this.bookings = this.bookings.map(b => b.id === id ? { ...b, hasReviewed: true } : b);
+                        } else {
+                            const err = await res.json();
+                            Swal.fire({ title: 'Error', text: err.error || 'Failed to submit review.', icon: 'error', customClass: { popup: 'swal-top-fix' }});
+                        }
+                    } catch (e) {
+                        Swal.fire({ title: 'Error', text: 'Connection error.', icon: 'error', customClass: { popup: 'swal-top-fix' }});
+                    }
+                }
             }
         }));
     });

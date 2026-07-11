@@ -19,6 +19,7 @@ namespace TripMate_Webapi.Controllers
         private readonly TourService _tourService;
         private readonly IReviewRepository _reviewRepository;
         private readonly IGuideRepository _guideRepository;
+        private readonly ISavedGuideRepository _savedGuideRepository;
 
         private const string LOGIN_URL = "/Auth/Login";
 
@@ -29,7 +30,8 @@ namespace TripMate_Webapi.Controllers
             IBookingRepository bookingRepository,
             TourService tourService,
             IReviewRepository reviewRepository,
-            IGuideRepository guideRepository)
+            IGuideRepository guideRepository,
+            ISavedGuideRepository savedGuideRepository)
         {
             _logger = logger;
             _authService = authService;
@@ -38,6 +40,7 @@ namespace TripMate_Webapi.Controllers
             _tourService = tourService;
             _reviewRepository = reviewRepository;
             _guideRepository = guideRepository;
+            _savedGuideRepository = savedGuideRepository;
         }
 
         // ────────────────────────────────────────────────────────────────────
@@ -139,11 +142,40 @@ namespace TripMate_Webapi.Controllers
         public async Task<IActionResult> Checkout(string id)
         {
             ViewBag.RequiresAuth = true;
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Redirect($"{LOGIN_URL}?returnUrl=/Traveler/Checkout/{id}");
+
             var booking = await _bookingRepository.GetBookingByIdAsync(id);
-            if (booking == null)
+            if (booking == null || booking.TravelerId != travelerId)
                 return RedirectToAction("Dashboard");
 
+            // Lấy thông tin Package và Guide để hiển thị
+            var package = await _tourService.GetTourByIdAsync(booking.ExperiencePackageId);
+            ViewBag.Package = package;
+
             return View(booking);
+        }
+
+        [HttpPost("Traveler/ProcessPaymentAjax/{id}")]
+        public async Task<IActionResult> ProcessPaymentAjax(string id)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            var booking = await _bookingRepository.GetBookingByIdAsync(id);
+            if (booking == null || booking.TravelerId != travelerId)
+                return NotFound(new { error = "Booking not found" });
+
+            if (!string.IsNullOrEmpty(booking.PaymentReference))
+                return BadRequest(new { error = "Booking is already paid" });
+
+            booking.PaymentReference = "MOCK-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
+            booking.PaymentMethod = "Credit Card (Mock)";
+            
+            var updatedBooking = await _bookingRepository.UpdateBookingAsync(booking);
+            return Json(new { success = true, booking = updatedBooking });
         }
 
         // GET: /Traveler/Messages [Auth required]
@@ -582,20 +614,76 @@ namespace TripMate_Webapi.Controllers
                 return Unauthorized(new { error = "Not authenticated" });
 
             var bookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
-            var result = bookings.Select(b => new
+            
+            var resultList = new List<object>();
+            foreach(var b in bookings)
             {
-                id = b.Id,
-                status = b.Status,
-                bookingDate = b.BookingDate.ToString("MMM dd, yyyy"),
-                totalAmount = b.TotalAmount,
-                paymentMethod = b.PaymentMethod,
-                notes = b.TravelerNotes,
-                guideName = b.GuideProfile?.Profile?.FullName ?? "Local Guide",
-                guideAvatar = b.GuideProfile?.Profile?.AvatarUrl ?? "",
-                guideProfileId = b.GuideProfileId,
-                packageTitle = b.ExperiencePackage?.Title ?? "Custom Tour"
-            });
-            return Json(result);
+                bool hasReviewed = false;
+                if (b.Status == 2) 
+                {
+                    hasReviewed = await _reviewRepository.HasReviewForBookingAsync(b.Id);
+                }
+
+                resultList.Add(new
+                {
+                    id = b.Id,
+                    status = b.Status,
+                    bookingDate = b.BookingDate.ToString("MMM dd, yyyy"),
+                    totalAmount = b.TotalAmount,
+                    paymentMethod = b.PaymentMethod,
+                    paymentReference = b.PaymentReference,
+                    notes = b.TravelerNotes,
+                    guideName = b.GuideProfile?.Profile?.FullName ?? "Local Guide",
+                    guideAvatar = b.GuideProfile?.Profile?.AvatarUrl ?? "",
+                    guideCoverPhoto = b.GuideProfile?.CoverPhotoUrl ?? "",
+                    guideProfileId = b.GuideProfileId,
+                    packageTitle = b.ExperiencePackage?.Title ?? "Custom Tour",
+                    hasReviewed = hasReviewed
+                });
+            }
+
+            return Json(resultList);
+        }
+
+        public class SubmitReviewRequest
+        {
+            public string BookingId { get; set; } = string.Empty;
+            public int Rating { get; set; }
+            public string Comment { get; set; } = string.Empty;
+        }
+
+        [HttpPost("Traveler/SubmitReviewAjax")]
+        public async Task<IActionResult> SubmitReviewAjax([FromBody] SubmitReviewRequest req)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            if (req.Rating < 1 || req.Rating > 5)
+                return BadRequest(new { error = "Rating must be between 1 and 5" });
+
+            var booking = await _bookingRepository.GetBookingByIdAsync(req.BookingId);
+            if (booking == null || booking.TravelerId != travelerId)
+                return NotFound(new { error = "Booking not found" });
+
+            if (booking.Status != 2)
+                return BadRequest(new { error = "You can only review completed trips." });
+
+            var hasReview = await _reviewRepository.HasReviewForBookingAsync(req.BookingId);
+            if (hasReview)
+                return BadRequest(new { error = "You have already reviewed this trip." });
+
+            var review = new ReviewEntity
+            {
+                BookingId = req.BookingId,
+                TravelerId = travelerId,
+                GuideProfileId = booking.GuideProfileId,
+                Rating = req.Rating,
+                Comment = req.Comment
+            };
+
+            var created = await _reviewRepository.CreateReviewAsync(review);
+            return Json(new { success = true });
         }
 
         // POST: /Traveler/DeleteTripAjax/{id}  [Bearer Auth via header]
@@ -640,6 +728,98 @@ namespace TripMate_Webapi.Controllers
 
             await _tripRequestRepository.ToggleTripRequestStatusAsync(id);
             return Json(new { success = true });
+        }
+        // GET: /Traveler/GetSavedGuidesAjax  [Bearer Auth via header]
+        [HttpGet]
+        public async Task<IActionResult> GetSavedGuidesAjax()
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                var savedGuides = await _savedGuideRepository.GetSavedGuidesByTravelerAsync(travelerId);
+                var result = new List<object>();
+
+                foreach (var sg in savedGuides)
+                {
+                    var guideProfile = await _guideRepository.GetGuideByProfileIdAsync(sg.GuideProfileId);
+                    if (guideProfile != null)
+                    {
+                        result.Add(new
+                        {
+                            guideId = guideProfile.Id,
+                            userId = guideProfile.UserId,
+                            name = guideProfile.Profile?.FullName ?? "Unknown Guide",
+                            avatarUrl = guideProfile.Profile?.AvatarUrl ?? "",
+                            coverPhotoUrl = guideProfile.CoverPhotoUrl ?? "",
+                            cityArea = guideProfile.CityArea ?? "Local Area",
+                            averageRating = guideProfile.AverageRating,
+                            totalReviews = guideProfile.TotalReviews,
+                            price = guideProfile.PricePerHour
+                        });
+                    }
+                }
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching saved guides for user {UserId}", travelerId);
+                return StatusCode(500, new { error = "Internal server error while fetching saved guides." });
+            }
+        }
+
+        // POST: /Traveler/ToggleSaveGuideAjax/{guideProfileId}  [Bearer Auth via header]
+        [HttpPost("Traveler/ToggleSaveGuideAjax/{guideProfileId}")]
+        public async Task<IActionResult> ToggleSaveGuideAjax(string guideProfileId)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                var isSaved = await _savedGuideRepository.IsGuideSavedAsync(travelerId, guideProfileId);
+                if (isSaved)
+                {
+                    await _savedGuideRepository.DeleteSavedGuideAsync(travelerId, guideProfileId);
+                    return Json(new { success = true, saved = false });
+                }
+                else
+                {
+                    await _savedGuideRepository.SaveGuideAsync(new SavedGuideEntity
+                    {
+                        TravelerId = travelerId,
+                        GuideProfileId = guideProfileId
+                    });
+                    return Json(new { success = true, saved = true });
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error toggling saved guide for user {UserId} and guide {GuideId}", travelerId, guideProfileId);
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        // GET: /Traveler/IsGuideSavedAjax/{guideProfileId}
+        [HttpGet("Traveler/IsGuideSavedAjax/{guideProfileId}")]
+        public async Task<IActionResult> IsGuideSavedAjax(string guideProfileId)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Ok(new { saved = false });
+
+            try
+            {
+                var isSaved = await _savedGuideRepository.IsGuideSavedAsync(travelerId, guideProfileId);
+                return Ok(new { saved = isSaved });
+            }
+            catch
+            {
+                return Ok(new { saved = false });
+            }
         }
     }
 }

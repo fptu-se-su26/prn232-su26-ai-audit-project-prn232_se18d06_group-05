@@ -79,6 +79,13 @@
                         Money held securely until tour completion
                     </p>
 
+                    <!-- Save Guide Button -->
+                    <button @@click="toggleSaveGuide()"
+                            class="w-full bg-surface-variant hover:bg-outline-variant/30 text-on-surface py-3 rounded-xl font-bold transition-all mb-4 flex justify-center items-center gap-2 border border-outline-variant/50">
+                        <span class="material-symbols-outlined text-primary" :style="isSaved ? 'font-variation-settings: \'FILL\' 1;' : ''">favorite</span>
+                        <span x-text="isSaved ? 'Saved to Favorites' : 'Save Guide'"></span>
+                    </button>
+
                     <!-- Message (only visible if booking exists — hint text) -->
                     <div class="text-center text-xs text-on-surface-variant bg-surface-variant/50 rounded-lg p-3">
                         <span class="material-symbols-outlined text-sm align-middle">chat</span>
@@ -336,10 +343,60 @@
         Alpine.data('guideProfilePage', () => ({
             showModal: false,
             bookingInProgress: false,
+            isSaved: false,
             modal: {
                 id: '', title: '', description: '', duration: 0,
                 pricePerSession: 0, pricePerPerson: 0, maxGroup: 6,
                 includedItems: [], priceLabel: ''
+            },
+
+            async init() {
+                await this.checkSavedState();
+            },
+
+            async checkSavedState() {
+                const token = localStorage.getItem('accessToken');
+                if (!token) return;
+                try {
+                    const res = await fetch(`/Traveler/IsGuideSavedAjax/@Model.Id`, {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.isSaved = data.saved;
+                    }
+                } catch(e) { console.error(e); }
+            },
+
+            async toggleSaveGuide() {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                
+                try {
+                    const res = await fetch(`/Traveler/ToggleSaveGuideAjax/@Model.Id`, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        this.isSaved = data.saved;
+                        
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: this.isSaved ? 'success' : 'info',
+                            title: this.isSaved ? 'Guide saved to Favorites!' : 'Removed from Favorites',
+                            showConfirmButton: false,
+                            timer: 2000,
+                            customClass: { popup: 'swal-top-fix' }
+                        });
+                    }
+                } catch (e) {
+                    console.error('Toggle save error:', e);
+                }
             },
 
             openTourModal(id, title, description, duration, pricePerSession, pricePerPerson, maxGroup, includedItemsStr) {
