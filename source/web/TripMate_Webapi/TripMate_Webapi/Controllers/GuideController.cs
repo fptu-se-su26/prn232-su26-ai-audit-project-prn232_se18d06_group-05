@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
+using TripMate_Webapi.Entities;
+using System.Security.Claims;
 
 namespace TripMate_Webapi.Controllers
 {
@@ -20,6 +22,7 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/Dashboard
+        [HttpGet("Guide/Dashboard")]
         public async Task<IActionResult> Dashboard()
         {
             try
@@ -74,9 +77,55 @@ namespace TripMate_Webapi.Controllers
 
         // GET: /Guide/Profile/{id}
         // This is the public profile viewed by the Traveler
+        [HttpGet("Guide/Profile/{id}")]
         public IActionResult Profile(string id = "1")
         {
             return View();
+        }
+
+        // ponytail ultra: minimal inline update
+        public class UpdateGuideProfileDto
+        {
+            public string? AvatarUrl { get; set; }
+            public string? Location { get; set; }
+            public string? Bio { get; set; }
+            public List<string>? Languages { get; set; }
+            public List<string>? Specialties { get; set; }
+            public string? CityArea { get; set; }
+            public decimal? PricePerHour { get; set; }
+            public string? CoverPhotoUrl { get; set; }
+            // ponytail: certificate, phone number, full name, email explicitly excluded per requirements
+        }
+
+        [HttpPost("Guide/UpdateProfile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateGuideProfileDto dto, [FromServices] Supabase.Client supabase)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var profileResponse = await supabase.From<ProfileEntity>().Where(x => x.Id == userId).Get();
+            var profile = profileResponse.Models.FirstOrDefault();
+            if (profile != null)
+            {
+                if (dto.AvatarUrl != null) profile.AvatarUrl = dto.AvatarUrl;
+                if (dto.Location != null) profile.Location = dto.Location;
+                await supabase.From<ProfileEntity>().Update(profile);
+            }
+
+            var guideProfileResponse = await supabase.From<GuideProfileEntity>().Where(x => x.UserId == userId).Get();
+            var guideProfile = guideProfileResponse.Models.FirstOrDefault();
+            if (guideProfile != null)
+            {
+                if (dto.Bio != null) guideProfile.Bio = dto.Bio;
+                if (dto.Languages != null) guideProfile.Languages = dto.Languages;
+                if (dto.Specialties != null) guideProfile.Specialties = dto.Specialties;
+                if (dto.CityArea != null) guideProfile.CityArea = dto.CityArea;
+                if (dto.PricePerHour != null) guideProfile.PricePerHour = dto.PricePerHour;
+                if (dto.CoverPhotoUrl != null) guideProfile.CoverPhotoUrl = dto.CoverPhotoUrl;
+                await supabase.From<GuideProfileEntity>().Update(guideProfile);
+            }
+
+            return Ok(new { success = true });
         }
     }
 
