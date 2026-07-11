@@ -190,8 +190,20 @@ namespace TripMate_Webapi.Controllers
             return View();
         }
 
-        // GET: /LandingPage/Support
+        // GET: /Home/Support
         public IActionResult Support()
+        {
+            return View();
+        }
+
+        // GET: /Home/TermsOfService
+        public IActionResult TermsOfService()
+        {
+            return View();
+        }
+
+        // GET: /Home/PrivacyPolicy
+        public IActionResult PrivacyPolicy()
         {
             return View();
         }

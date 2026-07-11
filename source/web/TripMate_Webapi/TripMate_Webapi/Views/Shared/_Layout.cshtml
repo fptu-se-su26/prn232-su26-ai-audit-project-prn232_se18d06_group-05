@@ -118,8 +118,12 @@
         @RenderBody()
     </main>
 
-    <!-- Footer -->
-    <footer class="w-full mt-16 bg-surface-variant border-t border-outline-variant/50">
+    <!-- Footer (hidden on auth pages) -->
+    @{
+        var pageTitle = ViewData["Title"]?.ToString() ?? "";
+        var isAuthPage = pageTitle == "Đăng nhập" || pageTitle == "Đăng ký" || pageTitle == "Đặt lại mật khẩu";
+    }
+    <footer class="w-full mt-16 bg-surface-variant border-t border-outline-variant/50 @(isAuthPage ? "hidden" : "")">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8 px-12 py-16 max-w-[1440px] mx-auto">
             <div class="col-span-1">
                 <div class="flex items-center gap-3 mb-4">
@@ -144,8 +148,8 @@
             </div>
             <div class="flex flex-col gap-3">
                 <h5 class="text-sm font-bold text-on-surface tracking-widest uppercase">Legal</h5>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="/Home/PrivacyPolicy">Privacy Policy</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="/Home/TermsOfService">Terms of Service</a>
             </div>
         </div>
         <div class="px-12 py-6 border-t border-outline-variant/20 max-w-[1440px] mx-auto text-center">

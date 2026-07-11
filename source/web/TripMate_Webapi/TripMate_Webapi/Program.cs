@@ -69,6 +69,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<ICloudinaryService, CloudinaryService>();
 builder.Services.AddHttpClient<PasswordResetService>();
 builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
+builder.Services.AddScoped<IGuideDashboardService, GuideDashboardService>();
 
 // ── Tour Service ──────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<TourService>();
@@ -143,10 +144,20 @@ builder.Services
         {
             OnMessageReceived = context =>
             {
-                var token = context.Request.Cookies["access_token"];
-                if (!string.IsNullOrEmpty(token))
+                // Ưu tiên đọc từ Header trước (để lấy token mới nếu AutoRefreshMiddleware vừa làm mới token)
+                var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+                if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
                 {
-                    context.Token = token;
+                    context.Token = authHeader.Substring("Bearer ".Length).Trim();
+                }
+                else
+                {
+                    // Đọc từ Cookie nếu Header không có
+                    var token = context.Request.Cookies["access_token"];
+                    if (!string.IsNullOrEmpty(token))
+                    {
+                        context.Token = token;
+                    }
                 }
                 return Task.CompletedTask;
             },
@@ -252,6 +263,7 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 
+app.UseMiddleware<TripMate_Webapi.Middlewares.AutoRefreshMiddleware>();
 app.UseSession();          // Phải trước UseAuthentication để Session sẵn sàng
 app.UseAuthentication();   // phải trước UseAuthorization
 app.UseAuthorization();

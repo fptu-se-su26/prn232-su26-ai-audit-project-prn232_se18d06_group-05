@@ -48,15 +48,48 @@ namespace TripMate_Webapi.Controllers
         [HttpGet("/Auth/Logout")]
         public IActionResult MvcLogout() 
         {
-            Response.Cookies.Delete("access_token", new CookieOptions { Path = "/" });
+            ClearAuthCookies();
             return RedirectToAction("LandingPage", "LandingPage");
         }
 
         [HttpPost("/api/auth/logout")]
         public IActionResult ApiLogout()
         {
-            Response.Cookies.Delete("access_token", new CookieOptions { Path = "/" });
+            ClearAuthCookies();
             return Ok(new { message = "Đăng xuất thành công" });
+        }
+
+        private void SetAuthCookies(string accessToken, string refreshToken)
+        {
+            var accessOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false, // TODO: Set to true in production
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTime.UtcNow.AddDays(7),
+                Path = "/"
+            };
+            
+            var refreshOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = false, // TODO: Set to true in production
+                SameSite = SameSiteMode.Lax,
+                Expires = DateTime.UtcNow.AddDays(30), // Refresh token sống lâu hơn
+                Path = "/"
+            };
+
+            Response.Cookies.Append("access_token", accessToken, accessOptions);
+            if (!string.IsNullOrEmpty(refreshToken))
+            {
+                Response.Cookies.Append("refresh_token", refreshToken, refreshOptions);
+            }
+        }
+
+        private void ClearAuthCookies()
+        {
+            Response.Cookies.Delete("access_token", new CookieOptions { Path = "/" });
+            Response.Cookies.Delete("refresh_token", new CookieOptions { Path = "/" });
         }
 
         /// <summary>
@@ -96,15 +129,7 @@ namespace TripMate_Webapi.Controllers
                     return Unauthorized(new { message = "Tài khoản của bạn đang chờ Admin phê duyệt hoặc đã bị vô hiệu hóa. Vui lòng quay lại sau." });
                 }
 
-                var cookieOptions = new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = false, // Set to true in production
-                    SameSite = SameSiteMode.Lax,
-                    Expires = DateTime.UtcNow.AddDays(7),
-                    Path = "/"
-                };
-                Response.Cookies.Append("access_token", result.AccessToken, cookieOptions);
+                SetAuthCookies(result.AccessToken, result.RefreshToken);
 
                 return Ok(new
                 {
@@ -247,6 +272,8 @@ namespace TripMate_Webapi.Controllers
                 }
                 else
                 {
+                    SetAuthCookies(result.AccessToken, result.RefreshToken);
+                    
                     return Ok(new
                     {
                         accessToken = result.AccessToken,
@@ -290,15 +317,7 @@ namespace TripMate_Webapi.Controllers
 
                 _logger.LogInformation("Google login successful for email: {Email}", result.User?.Email);
 
-                var cookieOptions = new CookieOptions
-                {
-                    HttpOnly = true,
-                    Secure = false, // Set to true in production
-                    SameSite = SameSiteMode.Lax,
-                    Expires = DateTime.UtcNow.AddDays(7),
-                    Path = "/"
-                };
-                Response.Cookies.Append("access_token", result.AccessToken, cookieOptions);
+                SetAuthCookies(result.AccessToken, result.RefreshToken);
 
                 return Ok(new
                 {
