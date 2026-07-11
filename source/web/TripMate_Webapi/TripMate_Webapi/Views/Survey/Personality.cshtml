@@ -469,9 +469,38 @@
     }
 
     function calculateProfile() {
-        // Simple personality profiling based on answers
+        const travelStyle = getTravelStyle();
+
+        // Map travel style → type + label + description (dùng cho Settings page)
+        const typeMap = {
+            'Phiêu lưu mạo hiểm': {
+                type: 'ESTP', label: 'The Adventurer',
+                description: 'You live for thrills and spontaneous adventures. You thrive in new environments and love the unexpected. Local guides who specialize in off-the-beaten-path experiences are your perfect match.'
+            },
+            'Nghỉ dưỡng thư giãn': {
+                type: 'ISFJ', label: 'The Relaxer',
+                description: 'You value peace, comfort, and meaningful moments. You prefer curated, stress-free experiences with guides who understand the art of slow travel.'
+            },
+            'Khám phá văn hóa': {
+                type: 'INFJ', label: 'The Explorer',
+                description: 'You are a true cultural enthusiast. You seek deep connections with local traditions, art, and history. You flourish with guides who are passionate storytellers.'
+            },
+            'Gần gũi thiên nhiên': {
+                type: 'ENFP', label: 'The Free Spirit',
+                description: 'You are a free spirit who finds joy in the natural world. Open-minded and curious, you love guides who share your passion for eco-travel and sustainable tourism.'
+            }
+        };
+
+        const typeInfo = typeMap[travelStyle] || {
+            type: 'ENFP', label: 'The Explorer',
+            description: 'You are an enthusiastic traveler who loves discovering new places and meeting local people. Your ideal guide is someone who can show you the authentic side of every destination.'
+        };
+
         const profile = {
-            travelStyle: getTravelStyle(),
+            travelStyle,
+            type: typeInfo.type,
+            label: typeInfo.label,
+            description: typeInfo.description,
             budget: answers[3] || 'moderate',
             destination: answers[4] || 'beach',
             duration: answers[5] || 'short',
@@ -483,7 +512,7 @@
             purpose: answers[20] || 'explore',
             completedAt: new Date().toISOString()
         };
-        
+
         return profile;
     }
 

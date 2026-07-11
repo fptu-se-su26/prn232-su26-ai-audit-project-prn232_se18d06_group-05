@@ -1,0 +1,68 @@
+@model List<TripMate_Webapi.Entities.GuideProfileEntity>
+@{
+    ViewData["Title"] = "Explore Destinations — TripMate";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var tours = ViewBag.Tours as List<TripMate_WebAPI.Services.ExperiencePackageRow> ?? new();
+
+    // Build destination data from actual guides + tours
+    var destinationList = new[] {
+        new { Name = "Ha Long Bay", Slug = "Ha Long Bay, Vietnam", Image = "/images/halong.jpg", Desc = "Cruise through emerald waters and towering limestone islands" },
+        new { Name = "Hoi An", Slug = "Hoi An, Vietnam", Image = "/images/hoian.png", Desc = "Walk the ancient lantern-lit streets of this UNESCO town" },
+        new { Name = "Sapa", Slug = "Sapa, Vietnam", Image = "/images/sapa.png", Desc = "Trek through rice terraces and meet hill tribe communities" },
+        new { Name = "Phu Quoc", Slug = "Phu Quoc, Vietnam", Image = "/images/phuquoc_new.png", Desc = "Relax on pristine beaches and explore tropical forests" },
+        new { Name = "Da Nang", Slug = "Da Nang, Vietnam", Image = "https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800", Desc = "Discover the dragon bridge city with stunning beaches" },
+        new { Name = "Ho Chi Minh City", Slug = "Ho Chi Minh City, Vietnam", Image = "https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800", Desc = "Dive into the bustling energy of Vietnam's largest city" },
+        new { Name = "Hanoi", Slug = "Hanoi, Vietnam", Image = "https://images.unsplash.com/photo-1555921015-5532091f6026?w=800", Desc = "Explore thousand-year-old temples and vibrant street food" },
+        new { Name = "Nha Trang", Slug = "Nha Trang, Vietnam", Image = "https://images.unsplash.com/photo-1573790387438-4da905039392?w=800", Desc = "Sun, sea, and adventure along the coastal paradise" },
+        new { Name = "Hue", Slug = "Hue, Vietnam", Image = "https://images.unsplash.com/photo-1612981805455-b9af5a6c2be9?w=800", Desc = "Step back in time at the former imperial capital" },
+        new { Name = "Da Lat", Slug = "Da Lat, Vietnam", Image = "https://images.unsplash.com/photo-1615195280194-68d37e45f830?w=800", Desc = "Enjoy the cool highlands, waterfalls, and flower gardens" },
+        new { Name = "Ninh Binh", Slug = "Ninh Binh, Vietnam", Image = "https://images.unsplash.com/photo-1577003811926-53b288a6e5d0?w=800", Desc = "The 'Halong Bay on land' with karst landscapes" },
+        new { Name = "Mui Ne", Slug = "Mui Ne, Vietnam", Image = "https://images.unsplash.com/photo-1540363503774-0ab97fca72c4?w=800", Desc = "Ride dunes, kite surf, and watch epic sunsets" },
+    };
+}
+
+<div class="bg-surface min-h-screen">
+
+    <!-- Hero -->
+    <div class="relative h-96 overflow-hidden">
+        <img src="https://images.unsplash.com/photo-1528127269322-539801943592?w=1920" alt="Vietnam" class="w-full h-full object-cover" />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20"></div>
+        <div class="absolute inset-0 flex flex-col items-center justify-center text-center px-6 z-10">
+            <h1 class="text-5xl md:text-6xl font-extrabold text-white mb-4 drop-shadow-2xl">Explore Vietnam</h1>
+            <p class="text-xl text-white/90 max-w-2xl font-medium mb-8">From bustling cities to serene highlands — discover @destinationList.Length amazing destinations with local guides.</p>
+        </div>
+    </div>
+
+    <!-- Destinations Grid -->
+    <div class="max-w-[1440px] mx-auto px-6 md:px-12 py-16">
+        <div class="flex justify-between items-end mb-10 border-b border-outline-variant/20 pb-4">
+            <div>
+                <h2 class="text-3xl font-extrabold text-on-surface mb-2">All Destinations</h2>
+                <p class="text-on-surface-variant text-lg">Click a destination to see available guides and tours.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            @for (int i = 0; i < destinationList.Length; i++)
+            {
+                var dest = destinationList[i];
+                var guideCount = Model?.Count(g => g.CityArea != null && g.CityArea.Contains(dest.Name, StringComparison.OrdinalIgnoreCase)) ?? 0;
+                var tourCount = tours.Count(t => t.GuideProfile?.CityArea != null && t.GuideProfile.CityArea.Contains(dest.Name, StringComparison.OrdinalIgnoreCase));
+
+                <a href="/Home/Explore?destination=@System.Net.WebUtility.UrlEncode(dest.Slug)" class="group relative rounded-3xl overflow-hidden aspect-square shadow-lg hover:shadow-2xl transition-all hover:-translate-y-2 duration-300">
+                    <img src="@dest.Image" alt="@dest.Name" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"/>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent"></div>
+                    <div class="absolute bottom-6 left-6 right-6 z-10">
+                        <h3 class="text-3xl font-bold text-white mb-2 drop-shadow-md">@dest.Name</h3>
+                        <p class="text-white/80 text-sm mb-3">@dest.Desc</p>
+                        <div class="flex gap-3">
+                            <span class="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full">@guideCount Guides</span>
+                            <span class="bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full">@tourCount Tours</span>
+                        </div>
+                    </div>
+                </a>
+            }
+        </div>
+    </div>
+</div>

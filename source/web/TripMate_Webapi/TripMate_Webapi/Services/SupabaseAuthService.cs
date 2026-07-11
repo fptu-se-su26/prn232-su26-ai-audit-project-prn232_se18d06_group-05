@@ -81,6 +81,8 @@ public class SupabaseAuthService
         if (string.IsNullOrEmpty(session.User?.Id))
             throw new Exception("Đăng ký thất bại");
 
+        bool requiresEmailConfirmation = string.IsNullOrEmpty(session.AccessToken);
+
         // 2. Upsert profile vào bảng profiles với thông tin mở rộng
         if (string.IsNullOrEmpty(session.AccessToken))
         {
@@ -95,7 +97,7 @@ public class SupabaseAuthService
             await _notificationService.NotifyAdminNewGuideApplicationAsync(session.User.Id, fullName, email);
         }
 
-        if (string.IsNullOrEmpty(session.AccessToken))
+        if (requiresEmailConfirmation)
             throw new Exception("Đăng ký thành công nhưng yêu cầu xác thực email. Vui lòng kiểm tra hộp thư của bạn.");
 
         var user = await GetProfileAsync(session.AccessToken, session.User.Id);
@@ -236,14 +238,12 @@ public class SupabaseAuthService
                 updated_at = DateTime.UtcNow,
             };
 
-            var token = string.IsNullOrEmpty(accessToken) ? _serviceRoleKey : accessToken;
-            bool success = false;
-
             // Try INSERT first (for new users)
             var insertRequest = new HttpRequestMessage(
                 HttpMethod.Post,
                 $"{_supabaseUrl}/rest/v1/profiles");
 
+            var token = string.IsNullOrEmpty(accessToken) ? _serviceRoleKey : accessToken;
             insertRequest.Headers.Add("apikey", _anonKey);
             insertRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             insertRequest.Headers.Add("Prefer", "resolution=merge-duplicates");
@@ -252,196 +252,42 @@ public class SupabaseAuthService
 
             var insertResponse = await _http.SendAsync(insertRequest);
             
+            // If INSERT succeeds, we're done
             if (insertResponse.IsSuccessStatusCode)
             {
-                success = true;
-            }
-            else
-            {
-                // If INSERT fails (user exists), try UPDATE
-                var updateRequest = new HttpRequestMessage(
-                    HttpMethod.Patch,
-                    $"{_supabaseUrl}/rest/v1/profiles?id=eq.{userId}");
-
-                updateRequest.Headers.Add("apikey", _anonKey);
-                updateRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                updateRequest.Content = new StringContent(
-                    JsonSerializer.Serialize(new {
-                        full_name = fullName,
-                        phone_number = phoneNumber,
-                        role = role,
-                        experience = experience,
-                        specialization = specialization,
-                        languages = languages,
-                        bio = bio,
-                        avatar_url = avatarUrl,
-                        certificate_url = certificatePath,
-                        is_active = role == "guide" ? false : true,
-                        updated_at = DateTime.UtcNow,
-                    }), Encoding.UTF8, "application/json");
-
-                var updateResponse = await _http.SendAsync(updateRequest);
-                
-                if (updateResponse.IsSuccessStatusCode)
-                {
-                    success = true;
-                }
-                else
-                {
-                    var err = await updateResponse.Content.ReadAsStringAsync();
-                    Console.WriteLine($"[ERROR] UpsertProfileAsync failed: {updateResponse.StatusCode} - {err}");
-                    throw new Exception($"Không thể lưu thông tin hồ sơ: {err}");
-                }
+                return;
             }
 
-            // Create/Update guide_profiles if role is guide
-            if (success && role == "guide")
+            // If INSERT fails (user exists), try UPDATE
+            var updateRequest = new HttpRequestMessage(
+                HttpMethod.Patch,
+                $"{_supabaseUrl}/rest/v1/profiles?id=eq.{userId}");
+
+            var tokenPatch = string.IsNullOrEmpty(accessToken) ? _serviceRoleKey : accessToken;
+            updateRequest.Headers.Add("apikey", _anonKey);
+            updateRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenPatch);
+            updateRequest.Content = new StringContent(
+                JsonSerializer.Serialize(new {
+                    full_name = fullName,
+                    phone_number = phoneNumber,
+                    role = role,
+                    experience = experience,
+                    specialization = specialization,
+                    languages = languages,
+                    bio = bio,
+                    avatar_url = avatarUrl,
+                    certificate_url = certificatePath,
+                    is_active = role == "guide" ? false : true,
+                    updated_at = DateTime.UtcNow,
+                }), Encoding.UTF8, "application/json");
+
+            var updateResponse = await _http.SendAsync(updateRequest);
+            
+            if (!updateResponse.IsSuccessStatusCode)
             {
-                // 1. Check if guide_profiles already exists
-                var checkReq = new HttpRequestMessage(
-                    HttpMethod.Get,
-                    $"{_supabaseUrl}/rest/v1/guide_profiles?user_id=eq.{userId}&select=id");
-                checkReq.Headers.Add("apikey", _anonKey);
-                checkReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                var checkRes = await _http.SendAsync(checkReq);
-                var checkContent = await checkRes.Content.ReadAsStringAsync();
-
-                string? guideProfileId = null;
-                bool exists = false;
-
-                if (checkRes.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(checkContent) && checkContent.Trim() != "[]")
-                {
-                    try
-                    {
-                        using var doc = JsonDocument.Parse(checkContent);
-                        if (doc.RootElement.ValueKind == JsonValueKind.Array && doc.RootElement.GetArrayLength() > 0)
-                        {
-                            var first = doc.RootElement[0];
-                            if (first.TryGetProperty("id", out var idProp))
-                            {
-                                guideProfileId = idProp.GetString();
-                                exists = true;
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"[WARNING] Error parsing existing guide_profile id: {ex.Message}");
-                    }
-                }
-
-                if (string.IsNullOrEmpty(guideProfileId))
-                {
-                    guideProfileId = Guid.NewGuid().ToString();
-                }
-
-                // Parse array fields
-                var langList = string.IsNullOrEmpty(languages) 
-                    ? new List<string>() 
-                    : languages.Split(',').Select(l => l.Trim()).Where(l => !string.IsNullOrEmpty(l)).ToList();
-
-                var specList = string.IsNullOrEmpty(specialization) 
-                    ? new List<string>() 
-                    : specialization.Split(',').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s)).ToList();
-
-                var guideProfileData = new
-                {
-                    id = guideProfileId,
-                    user_id = userId,
-                    bio = bio ?? "",
-                    languages = langList,
-                    specialties = specList,
-                    city_area = "Hội An",
-                    price_per_hour = 0,
-                    is_verified = false,
-                    average_rating = 0.00,
-                    total_reviews = 0,
-                    created_at = DateTime.UtcNow,
-                    updated_at = DateTime.UtcNow
-                };
-
-                if (!exists)
-                {
-                    var createReq = new HttpRequestMessage(
-                        HttpMethod.Post,
-                        $"{_supabaseUrl}/rest/v1/guide_profiles");
-                    createReq.Headers.Add("apikey", _anonKey);
-                    createReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                    createReq.Content = new StringContent(JsonSerializer.Serialize(guideProfileData), Encoding.UTF8, "application/json");
-                    var createRes = await _http.SendAsync(createReq);
-                    if (!createRes.IsSuccessStatusCode)
-                    {
-                        var err = await createRes.Content.ReadAsStringAsync();
-                        Console.WriteLine($"[ERROR] Failed to create guide_profile: {createRes.StatusCode} - {err}");
-                    }
-                }
-                else
-                {
-                    var updateReq = new HttpRequestMessage(
-                        HttpMethod.Patch,
-                        $"{_supabaseUrl}/rest/v1/guide_profiles?id=eq.{guideProfileId}");
-                    updateReq.Headers.Add("apikey", _anonKey);
-                    updateReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                    updateReq.Content = new StringContent(JsonSerializer.Serialize(new {
-                        bio = bio ?? "",
-                        languages = langList,
-                        specialties = specList,
-                        updated_at = DateTime.UtcNow
-                    }), Encoding.UTF8, "application/json");
-                    var updateRes = await _http.SendAsync(updateReq);
-                    if (!updateRes.IsSuccessStatusCode)
-                    {
-                        var err = await updateRes.Content.ReadAsStringAsync();
-                        Console.WriteLine($"[ERROR] Failed to update guide_profile: {updateRes.StatusCode} - {err}");
-                    }
-                }
-
-                // 2. If certificatePath is provided, upsert certificate
-                if (!string.IsNullOrEmpty(certificatePath))
-                {
-                    var certCheckReq = new HttpRequestMessage(
-                        HttpMethod.Get,
-                        $"{_supabaseUrl}/rest/v1/guide_certificates?guide_profile_id=eq.{guideProfileId}&select=id");
-                    certCheckReq.Headers.Add("apikey", _anonKey);
-                    certCheckReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                    var certCheckRes = await _http.SendAsync(certCheckReq);
-                    var certCheckContent = await certCheckRes.Content.ReadAsStringAsync();
-
-                    bool certExists = certCheckRes.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(certCheckContent) && certCheckContent.Trim() != "[]";
-
-                    var certData = new
-                    {
-                        guide_profile_id = guideProfileId,
-                        certificate_name = "Chứng chỉ hướng dẫn viên",
-                        file_url = certificatePath,
-                        status = "pending",
-                        created_at = DateTime.UtcNow
-                    };
-
-                    if (!certExists)
-                    {
-                        var certCreateReq = new HttpRequestMessage(
-                            HttpMethod.Post,
-                            $"{_supabaseUrl}/rest/v1/guide_certificates");
-                        certCreateReq.Headers.Add("apikey", _anonKey);
-                        certCreateReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                        certCreateReq.Content = new StringContent(JsonSerializer.Serialize(certData), Encoding.UTF8, "application/json");
-                        await _http.SendAsync(certCreateReq);
-                    }
-                    else
-                    {
-                        var certUpdateReq = new HttpRequestMessage(
-                            HttpMethod.Patch,
-                            $"{_supabaseUrl}/rest/v1/guide_certificates?guide_profile_id=eq.{guideProfileId}");
-                        certUpdateReq.Headers.Add("apikey", _anonKey);
-                        certUpdateReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-                        certUpdateReq.Content = new StringContent(JsonSerializer.Serialize(new {
-                            file_url = certificatePath,
-                            status = "pending"
-                        }), Encoding.UTF8, "application/json");
-                        await _http.SendAsync(certUpdateReq);
-                    }
-                }
+                var err = await updateResponse.Content.ReadAsStringAsync();
+                Console.WriteLine($"[ERROR] UpsertProfileAsync failed: {updateResponse.StatusCode} - {err}");
+                throw new Exception($"Không thể lưu thông tin hồ sơ: {err}");
             }
         }
         catch (Exception ex)

@@ -1,196 +1,326 @@
 @{
     ViewData["Title"] = "Account Settings";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // M6: Đọc thông tin từ JWT claim (nếu có)
+    var userEmail = User.FindFirst("email")?.Value
+        ?? User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+        ?? "";
+    var userName = User.Identity?.Name ?? "";
+    var userId = User.FindFirst("sub")?.Value ?? "";
 }
 
-<div class="min-h-screen bg-surface flex">
-    
+<div class="min-h-screen bg-surface flex" x-data="settingsPage()">
+
     <partial name="_TravelerSidebar" />
 
     <!-- Main Content -->
     <main class="flex-1 p-8 md:p-12 overflow-y-auto h-[calc(100vh-80px)]">
-        
+
+        <!-- Header -->
         <div class="mb-10">
             <h1 class="text-4xl font-extrabold text-on-surface mb-2">Account Settings</h1>
-            <p class="text-lg text-on-surface-variant">Manage your profile, preferences, and personality details.</p>
+            <p class="text-lg text-on-surface-variant">Manage your profile, travel preferences, and personality details.</p>
+        </div>
+
+        <!-- Success/Error TempData Messages -->
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="mb-6 bg-green-100 border border-green-200 text-green-800 px-6 py-4 rounded-xl flex items-center gap-3 animate-fade-in">
+                <span class="material-symbols-outlined text-green-600">check_circle</span>
+                <span class="font-bold">@TempData["SuccessMessage"]</span>
+            </div>
+        }
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="mb-6 bg-red-100 border border-red-200 text-red-800 px-6 py-4 rounded-xl flex items-center gap-3">
+                <span class="material-symbols-outlined text-red-600">error</span>
+                <span class="font-bold">@TempData["ErrorMessage"]</span>
+            </div>
+        }
+
+        <!-- Save Success Toast (JS) -->
+        <div id="saveToast" class="hidden fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2 z-50 font-bold">
+            <span class="material-symbols-outlined">check_circle</span>
+            <span>Preferences saved!</span>
         </div>
 
         <div class="max-w-3xl space-y-8">
-            
-            <!-- Personal Info Section -->
+
+            <!-- ── Personal Information ─────────────────────────────────────── -->
             <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
                 <h2 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-2 border-b border-outline-variant/30 pb-4">
-                    <span class="material-symbols-outlined text-primary">person</span> Personal Information
+                    <span class="material-symbols-outlined text-primary">person</span>
+                    Personal Information
                 </h2>
-                
-                <form id="profileForm" class="space-y-6">
-                    <div class="flex items-center gap-6 mb-8">
-                        <div class="w-24 h-24 rounded-full bg-primary-container text-primary flex items-center justify-center text-3xl font-bold shadow-sm border border-primary/20 relative group cursor-pointer" id="avatarInitials">
-                            TR
-                            <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                <span class="material-symbols-outlined text-white">photo_camera</span>
-                            </div>
-                        </div>
-                        <button type="button" class="bg-surface-variant text-on-surface font-bold px-4 py-2 rounded-xl border border-outline-variant/50 hover:bg-gray-200 transition-all">
-                            Change Photo
-                        </button>
-                    </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-bold text-on-surface mb-2">Full Name</label>
-                            <input type="text" id="fullName" value="" required class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-on-surface mb-2">Email Address</label>
-                            <input type="email" id="emailAddress" readonly class="w-full bg-gray-100 border-outline-variant/30 rounded-xl p-3 text-on-surface-variant cursor-not-allowed">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-bold text-on-surface mb-2">Phone Number</label>
-                            <input type="tel" id="phoneNumber" value="" class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
+                <!-- Avatar -->
+                <div class="flex items-center gap-6 mb-8">
+                    <div class="w-24 h-24 rounded-full bg-primary-container text-primary flex items-center justify-center text-3xl font-bold shadow-sm border border-primary/20 relative group cursor-pointer"
+                         id="avatarCircle">
+                        <span id="avatarInitials">?</span>
+                        <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span class="material-symbols-outlined text-white">photo_camera</span>
                         </div>
                     </div>
-
                     <div>
-                        <label class="block text-sm font-bold text-on-surface mb-2">Bio</label>
-                        <textarea id="bio" rows="4" class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary"></textarea>
+                        <p class="font-bold text-on-surface" id="avatarName">Loading...</p>
+                        <p class="text-sm text-on-surface-variant" id="avatarEmail">@userEmail</p>
+                        <span class="mt-1 inline-block text-xs font-bold bg-primary-container text-primary px-3 py-1 rounded-full">Traveler</span>
                     </div>
+                </div>
 
-                    <div class="flex justify-end">
-                        <button type="submit" class="bg-primary text-white font-bold px-8 py-3 rounded-xl hover:bg-primary/90 shadow-md transition-all">
-                            Save Changes
-                        </button>
+                <!-- Form fields (read-only display từ localStorage) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Display Name</label>
+                        <input type="text" id="displayNameInput" placeholder="Your name"
+                               class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
                     </div>
-                </form>
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Email Address</label>
+                        <input type="email" value="@userEmail" readonly
+                               class="w-full bg-gray-100 border border-outline-variant/30 rounded-xl p-3 text-on-surface-variant cursor-not-allowed" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Phone Number</label>
+                        <input type="tel" id="phoneInput" placeholder="+84 xxx xxx xxx"
+                               class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Nationality</label>
+                        <input type="text" id="nationalityInput" placeholder="e.g. Vietnamese"
+                               class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                    </div>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm font-bold text-on-surface mb-2">Bio</label>
+                    <textarea id="bioInput" rows="3"
+                              placeholder="Tell guides about yourself — your travel style, interests, what you're looking for..."
+                              class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-none"></textarea>
+                </div>
+
+                <div class="flex justify-end">
+                    <button onclick="saveProfile()" class="bg-primary text-white font-bold px-8 py-3 rounded-xl hover:bg-primary/90 shadow-md transition-all flex items-center gap-2">
+                        <span class="material-symbols-outlined">save</span>
+                        Save Profile
+                    </button>
+                </div>
             </div>
 
-            <!-- Personality Profile Section -->
+            <!-- ── Personality Profile ─────────────────────────────────────── -->
             <div class="bg-primary-container/20 rounded-3xl p-8 border border-primary/20">
                 <div class="flex justify-between items-start mb-6 border-b border-primary/20 pb-4">
                     <h2 class="text-2xl font-bold text-on-surface flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary">psychology</span> Personality Profile
+                        <span class="material-symbols-outlined text-primary">psychology</span>
+                        Personality Profile
                     </h2>
-                    <span class="bg-white text-primary px-3 py-1 rounded-full text-sm font-bold shadow-sm border border-primary/20">Completed</span>
+                    <span id="personalityBadge" class="bg-white text-on-surface-variant px-3 py-1 rounded-full text-sm font-bold shadow-sm border border-outline-variant/30">
+                        Not taken
+                    </span>
                 </div>
-                
+
                 <div class="flex flex-col md:flex-row gap-8 items-center">
-                    <div class="w-32 h-32 shrink-0 bg-white rounded-2xl shadow-sm border border-outline-variant/30 flex flex-col items-center justify-center">
-                        <span class="text-4xl font-extrabold text-primary mb-1">ENFP</span>
-                        <span class="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Campaigner</span>
+                    <div id="personalityCard" class="w-32 h-32 shrink-0 bg-white rounded-2xl shadow-sm border border-outline-variant/30 flex flex-col items-center justify-center">
+                        <span id="personalityType" class="text-3xl font-extrabold text-on-surface-variant">--</span>
+                        <span id="personalityLabel" class="text-xs font-bold text-on-surface-variant uppercase tracking-wider mt-1">Take Test</span>
                     </div>
                     <div>
-                        <p class="text-on-surface-variant mb-4 leading-relaxed">
-                            You are a true free spirit – energetic, enthusiastic, and curious. In travel, you prefer flexibility over rigid itineraries and value deep connections with locals.
+                        <p id="personalityDesc" class="text-on-surface-variant mb-4 leading-relaxed text-sm">
+                            Complete the personality test to unlock 99% accurate guide matching. It takes less than 3 minutes!
                         </p>
                         <a href="/Survey/Personality" class="text-primary font-bold hover:underline flex items-center gap-1">
-                            Retake Personality Test <span class="material-symbols-outlined text-sm">arrow_forward</span>
+                            Take Personality Test <span class="material-symbols-outlined text-sm">arrow_forward</span>
                         </a>
                     </div>
                 </div>
             </div>
 
-            <!-- Travel Preferences Section -->
+            <!-- ── Default Travel Preferences ─────────────────────────────── -->
             <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
-                <h2 class="text-2xl font-bold text-on-surface mb-6 flex items-center gap-2 border-b border-outline-variant/30 pb-4">
-                    <span class="material-symbols-outlined text-primary">travel_explore</span> Default Travel Preferences
+                <h2 class="text-2xl font-bold text-on-surface mb-2 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-primary">travel_explore</span>
+                    Default Travel Preferences
                 </h2>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <p class="text-sm text-on-surface-variant mb-6">These defaults pre-fill your next quiz to speed up matching. You can always override them per trip.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
                         <label class="block text-sm font-bold text-on-surface mb-2">Preferred Vibe</label>
-                        <select class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
-                            <option>Chill & Relax</option>
-                            <option selected>Adventure</option>
-                            <option>Cultural Deep-dive</option>
-                            <option>Foodie Tour</option>
+                        <select id="defaultVibe" class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                            <option value="">No preference</option>
+                            <option value="Chill &amp; Relax">Chill &amp; Relax</option>
+                            <option value="Adventure">Adventure</option>
+                            <option value="Cultural Deep-dive">Cultural Deep-dive</option>
+                            <option value="Foodie Tour">Foodie Tour</option>
                         </select>
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-on-surface mb-2">Budget Level</label>
-                        <select class="w-full bg-surface border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-primary focus:border-primary">
-                            <option>Budget-friendly</option>
-                            <option selected>Standard</option>
-                            <option>Premium</option>
+                        <select id="defaultBudget" class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                            <option value="">No preference</option>
+                            <option value="economy">Budget-friendly (&lt; 500K/buổi)</option>
+                            <option value="standard">Standard (500K – 1.5M/buổi)</option>
+                            <option value="premium">Premium (1.5M – 3M/buổi)</option>
+                            <option value="luxury">Luxury (&gt; 3M/buổi)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Favorite Destination</label>
+                        <input type="text" id="defaultDestination" placeholder="e.g. Hoi An, Da Nang..."
+                               class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Preferred Group Size</label>
+                        <select id="defaultGroupSize" class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                            <option value="1">Solo (1 person)</option>
+                            <option value="2">Couple (2 people)</option>
+                            <option value="4">Small Group (3-5)</option>
+                            <option value="6">Large Group (6+)</option>
                         </select>
                     </div>
                 </div>
-                
-                <p class="text-xs text-on-surface-variant mt-4">These defaults are used to speed up your matching process, but you can always change them for specific trips.</p>
+
+                <div class="flex justify-end">
+                    <button onclick="savePreferences()" class="bg-primary text-white font-bold px-8 py-3 rounded-xl hover:bg-primary/90 shadow-md transition-all flex items-center gap-2">
+                        <span class="material-symbols-outlined">tune</span>
+                        Save Preferences
+                    </button>
+                </div>
+            </div>
+
+            <!-- ── Danger Zone ─────────────────────────────────────────────── -->
+            <div class="bg-red-50 rounded-3xl p-8 border border-red-200">
+                <h2 class="text-xl font-bold text-red-700 mb-4 flex items-center gap-2">
+                    <span class="material-symbols-outlined">warning</span>
+                    Danger Zone
+                </h2>
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4">
+                    <div>
+                        <p class="font-bold text-on-surface">Sign out from all devices</p>
+                        <p class="text-sm text-on-surface-variant">This will clear your session and require you to log in again.</p>
+                    </div>
+                    <button onclick="logout()" class="shrink-0 bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-3 rounded-xl transition-all">
+                        Sign Out
+                    </button>
+                </div>
             </div>
 
         </div>
-
     </main>
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", async function() {
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-            window.location.href = '/Auth/Login';
-            return;
+    // ── M6: Load & Save user preferences from/to localStorage ───────────────
+
+    function showToast(message, isError) {
+        const toast = document.getElementById('saveToast');
+        if (!toast) return;
+        toast.querySelector('span:last-child').textContent = message || 'Saved!';
+        toast.classList.remove('hidden', 'bg-green-600', 'bg-red-600');
+        toast.classList.add(isError ? 'bg-red-600' : 'bg-green-600');
+        toast.classList.remove('hidden');
+        setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
+
+    function loadSettings() {
+        const userEmail = localStorage.getItem('userEmail') || '';
+        const atIdx = userEmail.indexOf('\u0040');
+        const displayName = atIdx > 0 ? userEmail.substring(0, atIdx) : userEmail;
+
+        // Load stored profile
+        const profile = JSON.parse(localStorage.getItem('travelerProfile') || '{}');
+
+        // Avatar initials
+        const initials = (profile.displayName || displayName).substring(0, 2).toUpperCase() || '?';
+        const avatarEl = document.getElementById('avatarInitials');
+        if (avatarEl) avatarEl.textContent = initials;
+        const nameEl = document.getElementById('avatarName');
+        if (nameEl) nameEl.textContent = profile.displayName || displayName || 'Traveler';
+        const emailEl = document.getElementById('avatarEmail');
+        if (emailEl && !emailEl.value) emailEl.textContent = userEmail;
+
+        // Profile fields
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+        setVal('displayNameInput', profile.displayName || displayName);
+        setVal('phoneInput', profile.phone || '');
+        setVal('nationalityInput', profile.nationality || '');
+        setVal('bioInput', profile.bio || '');
+
+        // Travel preferences (from tripPreferences in localStorage)
+        const prefs = JSON.parse(localStorage.getItem('tripPreferences') || '{}');
+        setVal('defaultVibe', prefs.vibe || profile.defaultVibe || '');
+        setVal('defaultBudget', prefs.budget || profile.defaultBudget || '');
+        setVal('defaultDestination', prefs.destination || profile.defaultDestination || '');
+        setVal('defaultGroupSize', profile.defaultGroupSize || '1');
+
+        // Personality profile
+        const personality = JSON.parse(localStorage.getItem('personalityProfile') || '{}');
+        if (personality.type) {
+            document.getElementById('personalityType').textContent = personality.type;
+            document.getElementById('personalityLabel').textContent = personality.label || 'Explorer';
+            document.getElementById('personalityDesc').textContent = personality.description || 'Your personality type has been recorded. Retake the test to update it.';
+            document.getElementById('personalityBadge').textContent = 'Completed';
+            document.getElementById('personalityBadge').className = 'bg-white text-primary px-3 py-1 rounded-full text-sm font-bold shadow-sm border border-primary/20';
+            document.getElementById('personalityType').className = 'text-3xl font-extrabold text-primary';
         }
+    }
 
-        // Fetch profile details
-        try {
-            const res = await fetch('/api/auth/profile', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            if (!res.ok) {
-                if (res.status === 401) {
-                    window.location.href = '/Auth/Login';
-                    return;
-                }
-                alert('Không thể tải thông tin hồ sơ.');
-                return;
-            }
-            const data = await res.json();
-            
-            // Populate inputs
-            document.getElementById('fullName').value = data.full_name || '';
-            document.getElementById('emailAddress').value = data.email || '';
-            document.getElementById('phoneNumber').value = data.phone_number || '';
-            document.getElementById('bio').value = data.bio || '';
-            
-            // Set avatar initials or photo if available
-            if (data.full_name) {
-                const initials = data.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                document.getElementById('avatarInitials').textContent = initials;
-            }
-        } catch (err) {
-            console.error(err);
-        }
+    function saveProfile() {
+        const profile = JSON.parse(localStorage.getItem('travelerProfile') || '{}');
+        profile.displayName = document.getElementById('displayNameInput').value.trim();
+        profile.phone = document.getElementById('phoneInput').value.trim();
+        profile.nationality = document.getElementById('nationalityInput').value.trim();
+        profile.bio = document.getElementById('bioInput').value.trim();
+        profile.updatedAt = new Date().toISOString();
 
-        // Handle form submit
-        document.getElementById('profileForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const fullName = document.getElementById('fullName').value;
-            const phoneNumber = document.getElementById('phoneNumber').value;
-            const bio = document.getElementById('bio').value;
+        localStorage.setItem('travelerProfile', JSON.stringify(profile));
 
-            try {
-                const saveRes = await fetch('/api/auth/profile', {
-                    method: 'PATCH',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${token}`
-                    },
-                    body: JSON.stringify({
-                        fullName: fullName,
-                        phoneNumber: phoneNumber,
-                        bio: bio
-                    })
-                });
+        // Cập nhật avatar initials ngay
+        const initials = profile.displayName.substring(0, 2).toUpperCase() || '?';
+        document.getElementById('avatarInitials').textContent = initials;
+        document.getElementById('avatarName').textContent = profile.displayName;
 
-                const saveResult = await saveRes.json();
-                alert(saveResult.message || 'Cập nhật thành công!');
-            } catch (err) {
-                console.error(err);
-                alert('Có lỗi xảy ra khi lưu thay đổi.');
-            }
-        });
-    });
+        showToast('Profile saved successfully!', false);
+    }
+
+    function savePreferences() {
+        // Lưu default preferences vào profile
+        const profile = JSON.parse(localStorage.getItem('travelerProfile') || '{}');
+        profile.defaultVibe = document.getElementById('defaultVibe').value;
+        profile.defaultBudget = document.getElementById('defaultBudget').value;
+        profile.defaultDestination = document.getElementById('defaultDestination').value;
+        profile.defaultGroupSize = document.getElementById('defaultGroupSize').value;
+        localStorage.setItem('travelerProfile', JSON.stringify(profile));
+
+        // Đồng bộ vào tripPreferences để Quiz dùng lại
+        const prefs = JSON.parse(localStorage.getItem('tripPreferences') || '{}');
+        if (profile.defaultVibe) prefs.vibe = profile.defaultVibe;
+        if (profile.defaultBudget) prefs.budget = profile.defaultBudget;
+        if (profile.defaultDestination) prefs.destination = profile.defaultDestination;
+        localStorage.setItem('tripPreferences', JSON.stringify(prefs));
+
+        // Đồng bộ lên Server Session (M2 integration)
+        fetch('/Survey/SavePreferences', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(prefs)
+        }).catch(err => console.warn('[Settings] Could not sync prefs to session:', err));
+
+        showToast('Preferences saved and synced!', false);
+    }
+
+    // Chạy khi trang load
+    document.addEventListener('DOMContentLoaded', loadSettings);
 </script>
+
+<style>
+    .animate-fade-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>

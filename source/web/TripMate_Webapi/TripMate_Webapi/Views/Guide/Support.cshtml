@@ -6,26 +6,13 @@
     var tickets = ViewBag.Tickets as IEnumerable<dynamic>;
 }
 
-<div class="max-w-5xl mx-auto" x-data="{
-        searchQuery: '',
-        isModalOpen: false,
-        openFaq: null,
-        tickets: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(tickets)),
-        newTicket: { type: '', bookingId: '', title: '', description: '' },
-        
-        submitTicket() {
-            if(!this.newTicket.title || !this.newTicket.description) return;
-            showToast('success', 'Đã gửi yêu cầu hỗ trợ thành công. Chúng tôi sẽ phản hồi sớm nhất có thể!');
-            this.tickets.unshift({
-                Id: 'TK-003',
-                Title: this.newTicket.title,
-                Status: 'Pending',
-                Date: new Date().toLocaleDateString('vi-VN')
-            });
-            this.isModalOpen = false;
-            this.newTicket = { type: '', bookingId: '', title: '', description: '' };
-        }
-    }">
+<!-- JSON data cho AlpineJS -->
+<script>
+    window.initialTickets = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(tickets));
+</script>
+
+<div class="max-w-5xl mx-auto" x-data="supportApp()">
+
     
     <!-- Header -->
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -262,3 +249,30 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        function supportApp() {
+            return {
+                searchQuery: '',
+                isModalOpen: false,
+                openFaq: null,
+                tickets: window.initialTickets || [],
+                newTicket: { type: '', bookingId: '', title: '', description: '' },
+                
+                submitTicket() {
+                    if(!this.newTicket.title || !this.newTicket.description) return;
+                    showToast('success', 'Đã gửi yêu cầu hỗ trợ thành công. Chúng tôi sẽ phản hồi sớm nhất có thể!');
+                    this.tickets.unshift({
+                        Id: 'TK-003',
+                        Title: this.newTicket.title,
+                        Status: 'Pending',
+                        Date: new Date().toLocaleDateString('vi-VN')
+                    });
+                    this.isModalOpen = false;
+                    this.newTicket = { type: '', bookingId: '', title: '', description: '' };
+                }
+            }
+        }
+    </script>
+}

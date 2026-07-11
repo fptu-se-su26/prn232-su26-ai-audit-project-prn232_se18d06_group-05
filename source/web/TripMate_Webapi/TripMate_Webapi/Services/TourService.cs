@@ -41,7 +41,8 @@ public class TourService
         if (!string.IsNullOrWhiteSpace(search))
             query += $"&or=(title.ilike.*{Uri.EscapeDataString(search)}*,description.ilike.*{Uri.EscapeDataString(search)}*)";
 
-        return await GetAsync<List<ExperiencePackageRow>>(query) ?? [];
+        var results = await GetAsync<List<ExperiencePackageRow>>(query) ?? new List<ExperiencePackageRow>();
+        return results.Where(r => r.Id != "00000000-0000-0000-0000-000000000000").ToList();
     }
 
     // ── GET package by ID ─────────────────────────────────────────────────────
@@ -65,7 +66,8 @@ public class TourService
                     $"&order=created_at.desc" +
                     $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,profiles(full_name))";
 
-        return await GetAsync<List<ExperiencePackageRow>>(query) ?? [];
+        var results = await GetAsync<List<ExperiencePackageRow>>(query) ?? new List<ExperiencePackageRow>();
+        return results.Where(r => r.Id != "00000000-0000-0000-0000-000000000000").ToList();
     }
 
     // ── GET guide profile ID by user ID ───────────────────────────────────────
