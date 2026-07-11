@@ -61,6 +61,51 @@
     showModerateModal: false,
     moderateReviewId: '',
     moderateAdminNote: '',
+    
+    reports: [],
+    showResolveReportModal: false,
+    selectedReport: null,
+    resolveComment: '',
+
+    async loadReports() {
+        try {
+            const res = await fetch('/api/SupportApi/admin/reports', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+            });
+            if (res.ok) this.reports = await res.json();
+        } catch (err) {
+            console.error('Error loading reports:', err);
+        }
+    },
+
+    openResolveReport(report) {
+        this.selectedReport = report;
+        this.resolveComment = '';
+        this.showResolveReportModal = true;
+    },
+
+    async submitResolveReport() {
+        if (!this.resolveComment.trim()) return alert('Please enter resolve comment');
+        try {
+            const res = await fetch(`/api/SupportApi/admin/reports/${this.selectedReport.id}/resolve`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                },
+                body: JSON.stringify({ adminComment: this.resolveComment })
+            });
+            const data = await res.json();
+            alert(data.message || 'Resolved successfully');
+            if (res.ok) {
+                this.showResolveReportModal = false;
+                await this.loadReports();
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to resolve report');
+        }
+    },
 
     async loadUsers() {
         const res = await fetch('/api/admin/users', {
@@ -82,8 +127,8 @@
         });
         if (res.ok) {
             const all = await res.json();
-            // Filter bookings with status cancelled (3) or having cancel_reason
-            this.disputes = all.filter(b => b.status === 3 || b.cancel_reason);
+            // Filter bookings with status Confirmed (1) and having cancel_reason
+            this.disputes = all.filter(b => b.status === 1 && b.cancel_reason);
         }
     },
 
@@ -186,6 +231,7 @@
     init() {
         this.loadReviews();
         this.loadDisputes();
+        this.loadReports();
     }
 }">
 
@@ -272,6 +318,10 @@
             <button @@click="activeTab = 'chat'" :class="activeTab === 'chat' ? 'bg-primary text-white font-bold' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'" class="px-6 py-2.5 rounded-lg shadow-sm transition-all text-sm flex items-center gap-2">
                 <span class="material-symbols-outlined text-sm">chat</span>
                 Chat Log Viewer
+            </button>
+            <button @@click="activeTab = 'reports'" :class="activeTab === 'reports' ? 'bg-primary text-white font-bold' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'" class="px-6 py-2.5 rounded-lg shadow-sm transition-all text-sm flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm">support</span>
+                User Reports
             </button>
         </div>
 
@@ -407,6 +457,85 @@
                 </div>
             </div>
         </div>
+
+        <!-- TAB CONTENT: User Reports -->
+        <div x-show="activeTab === 'reports'" class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" x-cloak>
+            <div class="px-8 py-5 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900">User Reports & Support Tickets</h3>
+                    <p class="text-xs text-gray-500 mt-1">Review, comment and resolve support requests submitted by Travelers and Guides.</p>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-200">
+                            <th class="py-4 px-6">User</th>
+                            <th class="py-4 px-6">Type</th>
+                            <th class="py-4 px-6">Ticket Title & Description</th>
+                            <th class="py-4 px-6">Booking Rel.</th>
+                            <th class="py-4 px-6">Status</th>
+                            <th class="py-4 px-6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm">
+                        <template x-for="rep in reports" :key="rep.id">
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="py-4 px-6">
+                                    <p class="font-bold text-gray-900" x-text="rep.profiles?.full_name || (rep.user?.full_name || 'N/A')"></p>
+                                    <p class="text-xs text-gray-400" x-text="rep.profiles?.email || (rep.user?.email || '')"></p>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase"
+                                          :class="{
+                                              'bg-blue-50 text-blue-700 border border-blue-200': rep.type === 'booking',
+                                              'bg-purple-50 text-purple-700 border border-purple-200': rep.type === 'payment',
+                                              'bg-amber-50 text-amber-700 border border-amber-200': rep.type === 'account',
+                                              'bg-red-50 text-red-700 border border-red-200': rep.type === 'technical',
+                                              'bg-gray-50 text-gray-700 border border-gray-200': rep.type !== 'booking' && rep.type !== 'payment' && rep.type !== 'account' && rep.type !== 'technical'
+                                          }"
+                                          x-text="rep.type">
+                                    </span>
+                                </td>
+                                <td class="py-4 px-6 max-w-xs">
+                                    <h4 class="font-bold text-gray-900" x-text="rep.title"></h4>
+                                    <p class="text-xs text-gray-500 mt-1 whitespace-pre-wrap" x-text="rep.description"></p>
+                                    <template x-if="rep.status === 'resolved' && rep.adminComment">
+                                        <div class="mt-2 text-xs text-green-700 bg-green-50 border border-green-200 p-2 rounded-lg">
+                                            <b>Reply:</b> <span x-text="rep.adminComment"></span>
+                                        </div>
+                                    </template>
+                                </td>
+                                <td class="py-4 px-6 font-mono text-xs text-gray-500" x-text="rep.bookingId ? '#' + rep.bookingId.substring(0,8) : 'None'"></td>
+                                <td class="py-4 px-6">
+                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase"
+                                          :class="rep.status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-green-50 text-green-700 border border-green-200'"
+                                          x-text="rep.status === 'pending' ? 'Pending' : 'Resolved'">
+                                    </span>
+                                </td>
+                                <td class="py-4 px-6 text-center">
+                                    <template x-if="rep.status === 'pending'">
+                                        <button @@click="openResolveReport(rep)" class="bg-primary hover:bg-primary-dark text-white font-bold px-3 py-1.5 rounded-lg text-xs transition-all shadow-sm">
+                                            Resolve
+                                        </button>
+                                    </template>
+                                    <template x-if="rep.status !== 'pending'">
+                                        <span class="text-gray-400 text-xs">-</span>
+                                    </template>
+                                </td>
+                            </tr>
+                        </template>
+                        <tr x-show="reports.length === 0">
+                            <td colspan="6" class="py-8 text-center text-gray-400">
+                                <span class="material-symbols-outlined text-4xl block mb-1">support</span>
+                                No support reports found.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </main>
 
     <!-- Review Moderation Modal -->
@@ -431,6 +560,38 @@
                 </button>
                 <button @@click="submitModerateReview()" class="flex-1 px-6 py-3 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-all text-sm shadow-md">
                     Hide Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resolve Report Modal -->
+    <div x-show="showResolveReportModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" x-cloak>
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="material-symbols-outlined text-4xl text-green-600 font-bold">support_agent</span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Resolve Report</h3>
+                <p class="text-sm text-gray-600">Provide an answer or resolution note to resolve this ticket.</p>
+            </div>
+
+            <div class="mb-4 text-sm text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100 max-h-40 overflow-y-auto">
+                <p class="font-bold text-gray-900 mb-1" x-text="selectedReport?.title"></p>
+                <p class="text-xs text-gray-500" x-text="selectedReport?.description"></p>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Admin Reply/Comment (Required)</label>
+                <textarea x-model="resolveComment" rows="3" required class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm" placeholder="Enter solution or status details..."></textarea>
+            </div>
+
+            <div class="flex gap-3">
+                <button @@click="showResolveReportModal = false" class="flex-1 px-6 py-3 bg-gray-100 text-gray-900 rounded-xl font-semibold hover:bg-gray-200 transition-all text-sm">
+                    Cancel
+                </button>
+                <button @@click="submitResolveReport()" class="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-all text-sm shadow-md">
+                    Resolve Ticket
                 </button>
             </div>
         </div>

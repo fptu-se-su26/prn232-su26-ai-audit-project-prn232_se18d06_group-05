@@ -98,6 +98,10 @@ builder.Services.AddScoped<GuideApprovalService>();
 builder.Services.AddHttpClient<AdminService>();
 builder.Services.AddScoped<AdminService>();
 
+// ── Problem Report Service ────────────────────────────────────────────────────
+builder.Services.AddHttpClient<ProblemReportService>();
+builder.Services.AddScoped<ProblemReportService>();
+
 // ── Chat & Notification Services ─────────────────────────────────────────────
 builder.Services.AddHttpClient<ChatService>();
 builder.Services.AddScoped<ChatService>();

@@ -287,7 +287,9 @@ namespace TripMate_WebAPI.Services
             try
             {
                 var status = approve ? 3 : 1; // 3 = Cancelled, 1 = Restored back to Confirmed
-                var updates = new { status = status, updated_at = DateTime.UtcNow };
+                var updates = approve 
+                    ? (object)new { status = status, updated_at = DateTime.UtcNow }
+                    : (object)new { status = status, cancel_reason = (string?)null, updated_at = DateTime.UtcNow };
                 
                 var patchReq = BuildAdminRequest(HttpMethod.Patch, $"{_supabaseUrl}/rest/v1/bookings?id=eq.{bookingId}");
                 patchReq.Content = new StringContent(JsonSerializer.Serialize(updates), Encoding.UTF8, "application/json");
