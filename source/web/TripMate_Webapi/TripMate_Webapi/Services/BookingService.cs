@@ -203,6 +203,7 @@ public class BookingService
 
             dtos.Add(new TripMate_WebAPI.DTOs.Booking.Responses.GuideBookingViewDto(
                 Id: b.Id,
+                TravelerId: b.TravelerId ?? b.Traveler?.Id ?? "",
                 TravelerName: b.Traveler?.FullName ?? "Unknown Traveler",
                 TravelerAvatar: b.Traveler?.AvatarUrl ?? "/images/AVATAR.png",
                 TravelerRating: b.Traveler?.AverageRating ?? 5.0m,

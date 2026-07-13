@@ -409,6 +409,42 @@ namespace TripMate_Webapi.Controllers
             };
             
             ViewBag.Threads = threads;
+
+            // Also provide active bookings for this guide so chat threads can be created even without messages
+            try
+            {
+                var guideProfileIdTask = GetCurrentGuideProfileIdAsync();
+                guideProfileIdTask.Wait();
+                var guideProfileId = guideProfileIdTask.Result;
+                if (!string.IsNullOrEmpty(guideProfileId))
+                {
+                    var guideBookingsTask = _bookingService.GetGuideBookingsAsync(guideProfileId);
+                    guideBookingsTask.Wait();
+                    var guideBookings = guideBookingsTask.Result;
+
+                    // Map to simple DTO to pass to view
+                    var active = guideBookings.Select(b => new TripMate_WebAPI.DTOs.Chat.ActiveBookingDto
+                    {
+                        BookingId = b.Id ?? string.Empty,
+                        TravelerId = b.TravelerId,
+                        TravelerName = b.TravelerName,
+                        TravelerAvatar = b.TravelerAvatar,
+                        TourName = b.TourName,
+                        BookingDate = b.Date
+                    }).ToList();
+
+                    ViewBag.ActiveBookings = active;
+                }
+                else
+                {
+                    ViewBag.ActiveBookings = new List<object>();
+                }
+            }
+            catch
+            {
+                ViewBag.ActiveBookings = new List<object>();
+            }
+
             return View();
         }
 

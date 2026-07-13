@@ -61,6 +61,31 @@ public class ChatController : ControllerBase
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
     }
 
+    /// <summary>Mark messages in booking as read for current user</summary>
+    [HttpPost("conversations/{bookingId}/mark-read")]
+    public async Task<IActionResult> MarkRead(string bookingId)
+    {
+        try
+        {
+            await _chat.MarkMessagesAsReadAsync(bookingId, UserId, UserToken);
+            return Ok(new { success = true });
+        }
+        catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+    }
+
+    /// <summary>Get basic profile info for a user</summary>
+    [HttpGet("profiles/{userId}")]
+    public async Task<IActionResult> GetProfile(string userId)
+    {
+        try
+        {
+            var p = await _chat.GetProfileAsync(userId, UserToken);
+            if (p == null) return NotFound();
+            return Ok(p);
+        }
+        catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+    }
+
     /// <summary>Gửi tin nhắn trong conversation (= booking_id)</summary>
     [HttpPost("conversations/{bookingId}/messages")]
     public async Task<IActionResult> SendMessage(

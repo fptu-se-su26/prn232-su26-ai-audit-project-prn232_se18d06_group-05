@@ -4,73 +4,308 @@
 }
 
 <div class="min-h-screen bg-surface flex">
-    
+
     <partial name="_TravelerSidebar" />
+
+    <script>
+        window.initialActiveBookings = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.ActiveBookings ?? new object[0]));
+    </script>
 
     <!-- Main Content: Chat Interface -->
     <main class="flex-1 flex flex-col h-[calc(100vh-80px)] bg-white overflow-hidden">
-        
-        <div class="flex h-full">
+        <div class="flex h-full" x-data="travelerMessengerApp()" x-init="init()">
+
             <!-- Chat List -->
             <div class="w-1/3 border-r border-outline-variant/30 flex flex-col">
                 <div class="p-6 border-b border-outline-variant/30">
-                    <h2 class="text-2xl font-bold text-on-surface mb-4">Messages</h2>
+                    <h2 class="text-2xl font-bold text-on-surface mb-4">Tin nh?n</h2>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-4 top-3 text-on-surface-variant">search</span>
-                        <input type="text" placeholder="Search conversations..." class="w-full bg-surface border-none rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary text-on-surface">
+                        <input type="text" x-model="searchQuery" placeholder="Tìm ki?m cu?c trò chuy?n..." class="w-full bg-surface border-none rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary text-on-surface">
                     </div>
                 </div>
 
                 <div class="flex-1 overflow-y-auto">
-                    @if (ViewBag.Guides != null && ((List<TripMate_Webapi.Entities.GuideProfileEntity>)ViewBag.Guides).Any())
-                    {
-                        var guides = (List<TripMate_Webapi.Entities.GuideProfileEntity>)ViewBag.Guides;
-                        foreach (var guide in guides)
-                        {
-                            <div class="p-4 border-b border-outline-variant/30 hover:bg-surface-variant cursor-pointer transition-all flex gap-4 items-center">
-                                <div class="relative">
-                                    <div class="w-14 h-14 bg-gray-200 rounded-full flex items-center justify-center overflow-hidden shrink-0 border border-outline-variant/30">
-                                        @if (!string.IsNullOrEmpty(guide.Profile?.AvatarUrl))
-                                        {
-                                            <img src="@guide.Profile.AvatarUrl" alt="@guide.Profile.FullName" class="w-full h-full object-cover"/>
-                                        }
-                                        else
-                                        {
-                                            <span class="material-symbols-outlined text-4xl text-gray-400">face_4</span>
-                                        }
-                                    </div>
-                                    <div class="absolute bottom-0 right-0 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
-                                </div>
-                                <div class="flex-1 min-w-0">
-                                    <div class="flex justify-between items-center mb-1">
-                                        <h4 class="font-bold text-on-surface truncate">@(guide.Profile?.FullName ?? "Guide")</h4>
-                                        <span class="text-xs text-on-surface-variant">Recent</span>
-                                    </div>
-                                    <p class="text-sm text-on-surface-variant truncate">Click to view conversation</p>
-                                </div>
-                            </div>
-                        }
-                    }
-                    else
-                    {
+                    <template x-if="threads.length === 0">
                         <div class="p-8 text-center text-on-surface-variant">
                             <span class="material-symbols-outlined text-4xl mb-2">chat_bubble_outline</span>
-                            <p class="text-sm">You don't have any active conversations yet. Book a guide to start chatting!</p>
-                            <a href="/Traveler/Trips" class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold">View My Trips</a>
+                            <p class="text-sm">B?n ch?a có cu?c trò chuy?n nào. ??t booking ?? b?t ??u liên l?c v?i guide!</p>
+                            <a href="/Traveler/Trips" class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold">Xem chuy?n c?a tôi</a>
                         </div>
-                    }
+                    </template>
+
+                    <template x-for="t in filteredThreads" :key="t.Id">
+                        <button @@click="selectThread(t)" class="w-full text-left p-4 border-b border-outline-variant/30 hover:bg-surface-variant transition-all flex gap-4 items-center">
+                            <div class="relative">
+                                <img :src="t.OtherAvatar || '/images/AVATAR.png'" class="w-14 h-14 rounded-full object-cover border border-outline-variant/30 shrink-0" />
+                                <div x-show="t.UnreadCount > 0" class="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white" x-text="t.UnreadCount"></div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex justify-between items-center mb-1">
+                                    <h4 class="font-bold text-on-surface truncate" x-text="t.OtherName"></h4>
+                                    <span class="text-xs text-on-surface-variant" x-text="t.TimeAgo"></span>
+                                </div>
+                                <p class="text-sm text-on-surface-variant truncate" x-text="t.LastMessage"></p>
+                            </div>
+                        </button>
+                    </template>
                 </div>
             </div>
 
             <!-- Chat Window -->
-            <div class="flex-1 flex flex-col bg-surface items-center justify-center">
-                <div class="text-center text-on-surface-variant">
-                    <span class="material-symbols-outlined text-6xl mb-4 text-outline-variant">forum</span>
-                    <h3 class="text-xl font-bold text-on-surface mb-2">Select a conversation</h3>
-                    <p>Choose a guide from the list to view your messages or start chatting.</p>
-                </div>
-            </div>
-        </div>
+            <div class="flex-1 flex flex-col bg-surface">
+                <template x-if="!activeThread">
+                    <div class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                        <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-6">
+                            <span class="material-symbols-outlined text-[40px]">forum</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-on-surface mb-2">Ch?n cu?c trò chuy?n</h3>
+                        <p class="text-on-surface-variant">Ch?n m?t guide ? c?t bên trái ?? xem tin nh?n ho?c b?t ??u trò chuy?n.</p>
+                    </div>
+                </template>
 
+                <template x-if="activeThread">
+                    <div class="flex-1 flex flex-col h-full">
+                        <div class="h-20 bg-white border-b border-outline-variant/30 flex items-center px-6">
+                            <img :src="activeThread.OtherAvatar || '/images/AVATAR.png'" class="w-10 h-10 rounded-full object-cover border" />
+                            <div class="ml-4">
+                                <h3 class="font-bold text-on-surface" x-text="activeThread.OtherName"></h3>
+                                <p class="text-xs text-on-surface-variant" x-text="activeThread.TourName || ''"></p>
+                            </div>
+                        </div>
+
+                        <div class="flex-1 overflow-y-auto p-6 space-y-4" id="travelerChatContainer">
+                            <div class="text-center mb-8">
+                                <span class="text-xs font-medium bg-gray-100 text-gray-500 px-3 py-1 rounded-full" x-text="activeThread.Date"></span>
+                            </div>
+
+                            <template x-for="(m, i) in activeThread.Messages" :key="i">
+                                <div class="flex flex-col" :class="m.IsMine ? 'items-end' : 'items-start'">
+                                    <div class="max-w-[75%] px-4 py-2.5 shadow-sm text-[15px]" :class="m.IsMine ? 'bg-primary text-white rounded-2xl rounded-br-sm' : 'bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-sm'">
+                                        <span x-text="m.Text"></span>
+                                    </div>
+                                    <div class="flex items-center gap-1 mt-1 text-[11px] text-gray-400 px-1">
+                                        <span x-text="m.Time"></span>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+
+                        <div class="bg-white border-t border-outline-variant/30 p-4">
+                            <form @@submit.prevent="sendMessage" class="flex items-end gap-3 max-w-4xl mx-auto" onsubmit="event.preventDefault(); return false;">
+                                <div class="flex-1 bg-surface border border-outline-variant/30 rounded-2xl overflow-hidden">
+                                    <textarea x-model="newMessage" @@keydown.enter.prevent="sendMessage" @@input="autoSize" rows="1" placeholder="Nh?p tin nh?n..." class="w-full bg-transparent border-none text-on-surface text-sm px-4 py-3 max-h-32 resize-none focus:ring-0 outline-none"></textarea>
+                                </div>
+                                <button type="button" @@click="sendMessage()" :disabled="!newMessage.trim()" class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-50">
+                                    <span class="material-symbols-outlined">send</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+        </div>
     </main>
 </div>
+
+@section Scripts {
+    <script>
+        function travelerMessengerApp() {
+            return {
+                threads: [],
+                activeThread: null,
+                searchQuery: '',
+                newMessage: '',
+
+                init() {
+                    this.loadConversations();
+                },
+
+                get filteredThreads() {
+                    if (!this.searchQuery) return this.threads;
+                    const q = this.searchQuery.toLowerCase();
+                    return this.threads.filter(t => (t.OtherName || '').toLowerCase().includes(q) || (t.LastMessage || '').toLowerCase().includes(q));
+                },
+
+                async loadConversations() {
+                    const token = localStorage.getItem('accessToken');
+                    const userId = localStorage.getItem('userId');
+                    if (!token || !userId) return;
+                    try {
+                        const res = await fetch('/api/chat/conversations', { headers: { 'Authorization': 'Bearer ' + token } });
+                        if (!res.ok) throw new Error('Failed to load conversations');
+                        const data = await res.json();
+                        const convs = data?.conversations || [];
+
+                        const threads = [];
+                        for (const c of convs) {
+                            const bookingId = c.bookingId || c.BookingId;
+                            const travelerId = c.travelerId || c.TravelerId || '';
+                            const guideId = c.guideId || c.GuideId || '';
+                            const otherId = (travelerId === userId) ? guideId : travelerId;
+
+                            // Get messages preview
+                            const mres = await fetch(`/api/chat/conversations/${encodeURIComponent(bookingId)}/messages`, { headers: { 'Authorization': 'Bearer ' + token } });
+                            const mdata = await mres.json();
+                            const rows = mdata?.messages || [];
+                            const messages = rows.map(r => ({
+                                Id: r.id || r.Id,
+                                Text: r.messageText || r.MessageText || '',
+                                SenderId: r.senderId || r.SenderId || '',
+                                ReceiverId: r.receiverId || r.ReceiverId || '',
+                                IsRead: !!(r.isRead || r.IsRead),
+                                SentAt: r.sentAt || r.SentAt
+                            }));
+
+                            threads.push({
+                                Id: bookingId,
+                                BookingId: bookingId,
+                                ParticipantId: otherId,
+                                OtherId: otherId,
+                                OtherName: otherId,
+                                OtherAvatar: '/images/AVATAR.png',
+                                Messages: messages.map(m => ({
+                                    Text: m.Text,
+                                    IsMine: m.SenderId === userId,
+                                    Time: new Date(m.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                                    IsRead: m.IsRead
+                                })),
+                                LastMessage: messages.length ? messages[messages.length -1].Text : 'Không có tin nh?n',
+                                TimeAgo: messages.length ? this.formatTimeAgo(messages[messages.length -1].SentAt) : '',
+                                Date: messages.length ? new Date(messages[messages.length -1].SentAt).toLocaleDateString('vi-VN') : '',
+                                UnreadCount: messages.filter(m => !m.IsRead && m.ReceiverId === userId).length
+                            });
+                        }
+
+                        this.threads = threads;
+
+                        // Merge server-provided active bookings (confirmed trips) so user can chat even if no messages exist
+                        try {
+                            const active = window.initialActiveBookings || [];
+                            for (const ab of active) {
+                                const bid = ab.bookingId || ab.BookingId || ab.BookingId?.toString();
+                                if (!bid) continue;
+                                if (!this.threads.find(t => t.BookingId === bid)) {
+                                    // guide profile may be nested
+                                    const gp = ab.guideProfile || ab.GuideProfile || ab.Guide || ab.guideProfile;
+                                    // prefer explicit DTO fields
+                                    let otherId = ab.guideUserId || ab.GuideUserId || gp?.userId || gp?.UserId || gp?.Id || gp?.id || (gp?.profile?.id || gp?.Profile?.Id);
+                                    let otherName = ab.guideName || ab.GuideName || gp?.profile?.fullName || gp?.Profile?.FullName || gp?.profile?.Full_Name || (ab.TourName || 'Guide');
+                                    let otherAvatar = ab.guideAvatar || ab.GuideAvatar || gp?.profile?.avatarUrl || gp?.Profile?.AvatarUrl || gp?.profile?.avatar_url || '/images/AVATAR.png';
+
+                                    this.threads.push({
+                                        Id: bid,
+                                        BookingId: bid,
+                                        ParticipantId: otherId || '',
+                                        OtherId: otherId || '',
+                                        OtherName: otherName || 'Guide',
+                                        OtherAvatar: otherAvatar,
+                                        Messages: [],
+                                        LastMessage: 'No messages yet',
+                                        TimeAgo: '',
+                                        Date: (ab.bookingDate ? new Date(ab.bookingDate).toLocaleDateString('vi-VN') : ''),
+                                        UnreadCount: 0
+                                    });
+                                }
+                            }
+                        } catch (e) { console.warn('merge active bookings failed', e); }
+
+                        // Deduplicate threads by participant (one chat per other user)
+                        try {
+                            const map = new Map();
+                            for (const th of this.threads) {
+                                const key = th.ParticipantId || th.OtherId || th.BookingId || th.Id || '';
+                                if (!key) continue;
+                                // prefer thread with messages or most recent date
+                                const existing = map.get(key);
+                                const existingDate = existing && existing.Date ? new Date(existing.Date) : new Date(0);
+                                const thDate = th.Date ? new Date(th.Date) : new Date(0);
+                                if (!existing || (th.Messages && th.Messages.length > 0 && (!existing.Messages || existing.Messages.length === 0)) || thDate > existingDate) {
+                                    map.set(key, th);
+                                }
+                            }
+                            this.threads = Array.from(map.values());
+                        } catch (e) { console.warn('dedupe threads failed', e); }
+
+                        // fetch profiles for display
+                        for (const th of this.threads) {
+                            if (!th.OtherId) continue;
+                            fetch(`/api/chat/profiles/${encodeURIComponent(th.OtherId)}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('accessToken') } })
+                                .then(r => r.ok ? r.json() : null)
+                                .then(p => {
+                                    if (!p) return;
+                                    th.OtherAvatar = p.avatarUrl || p.AvatarUrl || th.OtherAvatar;
+                                    th.OtherName = p.fullName || p.FullName || th.OtherName;
+                                }).catch(()=>{});
+                        }
+
+                    } catch (e) {
+                        console.error(e);
+                    }
+                },
+
+                async selectThread(thread) {
+                    this.activeThread = thread;
+                    await this.loadMessagesForThread(thread);
+                    thread.UnreadCount = 0;
+                    this.scrollToBottom();
+                },
+
+                async loadMessagesForThread(thread) {
+                    const token = localStorage.getItem('accessToken');
+                    const userId = localStorage.getItem('userId');
+                    if (!token) return;
+                    try {
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/messages`, { headers: { 'Authorization': 'Bearer ' + token } });
+                        if (!res.ok) throw new Error('Failed to load messages');
+                        const data = await res.json();
+                        const rows = data?.messages || [];
+                        thread.Messages = rows.map(r => ({
+                            Text: r.messageText || r.MessageText || '',
+                            IsMine: (r.senderId || r.SenderId) === userId,
+                            Time: new Date(r.sentAt || r.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                            IsRead: !!(r.isRead || r.IsRead)
+                        }));
+
+                        const last = rows.length ? rows[rows.length -1] : null;
+                        thread.LastMessage = last ? (last.messageText || last.MessageText) : thread.LastMessage;
+                        thread.TimeAgo = last ? this.formatTimeAgo(last.sentAt || last.SentAt) : thread.TimeAgo;
+                        thread.UnreadCount = rows.filter(m => !(m.isRead || m.IsRead) && (m.receiverId || m.ReceiverId) === userId).length;
+
+                        // mark as read on server
+                        try {
+                            await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/mark-read`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+                        } catch (e) { console.warn('mark-read failed', e); }
+                    } catch (e) { console.error(e); }
+                },
+
+                async sendMessage() {
+                    const text = this.newMessage.trim();
+                    if (!text || !this.activeThread) return;
+                    const token = localStorage.getItem('accessToken');
+                    const userId = localStorage.getItem('userId');
+                    const receiverId = this.activeThread.OtherId;
+                    try {
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.BookingId)}/messages`, {
+                            method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ Content: text, ReceiverId: receiverId })
+                        });
+                        if (!res.ok) throw new Error('Send failed');
+                        const msg = await res.json();
+                        const sent = { Text: msg.messageText || msg.MessageText || text, IsMine: true, Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }), IsRead: !!(msg.isRead || msg.IsRead) };
+                        this.activeThread.Messages.push(sent);
+                        this.activeThread.LastMessage = sent.Text;
+                        this.newMessage = '';
+                        this.scrollToBottom();
+                    } catch (e) { console.error(e); showToast('error', 'G?i tin nh?n th?t b?i'); }
+                },
+
+                autoSize() { const ta = this.$event.target; ta.style.height='auto'; ta.style.height = ta.scrollHeight + 'px'; },
+
+                scrollToBottom() { setTimeout(()=>{ const c = document.getElementById('travelerChatContainer'); if (c) c.scrollTop = c.scrollHeight; }, 50); },
+
+                formatTimeAgo(iso) { if (!iso) return ''; const d = new Date(iso); const diff = (Date.now() - d.getTime())/1000; if (diff<60) return 'V?a xong'; if (diff<3600) return Math.floor(diff/60)+' phút tr??c'; if (diff<86400) return Math.floor(diff/3600)+' gi? tr??c'; return d.toLocaleDateString('vi-VN'); }
+            }
+        }
+    </script>
+}

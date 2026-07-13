@@ -26,6 +26,15 @@ public class ChatService
         _anonKey = config["Supabase:AnonKey"]!;
     }
 
+internal class ProfileRow
+{
+    [JsonPropertyName("id")] public string? Id { get; set; }
+    [JsonPropertyName("full_name")] public string? FullName { get; set; }
+    [JsonPropertyName("avatar_url")] public string? AvatarUrl { get; set; }
+}
+
+public record ProfileDto(string Id, string FullName, string? AvatarUrl);
+
     // ── Get or create "conversation" (= messages grouped by booking_id) ───────
 
     public async Task<ConversationDto> GetOrCreateConversationAsync(
@@ -154,6 +163,38 @@ public class ChatService
         req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token ?? _anonKey);
         req.Headers.Add("Accept", "application/json");
         return req;
+    }
+
+    /// <summary>
+    /// Mark all messages for a booking as read where receiver_id == userId
+    /// </summary>
+    public async Task MarkMessagesAsReadAsync(string bookingId, string userId, string userToken)
+    {
+        var url = $"{_supabaseUrl}/rest/v1/chat_messages?booking_id=eq.{bookingId}&receiver_id=eq.{userId}";
+        var body = new { is_read = true };
+
+        var req = BuildRequest(HttpMethod.Patch, url, userToken);
+        req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+
+        var res = await _http.SendAsync(req);
+        var c = await res.Content.ReadAsStringAsync();
+        if (!res.IsSuccessStatusCode)
+        {
+            // don't throw to avoid breaking UI; log via exception
+            throw new Exception($"Supabase mark-read failed: {res.StatusCode}: {c}");
+        }
+    }
+
+    /// <summary>
+    /// Get profile (id, full_name, avatar_url) from profiles table
+    /// </summary>
+    public async Task<ProfileDto?> GetProfileAsync(string userId, string userToken)
+    {
+        var url = $"{_supabaseUrl}/rest/v1/profiles?id=eq.{userId}&select=id,full_name,avatar_url&limit=1";
+        var rows = await GetAsync<List<ProfileRow>>(url, userToken);
+        var r = rows?.FirstOrDefault();
+        if (r == null) return null;
+        return new ProfileDto(r.Id ?? "", r.FullName ?? "", r.AvatarUrl);
     }
 
     private static void EnsureSuccess(HttpResponseMessage r, string c)

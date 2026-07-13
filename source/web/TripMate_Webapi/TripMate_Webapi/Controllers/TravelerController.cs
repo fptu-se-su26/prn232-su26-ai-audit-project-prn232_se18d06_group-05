@@ -158,15 +158,22 @@ namespace TripMate_Webapi.Controllers
                 var bookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
                 var activeBookings = bookings.Where(b => b.Status >= 1).ToList();
                 
-                // Trích xuất các Guide duy nhất từ các booking này
-                var guideProfiles = activeBookings
+                // Prepare active bookings info for client (include booking id + guide profile)
+                var activeList = activeBookings
                     .Where(b => b.GuideProfile != null)
-                    .Select(b => b.GuideProfile)
-                    .GroupBy(g => g!.Id)
-                    .Select(g => g.First())
+                    .Select(b => new TripMate_WebAPI.DTOs.Chat.ActiveBookingDto
+                    {
+                        BookingId = b.Id ?? string.Empty,
+                        GuideProfileId = b.GuideProfile?.Id,
+                        GuideUserId = b.GuideProfile?.UserId,
+                        GuideName = b.GuideProfile?.Profile?.FullName ?? b.GuideProfile?.UserId,
+                        GuideAvatar = b.GuideProfile?.Profile?.AvatarUrl,
+                        TourName = b.ExperiencePackage?.Title,
+                        BookingDate = b.BookingDate.ToString("yyyy-MM-dd")
+                    })
                     .ToList();
 
-                ViewBag.Guides = guideProfiles;
+                ViewBag.ActiveBookings = activeList;
             }
 
             return View();
