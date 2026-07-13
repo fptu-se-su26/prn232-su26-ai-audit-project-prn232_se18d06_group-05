@@ -139,44 +139,13 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Traveler/Checkout/{id} [Auth required]
-        public async Task<IActionResult> Checkout(string id)
+        public IActionResult Checkout(string id)
         {
             ViewBag.RequiresAuth = true;
-            var travelerId = GetCurrentUserId();
-            if (string.IsNullOrEmpty(travelerId))
-                return Redirect($"{LOGIN_URL}?returnUrl=/Traveler/Checkout/{id}");
-
-            var booking = await _bookingRepository.GetBookingByIdAsync(id);
-            if (booking == null || booking.TravelerId != travelerId)
-                return RedirectToAction("Dashboard");
-
-            // Lấy thông tin Package và Guide để hiển thị
-            var package = await _tourService.GetTourByIdAsync(booking.ExperiencePackageId);
-            ViewBag.Package = package;
-
-            return View(booking);
+            return RedirectToAction("BookingDetails", new { id });
         }
 
-        [HttpPost("Traveler/ProcessPaymentAjax/{id}")]
-        public async Task<IActionResult> ProcessPaymentAjax(string id)
-        {
-            var travelerId = GetCurrentUserId();
-            if (string.IsNullOrEmpty(travelerId))
-                return Unauthorized(new { error = "Not authenticated" });
 
-            var booking = await _bookingRepository.GetBookingByIdAsync(id);
-            if (booking == null || booking.TravelerId != travelerId)
-                return NotFound(new { error = "Booking not found" });
-
-            if (!string.IsNullOrEmpty(booking.PaymentReference))
-                return BadRequest(new { error = "Booking is already paid" });
-
-            booking.PaymentReference = "MOCK-" + Guid.NewGuid().ToString().Substring(0, 8).ToUpper();
-            booking.PaymentMethod = "Credit Card (Mock)";
-            
-            var updatedBooking = await _bookingRepository.UpdateBookingAsync(booking);
-            return Json(new { success = true, booking = updatedBooking });
-        }
 
         // GET: /Traveler/Messages [Auth required]
         public async Task<IActionResult> Messages()
@@ -401,36 +370,7 @@ namespace TripMate_Webapi.Controllers
             return Json(new { bookingId = createdBooking.Id });
         }
 
-        /// <summary>
-        /// POST: /Traveler/ProcessPayment
-        /// M4: KHÔNG chuyển Status = Completed ngay. Chỉ lưu payment reference.
-        /// Status vẫn là Pending(0) cho đến khi Guide Accept → Confirmed(1).
-        /// </summary>
-        [HttpPost]
-        public async Task<IActionResult> ProcessPayment(string id, string paymentMethod)
-        {
-            var travelerId = GetCurrentUserId();
-            if (string.IsNullOrEmpty(travelerId))
-                return Redirect($"{LOGIN_URL}?returnUrl=/Traveler/Checkout/{id}");
 
-            var booking = await _bookingRepository.GetBookingByIdAsync(id);
-            if (booking == null)
-            {
-                TempData["ErrorMessage"] = "Không tìm thấy booking.";
-                return RedirectToAction("Dashboard");
-            }
-
-            // M4: Chỉ lưu payment reference — KHÔNG thay đổi Status
-            // Status sẽ chuyển: Pending(0) → [Guide Accept] → Confirmed(1) → [Auto] → Completed(2)
-            booking.PaymentReference = $"TM-{paymentMethod.ToUpper()}-{DateTime.UtcNow:yyyyMMddHHmmss}-{id[..6].ToUpper()}";
-            booking.PaymentMethod = paymentMethod;
-            // Status giữ nguyên = 0 (Pending) — chờ Guide xác nhận
-
-            await _bookingRepository.UpdateBookingAsync(booking);
-
-            TempData["SuccessMessage"] = $"Thanh toán qua {paymentMethod} đã được ghi nhận! Guide sẽ xác nhận trong 24 giờ.";
-            return RedirectToAction("BookingDetails", new { id });
-        }
 
         /// <summary>
         /// POST: /Traveler/CreateTripRequest
@@ -630,8 +570,6 @@ namespace TripMate_Webapi.Controllers
                     status = b.Status,
                     bookingDate = b.BookingDate.ToString("MMM dd, yyyy"),
                     totalAmount = b.TotalAmount,
-                    paymentMethod = b.PaymentMethod,
-                    paymentReference = b.PaymentReference,
                     notes = b.TravelerNotes,
                     guideName = b.GuideProfile?.Profile?.FullName ?? "Local Guide",
                     guideAvatar = b.GuideProfile?.Profile?.AvatarUrl ?? "",

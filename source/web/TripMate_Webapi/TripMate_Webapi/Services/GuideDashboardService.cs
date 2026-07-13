@@ -86,11 +86,11 @@ namespace TripMate_WebAPI.Services
                 vm.AcceptanceRate = 100; // Default if no resolved bookings
             }
 
-            // Response Time
-            var respondedBookings = bookings.Where(b => b.GuideResponseAt != null).ToList();
+            // Response Time (estimate from UpdatedAt - CreatedAt for responded bookings)
+            var respondedBookings = bookings.Where(b => b.Status != 0 && b.UpdatedAt > b.CreatedAt).ToList();
             if (respondedBookings.Any())
             {
-                var totalMinutes = respondedBookings.Sum(b => (b.GuideResponseAt!.Value - b.CreatedAt).TotalMinutes);
+                var totalMinutes = respondedBookings.Sum(b => (b.UpdatedAt - b.CreatedAt).TotalMinutes);
                 vm.ResponseTimeMinutes = (int)Math.Round(totalMinutes / respondedBookings.Count);
             }
             else

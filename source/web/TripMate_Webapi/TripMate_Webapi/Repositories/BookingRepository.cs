@@ -49,9 +49,7 @@ namespace TripMate_Webapi.Repositories
             var response = await http.SendAsync(req);
             if (response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
-                var created = System.Text.Json.JsonSerializer.Deserialize<List<BookingEntity>>(content);
-                return created?.FirstOrDefault() ?? booking;
+                return booking;
             }
             else 
             {
