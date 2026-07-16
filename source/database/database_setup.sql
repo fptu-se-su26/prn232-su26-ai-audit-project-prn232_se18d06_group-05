@@ -254,9 +254,20 @@ CREATE TABLE public.payments (
   CONSTRAINT payments_booking_fkey
     FOREIGN KEY (booking_id) REFERENCES public.bookings(id) ON DELETE CASCADE,
 
-  CONSTRAINT payments_payer_fkey
     FOREIGN KEY (payer_id) REFERENCES public.profiles(id) ON DELETE CASCADE
 );
+
+-- ==========================================
+-- 15. SAVED GUIDES (M1, M3: Traveler Bookmarks)
+-- ==========================================
+CREATE TABLE public.saved_guides (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    traveler_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    guide_profile_id UUID NOT NULL REFERENCES public.guide_profiles(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(traveler_id, guide_profile_id)
+);
+
 -- ==========================================
 -- 3. CẬP NHẬT TRIGGER TẠO USER (AUTH -> PROFILES)
 -- ==========================================
@@ -301,7 +312,9 @@ ALTER TABLE public.reviews ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.admin_notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.survey_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.survey_options ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.survey_options ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_personalities ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.saved_guides ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------
 -- POLICIES CHO BẢNG PROFILES & GUIDE PROFILES
@@ -370,6 +383,13 @@ CREATE POLICY "User chỉ được điền/cập nhật kết quả tính cách 
   ON public.user_personalities FOR ALL USING (auth.uid() = user_id);
 
 -- ------------------------------------------
+-- POLICIES CHO SAVED GUIDES
+-- ------------------------------------------
+CREATE POLICY "Travelers can view their own saved guides" ON public.saved_guides FOR SELECT USING (auth.uid() = traveler_id);
+CREATE POLICY "Travelers can insert their own saved guides" ON public.saved_guides FOR INSERT WITH CHECK (auth.uid() = traveler_id);
+CREATE POLICY "Travelers can delete their own saved guides" ON public.saved_guides FOR DELETE USING (auth.uid() = traveler_id);
+
+-- ------------------------------------------
 -- POLICIES CHO ADMIN (NOTIFICATIONS & LEDGER)
 -- ------------------------------------------
 CREATE POLICY "Chỉ admin mới thao tác admin notifications" ON public.admin_notifications FOR ALL USING (
@@ -410,3 +430,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_personalities TO authenticat
 -- Admin & Ledger (authenticated only)
 GRANT SELECT, INSERT, UPDATE ON public.admin_notifications TO authenticated;
 GRANT SELECT, INSERT ON public.ledger_entries TO authenticated;
+
+-- Saved Guides (authenticated only)
+GRANT SELECT, INSERT, DELETE ON public.saved_guides TO authenticated;

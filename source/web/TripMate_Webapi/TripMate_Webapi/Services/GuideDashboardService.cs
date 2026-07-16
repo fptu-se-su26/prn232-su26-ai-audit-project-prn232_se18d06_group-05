@@ -86,11 +86,11 @@ namespace TripMate_WebAPI.Services
                 vm.AcceptanceRate = 100; // Default if no resolved bookings
             }
 
-            // Response Time
-            var respondedBookings = bookings.Where(b => b.GuideResponseAt != null).ToList();
+            // Response Time (estimate from UpdatedAt - CreatedAt for responded bookings)
+            var respondedBookings = bookings.Where(b => b.Status != 0 && b.UpdatedAt > b.CreatedAt).ToList();
             if (respondedBookings.Any())
             {
-                var totalMinutes = respondedBookings.Sum(b => (b.GuideResponseAt!.Value - b.CreatedAt).TotalMinutes);
+                var totalMinutes = respondedBookings.Sum(b => (b.UpdatedAt - b.CreatedAt).TotalMinutes);
                 vm.ResponseTimeMinutes = (int)Math.Round(totalMinutes / respondedBookings.Count);
             }
             else
@@ -131,14 +131,14 @@ namespace TripMate_WebAPI.Services
 
             // 7. Upcoming Schedule
             vm.UpcomingSchedule = bookings
-                .Where(b => b.Status == 1 && b.StartTime >= now)
-                .OrderBy(b => b.StartTime)
+                .Where(b => b.Status == 1 && b.BookingDate.Date >= now.Date)
+                .OrderBy(b => b.BookingDate).ThenBy(b => b.StartTime)
                 .Take(3)
                 .Select(b => new UpcomingTourItem
                 {
                     TourName = b.ExperiencePackage?.Title ?? "Tour",
                     TravelerName = b.Traveler?.FullName ?? "Traveler",
-                    Date = b.StartTime.ToString("dd/MM/yyyy"),
+                    Date = b.BookingDate.ToString("dd/MM/yyyy"),
                     Time = b.StartTime.ToString("HH:mm"),
                     Guests = b.GuestCount,
                     Status = "Confirmed"

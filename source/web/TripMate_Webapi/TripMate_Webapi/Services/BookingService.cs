@@ -217,7 +217,8 @@ public class BookingService
                 NetEarnings: b.GuideEarnings,
                 Note: b.TravelerNotes,
                 Status: MapStatus(b.Status),
-                SecondsRemaining: secondsRemaining
+                SecondsRemaining: secondsRemaining,
+                CreatedAt: b.CreatedAt
             ));
         }
 
@@ -340,11 +341,7 @@ public class BookingService
             PlatformFee: row.PlatformFee,
             GuideEarnings: row.GuideEarnings,
             Status: MapStatus(row.Status),
-            PaymentReference: row.PaymentReference,
-            PaymentMethod: row.PaymentMethod,
-            EscrowReleased: row.EscrowReleased,
             TravelerNotes: row.TravelerNotes,
-            CancelReason: row.CancelReason,
             CreatedAt: row.CreatedAt,
             UpdatedAt: row.UpdatedAt
         );
@@ -371,12 +368,7 @@ internal class BookingRow
     [JsonPropertyName("platform_fee")]          public decimal PlatformFee { get; set; }
     [JsonPropertyName("guide_earnings")]        public decimal GuideEarnings { get; set; }
     [JsonPropertyName("status")]                public int Status { get; set; }
-    [JsonPropertyName("payment_reference")]     public string? PaymentReference { get; set; }
-    [JsonPropertyName("payment_method")]        public string? PaymentMethod { get; set; }
-    [JsonPropertyName("escrow_released")]       public bool EscrowReleased { get; set; }
     [JsonPropertyName("traveler_notes")]        public string? TravelerNotes { get; set; }
-    [JsonPropertyName("guide_response_at")]     public DateTime? GuideResponseAt { get; set; }
-    [JsonPropertyName("cancel_reason")]         public string? CancelReason { get; set; }
     [JsonPropertyName("created_at")]            public DateTime CreatedAt { get; set; }
     [JsonPropertyName("updated_at")]            public DateTime UpdatedAt { get; set; }
 }

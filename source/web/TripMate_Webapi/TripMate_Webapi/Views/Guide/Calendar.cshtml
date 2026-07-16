@@ -7,17 +7,27 @@
 <!-- FullCalendar CSS & Script -->
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
 <style>
-    /* FullCalendar Overrides */
+    /* FullCalendar Overrides (Minimalist) */
     .fc-toolbar-title { font-size: 1.25rem !important; font-weight: 700 !important; color: #1f2937 !important; }
     .fc-button-primary { background-color: #FF6B35 !important; border-color: #FF6B35 !important; }
     .fc-button-primary:hover { background-color: #E55A2B !important; border-color: #E55A2B !important; }
     .fc-button-active { background-color: #E55A2B !important; }
     .fc-day-today { background-color: transparent !important; }
-    .fc-day-today .fc-daygrid-day-number { background-color: #FF6B35; color: white !important; border-radius: 50%; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; }
     .fc-daygrid-day-number { color: #4b5563 !important; font-weight: 600 !important; padding: 8px !important; text-decoration: none !important;}
     
-    .fc-blocked-day { background-color: #fee2e2 !important; cursor: pointer; transition: all 0.2s; }
-    .fc-booked-day { background-color: #f0f9ff !important; cursor: not-allowed; }
+    /* Past days */
+    .fc-day-past { background-color: #f8fafc !important; }
+    .fc-day-past .fc-daygrid-day-number { color: #94a3b8 !important; }
+    
+    /* Hover effects for available future days */
+    .fc-day-future:not(.fc-blocked-day):not(.fc-booked-day) { cursor: pointer; transition: background-color 0.2s; }
+    .fc-day-future:not(.fc-blocked-day):not(.fc-booked-day):hover { background-color: #f1f5f9 !important; }
+
+    /* Event Chips Minimalist */
+    .booking-label { background: linear-gradient(to right, #3b82f6, #2563eb); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; box-shadow: 0 2px 4px rgba(37,99,235,0.2); }
+    .booking-label-past { background: #94a3b8; box-shadow: none; }
+    .blocked-label { background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; text-align: center; }
+    .blocked-label-past { background: #e2e8f0; color: #64748b; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; text-align: center; }
     .fc-available-day { cursor: pointer; transition: all 0.2s; }
     .fc-available-day:hover { background-color: #f3f4f6 !important; }
     
@@ -48,6 +58,10 @@
             hasChanges: false,
             isSaving: false,
             isFetching: true, // Track API loading state for skeleton
+            
+            // Navigation guard state
+            showLeaveModal: false,
+            pendingNavigationUrl: null,
 
             initCalendar(attempt = 0) {
                 if (typeof FullCalendar === 'undefined') {
@@ -57,6 +71,28 @@
                 }
 
                 this.blockedDates = [...this.originalBlockedDates];
+                
+                // Intercept all <a> link clicks to show custom modal if there are unsaved changes
+                document.addEventListener('click', (e) => {
+                    if (!this.hasChanges) return;
+                    const link = e.target.closest('a[href]');
+                    if (!link) return;
+                    const href = link.getAttribute('href');
+                    // Ignore anchors, javascript: links, and same-page links
+                    if (!href || href.startsWith('#') || href.startsWith('javascript:')) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.pendingNavigationUrl = href;
+                    this.showLeaveModal = true;
+                });
+                
+                // Also handle browser back/forward & tab close
+                window.addEventListener('beforeunload', (e) => {
+                    if (this.hasChanges) {
+                        e.preventDefault();
+                        e.returnValue = '';
+                    }
+                });
                 
                 const calendarEl = document.getElementById('calendar');
                 
@@ -140,23 +176,34 @@
                         // 2. REAL DATA STATE
                         let html = `
                             <div class="flex flex-col h-full w-full min-h-[80px]">
-                                <div class="text-right text-gray-700 font-medium text-sm p-1.5">${info.dayNumberText}</div>
-                                <div class="flex-1 flex flex-col justify-end p-1">
-                        `;
+                                <div class="text-right text-gray-700 font-medium text-sm p-1.5 flex justify-end">`;
+                                
+                        if (info.isToday) {
+                            html += `<div style="width:28px;height:28px;border-radius:50%;background:#FF6B35;color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:800;box-shadow:0 3px 10px rgba(255,107,53,0.4);">${info.date.getDate()}</div>`;
+                        } else {
+                            html += `${info.date.getDate()}`;
+                        }
+                        
+                        html += `</div>
+                                <div class="flex-1 flex flex-col justify-end p-1 gap-1">`;
+                        
+                        const isPast = date < new Date().setHours(0,0,0,0);
                         
                         if (this.bookings[dateStr]) {
                             const b = this.bookings[dateStr];
+                            const labelClass = isPast ? 'booking-label booking-label-past' : 'booking-label';
                             html += `
-                                    <div class="booking-label w-full m-0">
+                                    <div class="${labelClass} w-full m-0">
                                         <div class="truncate font-bold">${b.guest}</div>
                                         <div class="flex items-center justify-between opacity-90 text-[10px]">
                                             <span>👤 ${b.pax}</span>
-                                            <span>Tour</span>
+                                            <span class="bg-white/20 px-1 rounded">Tour</span>
                                         </div>
                                     </div>
                             `;
                         } else if (this.blockedDates.includes(dateStr)) {
-                            html += `<div class="blocked-label w-full m-0">Đã chặn</div>`;
+                            const blockedClass = isPast ? 'blocked-label blocked-label-past' : 'blocked-label';
+                            html += `<div class="${blockedClass} w-full m-0 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[12px]">block</span> Đã chặn</div>`;
                         }
                         
                         html += `
@@ -183,7 +230,9 @@
                             cell.title = `Booking: ${this.bookings[dateStr].title}\nKhách: ${this.bookings[dateStr].guest}\nSố người: ${this.bookings[dateStr].pax}`;
                         } else if (this.blockedDates.includes(dateStr)) {
                             cell.classList.add('fc-blocked-day');
-                            cell.title = "Bạn đã chặn ngày này. Click để bỏ chặn.";
+                            cell.title = "Đã chặn";
+                        } else if (date < new Date().setHours(0,0,0,0)) {
+                            cell.style.cursor = 'not-allowed';
                         } else {
                             cell.classList.add('fc-available-day');
                             cell.title = "Ngày trống. Click để chặn.";
@@ -267,6 +316,23 @@
                 this.calendar.render();
             },
             
+            confirmLeave() {
+                // User chose to leave without saving
+                this.hasChanges = false; // prevent beforeunload from firing
+                if (this.pendingNavigationUrl) {
+                    window.location.href = this.pendingNavigationUrl;
+                }
+                this.showLeaveModal = false;
+            },
+            
+            saveAndLeave() {
+                this.saveChanges().then(() => {
+                    if (this.pendingNavigationUrl) {
+                        window.location.href = this.pendingNavigationUrl;
+                    }
+                });
+            },
+            
             async saveChanges() {
                 this.isSaving = true;
                 
@@ -343,6 +409,40 @@
 </script>
 
 <div x-data="calendarManager()" x-init="initCalendar()" class="flex flex-col">
+
+    <!-- ====== UNSAVED CHANGES: TOP SLIM BANNER ====== -->
+    <div x-show="hasChanges"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0 -translate-y-3"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-3"
+         class="mb-4"
+         style="display:none;">
+        <div class="flex items-center gap-3 bg-white border border-amber-200 rounded-xl px-4 py-3 shadow-sm">
+            <!-- Pulsing dot indicator -->
+            <span class="relative flex h-2.5 w-2.5 shrink-0">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
+            </span>
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-gray-800">Bạn có thay đổi chưa được lưu — <span class="font-normal text-gray-500">Hãy lưu trước khi chuyển trang khác.</span></p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <button @@click="discardChanges()"
+                        class="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
+                    Hủy bỏ
+                </button>
+                <button @@click="saveChanges()" :disabled="isSaving"
+                        class="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 transition-colors shadow-sm flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[14px] animate-spin" x-show="isSaving">autorenew</span>
+                    <span class="material-symbols-outlined text-[14px]" x-show="!isSaving">save</span>
+                    <span x-text="isSaving ? 'Đang lưu...' : 'Lưu thay đổi'"></span>
+                </button>
+            </div>
+        </div>
+    </div>
     <!-- KPI Bar -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center gap-3 hover:shadow-md transition-shadow">
@@ -420,10 +520,9 @@
         </div>
 
         <!-- Right: Sidebar -->
-        <div class="xl:col-span-1 space-y-4 h-full">
-            <!-- Tabs Sidebar -->
-            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
-                <div class="flex border-b border-gray-100">
+        <div class="xl:col-span-1 flex flex-col min-h-[500px]">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col w-full flex-1 min-h-0">
+                <div class="flex border-b border-gray-100 shrink-0">
                     <button @@click="activeTab = 'stats'" 
                             :class="activeTab === 'stats' ? 'border-primary text-primary bg-orange-50/50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
                             class="flex-1 py-4 text-sm font-bold border-b-2 transition-all flex flex-col items-center justify-center gap-1">
@@ -503,28 +602,86 @@
                         </template>
                     </ul>
                 </div>
+                
+                <!-- (Save bar — see top slim banner) -->
             </div>
         </div>
     </div>
 
-    <!-- Unsaved Changes Sticky Banner -->
-    <div x-show="hasChanges" x-transition.opacity
-         class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-50 p-4 transform transition-all duration-300">
-        <div class="max-w-7xl mx-auto flex items-center justify-between px-[280px]">
-            <div class="flex items-center gap-3 bg-amber-50 px-4 py-2 rounded-lg border border-amber-100">
-                <span class="material-symbols-outlined text-amber-500 animate-pulse">info</span>
-                <p class="font-bold text-amber-800 text-sm">Bạn có thay đổi lịch rảnh chưa được lưu.</p>
-            </div>
-            <div class="flex gap-3">
-                <button @@click="discardChanges()" class="px-6 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">
-                    Hủy bỏ
-                </button>
-                <button @@click="saveChanges()" class="px-8 py-2.5 rounded-xl font-bold bg-primary text-white hover:bg-primary/90 transition-colors shadow-lg shadow-primary/30 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[20px]" x-show="!isSaving">save</span>
-                    <span class="material-symbols-outlined text-[20px] animate-spin" x-show="isSaving">autorenew</span>
-                    <span x-text="isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi Lịch'"></span>
-                </button>
+    <!-- ====== LEAVE CONFIRMATION MODAL (inside Alpine scope) ====== -->
+    <div x-show="showLeaveModal"
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-[9999] flex items-center justify-center p-4"
+         style="display:none;"
+         @@keydown.escape.window="showLeaveModal = false">
+        
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-gray-950/50 backdrop-blur-[2px]" @@click="showLeaveModal = false"></div>
+        
+        <!-- Modal Card -->
+        <div x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             class="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            
+            <!-- Top accent bar -->
+            <div class="h-1 bg-gradient-to-r from-amber-400 to-orange-500"></div>
+
+            <!-- Body -->
+            <div class="p-6">
+                <!-- Icon + Title: Centered for compact confirmation dialogs (Material, Notion, Linear pattern) -->
+                <div class="flex flex-col items-center text-center mb-5">
+                    <div class="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-100 flex items-center justify-center mb-3">
+                        <span class="material-symbols-outlined text-amber-500 text-[28px]">edit_calendar</span>
+                    </div>
+                    <h3 class="font-bold text-gray-900 text-base leading-snug">Lưu thay đổi trước khi rời?</h3>
+                    <p class="text-gray-500 text-sm mt-1">
+                        Bạn có <strong class="text-amber-600 font-bold" x-text="blockedDates.length"></strong> ngày đã chặn chưa được lưu.
+                    </p>
+                </div>
+
+                <!-- Warning note with amber tint to match context -->
+                <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-2.5 mb-5">
+                    <span class="material-symbols-outlined text-amber-400 text-[16px] mt-px shrink-0">warning</span>
+                    <p class="text-amber-700 text-xs leading-relaxed">Nếu rời đi không lưu, mọi thay đổi sẽ bị <strong>mất hoàn toàn</strong> và lịch sẽ quay về trạng thái ban đầu.</p>
+                </div>
+
+                <!--
+                    UX HIERARCHY (Senior UX/UI Design Principle):
+                    - Neutral + Primary side-by-side → clearly distinguish but equal visual space
+                    - Destructive action as a de-emphasized text-link below a divider
+                    → Prevents accidental destructive clicks while still being discoverable
+                -->
+                <div class="flex gap-2.5">
+                    <button @@click="showLeaveModal = false"
+                            class="flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
+                        Ở lại trang
+                    </button>
+                    <button @@click="saveAndLeave()" :disabled="isSaving"
+                            class="flex-[1.4] py-2.5 px-4 rounded-xl font-bold text-sm text-white bg-primary hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-1.5">
+                        <span class="material-symbols-outlined text-[15px] animate-spin" x-show="isSaving">autorenew</span>
+                        <span class="material-symbols-outlined text-[15px]" x-show="!isSaving">save</span>
+                        <span x-text="isSaving ? 'Đang lưu...' : 'Lưu & Rời đi'"></span>
+                    </button>
+                </div>
+
+                <!-- Destructive: least prominent, text-link, below divider -->
+                <div class="pt-3 mt-3 flex justify-center border-t border-gray-100">
+                    <button @@click="confirmLeave()"
+                            class="text-xs text-gray-400 hover:text-red-500 transition-colors font-medium underline underline-offset-2 decoration-gray-300 hover:decoration-red-400">
+                        Rời đi mà không lưu thay đổi
+                    </button>
+                </div>
             </div>
         </div>
     </div>
+
 </div>

@@ -39,23 +39,8 @@ namespace TripMate_Webapi.Entities
         [Column("status")]
         public int Status { get; set; } = 0; // 0=Pending, 1=Confirmed, 2=Completed, 3=Cancelled
 
-        [Column("payment_reference")]
-        public string? PaymentReference { get; set; }
-
-        [Column("payment_method")]
-        public string? PaymentMethod { get; set; }
-
-        [Column("escrow_released")]
-        public bool EscrowReleased { get; set; } = false;
-
         [Column("traveler_notes")]
         public string? TravelerNotes { get; set; }
-
-        [Column("guide_response_at")]
-        public DateTime? GuideResponseAt { get; set; }
-
-        [Column("cancel_reason")]
-        public string? CancelReason { get; set; }
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

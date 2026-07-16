@@ -26,5 +26,8 @@ public record GuideBookingViewDto(
     string Status,
 
     // UI logic
-    int SecondsRemaining
+    int SecondsRemaining,
+    
+    // Sort logic
+    DateTime CreatedAt
 );

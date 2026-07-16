@@ -107,8 +107,8 @@
                     
                     <div class="flex flex-col gap-3">
                         @if(Model.Status == 0) {
-                            <button class="w-full bg-surface-variant text-on-surface-variant py-3 rounded-xl font-bold flex items-center justify-center gap-2 cursor-not-allowed opacity-70" title="Messaging unlocks after payment" disabled>
-                                <span class="material-symbols-outlined">lock</span> Messaging Locked
+                            <button class="w-full bg-surface-variant text-on-surface-variant py-3 rounded-xl font-bold flex items-center justify-center gap-2 cursor-not-allowed opacity-70" title="Messaging unlocks after guide accepts" disabled>
+                                <span class="material-symbols-outlined">lock</span> Awaiting Guide
                             </button>
                         } else {
                             <button class="w-full bg-primary-container text-primary hover:bg-primary hover:text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
@@ -141,18 +141,9 @@
                         <span class="text-3xl font-extrabold text-primary">@(Model.TotalAmount.ToString("#,##0")) ₫</span>
                     </div>
 
-                    @if (Model.Status != 2)
-                    {
-                        <a href="/Traveler/Checkout/@Model.Id" class="block w-full text-center bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:-translate-y-1 transition-all flex justify-center items-center gap-2">
-                            <span class="material-symbols-outlined">lock</span> Proceed to Pay
-                        </a>
-                    }
-                    else
-                    {
-                        <div class="block w-full text-center bg-green-500 text-white py-4 rounded-xl font-bold text-lg shadow-lg flex justify-center items-center gap-2">
-                            <span class="material-symbols-outlined">check_circle</span> Paid
-                        </div>
-                    }
+                    <div class="block w-full text-center bg-green-500/10 border border-green-500/20 text-green-700 py-4 rounded-xl font-bold text-lg shadow-sm flex justify-center items-center gap-2 mt-4">
+                        <span class="material-symbols-outlined text-green-600">verified_user</span> Paid & Escrowed
+                    </div>
                 </div>
             </div>
         </div>
