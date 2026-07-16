@@ -313,12 +313,14 @@ namespace TripMate_Webapi.Controllers
             if (string.IsNullOrEmpty(guideId) || string.IsNullOrEmpty(packageId))
                 return BadRequest(new { error = "Missing guideId or packageId" });
 
-            var packages = await _tourService.GetToursByGuideAsync(guideId);
-            var selectedPackage = packages?.FirstOrDefault(p => p.Id == packageId);
+            var selectedPackage = await _tourService.GetTourByIdAsync(packageId);
 
             decimal basePrice;
             if (selectedPackage != null)
             {
+                // Force the guideId to match the actual owner of the package
+                guideId = selectedPackage.GuideProfileId ?? guideId;
+                
                 if (selectedPackage.PricePerSession > 0)
                     basePrice = selectedPackage.PricePerSession;
                 else if (selectedPackage.PricePerPerson.HasValue && selectedPackage.PricePerPerson > 0)
@@ -328,6 +330,7 @@ namespace TripMate_Webapi.Controllers
             }
             else
             {
+                // Fallback to custom package
                 basePrice = 500_000m * guests;
                 packageId = "00000000-0000-0000-0000-000000000000";
             }
