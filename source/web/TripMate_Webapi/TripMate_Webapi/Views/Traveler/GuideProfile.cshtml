@@ -647,13 +647,18 @@
                     });
 
                     if (res.ok) {
+                        const data = await res.json();
+                        if (data.paymentUrl) {
+                            window.location.href = data.paymentUrl;
+                            return;
+                        }
+                        
                         this.showWizard = false;
                         await Swal.fire({
-                            title: 'Payment Received! 🎉',
-                            html: `<p class="text-gray-600">Your booking & payment are secured in escrow.</p><p class="mt-2 font-semibold">The guide will confirm within <strong>48 hours</strong>.</p>`,
+                            title: 'Booking Created 🎉',
+                            html: `<p class="text-gray-600">Your booking is secured.</p>`,
                             icon: 'success',
-                            confirmButtonColor: '#ff7a00',
-                            confirmButtonText: 'View My Bookings'
+                            confirmButtonColor: '#ff7a00'
                         });
                         window.location.href = '/Traveler/Dashboard';
                     } else if (res.status === 400) {
