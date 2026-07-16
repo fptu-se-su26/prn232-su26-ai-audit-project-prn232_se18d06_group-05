@@ -19,13 +19,16 @@
             <p class="text-gray-500 text-sm">Quản lý lịch đặt tour và phản hồi yêu cầu của du khách.</p>
         </div>
         <div class="flex items-center gap-3">
-            <button class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
-                <span class="material-symbols-outlined text-[18px]">calendar_today</span>
-                Chọn ngày
-            </button>
-            <button class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
-                <span class="material-symbols-outlined text-[18px]">sort</span>
-                Mới nhất
+            <!-- Date Filter -->
+            <div class="relative">
+                <input type="date" x-model="filterDate" class="bg-white border border-gray-200 text-gray-700 pl-10 pr-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary h-[38px]">
+                <span class="material-symbols-outlined text-[18px] text-gray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">calendar_today</span>
+            </div>
+            
+            <!-- Sort Button -->
+            <button @@click="toggleSort()" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2 h-[38px]">
+                <span class="material-symbols-outlined text-[18px]" :class="sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'">sort</span>
+                <span x-text="sortOrder === 'desc' ? 'Mới nhất' : 'Cũ nhất'"></span>
             </button>
         </div>
     </div>
@@ -463,8 +466,14 @@
                 bookings: window.initialBookings || [],
                 currentTab: 'all',
                 searchQuery: '',
+                filterDate: '',
+                sortOrder: 'desc',
                 isDetailOpen: false,
                 selectedBooking: null,
+
+                toggleSort() {
+                    this.sortOrder = this.sortOrder === 'desc' ? 'asc' : 'desc';
+                },
 
                 get tabs() {
                     return [
@@ -487,20 +496,39 @@
                 },
 
                 get filteredBookings() {
-                    return this.bookings.filter(b => {
+                    let result = this.bookings.filter(b => {
                         // Filter by tab
                         if (this.currentTab !== 'all' && b.Status !== this.currentTab) return false;
                         
                         // Filter by search
                         if (this.searchQuery) {
                             const q = this.searchQuery.toLowerCase();
-                            return b.TravelerName.toLowerCase().includes(q) || 
-                                   b.Id.toLowerCase().includes(q) || 
-                                   b.TourName.toLowerCase().includes(q);
+                            if (!(b.TravelerName.toLowerCase().includes(q) || 
+                                  b.Id.toLowerCase().includes(q) || 
+                                  b.TourName.toLowerCase().includes(q))) {
+                                return false;
+                            }
+                        }
+
+                        // Filter by Date
+                        if (this.filterDate) {
+                            // Convert this.filterDate (YYYY-MM-DD) to DD/MM/YYYY to match b.Date
+                            const [yyyy, mm, dd] = this.filterDate.split('-');
+                            const formattedFilterDate = `${dd}/${mm}/${yyyy}`;
+                            if (b.Date !== formattedFilterDate) return false;
                         }
                         
                         return true;
                     });
+
+                    // Sort by CreatedAt
+                    result.sort((a, b) => {
+                        const dateA = new Date(a.CreatedAt).getTime();
+                        const dateB = new Date(b.CreatedAt).getTime();
+                        return this.sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+                    });
+
+                    return result;
                 },
 
                 init() {

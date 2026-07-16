@@ -216,7 +216,8 @@ public class BookingService
                 NetEarnings: b.GuideEarnings,
                 Note: b.TravelerNotes,
                 Status: MapStatus(b.Status),
-                SecondsRemaining: secondsRemaining
+                SecondsRemaining: secondsRemaining,
+                CreatedAt: b.CreatedAt
             ));
         }
 
