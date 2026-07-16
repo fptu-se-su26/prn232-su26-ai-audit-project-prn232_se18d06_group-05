@@ -11,6 +11,43 @@ namespace TripMate_Webapi.Controllers
         private readonly IGuideRepository _guideRepository;
         private readonly ILogger<HomeController> _logger;
 
+        // City alias map: canonical DB value (city_area) → fuzzy aliases
+        private static readonly Dictionary<string, string[]> CityAliases = new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Danang"]       = new[] { "da nang", "đà nẵng", "danang", "da-nang", "dn" },
+            ["Hanoi"]        = new[] { "ha noi", "hà nội", "hanoi", "hn" },
+            ["Hoi An"]       = new[] { "hoian", "hội an", "hoi-an" },
+            ["Ho Chi Minh"]  = new[] { "hcm", "hcmc", "saigon", "sài gòn", "sai gon", "ho chi minh city", "sg" },
+            ["Sapa"]         = new[] { "sa pa", "sả pa" },
+            ["Nha Trang"]    = new[] { "nhatrang" },
+            ["Da Lat"]       = new[] { "dalat", "đà lạt", "da-lat" },
+            ["Hue"]          = new[] { "huế", "thua thien", "thừa thiên" },
+            ["Phu Quoc"]     = new[] { "phú quốc", "phuquoc", "phu-quoc" },
+            ["Ha Long"]      = new[] { "halong", "hạ long", "vịnh hạ long", "ha long bay" },
+        };
+
+        private static string NormalizeCity(string input)
+        {
+            var norm = RemoveDiacritics(input.Trim().ToLowerInvariant());
+
+            foreach (var (canonical, aliases) in CityAliases)
+            {
+                // Check canonical itself
+                if (RemoveDiacritics(canonical.ToLowerInvariant()) == norm) return canonical;
+                // Check aliases
+                foreach (var alias in aliases)
+                    if (RemoveDiacritics(alias) == norm) return canonical;
+            }
+            return input.Trim(); // fallback: pass original
+        }
+
+        private static string RemoveDiacritics(string s) =>
+            new string(s.Normalize(System.Text.NormalizationForm.FormD)
+                        .Where(c => System.Globalization.CharUnicodeInfo.GetUnicodeCategory(c)
+                                    != System.Globalization.UnicodeCategory.NonSpacingMark)
+                        .ToArray())
+                .Replace("đ", "d").Replace("Đ", "D");
+
         public HomeController(TourService tourService, IGuideRepository guideRepository, ILogger<HomeController> logger)
         {
             _tourService = tourService;
@@ -63,21 +100,25 @@ namespace TripMate_Webapi.Controllers
         {
             try
             {
-                var guides = await _guideRepository.GetGuidesFilteredAsync(destination ?? search, specialty);
-                var tours = await _tourService.GetToursAsync(search ?? destination);
-                
-                // If searching by destination, also filter tours by guide's city_area
-                if (!string.IsNullOrEmpty(destination))
+                // Unified search term — prefer `search`, fall back to `destination`
+                var rawQuery = search ?? destination;
+                var normalizedCity = string.IsNullOrWhiteSpace(rawQuery) ? null : NormalizeCity(rawQuery);
+
+                var guides = await _guideRepository.GetGuidesFilteredAsync(normalizedCity, specialty);
+                var tours = await _tourService.GetToursAsync(rawQuery); // title/description search
+
+                // Also filter tours by guide's city_area when a city was searched
+                if (!string.IsNullOrWhiteSpace(normalizedCity))
                 {
-                    tours = tours.Where(t => 
-                        t.GuideProfile?.CityArea != null && 
-                        t.GuideProfile.CityArea.Contains(destination, StringComparison.OrdinalIgnoreCase)
+                    tours = tours.Where(t =>
+                        t.GuideProfile?.CityArea != null &&
+                        t.GuideProfile.CityArea.Contains(normalizedCity, StringComparison.OrdinalIgnoreCase)
                     ).ToList();
                 }
 
-                ViewBag.Destination = destination;
+                ViewBag.Destination = normalizedCity;
                 ViewBag.Specialty = specialty;
-                ViewBag.Search = search ?? destination;
+                ViewBag.Search = rawQuery;
                 ViewBag.Tours = tours;
                 return View(guides);
             }
