@@ -242,8 +242,6 @@ namespace TripMate_Webapi.Controllers
             return Ok(new { success = true });
         }
 
-        // GET: /Traveler/Review/{id}
-        public IActionResult Review(string id = "1")
         // GET: /Traveler/Review/{id} [Auth required]
         public async Task<IActionResult> Review(string id)
         {

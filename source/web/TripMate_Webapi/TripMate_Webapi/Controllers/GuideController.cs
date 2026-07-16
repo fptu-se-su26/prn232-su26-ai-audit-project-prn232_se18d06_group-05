@@ -3,7 +3,6 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
 using TripMate_Webapi.Entities;
-using System.Security.Claims;
 using TripMate_WebAPI.DTOs.Tour.Requests;
 using TripMate_Webapi.Repositories;
 using TripMate_WebAPI.DTOs;
@@ -85,7 +84,11 @@ namespace TripMate_Webapi.Controllers
         // GET: /Guide/Profile/{id}
         // This is the public profile viewed by the Traveler
         [HttpGet("Guide/Profile/{id}")]
-        public IActionResult Profile(string id = "1")
+        public IActionResult Profile(string id)
+        {
+            return RedirectToAction("GuideProfile", "Traveler", new { id });
+        }
+
         // GET: /Guide/Profile
         [Authorize(Roles = "guide")]
         public IActionResult Profile()
@@ -153,7 +156,6 @@ namespace TripMate_Webapi.Controllers
 
             return Ok(new { success = true });
         }
-    }
 
         // GET: /Guide/Calendar
         [Authorize(Roles = "guide")]
