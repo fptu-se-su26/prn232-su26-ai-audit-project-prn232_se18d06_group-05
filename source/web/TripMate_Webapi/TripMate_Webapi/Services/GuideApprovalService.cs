@@ -12,17 +12,20 @@ namespace TripMate_WebAPI.Services
         private readonly string _anonKey;
         private readonly ILogger<GuideApprovalService> _logger;
         private readonly JsonSerializerOptions _json;
+        private readonly AdminService _adminService;
 
         public GuideApprovalService(
             HttpClient http,
             IConfiguration config,
-            ILogger<GuideApprovalService> logger)
+            ILogger<GuideApprovalService> logger,
+            AdminService adminService)
         {
             _http = http;
             _supabaseUrl = config["Supabase:Url"] ?? throw new Exception("Supabase URL not configured");
             _anonKey = config["Supabase:AnonKey"] ?? throw new Exception("Supabase Anon Key not configured");
             _logger = logger;
             _json = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            _adminService = adminService;
         }
 
         // Get pending guide applications (is_verified = false)
@@ -32,7 +35,7 @@ namespace TripMate_WebAPI.Services
             {
                 var request = new HttpRequestMessage(
                     HttpMethod.Get,
-                    $"{_supabaseUrl}/rest/v1/guide_profiles?is_verified=eq.false&select=*,profiles(email,full_name,phone_number,role),guide_certificates(certificate_name,file_url)&order=created_at.desc");
+                    $"{_supabaseUrl}/rest/v1/guide_profiles?is_verified=eq.false&select=*,profiles(email,full_name,phone_number,role),guide_certificates(certificate_name,file_url)&order=created_at.asc");
 
                 request.Headers.Add("apikey", _anonKey);
                 request.Headers.Add("Prefer", "return=representation");
@@ -47,7 +50,15 @@ namespace TripMate_WebAPI.Services
                 }
 
                 var rows = JsonSerializer.Deserialize<List<GuideProfileWithRelationsRow>>(content, _json) ?? new();
-                return rows.Select(MapToDto).ToList();
+                var list = rows.Select(MapToDto).ToList();
+                foreach (var item in list)
+                {
+                    if (!string.IsNullOrEmpty(item.Certificate_Path))
+                    {
+                        item.Certificate_Path = await _adminService.GetSignedUrlAsync(item.Certificate_Path);
+                    }
+                }
+                return list;
             }
             catch (Exception ex)
             {
@@ -114,7 +125,14 @@ namespace TripMate_WebAPI.Services
 
                 var rows = JsonSerializer.Deserialize<List<GuideProfileWithRelationsRow>>(content, _json);
                 var row = rows?.FirstOrDefault();
-                return row != null ? MapToDto(row) : null;
+                if (row == null) return null;
+
+                var dto = MapToDto(row);
+                if (!string.IsNullOrEmpty(dto.Certificate_Path))
+                {
+                    dto.Certificate_Path = await _adminService.GetSignedUrlAsync(dto.Certificate_Path);
+                }
+                return dto;
             }
             catch (Exception ex)
             {
@@ -274,15 +292,16 @@ namespace TripMate_WebAPI.Services
         [JsonPropertyName("guide_certificates")] public List<CertificateData>? Certificates { get; set; }
     }
 
-    internal class ProfileData
+    public class ProfileData
     {
         [JsonPropertyName("email")]        public string? Email { get; set; }
         [JsonPropertyName("full_name")]    public string? FullName { get; set; }
         [JsonPropertyName("phone_number")] public string? PhoneNumber { get; set; }
         [JsonPropertyName("role")]         public string? Role { get; set; }
+        [JsonPropertyName("is_active")]    public bool IsActive { get; set; }
     }
 
-    internal class CertificateData
+    public class CertificateData
     {
         [JsonPropertyName("certificate_name")] public string? CertificateName { get; set; }
         [JsonPropertyName("file_url")]         public string? FileUrl { get; set; }

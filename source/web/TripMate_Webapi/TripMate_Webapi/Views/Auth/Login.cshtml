@@ -4,119 +4,92 @@
 }
 
 <section
-    class="min-h-screen flex items-center justify-center py-16 px-4 bg-gradient-to-br from-primary/5 via-surface to-primary-container/20">
-    <div class="w-full max-w-md">
+    class="min-h-screen flex items-center justify-center py-12 px-4 bg-gradient-to-br from-primary/5 via-surface to-primary-container/20">
+    <div class="w-full max-w-sm">
         <!-- Glass Card -->
         <div
             class="bg-surface/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden">
             <!-- Header -->
-            <div class="bg-gradient-to-r from-primary to-primary/80 p-8 text-center">
-                <div class="flex justify-center mb-4">
-                    <img alt="TripMate Logo" class="h-16 w-16 rounded-full object-cover border-4 border-white/30"
+            <div class="bg-gradient-to-r from-primary to-primary/80 p-6 text-center">
+                <div class="flex justify-center mb-3">
+                    <img alt="TripMate Logo" class="h-14 w-14 rounded-full object-cover border-4 border-white/30"
                         src="/images/AVATAR.png" />
                 </div>
-                <h1 class="text-3xl font-extrabold text-white mb-2">Chào mừng trở lại!</h1>
-                <p class="text-white/90">Đăng nhập để tiếp tục hành trình</p>
+                <h1 class="text-2xl font-extrabold text-white mb-1">Chào mừng trở lại!</h1>
+                <p class="text-white/90 text-sm">Đăng nhập để tiếp tục hành trình</p>
             </div>
 
             <!-- Form -->
-            <div class="p-8">
-                <form id="loginForm" class="space-y-6">
+            <div class="p-6">
+                <form id="loginForm" class="space-y-4">
                     <!-- Email -->
                     <div class="relative">
-                        <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">EMAIL</label>
+                        <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">EMAIL</label>
                         <div class="relative">
                             <span
-                                class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">mail</span>
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">email</span>
                             <input type="email" id="email" required
-                                class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50"
+                                class="w-full pl-10 pr-4 py-2.5 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface text-sm placeholder:text-on-surface-variant/50"
                                 placeholder="your@email.com" />
                         </div>
                     </div>
 
                     <!-- Password -->
                     <div class="relative">
-                        <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">MẬT
+                        <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">MẬT
                             KHẨU</label>
                         <div class="relative">
                             <span
-                                class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">lock</span>
+                                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
                             <input type="password" id="password" required
-                                class="w-full pl-12 pr-12 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50"
+                                class="w-full pl-10 pr-10 py-2.5 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface text-sm placeholder:text-on-surface-variant/50"
                                 placeholder="••••••••" />
-                            <button type="button" onclick="togglePassword()"
-                                class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined" id="toggleIcon">visibility</span>
-                            </button>
                         </div>
                     </div>
 
                     <!-- Remember & Forgot -->
-                    <div class="flex items-center justify-between text-sm">
+                    <div class="flex items-center justify-between text-xs">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input type="checkbox"
-                                class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/20" />
+                                class="w-3.5 h-3.5 rounded border-outline-variant text-primary focus:ring-primary/20" />
                             <span class="text-on-surface-variant font-medium">Ghi nhớ đăng nhập</span>
                         </label>
                         <a href="#" onclick="showForgotPasswordModal()" class="text-primary font-bold hover:underline">Quên mật khẩu?</a>
                     </div>
 
                     <!-- Error Message -->
-                    <div id="errorMessage" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
+                    <div id="errorMessage" class="hidden bg-red-50 border-l-4 border-red-500 p-3 rounded-lg">
                         <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-red-500">error</span>
-                            <p class="text-sm text-red-700 font-medium" id="errorText"></p>
+                            <span class="material-symbols-outlined text-red-500 text-[18px]">error</span>
+                            <p class="text-xs text-red-700 font-medium" id="errorText"></p>
                         </div>
                     </div>
 
                     <!-- Submit Button -->
                     <button type="submit"
-                        class="w-full bg-primary hover:bg-primary/90 text-on-primary font-bold py-3 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group">
+                        class="w-full bg-primary hover:bg-primary/90 text-on-primary font-bold py-2.5 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group text-sm">
                         <span>Đăng nhập</span>
                         <span
-                            class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                            class="material-symbols-outlined group-hover:translate-x-1 transition-transform text-[18px]">arrow_forward</span>
                     </button>
                 </form>
 
                 <!-- Divider -->
-                <div class="relative my-8">
+                <div class="relative my-5">
                     <div class="absolute inset-0 flex items-center">
                         <div class="w-full border-t border-outline-variant"></div>
                     </div>
-                    <div class="relative flex justify-center text-sm">
+                    <div class="relative flex justify-center text-xs">
                         <span class="px-4 bg-surface text-on-surface-variant font-medium">HOẶC</span>
                     </div>
                 </div>
 
-                <!-- Social Login -->
-                <div class="space-y-3">
-                    <button id="googleLoginBtn"
-                        class="w-full bg-surface-variant hover:bg-outline-variant/30 border-2 border-outline-variant text-on-surface font-medium py-3 rounded-lg transition-all flex items-center justify-center gap-3">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24">
-                            <path fill="currentColor"
-                                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                            <path fill="currentColor"
-                                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                            <path fill="currentColor"
-                                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-                            <path fill="currentColor"
-                                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-                        </svg>
-                        <span>Đăng nhập với Google</span>
-                    </button>
-                    <button
-                        class="w-full bg-surface-variant hover:bg-outline-variant/30 border-2 border-outline-variant text-on-surface font-medium py-3 rounded-lg transition-all flex items-center justify-center gap-3">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                            <path
-                                d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                        </svg>
-                        <span>Đăng nhập với Apple</span>
-                    </button>
-                </div>
+                <!-- Google Sign-In rendered directly by SDK -->
+                <div id="googleSignInContainer" class="flex justify-center"></div>
 
                 <!-- Register Link -->
-                <div class="mt-8 text-center">
-                    <p class="text-on-surface-variant">
+                <div class="mt-5 text-center">
+                    <p class="text-on-surface-variant text-sm">
                         Chưa có tài khoản?
                         <a href="/Auth/Register" class="text-primary font-bold hover:underline">Đăng ký ngay</a>
                     </p>
@@ -139,13 +112,12 @@
             <div>
                 <label class="block text-sm font-bold text-on-surface-variant mb-2">EMAIL</label>
                 <div class="relative">
-                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">mail</span>
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">email</span>
                     <input type="email" id="forgotEmail" required
                         class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
                         placeholder="your@email.com" />
                 </div>
             </div>
-            
             
             <!-- Error Message -->
             <div id="forgotErrorMessage" class="hidden bg-red-50 border-l-4 border-red-500 p-3 rounded-lg">
@@ -193,53 +165,30 @@
 <!-- Google Sign-In SDK -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
-
-
 <script>
-    let recaptchaWidget;
     let googleInitialized = false;
 
-    // Toggle password visibility
+    // ponytail: toggle password — one function, no duplication
     function togglePassword() {
-        const passwordInput = document.getElementById('password');
-        const toggleIcon = document.getElementById('toggleIcon');
-
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            toggleIcon.textContent = 'visibility_off';
-        } else {
-            passwordInput.type = 'password';
-            toggleIcon.textContent = 'visibility';
-        }
+        const p = document.getElementById('password');
+        const icon = document.getElementById('toggleIcon');
+        const isHidden = p.type === 'password';
+        p.type = isHidden ? 'text' : 'password';
+        icon.textContent = isHidden ? 'visibility_off' : 'visibility';
     }
 
-    // Show/hide spinner
-    function showSpinner() {
-        document.getElementById('loadingSpinner').style.display = 'flex';
-    }
+    function showSpinner() { document.getElementById('loadingSpinner').style.display = 'flex'; }
+    function hideSpinner() { document.getElementById('loadingSpinner').style.display = 'none'; }
 
-    function hideSpinner() {
-        document.getElementById('loadingSpinner').style.display = 'none';
-    }
-
-    // Show error message
     function showError(message) {
         const errorDiv = document.getElementById('errorMessage');
-        const errorText = document.getElementById('errorText');
-        errorText.textContent = message;
+        document.getElementById('errorText').textContent = message;
         errorDiv.classList.remove('hidden');
-
-        // Auto hide after 5 seconds
-        setTimeout(() => {
-            errorDiv.classList.add('hidden');
-        }, 5000);
+        setTimeout(() => errorDiv.classList.add('hidden'), 5000);
     }
 
-    // Forgot password modal functions
-    function showForgotPasswordModal() {
-        document.getElementById('forgotPasswordModal').classList.remove('hidden');
-    }
-
+    // Forgot password modal
+    function showForgotPasswordModal() { document.getElementById('forgotPasswordModal').classList.remove('hidden'); }
     function closeForgotPasswordModal() {
         document.getElementById('forgotPasswordModal').classList.add('hidden');
         document.getElementById('forgotPasswordForm').reset();
@@ -247,33 +196,20 @@
         document.getElementById('forgotSuccessMessage').classList.add('hidden');
     }
 
-    // Handle forgot password form
     document.getElementById('forgotPasswordForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-
         const email = document.getElementById('forgotEmail').value;
-
         try {
             const response = await fetch('/api/auth/forgot-password', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    email: email,
-                    captchaToken: 'test-captcha-response'
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, captchaToken: 'test-captcha-response' })
             });
-
             const data = await response.json();
-
             if (response.ok) {
                 document.getElementById('forgotErrorMessage').classList.add('hidden');
                 document.getElementById('forgotSuccessMessage').classList.remove('hidden');
-                
-                setTimeout(() => {
-                    closeForgotPasswordModal();
-                }, 2000);
+                setTimeout(() => closeForgotPasswordModal(), 2000);
             } else {
                 document.getElementById('forgotErrorText').textContent = data.message || 'Có lỗi xảy ra';
                 document.getElementById('forgotErrorMessage').classList.remove('hidden');
@@ -285,40 +221,30 @@
         }
     });
 
-    // Google Sign-In callback
+    // ponytail: Google Sign-In — render button directly, no prompt() double-click bug
     function handleCredentialResponse(response) {
-        console.log('Google credential response received');
         showSpinner();
-        
         fetch('/api/auth/google-login', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ 
-                idToken: response.credential,
-                accessToken: null
-            })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: response.credential, accessToken: null })
         })
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
             hideSpinner();
-            
             if (data.accessToken) {
-                // Save to localStorage
                 localStorage.setItem('accessToken', data.accessToken);
                 localStorage.setItem('refreshToken', data.refreshToken || '');
                 localStorage.setItem('userEmail', data.user?.email || '');
                 localStorage.setItem('userId', data.user?.id || '');
                 localStorage.setItem('userRole', data.user?.role || 'traveler');
 
-                // Redirect based on role
                 const role = data.user?.role || 'traveler';
-                const surveyCompleted = localStorage.getItem('surveyCompleted');
-
+                const redirectUrl = localStorage.getItem('redirectAfterLogin');
                 setTimeout(() => {
-                    if (role === 'traveler' && surveyCompleted !== 'true') {
-                        window.location.href = '/Survey/Personality';
+                    if (redirectUrl) {
+                        localStorage.removeItem('redirectAfterLogin');
+                        window.location.href = redirectUrl;
                     } else if (role === 'admin') {
                         window.location.href = '/Admin/Dashboard';
                     } else if (role === 'guide') {
@@ -338,91 +264,52 @@
         });
     }
 
-    // Initialize Google Sign-In
+    // ponytail: render Google button immediately when SDK loads — no prompt(), no double-click
     function initializeGoogle() {
-        if (typeof google !== 'undefined' && google.accounts && !googleInitialized) {
-            try {
-                google.accounts.id.initialize({
-                    client_id: "603408450988-ev8uo6i21kspfng413hb7ugr9u6mfna1.apps.googleusercontent.com",
-                    callback: handleCredentialResponse,
-                    auto_select: false,
-                    cancel_on_tap_outside: true
-                });
-                googleInitialized = true;
-                console.log('Google Sign-In initialized successfully');
-            } catch (error) {
-                console.error('Google Sign-In initialization error:', error);
-            }
+        if (typeof google === 'undefined' || !google.accounts || googleInitialized) return;
+        try {
+            google.accounts.id.initialize({
+                client_id: "603408450988-ev8uo6i21kspfng413hb7ugr9u6mfna1.apps.googleusercontent.com",
+                callback: handleCredentialResponse,
+                auto_select: false,
+                cancel_on_tap_outside: true
+            });
+            google.accounts.id.renderButton(
+                document.getElementById('googleSignInContainer'),
+                { theme: "outline", size: "large", width: "100%", text: "signin_with", locale: "vi" }
+            );
+            googleInitialized = true;
+        } catch (error) {
+            console.error('Google Sign-In initialization error:', error);
         }
     }
 
-    // Handle Google login button click
-    function handleGoogleLogin() {
-        if (googleInitialized && typeof google !== 'undefined') {
-            try {
-                google.accounts.id.prompt((notification) => {
-                    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-                        console.log('Google One Tap not displayed, showing popup');
-                        // Fallback to popup if One Tap doesn't work
-                        google.accounts.id.renderButton(
-                            document.getElementById('googleLoginBtn'),
-                            { theme: "outline", size: "large" }
-                        );
-                    }
-                });
-            } catch (error) {
-                console.error('Google login prompt error:', error);
-                showError('Không thể khởi tạo đăng nhập Google. Vui lòng thử lại.');
-            }
-        } else {
-            console.error('Google Sign-In not initialized');
-            showError('Google Sign-In chưa sẵn sàng. Vui lòng thử lại sau.');
-        }
-    }
-
-    // Handle Google login button click
-    document.getElementById('googleLoginBtn').addEventListener('click', handleGoogleLogin);
-
-    // Handle form submission
+    // Login form
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
-
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
-
         showSpinner();
-
         try {
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
-
             const data = await response.json();
-
             if (response.ok && data.accessToken) {
-                // Save to localStorage
                 localStorage.setItem('accessToken', data.accessToken);
                 localStorage.setItem('refreshToken', data.refreshToken || '');
                 localStorage.setItem('userEmail', data.user?.email || email);
                 localStorage.setItem('userId', data.user?.id || '');
                 localStorage.setItem('userRole', data.user?.role || 'traveler');
 
-                // Check if traveler needs to complete survey
                 const role = data.user?.role || 'traveler';
-                // Check if there's a saved URL to redirect back to
                 const redirectUrl = localStorage.getItem('redirectAfterLogin');
-
-                // Redirect based on role
                 setTimeout(() => {
                     if (redirectUrl) {
                         localStorage.removeItem('redirectAfterLogin');
                         window.location.href = redirectUrl;
-                    } else if (role === 'traveler') {
-                        window.location.href = '/Traveler/Dashboard';
                     } else if (role === 'admin') {
                         window.location.href = '/Admin/Dashboard';
                     } else if (role === 'guide') {
@@ -442,24 +329,19 @@
         }
     });
 
-    // Close modal when clicking outside
+    // Close modal on outside click
     document.getElementById('forgotPasswordModal').addEventListener('click', (e) => {
-        if (e.target.id === 'forgotPasswordModal') {
-            closeForgotPasswordModal();
-        }
+        if (e.target.id === 'forgotPasswordModal') closeForgotPasswordModal();
     });
 
-    // Initialize when page loads
+    // Poll for Google SDK load
     window.addEventListener('load', function() {
-        // Initialize Google Sign-In when available
         const checkGoogle = setInterval(() => {
             if (typeof google !== 'undefined' && google.accounts) {
                 initializeGoogle();
                 clearInterval(checkGoogle);
             }
         }, 100);
-        
-        // Stop checking after 10 seconds
         setTimeout(() => clearInterval(checkGoogle), 10000);
     });
 </script>

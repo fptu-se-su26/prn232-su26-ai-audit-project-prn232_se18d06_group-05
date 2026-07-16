@@ -1,0 +1,160 @@
+@{
+    ViewData["Title"] = "Trip Requests Board";
+}
+
+<div class="bg-surface min-h-screen py-10">
+    <div class="max-w-[1440px] mx-auto px-6">
+        <!-- Header -->
+        <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-on-surface">Trip Requests Board</h1>
+                <p class="text-on-surface-variant mt-2">Find travelers looking for guides and send them a custom offer.</p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
+                    <input type="text" placeholder="Search by destination..." class="pl-10 pr-4 py-2 bg-white border border-outline-variant/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary w-64">
+                </div>
+                <button class="p-2 bg-white border border-outline-variant/50 rounded-lg text-on-surface-variant hover:text-primary transition-colors">
+                    <span class="material-symbols-outlined">filter_list</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Requests List -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Request Card 1 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant/30 hover:border-primary/50 transition-colors">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-orange-100 text-primary rounded-full flex items-center justify-center font-bold text-lg">M</div>
+                            <div>
+                                <h3 class="font-bold text-on-surface">Michael D.</h3>
+                                <p class="text-xs text-on-surface-variant">Posted 2 hours ago</p>
+                            </div>
+                        </div>
+                        <span class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">New</span>
+                    </div>
+                    
+                    <h2 class="text-xl font-bold text-on-surface mb-3">3 Days in Ha Long Bay</h2>
+                    
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
+                            <span class="material-symbols-outlined text-[16px]">location_on</span> Ha Long Bay
+                        </div>
+                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
+                            <span class="material-symbols-outlined text-[16px]">calendar_month</span> Oct 12 - Oct 15
+                        </div>
+                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
+                            <span class="material-symbols-outlined text-[16px]">group</span> 2 People
+                        </div>
+                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
+                            <span class="material-symbols-outlined text-[16px]">payments</span> 1M - 2M VND/day
+                        </div>
+                    </div>
+                    
+                    <div class="bg-surface-variant/30 p-4 rounded-xl border-l-4 border-primary mb-6">
+                        <p class="text-on-surface-variant text-sm">"I love trying local street food, hate crowded tourist spots, and want to learn about the history. I need an English-speaking guide who can arrange private transport."</p>
+                    </div>
+                    
+                    <div class="flex gap-4">
+                        <button class="bg-primary hover:bg-primary/90 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">send</span> Send Offer
+                        </button>
+                        <button class="bg-surface-variant hover:bg-outline-variant/30 text-on-surface font-bold py-2 px-6 rounded-lg transition-colors">
+                            Message
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Request Card 2 -->
+                <div class="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant/30 hover:border-primary/50 transition-colors">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold text-lg">S</div>
+                            <div>
+                                <h3 class="font-bold text-on-surface">Sarah Connor</h3>
+                                <p class="text-xs text-on-surface-variant">Posted 1 day ago</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <h2 class="text-xl font-bold text-on-surface mb-3">Sapa Trekking Adventure</h2>
+                    
+                    <div class="flex flex-wrap gap-3 mb-4">
+                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
+                            <span class="material-symbols-outlined text-[16px]">location_on</span> Sapa
+                        </div>
+                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
+                            <span class="material-symbols-outlined text-[16px]">calendar_month</span> Nov 1 - Nov 3
+                        </div>
+                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
+                            <span class="material-symbols-outlined text-[16px]">group</span> 4 People
+                        </div>
+                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
+                            <span class="material-symbols-outlined text-[16px]">payments</span> 2M - 5M VND/day
+                        </div>
+                    </div>
+                    
+                    <div class="bg-surface-variant/30 p-4 rounded-xl border-l-4 border-primary mb-6">
+                        <p class="text-on-surface-variant text-sm">"Looking for a physically demanding trek through authentic villages. We want a homestay experience, not hotels. Must know the local ethnic culture deeply."</p>
+                    </div>
+                    
+                    <div class="flex gap-4">
+                        <button class="bg-primary hover:bg-primary/90 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px]">send</span> Send Offer
+                        </button>
+                        <button class="bg-surface-variant hover:bg-outline-variant/30 text-on-surface font-bold py-2 px-6 rounded-lg transition-colors">
+                            Message
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats / Info Panel -->
+            <div class="space-y-6">
+                <!-- How to get selected -->
+                <div class="bg-primary-container p-6 rounded-2xl">
+                    <h3 class="font-bold text-on-primary-container text-lg mb-3 flex items-center gap-2">
+                        <span class="material-symbols-outlined">lightbulb</span> Tips to win offers
+                    </h3>
+                    <ul class="space-y-3 text-sm text-on-surface-variant">
+                        <li class="flex items-start gap-2">
+                            <span class="material-symbols-outlined text-primary text-[18px] mt-0.5">check_circle</span>
+                            <span>Read the traveler's notes carefully and personalize your offer.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="material-symbols-outlined text-primary text-[18px] mt-0.5">check_circle</span>
+                            <span>Include a clear, itemized itinerary and transparent pricing.</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="material-symbols-outlined text-primary text-[18px] mt-0.5">check_circle</span>
+                            <span>Respond quickly. Travelers usually pick the first 3 good offers.</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- My Stats -->
+                <div class="bg-white p-6 rounded-2xl border border-outline-variant/30 shadow-sm">
+                    <h3 class="font-bold text-on-surface text-lg mb-4">My Request Stats</h3>
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-on-surface-variant text-sm">Offers Sent (This week)</span>
+                            <span class="font-bold text-on-surface">12</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-on-surface-variant text-sm">Accepted Offers</span>
+                            <span class="font-bold text-green-600">3</span>
+                        </div>
+                        <div class="w-full bg-surface-variant rounded-full h-2">
+                            <div class="bg-green-500 h-2 rounded-full" style="width: 25%"></div>
+                        </div>
+                        <p class="text-xs text-on-surface-variant text-right">25% Success Rate</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

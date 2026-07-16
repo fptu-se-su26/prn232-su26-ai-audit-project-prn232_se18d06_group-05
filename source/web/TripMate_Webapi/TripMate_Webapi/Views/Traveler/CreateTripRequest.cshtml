@@ -1,0 +1,253 @@
+@{
+    ViewData["Title"] = "Post a Trip Request";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="bg-surface min-h-screen py-12">
+    <div class="max-w-3xl mx-auto px-6">
+        <!-- Breadcrumb -->
+        <nav class="flex text-sm text-on-surface-variant mb-8" aria-label="Breadcrumb">
+            <ol class="inline-flex items-center space-x-1 md:space-x-3">
+                <li class="inline-flex items-center">
+                    <a href="/" class="hover:text-primary transition-colors">Home</a>
+                </li>
+                <li>
+                    <div class="flex items-center">
+                        <span class="material-symbols-outlined text-[16px] mx-1">chevron_right</span>
+                        <a href="/Guide/Index" class="hover:text-primary transition-colors">Guides</a>
+                    </div>
+                </li>
+                <li aria-current="page">
+                    <div class="flex items-center">
+                        <span class="material-symbols-outlined text-[16px] mx-1">chevron_right</span>
+                        <span class="text-on-surface font-medium">Post Request</span>
+                    </div>
+                </li>
+            </ol>
+        </nav>
+
+        <div class="bg-white rounded-3xl shadow-xl overflow-hidden border border-outline-variant/30">
+            <div class="bg-gradient-to-r from-primary to-orange-500 p-8 text-white">
+                <h1 class="text-3xl font-extrabold mb-2">Post a Trip Request</h1>
+                <p class="text-white/90">Tell us what you're looking for, and local guides will reach out to you with their best offers and itineraries.</p>
+            </div>
+            
+            <form id="trip-request-form" class="p-8 space-y-6">
+                @Html.AntiForgeryToken()
+                <!-- Location & Dates -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Where do you want to go?</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">location_on</span>
+                            <input type="text" id="trip-destination-input" name="destination" required placeholder="e.g. Ha Long Bay, Vietnam" autocomplete="off" class="w-full pl-10 pr-4 py-3 bg-surface border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all">
+                            <!-- Autocomplete Dropdown -->
+                            <div id="trip-autocomplete-dropdown" class="absolute top-[105%] left-0 w-full bg-white border border-outline-variant/30 rounded-xl shadow-xl hidden z-[100] max-h-60 overflow-y-auto">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">When are you traveling?</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">calendar_month</span>
+                            <input type="text" name="dates" required placeholder="e.g. Oct 12 - Oct 15" class="date-picker cursor-pointer w-full pl-10 pr-4 py-3 bg-surface border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Group Size & Budget -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Group Size</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">group</span>
+                            <select name="groupSize" class="w-full pl-10 pr-4 py-3 bg-surface border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all appearance-none cursor-pointer">
+                                <option value="1">Just me (1 person)</option>
+                                <option value="2">Couple (2 people)</option>
+                                <option value="4">Small Group (3-5 people)</option>
+                                <option value="6">Large Group (6+ people)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold text-on-surface mb-2">Expected Budget (per day)</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">payments</span>
+                            <select name="budget" class="w-full pl-10 pr-4 py-3 bg-surface border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all appearance-none cursor-pointer">
+                                <option value="economy">Economy (< 1M VND)</option>
+                                <option value="standard">Standard (1M - 2M VND)</option>
+                                <option value="premium">Premium (2M - 5M VND)</option>
+                                <option value="luxury">Luxury (> 5M VND)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes / Description -->
+                <div>
+                    <label class="block text-sm font-bold text-on-surface mb-2">What's your travel vibe & preferences?</label>
+                    <textarea name="notes" rows="4" placeholder="e.g. I love trying local street food, hate crowded tourist spots, and want to learn about the history. I need an English-speaking guide." class="w-full p-4 bg-surface border border-outline-variant/50 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all resize-none"></textarea>
+                    <p class="text-xs text-on-surface-variant mt-2">The more details you provide, the better matches you will get.</p>
+                </div>
+
+                <!-- Submit -->
+                <div class="pt-4 border-t border-outline-variant/30 flex justify-end gap-4">
+                    <button type="button" onclick="history.back()" class="px-6 py-3 rounded-xl font-bold text-on-surface-variant hover:bg-surface-variant transition-colors">Cancel</button>
+                    <button type="submit" class="px-8 py-3 rounded-xl font-bold bg-primary text-white hover:bg-primary/90 shadow-lg shadow-primary/30 transition-all hover:-translate-y-1">
+                        Post Request
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form Submission with JWT Auth
+        const form = document.getElementById('trip-request-form');
+        if (form) {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+
+                // Add guideId from query params if exists
+                const urlParams = new URLSearchParams(window.location.search);
+                const guideId = urlParams.get('guideId');
+                
+                const formData = new FormData(form);
+                if (guideId) {
+                    formData.append('guideId', guideId);
+                }
+
+                try {
+                    const submitBtn = form.querySelector('button[type="submit"]');
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="material-symbols-outlined animate-spin mr-2">progress_activity</span> Posting...';
+
+                    const response = await fetch('/Traveler/CreateTripRequest', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: formData
+                    });
+
+                    if (response.redirected || response.ok) {
+                        window.location.href = response.url || '/Traveler/Trips';
+                    } else {
+                        alert('Something went wrong. Please try again.');
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = 'Post Request';
+                    }
+                } catch (error) {
+                    console.error('Submit error:', error);
+                    alert('Error connecting to server.');
+                    form.querySelector('button[type="submit"]').disabled = false;
+                }
+            });
+        }
+
+        // Nominatim Autocomplete Logic
+        const destInput = document.getElementById('trip-destination-input');
+        const dropdown = document.getElementById('trip-autocomplete-dropdown');
+        let timeoutId;
+
+        if (destInput && dropdown) {
+            destInput.addEventListener('input', function() {
+                clearTimeout(timeoutId);
+                const query = this.value.trim();
+                
+                if (query.length < 2) {
+                    dropdown.classList.add('hidden');
+                    return;
+                }
+
+                timeoutId = setTimeout(() => {
+                    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=vn&addressdetails=1&limit=5&accept-language=en`)
+                        .then(res => res.json())
+                        .then(data => {
+                            dropdown.innerHTML = '';
+                            
+                            // Default popular destinations in VN to pad the results
+                            const defaultDests = [
+                                { name: "Hanoi", display_name: "Hanoi, Vietnam" },
+                                { name: "Da Nang", display_name: "Da Nang, Vietnam" },
+                                { name: "Hoi An", display_name: "Hoi An, Quang Nam, Vietnam" },
+                                { name: "Da Lat", display_name: "Da Lat, Lam Dong, Vietnam" },
+                                { name: "Phu Quoc", display_name: "Phu Quoc, Kien Giang, Vietnam" },
+                                { name: "Sapa", display_name: "Sapa, Lao Cai, Vietnam" },
+                                { name: "Nha Trang", display_name: "Nha Trang, Khanh Hoa, Vietnam" },
+                                { name: "Ha Long", display_name: "Ha Long Bay, Quang Ninh, Vietnam" }
+                            ];
+
+                            let results = [];
+                            if (data && data.length > 0) {
+                                results = data.map(item => ({
+                                    name: item.address?.city || item.address?.town || item.address?.state || item.name,
+                                    display_name: item.display_name
+                                }));
+                            }
+                            
+                            // Pad with defaults if less than 5
+                            if (results.length < 5) {
+                                const availableDefaults = defaultDests.filter(d => 
+                                    d.name.toLowerCase().includes(query.toLowerCase()) &&
+                                    !results.some(r => r.name.toLowerCase() === d.name.toLowerCase())
+                                );
+                                
+                                let i = 0;
+                                while (results.length < 5 && i < availableDefaults.length) {
+                                    results.push(availableDefaults[i]);
+                                    i++;
+                                }
+                                
+                                let j = 0;
+                                while (results.length < 5 && j < defaultDests.length) {
+                                    if (!results.some(r => r.name === defaultDests[j].name)) {
+                                        results.push(defaultDests[j]);
+                                    }
+                                    j++;
+                                }
+                            }
+
+                            // Slice exactly 5
+                            results.slice(0, 5).forEach(item => {
+                                const div = document.createElement('div');
+                                div.className = 'px-4 py-3 hover:bg-surface-variant cursor-pointer border-b border-outline-variant/10 last:border-0 text-sm flex items-start gap-2';
+                                div.innerHTML = `
+                                    <span class="material-symbols-outlined text-primary text-sm mt-0.5 shrink-0">location_on</span>
+                                    <div class="flex flex-col">
+                                        <span class="font-bold text-on-surface">${item.name}</span>
+                                        <span class="text-xs text-on-surface-variant truncate w-48">${item.display_name}</span>
+                                    </div>
+                                `;
+                                div.onclick = () => {
+                                    destInput.value = item.name + ', Vietnam';
+                                    dropdown.classList.add('hidden');
+                                };
+                                dropdown.appendChild(div);
+                            });
+                            dropdown.classList.remove('hidden');
+                        })
+                        .catch(err => {
+                            console.error('Nominatim error:', err);
+                            dropdown.classList.add('hidden');
+                        });
+                }, 400);
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!destInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden');
+                }
+            });
+        }
+    });
+</script>

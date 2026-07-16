@@ -3,223 +3,162 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<section class="min-h-screen flex items-center justify-center py-16 px-4 bg-gradient-to-br from-primary/5 via-surface to-primary-container/20">
-    <div class="w-full max-w-6xl">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+<section class="min-h-screen flex items-center justify-center py-12 px-4 bg-gradient-to-br from-primary/5 via-surface to-primary-container/20">
+    <div class="w-full max-w-4xl">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6" id="registerGrid">
             <!-- Main Registration Form -->
             <div class="w-full">
-                <!-- Glass Card -->
-                <div class="bg-surface/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden">
-            <!-- Header -->
-            <div class="bg-gradient-to-r from-primary to-primary/80 p-8 text-center">
-                <div class="flex justify-center mb-4">
-                    <img alt="TripMate Logo" class="h-16 w-16 rounded-full object-cover border-4 border-white/30" src="/images/AVATAR.png"/>
-                </div>
-                <h1 class="text-3xl font-extrabold text-white mb-2">Tạo tài khoản mới</h1>
-                <p class="text-white/90">Bắt đầu hành trình khám phá của bạn</p>
-            </div>
-
-            <!-- Form -->
-            <div class="p-8">
-                <form id="registerForm" class="space-y-6">
-                    <!-- Full Name -->
-                    <div class="relative">
-                        <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">HỌ VÀ TÊN</label>
-                        <div class="relative">
-                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">person</span>
-                            <input 
-                                type="text" 
-                                id="fullName" 
-                                required
-                                class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50"
-                                placeholder="Nguyễn Văn A"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Email -->
-                    <div class="relative">
-                        <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">EMAIL</label>
-                        <div class="relative">
-                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">mail</span>
-                            <input 
-                                type="email" 
-                                id="email" 
-                                required
-                                class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50"
-                                placeholder="your@email.com"
-                            />
-                        </div>
-                    </div>
-
-                    <!-- Phone Number -->
-                    <div class="relative">
-                        <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">SỐ ĐIỆN THOẠI</label>
-                        <div class="relative">
-                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">phone</span>
-                            <input 
-                                type="tel" 
-                                id="phoneNumber" 
-                                required
-                                pattern="[0-9]{10,11}"
-                                class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50"
-                                placeholder="0901234567"
-                            />
-                        </div>
-                        <p class="text-xs text-on-surface-variant mt-1 ml-1">10-11 chữ số</p>
-                    </div>
-
-                    <!-- Password -->
-                    <div class="relative">
-                        <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">MẬT KHẨU</label>
-                        <div class="relative">
-                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">lock</span>
-                            <input 
-                                type="password" 
-                                id="password" 
-                                required
-                                minlength="6"
-                                class="w-full pl-12 pr-12 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50"
-                                placeholder="••••••••"
-                            />
-                            <button type="button" onclick="togglePassword('password')" class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined" id="toggleIconPassword">visibility</span>
-                            </button>
-                        </div>
-                        <p class="text-xs text-on-surface-variant mt-1 ml-1">Tối thiểu 6 ký tự</p>
-                    </div>
-
-                    <!-- Confirm Password -->
-                    <div class="relative">
-                        <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">XÁC NHẬN MẬT KHẨU</label>
-                        <div class="relative">
-                            <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">lock_reset</span>
-                            <input 
-                                type="password" 
-                                id="confirmPassword" 
-                                required
-                                minlength="6"
-                                class="w-full pl-12 pr-12 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50"
-                                placeholder="••••••••"
-                            />
-                            <button type="button" onclick="togglePassword('confirmPassword')" class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
-                                <span class="material-symbols-outlined" id="toggleIconConfirmPassword">visibility</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Role Selection -->
-                    <div class="relative">
-                        <label class="block text-sm font-bold text-on-surface-variant mb-3 tracking-wide">VAI TRÒ</label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <label class="relative cursor-pointer">
-                                <input type="radio" name="role" value="traveler" checked class="peer sr-only" onchange="toggleGuideForm()"/>
-                                <div class="p-4 bg-surface-variant border-2 border-outline-variant rounded-lg peer-checked:border-primary peer-checked:bg-primary-container transition-all">
-                                    <div class="flex flex-col items-center gap-2">
-                                        <span class="material-symbols-outlined text-2xl text-on-surface-variant peer-checked:text-primary">luggage</span>
-                                        <span class="text-sm font-bold text-on-surface">Du khách</span>
-                                    </div>
-                                </div>
-                            </label>
-                            <label class="relative cursor-pointer">
-                                <input type="radio" name="role" value="guide" class="peer sr-only" onchange="toggleGuideForm()"/>
-                                <div class="p-4 bg-surface-variant border-2 border-outline-variant rounded-lg peer-checked:border-primary peer-checked:bg-primary-container transition-all">
-                                    <div class="flex flex-col items-center gap-2">
-                                        <span class="material-symbols-outlined text-2xl text-on-surface-variant peer-checked:text-primary">badge</span>
-                                        <span class="text-sm font-bold text-on-surface">Hướng dẫn viên</span>
-                                    </div>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Terms -->
-                    <div class="flex items-start gap-2">
-                        <input type="checkbox" id="terms" required class="mt-1 w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary/20"/>
-                        <label for="terms" class="text-sm text-on-surface-variant">
-                            Tôi đồng ý với <a href="#" class="text-primary font-bold hover:underline">Điều khoản dịch vụ</a> và <a href="#" class="text-primary font-bold hover:underline">Chính sách bảo mật</a>
-                        </label>
-                    </div>
-
-                    <!-- Error Message -->
-                    <div id="errorMessage" class="hidden bg-red-50 border-l-4 border-red-500 p-4 rounded-lg">
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-red-500">error</span>
-                            <p class="text-sm text-red-700 font-medium" id="errorText"></p>
-                        </div>
-                    </div>
-
-                    <!-- Submit Button -->
-                    <button 
-                        type="submit" 
-                        class="w-full bg-primary hover:bg-primary/90 text-on-primary font-bold py-3 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group"
-                    >
-                        <span>Đăng ký</span>
-                        <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform">arrow_forward</span>
-                    </button>
-                </form>
-
-                <!-- Divider -->
-                <div class="relative my-8">
-                    <div class="absolute inset-0 flex items-center">
-                        <div class="w-full border-t border-outline-variant"></div>
-                    </div>
-                    <div class="relative flex justify-center text-sm">
-                        <span class="px-4 bg-surface text-on-surface-variant font-medium">HOẶC</span>
-                    </div>
-                </div>
-
-                <!-- Social Register -->
-                <div class="space-y-3">
-                    <button class="w-full bg-surface-variant hover:bg-outline-variant/30 border-2 border-outline-variant text-on-surface font-medium py-3 rounded-lg transition-all flex items-center justify-center gap-3">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24">
-                            <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                            <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                            <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                            <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                        </svg>
-                        <span>Đăng ký với Google</span>
-                    </button>
-                    <button class="w-full bg-surface-variant hover:bg-outline-variant/30 border-2 border-outline-variant text-on-surface font-medium py-3 rounded-lg transition-all flex items-center justify-center gap-3">
-                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09l.01-.01zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
-                        </svg>
-                        <span>Đăng ký với Apple</span>
-                    </button>
-                </div>
-
-                <!-- Login Link -->
-                <div class="mt-8 text-center">
-                    <p class="text-on-surface-variant">
-                        Đã có tài khoản? 
-                        <a href="/Auth/Login" class="text-primary font-bold hover:underline">Đăng nhập ngay</a>
-                    </p>
-                </div>
-            </div>
-
-            <!-- Guide Additional Information Form -->
-            <div id="guideForm" class="w-full hidden">
                 <div class="bg-surface/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden">
                     <!-- Header -->
-                    <div class="bg-gradient-to-r from-secondary to-secondary/80 p-6 text-center">
+                    <div class="bg-gradient-to-r from-primary to-primary/80 p-6 text-center">
                         <div class="flex justify-center mb-3">
-                            <span class="material-symbols-outlined text-4xl text-white">verified</span>
+                            <img alt="TripMate Logo" class="h-14 w-14 rounded-full object-cover border-4 border-white/30" src="/images/AVATAR.png"/>
                         </div>
-                        <h2 class="text-2xl font-extrabold text-white mb-1">Thông tin hướng dẫn viên</h2>
-                        <p class="text-white/90 text-sm">Cung cấp thêm thông tin để xác minh</p>
+                        <h1 class="text-2xl font-extrabold text-white mb-1">Tạo tài khoản mới</h1>
+                        <p class="text-white/90 text-sm">Bắt đầu hành trình khám phá của bạn</p>
                     </div>
 
                     <!-- Form -->
                     <div class="p-6">
-                        <!-- Experience -->
-                        <div class="relative mb-6">
-                            <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">KINH NGHIỆM (NĂM)</label>
+                        <form id="registerForm" class="space-y-4">
+                            <!-- Full Name -->
                             <div class="relative">
-                                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">work_history</span>
-                                <select 
-                                    id="experience" 
-                                    class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
-                                >
+                                <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">HỌ VÀ TÊN</label>
+                                <div class="relative">
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">person</span>
+                                    <input type="text" id="fullName" required
+                                        class="w-full pl-10 pr-4 py-2.5 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface text-sm placeholder:text-on-surface-variant/50"
+                                        placeholder="Nguyễn Văn A" />
+                                </div>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="relative">
+                                <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">EMAIL</label>
+                                <div class="relative">
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">email</span>
+                                    <input type="email" id="email" required
+                                        class="w-full pl-10 pr-4 py-2.5 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface text-sm placeholder:text-on-surface-variant/50"
+                                        placeholder="your@email.com" />
+                                </div>
+                            </div>
+
+                            <!-- Phone Number -->
+                            <div class="relative">
+                                <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">SỐ ĐIỆN THOẠI</label>
+                                <div class="relative">
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">phone</span>
+                                    <input type="tel" id="phoneNumber" required pattern="[0-9]{10,11}"
+                                        class="w-full pl-10 pr-4 py-2.5 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface text-sm placeholder:text-on-surface-variant/50"
+                                        placeholder="0901234567" />
+                                </div>
+                                <p class="text-[11px] text-on-surface-variant mt-1 ml-1">10-11 chữ số</p>
+                            </div>
+
+                            <!-- Password -->
+                            <div class="relative">
+                                <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">MẬT KHẨU</label>
+                                <div class="relative">
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock</span>
+                                    <input type="password" id="password" required minlength="6"
+                                        class="w-full pl-10 pr-10 py-2.5 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface text-sm placeholder:text-on-surface-variant/50"
+                                        placeholder="••••••••" />
+                                </div>
+                                <p class="text-[11px] text-on-surface-variant mt-1 ml-1">Tối thiểu 6 ký tự</p>
+                            </div>
+
+                            <!-- Confirm Password -->
+                            <div class="relative">
+                                <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">XÁC NHẬN MẬT KHẨU</label>
+                                <div class="relative">
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">lock_reset</span>
+                                    <input type="password" id="confirmPassword" required minlength="6"
+                                        class="w-full pl-10 pr-10 py-2.5 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface text-sm placeholder:text-on-surface-variant/50"
+                                        placeholder="••••••••" />
+                                </div>
+                            </div>
+
+                            <!-- Role Selection -->
+                            <div class="relative">
+                                <label class="block text-xs font-bold text-on-surface-variant mb-2 tracking-wide">VAI TRÒ</label>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <label class="relative cursor-pointer">
+                                        <input type="radio" name="role" value="traveler" checked class="peer sr-only" onchange="toggleGuideForm()"/>
+                                        <div class="p-3 bg-surface-variant border-2 border-outline-variant rounded-lg peer-checked:border-primary peer-checked:bg-primary-container transition-all">
+                                            <div class="flex flex-col items-center gap-1">
+                                                <span class="material-symbols-outlined text-xl text-on-surface-variant peer-checked:text-primary">luggage</span>
+                                                <span class="text-xs font-bold text-on-surface">Du khách</span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                    <label class="relative cursor-pointer">
+                                        <input type="radio" name="role" value="guide" class="peer sr-only" onchange="toggleGuideForm()"/>
+                                        <div class="p-3 bg-surface-variant border-2 border-outline-variant rounded-lg peer-checked:border-primary peer-checked:bg-primary-container transition-all">
+                                            <div class="flex flex-col items-center gap-1">
+                                                <span class="material-symbols-outlined text-xl text-on-surface-variant peer-checked:text-primary">badge</span>
+                                                <span class="text-xs font-bold text-on-surface">Hướng dẫn viên</span>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Terms -->
+                            <div class="flex items-start gap-2">
+                                <input type="checkbox" id="terms" required class="mt-0.5 w-3.5 h-3.5 rounded border-outline-variant text-primary focus:ring-primary/20"/>
+                                <label for="terms" class="text-xs text-on-surface-variant">
+                                    Tôi đồng ý với <a href="/Home/TermsOfService" target="_blank" class="text-primary font-bold hover:underline">Điều khoản dịch vụ</a> và <a href="/Home/PrivacyPolicy" target="_blank" class="text-primary font-bold hover:underline">Chính sách bảo mật</a>
+                                </label>
+                            </div>
+
+                            <!-- Error Message -->
+                            <div id="errorMessage" class="hidden bg-red-50 border-l-4 border-red-500 p-3 rounded-lg">
+                                <div class="flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-red-500 text-[18px]">error</span>
+                                    <p class="text-xs text-red-700 font-medium" id="errorText"></p>
+                                </div>
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button type="submit"
+                                class="w-full bg-primary hover:bg-primary/90 text-on-primary font-bold py-2.5 rounded-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group text-sm">
+                                <span>Đăng ký</span>
+                                <span class="material-symbols-outlined group-hover:translate-x-1 transition-transform text-[18px]">arrow_forward</span>
+                            </button>
+                        </form>
+
+                        <!-- Login Link -->
+                        <div class="mt-5 text-center">
+                            <p class="text-on-surface-variant text-sm">
+                                Đã có tài khoản?
+                                <a href="/Auth/Login" class="text-primary font-bold hover:underline">Đăng nhập ngay</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guide Additional Information Form — grid sibling, shown only when guide role selected -->
+            <div id="guideForm" class="w-full hidden">
+                <div class="bg-surface/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-outline-variant/30 overflow-hidden">
+                    <!-- Header -->
+                    <div class="bg-gradient-to-r from-secondary to-secondary/80 p-5 text-center">
+                        <div class="flex justify-center mb-2">
+                            <span class="material-symbols-outlined text-3xl text-white">verified</span>
+                        </div>
+                        <h2 class="text-xl font-extrabold text-white mb-1">Thông tin hướng dẫn viên</h2>
+                        <p class="text-white/90 text-xs">Cung cấp thêm thông tin để xác minh</p>
+                    </div>
+
+                    <!-- Form -->
+                    <div class="p-5 space-y-4">
+                        <!-- Experience -->
+                        <div class="relative">
+                            <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">KINH NGHIỆM (NĂM)</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">work_history</span>
+                                <select id="experience"
+                                    class="w-full pl-10 pr-4 py-2.5 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface text-sm">
                                     <option value="">Chọn kinh nghiệm</option>
                                     <option value="0-1">Dưới 1 năm</option>
                                     <option value="1-3">1-3 năm</option>
@@ -231,14 +170,12 @@
                         </div>
 
                         <!-- Specialization -->
-                        <div class="relative mb-6">
-                            <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">CHUYÊN MÔN</label>
+                        <div class="relative">
+                            <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">CHUYÊN MÔN</label>
                             <div class="relative">
-                                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">category</span>
-                                <select 
-                                    id="specialization" 
-                                    class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface"
-                                >
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">category</span>
+                                <select id="specialization"
+                                    class="w-full pl-10 pr-4 py-2.5 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface text-sm">
                                     <option value="">Chọn chuyên môn</option>
                                     <option value="cultural">Du lịch văn hóa</option>
                                     <option value="adventure">Du lịch mạo hiểm</option>
@@ -252,67 +189,48 @@
                         </div>
 
                         <!-- Languages -->
-                        <div class="relative mb-6">
-                            <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">NGÔN NGỮ</label>
+                        <div class="relative">
+                            <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">NGÔN NGỮ</label>
                             <div class="relative">
-                                <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">translate</span>
-                                <input 
-                                    type="text" 
-                                    id="languages" 
-                                    class="w-full pl-12 pr-4 py-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50"
-                                    placeholder="Tiếng Việt, English, 中文"
-                                />
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">translate</span>
+                                <input type="text" id="languages"
+                                    class="w-full pl-10 pr-4 py-2.5 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface text-sm placeholder:text-on-surface-variant/50"
+                                    placeholder="Tiếng Việt, English, 中文" />
                             </div>
-                            <p class="text-xs text-on-surface-variant mt-1 ml-1">Các ngôn ngữ bạn có thể giao tiếp</p>
+                            <p class="text-[11px] text-on-surface-variant mt-1 ml-1">Các ngôn ngữ bạn có thể giao tiếp</p>
                         </div>
 
                         <!-- Certificate Upload -->
-                        <div class="relative mb-6">
-                            <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">CHỨNG CHỈ HƯỚNG DẪN VIÊN</label>
+                        <div class="relative">
+                            <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">CHỨNG CHỈ HƯỚNG DẪN VIÊN</label>
                             <div class="relative">
-                                <input 
-                                    type="file" 
-                                    id="certificateFile" 
-                                    accept=".pdf"
-                                    class="hidden"
-                                    onchange="handleFileUpload(this)"
-                                />
-                                <div 
-                                    id="uploadArea"
-                                    class="w-full p-6 bg-surface-variant border-2 border-dashed border-outline-variant rounded-lg hover:border-primary transition-all cursor-pointer text-center"
-                                    onclick="document.getElementById('certificateFile').click()"
-                                >
-                                    <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">cloud_upload</span>
-                                    <p class="text-on-surface font-medium mb-1">Nhấp để tải lên chứng chỉ</p>
-                                    <p class="text-xs text-on-surface-variant">PDF, tối đa 10MB</p>
+                                <input type="file" id="certificateFile" accept=".pdf" class="hidden" onchange="handleFileUpload(this)" />
+                                <div id="uploadArea"
+                                    class="w-full p-4 bg-surface-variant border-2 border-dashed border-outline-variant rounded-lg hover:border-primary transition-all cursor-pointer text-center"
+                                    onclick="document.getElementById('certificateFile').click()">
+                                    <span class="material-symbols-outlined text-3xl text-on-surface-variant mb-1 block">cloud_upload</span>
+                                    <p class="text-on-surface font-medium text-sm mb-0.5">Nhấp để tải lên chứng chỉ</p>
+                                    <p class="text-[11px] text-on-surface-variant">PDF, tối đa 10MB</p>
                                 </div>
                             </div>
                             
                             <!-- File Preview -->
-                            <div id="filePreview" class="hidden mt-4 p-4 bg-primary-container rounded-lg">
+                            <div id="filePreview" class="hidden mt-3 p-3 bg-primary-container rounded-lg">
                                 <div class="flex items-center gap-3">
-                                    <div class="flex-shrink-0">
-                                        <span class="material-symbols-outlined text-2xl text-primary">picture_as_pdf</span>
-                                    </div>
+                                    <span class="material-symbols-outlined text-xl text-primary flex-shrink-0">picture_as_pdf</span>
                                     <div class="flex-1 min-w-0">
-                                        <p id="fileName" class="text-sm font-medium text-on-primary-container truncate"></p>
-                                        <p id="fileSize" class="text-xs text-on-primary-container/70"></p>
+                                        <p id="fileName" class="text-xs font-medium text-on-primary-container truncate"></p>
+                                        <p id="fileSize" class="text-[11px] text-on-primary-container/70"></p>
                                     </div>
-                                    <button 
-                                        type="button" 
-                                        onclick="removeFile()" 
-                                        class="flex-shrink-0 p-1 hover:bg-primary/20 rounded-full transition-colors"
-                                    >
-                                        <span class="material-symbols-outlined text-primary">close</span>
+                                    <button type="button" onclick="removeFile()" class="flex-shrink-0 p-1 hover:bg-primary/20 rounded-full transition-colors">
+                                        <span class="material-symbols-outlined text-primary text-[18px]">close</span>
                                     </button>
                                 </div>
-                                
-                                <!-- PDF Thumbnail -->
-                                <div id="pdfThumbnail" class="mt-3 p-3 bg-surface rounded-lg border border-outline-variant/30">
-                                    <div class="flex items-center justify-center h-32 bg-surface-variant rounded border-2 border-dashed border-outline-variant">
+                                <div id="pdfThumbnail" class="mt-2 p-2 bg-surface rounded-lg border border-outline-variant/30">
+                                    <div class="flex items-center justify-center h-24 bg-surface-variant rounded border-2 border-dashed border-outline-variant">
                                         <div class="text-center">
-                                            <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2 block">description</span>
-                                            <p class="text-sm text-on-surface-variant">PDF Preview</p>
+                                            <span class="material-symbols-outlined text-3xl text-on-surface-variant mb-1 block">description</span>
+                                            <p class="text-xs text-on-surface-variant">PDF Preview</p>
                                         </div>
                                     </div>
                                 </div>
@@ -320,28 +238,22 @@
                         </div>
 
                         <!-- Bio -->
-                        <div class="relative mb-6">
-                            <label class="block text-sm font-bold text-on-surface-variant mb-2 tracking-wide">GIỚI THIỆU BẢN THÂN</label>
-                            <div class="relative">
-                                <textarea 
-                                    id="bio" 
-                                    rows="4"
-                                    class="w-full p-4 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface placeholder:text-on-surface-variant/50 resize-none"
-                                    placeholder="Chia sẻ về kinh nghiệm và đam mê của bạn trong lĩnh vực du lịch..."
-                                ></textarea>
-                            </div>
-                            <p class="text-xs text-on-surface-variant mt-1 ml-1">Tối đa 500 ký tự</p>
+                        <div class="relative">
+                            <label class="block text-xs font-bold text-on-surface-variant mb-1.5 tracking-wide">GIỚI THIỆU BẢN THÂN</label>
+                            <textarea id="bio" rows="3"
+                                class="w-full p-3 bg-surface-variant border-2 border-outline-variant rounded-lg focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all text-on-surface text-sm placeholder:text-on-surface-variant/50 resize-none"
+                                placeholder="Chia sẻ về kinh nghiệm và đam mê của bạn..."></textarea>
+                            <p class="text-[11px] text-on-surface-variant mt-1 ml-1">Tối đa 500 ký tự</p>
                         </div>
 
                         <!-- Verification Note -->
-                        <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-lg">
+                        <div class="bg-blue-50 border-l-4 border-blue-500 p-3 rounded-lg">
                             <div class="flex items-start gap-2">
-                                <span class="material-symbols-outlined text-blue-500 mt-0.5">info</span>
+                                <span class="material-symbols-outlined text-blue-500 mt-0.5 text-[18px]">info</span>
                                 <div>
-                                    <p class="text-sm text-blue-700 font-medium mb-1">Xác minh tài khoản</p>
-                                    <p class="text-xs text-blue-600">
-                                        Thông tin của bạn sẽ được xem xét và xác minh trong vòng 24-48 giờ. 
-                                        Bạn sẽ nhận được email thông báo kết quả.
+                                    <p class="text-xs text-blue-700 font-medium mb-0.5">Xác minh tài khoản</p>
+                                    <p class="text-[11px] text-blue-600">
+                                        Thông tin sẽ được xem xét trong 24-48 giờ. Bạn sẽ nhận email thông báo kết quả.
                                     </p>
                                 </div>
                             </div>
@@ -381,7 +293,7 @@
         <p style="color:#FF6B35; font-size:16px; font-weight:700; margin-bottom:16px;">Tài khoản đang chờ phê duyệt</p>
         <p style="color:#555; font-size:14px; line-height:1.6; margin-bottom:28px;">
             Hồ sơ Hướng dẫn viên của bạn đã được gửi đến Admin TripMate.<br/>
-            Chúng tôi sẽ xem xét và gửi kết quả qua email của bạn trong vòng <strong>24–48 giờ</strong>.
+            Chúng tôi sẽ xem xét và gửi kết quả qua email trong vòng <strong>24–48 giờ</strong>.
         </p>
         <div style="background:#fff8f5; border:1px solid #ffe0d0; border-radius:10px; padding:16px; margin-bottom:24px;">
             <p style="color:#FF6B35; font-size:13px; font-weight:600; margin:0;">📧 Kiểm tra email của bạn để nhận thông báo kết quả từ TripMate!</p>
@@ -391,78 +303,53 @@
 </div>
 
 <script>
-    // Toggle Guide Form
+    // ponytail: toggle guide form as grid sibling — fixed layout bug
     function toggleGuideForm() {
         const guideForm = document.getElementById('guideForm');
+        const grid = document.getElementById('registerGrid');
         const selectedRole = document.querySelector('input[name="role"]:checked').value;
         
         if (selectedRole === 'guide') {
             guideForm.classList.remove('hidden');
             guideForm.classList.add('animate-fade-in');
+            // Ensure grid shows 2 columns on lg when guide form visible
+            grid.classList.remove('lg:grid-cols-1');
+            grid.classList.add('lg:grid-cols-2');
         } else {
             guideForm.classList.add('hidden');
             guideForm.classList.remove('animate-fade-in');
+            // Single column when only traveler form
+            grid.classList.remove('lg:grid-cols-2');
+            grid.classList.add('lg:grid-cols-1');
         }
     }
 
-    // Handle File Upload
+    // ponytail: init — traveler is default, single column
+    document.getElementById('registerGrid').classList.remove('lg:grid-cols-2');
+    document.getElementById('registerGrid').classList.add('lg:grid-cols-1');
+
     function handleFileUpload(input) {
         const file = input.files[0];
         if (!file) return;
-
-        // Validate file type
-        if (file.type !== 'application/pdf') {
-            alert('Vui lòng chọn file PDF!');
-            input.value = '';
-            return;
-        }
-
-        // Validate file size (10MB)
-        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-        if (file.size > maxSize) {
-            alert('File quá lớn! Vui lòng chọn file dưới 10MB.');
-            input.value = '';
-            return;
-        }
-
-        // Show file preview
+        if (file.type !== 'application/pdf') { alert('Vui lòng chọn file PDF!'); input.value = ''; return; }
+        if (file.size > 10 * 1024 * 1024) { alert('File quá lớn! Vui lòng chọn file dưới 10MB.'); input.value = ''; return; }
         showFilePreview(file);
     }
 
-    // Show File Preview
     function showFilePreview(file) {
-        const uploadArea = document.getElementById('uploadArea');
-        const filePreview = document.getElementById('filePreview');
-        const fileName = document.getElementById('fileName');
-        const fileSize = document.getElementById('fileSize');
-
-        // Hide upload area and show preview
-        uploadArea.classList.add('hidden');
-        filePreview.classList.remove('hidden');
-
-        // Set file info
-        fileName.textContent = file.name;
-        fileSize.textContent = formatFileSize(file.size);
-
-        // Generate PDF thumbnail (simplified)
+        document.getElementById('uploadArea').classList.add('hidden');
+        document.getElementById('filePreview').classList.remove('hidden');
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = formatFileSize(file.size);
         generatePDFThumbnail(file);
     }
 
-    // Remove File
     function removeFile() {
-        const uploadArea = document.getElementById('uploadArea');
-        const filePreview = document.getElementById('filePreview');
-        const certificateFile = document.getElementById('certificateFile');
-
-        // Reset file input
-        certificateFile.value = '';
-
-        // Show upload area and hide preview
-        uploadArea.classList.remove('hidden');
-        filePreview.classList.add('hidden');
+        document.getElementById('certificateFile').value = '';
+        document.getElementById('uploadArea').classList.remove('hidden');
+        document.getElementById('filePreview').classList.add('hidden');
     }
 
-    // Format File Size
     function formatFileSize(bytes) {
         if (bytes === 0) return '0 Bytes';
         const k = 1024;
@@ -471,60 +358,36 @@
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    // Generate PDF Thumbnail (simplified version)
     function generatePDFThumbnail(file) {
-        const thumbnail = document.getElementById('pdfThumbnail');
-        
-        // For now, just show a PDF icon with file info
-        // In a real implementation, you would use PDF.js to render the first page
-        thumbnail.innerHTML = `
-            <div class="flex items-center justify-center h-32 bg-surface-variant rounded border-2 border-dashed border-outline-variant">
+        document.getElementById('pdfThumbnail').innerHTML = `
+            <div class="flex items-center justify-center h-24 bg-surface-variant rounded border-2 border-dashed border-outline-variant">
                 <div class="text-center">
-                    <span class="material-symbols-outlined text-4xl text-red-500 mb-2 block">picture_as_pdf</span>
-                    <p class="text-sm font-medium text-on-surface">${file.name}</p>
-                    <p class="text-xs text-on-surface-variant">${formatFileSize(file.size)}</p>
+                    <span class="material-symbols-outlined text-3xl text-red-500 mb-1 block">picture_as_pdf</span>
+                    <p class="text-xs font-medium text-on-surface">${file.name}</p>
+                    <p class="text-[11px] text-on-surface-variant">${formatFileSize(file.size)}</p>
                 </div>
             </div>
         `;
     }
 
-    // Toggle password visibility
     function togglePassword(fieldId) {
-        const passwordInput = document.getElementById(fieldId);
-        const toggleIcon = document.getElementById('toggleIcon' + fieldId.charAt(0).toUpperCase() + fieldId.slice(1));
-        
-        if (passwordInput.type === 'password') {
-            passwordInput.type = 'text';
-            toggleIcon.textContent = 'visibility_off';
-        } else {
-            passwordInput.type = 'password';
-            toggleIcon.textContent = 'visibility';
-        }
+        const p = document.getElementById(fieldId);
+        const icon = document.getElementById('toggleIcon' + fieldId.charAt(0).toUpperCase() + fieldId.slice(1));
+        const isHidden = p.type === 'password';
+        p.type = isHidden ? 'text' : 'password';
+        icon.textContent = isHidden ? 'visibility_off' : 'visibility';
     }
 
-    // Show/hide spinner
-    function showSpinner() {
-        document.getElementById('loadingSpinner').style.display = 'flex';
-    }
+    function showSpinner() { document.getElementById('loadingSpinner').style.display = 'flex'; }
+    function hideSpinner() { document.getElementById('loadingSpinner').style.display = 'none'; }
 
-    function hideSpinner() {
-        document.getElementById('loadingSpinner').style.display = 'none';
-    }
-
-    // Show error message
     function showError(message) {
         const errorDiv = document.getElementById('errorMessage');
-        const errorText = document.getElementById('errorText');
-        errorText.textContent = message;
+        document.getElementById('errorText').textContent = message;
         errorDiv.classList.remove('hidden');
-        
-        // Auto hide after 5 seconds
-        setTimeout(() => {
-            errorDiv.classList.add('hidden');
-        }, 5000);
+        setTimeout(() => errorDiv.classList.add('hidden'), 5000);
     }
 
-    // Handle form submission
     document.getElementById('registerForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
@@ -536,50 +399,18 @@
         const role = document.querySelector('input[name="role"]:checked').value;
         const terms = document.getElementById('terms').checked;
 
-        // Validation
-        if (password !== confirmPassword) {
-            showError('Mật khẩu xác nhận không khớp!');
-            return;
-        }
+        if (password !== confirmPassword) { showError('Mật khẩu xác nhận không khớp!'); return; }
+        if (!terms) { showError('Vui lòng đồng ý với điều khoản dịch vụ!'); return; }
+        if (!/^[0-9]{10,11}$/.test(phoneNumber)) { showError('Số điện thoại không hợp lệ! Vui lòng nhập 10-11 chữ số.'); return; }
 
-        if (!terms) {
-            showError('Vui lòng đồng ý với điều khoản dịch vụ!');
-            return;
-        }
-
-        // Phone number validation
-        const phoneRegex = /^[0-9]{10,11}$/;
-        if (!phoneRegex.test(phoneNumber)) {
-            showError('Số điện thoại không hợp lệ! Vui lòng nhập 10-11 chữ số.');
-            return;
-        }
-
-        // Guide-specific validation
         if (role === 'guide') {
-            const experience = document.getElementById('experience').value;
-            const specialization = document.getElementById('specialization').value;
-            const certificateFile = document.getElementById('certificateFile').files[0];
-
-            if (!experience) {
-                showError('Vui lòng chọn kinh nghiệm làm việc!');
-                return;
-            }
-
-            if (!specialization) {
-                showError('Vui lòng chọn chuyên môn!');
-                return;
-            }
-
-            if (!certificateFile) {
-                showError('Vui lòng tải lên chứng chỉ hướng dẫn viên!');
-                return;
-            }
+            if (!document.getElementById('experience').value) { showError('Vui lòng chọn kinh nghiệm làm việc!'); return; }
+            if (!document.getElementById('specialization').value) { showError('Vui lòng chọn chuyên môn!'); return; }
+            if (!document.getElementById('certificateFile').files[0]) { showError('Vui lòng tải lên chứng chỉ hướng dẫn viên!'); return; }
         }
 
         showSpinner();
-
         try {
-            // Prepare form data
             const formData = new FormData();
             formData.append('email', email);
             formData.append('password', password);
@@ -587,7 +418,6 @@
             formData.append('phoneNumber', phoneNumber);
             formData.append('role', role);
 
-            // Add guide-specific data
             if (role === 'guide') {
                 formData.append('experience', document.getElementById('experience').value);
                 formData.append('specialization', document.getElementById('specialization').value);
@@ -596,20 +426,14 @@
                 formData.append('certificate', document.getElementById('certificateFile').files[0]);
             }
 
-            const response = await fetch('/api/auth/register', {
-                method: 'POST',
-                body: formData
-            });
-
+            const response = await fetch('/api/auth/register', { method: 'POST', body: formData });
             const data = await response.json();
 
             if (response.ok) {
                 hideSpinner();
                 if (role === 'guide') {
-                    // Guide: show pending approval screen, do NOT auto-login
                     document.getElementById('guidePendingScreen').style.display = 'flex';
                 } else if (data.accessToken) {
-                    // Traveler: auto-login and go to survey
                     localStorage.setItem('accessToken', data.accessToken);
                     localStorage.setItem('refreshToken', data.refreshToken || '');
                     localStorage.setItem('userEmail', data.user?.email || email);
@@ -638,31 +462,12 @@
     }
 
     @@keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateX(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
     }
 
-    /* Custom scrollbar for textarea */
-    textarea::-webkit-scrollbar {
-        width: 6px;
-    }
-
-    textarea::-webkit-scrollbar-track {
-        background: transparent;
-    }
-
-    textarea::-webkit-scrollbar-thumb {
-        background: #d3c4b9;
-        border-radius: 3px;
-    }
-
-    textarea::-webkit-scrollbar-thumb:hover {
-        background: #81756c;
-    }
+    textarea::-webkit-scrollbar { width: 6px; }
+    textarea::-webkit-scrollbar-track { background: transparent; }
+    textarea::-webkit-scrollbar-thumb { background: #d3c4b9; border-radius: 3px; }
+    textarea::-webkit-scrollbar-thumb:hover { background: #81756c; }
 </style>

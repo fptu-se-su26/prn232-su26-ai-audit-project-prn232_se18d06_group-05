@@ -6,8 +6,15 @@
     <title>@ViewData["Title"] - TripMate</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <!-- SweetAlert2 -->
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.all.min.js"></script>
+
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -34,12 +41,7 @@
     </script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
-        .hero-gradient {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.5) 100%);
-        }
+        /* End of custom layout styles */
         .tonal-elevation {
             box-shadow: 0 12px 30px -10px rgba(255, 122, 0, 0.12), 0 4px 10px -5px rgba(0, 0, 0, 0.04);
         }
@@ -47,9 +49,22 @@
             background: rgba(255, 255, 255, 0.9);
             backdrop-filter: blur(20px);
         }
+        /* Smooth Page Transition */
+        .page-enter {
+            animation: pageFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+        }
+        @@keyframes pageFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        /* Global scrollbar styling for smoothness */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f0ebe8; }
+        ::-webkit-scrollbar-thumb { background: #d3c4b9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #ff7a00; }
     </style>
 </head>
-<body class="bg-background text-on-background">
+<body class="bg-background text-on-background page-enter" data-requires-auth="@(ViewBag.RequiresAuth == true ? "true" : "false")">
     <!-- TopNavBar -->
     <header class="sticky top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm border-b border-outline-variant/30">
         <div class="flex justify-between items-center h-20 px-12 max-w-[1440px] mx-auto">
@@ -59,20 +74,35 @@
                     <span class="text-2xl font-extrabold tracking-tight text-on-surface">TRIPMATE</span>
                 </a>
             </div>
-            <nav class="hidden md:flex items-center gap-8 text-base font-medium">
-                <a class="text-primary border-b-2 border-primary pb-1 font-bold" href="/">Home</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="/Guide">Top Guides</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="/Stories">Stories</a>
+            <nav id="mainNav" class="hidden md:flex items-center gap-6 text-sm font-bold flex-1 ml-8">
+                <!-- Search Bar in Header -->
+                <form action="/Home/Explore" method="get" class="relative group hidden lg:flex bg-white rounded-full border border-outline-variant/30 items-center transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary shadow-sm hover:shadow-md">
+                    <div class="flex items-center px-4 py-2 relative">
+                        <span class="material-symbols-outlined text-on-surface-variant text-lg mr-2">search</span>
+                        <input type="text" id="destination-input" name="search" autocomplete="off" placeholder="Guides, tours, destinations..." class="bg-transparent text-on-surface text-sm w-52 focus:outline-none border-none p-0 placeholder-on-surface-variant/70">
+                        <!-- Autocomplete Dropdown -->
+                        <div id="autocomplete-dropdown" class="absolute top-[120%] left-0 w-80 bg-white border border-outline-variant/30 rounded-xl shadow-xl hidden z-[100] max-h-72 overflow-y-auto">
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-primary hover:bg-primary/90 text-white px-6 py-2 h-full font-bold transition-all shadow-md rounded-r-full">Search</button>
+                </form>
+
+                <a class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-orange-500 hover:opacity-80 transition-opacity flex items-center gap-1 whitespace-nowrap" href="/Survey/Index">
+                    <span class="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>
+                    AI Matchmaker
+                </a>
             </nav>
-            <div class="flex items-center gap-4">
-                <button class="p-2 hover:bg-primary-container transition-all rounded-full">
-                    <span class="material-symbols-outlined text-on-surface-variant">notifications</span>
-                </button>
-                <button class="p-2 hover:bg-primary-container transition-all rounded-full">
-                    <span class="material-symbols-outlined text-on-surface-variant">favorite</span>
-                </button>
-                <div id="userSection" class="ml-4">
-                    <!-- Will be populated by JavaScript -->
+            <div id="headerTools" class="flex items-center gap-6">
+                <a class="text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap font-bold" href="/Home/BecomeAGuide">Become a guide</a>
+                
+                <div class="flex items-center gap-4">
+                    <button class="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center">
+                        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+                    </button>
+                    <div id="savedContainer" class="flex items-center justify-center"></div>
+                    <div id="userSection" class="ml-2">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -83,8 +113,12 @@
         @RenderBody()
     </main>
 
-    <!-- Footer -->
-    <footer class="w-full mt-16 bg-surface-variant border-t border-outline-variant/50">
+    <!-- Footer (hidden on auth pages) -->
+    @{
+        var pageTitle = ViewData["Title"]?.ToString() ?? "";
+        var isAuthPage = pageTitle == "Đăng nhập" || pageTitle == "Đăng ký" || pageTitle == "Đặt lại mật khẩu";
+    }
+    <footer class="w-full mt-16 bg-surface-variant border-t border-outline-variant/50 @(isAuthPage ? "hidden" : "")">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8 px-12 py-16 max-w-[1440px] mx-auto">
             <div class="col-span-1">
                 <div class="flex items-center gap-3 mb-4">
@@ -109,13 +143,13 @@
             </div>
             <div class="flex flex-col gap-3">
                 <h5 class="text-sm font-bold text-on-surface tracking-widest uppercase">Legal</h5>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Privacy Policy</a>
-                <a class="text-on-surface-variant hover:text-primary transition-colors" href="#">Terms of Service</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="/Home/PrivacyPolicy">Privacy Policy</a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors" href="/Home/TermsOfService">Terms of Service</a>
             </div>
         </div>
         <div class="px-12 py-6 border-t border-outline-variant/20 max-w-[1440px] mx-auto text-center">
             <span class="text-sm text-on-surface-variant font-bold tracking-widest uppercase">
-                © 2024 TRIPMATE. EXPLORE VIETNAM YOUR WAY.
+                © 2026 TRIPMATE. EXPLORE VIETNAM YOUR WAY.
             </span>
         </div>
     </footer>
@@ -145,19 +179,35 @@
                         </button>
                         <!-- Dropdown Menu -->
                         <div class="absolute right-0 top-full mt-2 w-56 bg-surface rounded-xl shadow-2xl border border-outline-variant/30 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                            <div class="p-4 border-b border-outline-variant/30">
+                            <a href="${userRole === 'guide' ? '/Guide/Dashboard' : '/Traveler/Dashboard'}" class="block p-4 border-b border-outline-variant/30 hover:bg-surface-variant transition-colors">
                                 <p class="font-bold text-on-surface">${displayName}</p>
                                 <p class="text-xs text-on-surface-variant">${userEmail}</p>
-                                <span class="inline-block mt-2 px-3 py-1 bg-primary-container text-primary text-xs font-bold rounded-full">
+                                <span class="inline-block mt-2 px-3 py-1 bg-primary-container text-primary text-xs font-bold rounded-full capitalize">
                                     ${userRole || 'traveler'}
                                 </span>
-                            </div>
+                            </a>
                             <div class="p-2">
-                                <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                ${userRole === 'traveler' ? `
+                                <a href="/Traveler/Trips" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                    <span class="material-symbols-outlined text-on-surface-variant">calendar_month</span>
+                                    <span class="font-medium">My Trips</span>
+                                </a>
+                                <a href="/Traveler/Messages" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                    <span class="material-symbols-outlined text-on-surface-variant">chat</span>
+                                    <span class="font-medium">Messages</span>
+                                </a>
+                                ` : ''}
+                                ${userRole === 'guide' ? `
+                                <a href="/Guide/Dashboard" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                    <span class="material-symbols-outlined text-on-surface-variant">dashboard</span>
+                                    <span class="font-medium">Guide Dashboard</span>
+                                </a>
+                                ` : ''}
+                                <a href="${userRole === 'guide' ? '/Guide/Profile' : '#'}" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
                                     <span class="material-symbols-outlined text-on-surface-variant">person</span>
                                     <span class="font-medium">Profile</span>
                                 </a>
-                                <a href="#" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                <a href="${userRole === 'guide' ? '/Guide/Profile' : '#'}" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
                                     <span class="material-symbols-outlined text-on-surface-variant">settings</span>
                                     <span class="font-medium">Settings</span>
                                 </a>
@@ -169,6 +219,21 @@
                         </div>
                     </div>
                 `;
+
+                // Optionally adjust Main Nav based on role
+                if(userRole === 'traveler') {
+                    // Inject Saved Guides link in header tools
+                    if(!document.getElementById('savedGuidesLink')) {
+                        const savedGuides = document.createElement('a');
+                        savedGuides.id = 'savedGuidesLink';
+                        savedGuides.className = 'flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors';
+                        savedGuides.href = '/Traveler/Saved';
+                        savedGuides.innerHTML = '<span class="material-symbols-outlined" style="font-variation-settings: \\\'FILL\\\' 0;">favorite</span>';
+                        
+                        const container = document.getElementById('savedContainer');
+                        if (container) container.appendChild(savedGuides);
+                    }
+                }
             } else {
                 // User is not logged in
                 userSection.innerHTML = `
@@ -196,6 +261,144 @@
 
         // Run on page load
         checkAuth();
+
+        // ── M1: Auth Guard cho các Traveler pages ──────────────────────────
+        // Server set ViewBag.RequiresAuth = true trong Controller
+        // JS đọc flag này từ data attribute và redirect nếu chưa login
+        (function() {
+            const requiresAuth = document.body.dataset.requiresAuth === 'true';
+            if (!requiresAuth) return;
+
+            const token = localStorage.getItem('accessToken');
+            const userId = localStorage.getItem('userId');
+
+            if (!token || !userId) {
+                // Lưu URL hiện tại để sau login quay về
+                localStorage.setItem('redirectAfterLogin', window.location.href);
+                // Redirect về Login
+                window.location.replace('/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search));
+            }
+        })();
+
+        // Initialize smart local fuzzy search
+        document.addEventListener('DOMContentLoaded', function() {
+            // City alias map: canonical DB value → all search aliases
+            const CITY_DATA = [
+                { value: 'Hanoi',     label: 'Hanoi',     aliases: ['hanoi','ha noi','hà nội','ha nội','hn'] },
+                { value: 'Danang',    label: 'Da Nang',   aliases: ['danang','da nang','đà nẵng','da nẵng','đà nang','dn'] },
+                { value: 'Hoi An',    label: 'Hoi An',    aliases: ['hoian','hoi an','hội an','hoi-an'] },
+                { value: 'Ho Chi Minh', label: 'Ho Chi Minh City', aliases: ['hcm','ho chi minh','hcmc','saigon','sài gòn','sai gon','sg'] },
+                { value: 'Sapa',      label: 'Sapa',      aliases: ['sapa','sa pa','sả pa'] },
+                { value: 'Nha Trang', label: 'Nha Trang', aliases: ['nhatrang','nha trang','nt'] },
+                { value: 'Da Lat',    label: 'Da Lat',    aliases: ['dalat','da lat','đà lạt','da lạt'] },
+                { value: 'Hue',       label: 'Hue',       aliases: ['hue','huế','thua thien','thừa thiên'] },
+                { value: 'Phu Quoc',  label: 'Phu Quoc',  aliases: ['phuquoc','phu quoc','phú quốc'] },
+                { value: 'Ha Long',   label: 'Ha Long Bay', aliases: ['halong','ha long','hạ long','vịnh hạ long'] },
+            ];
+
+            const TOUR_KEYWORDS = [
+                { label: '🍜 Street Food Tours',   value: 'street food' },
+                { label: '📸 Photography Tours',   value: 'photography' },
+                { label: '🏯 Culture & History',   value: 'culture' },
+                { label: '🌿 Adventure & Trekking', value: 'adventure' },
+                { label: '🛵 Motorbike Tours',      value: 'motorbike' },
+            ];
+
+            const destInput = document.getElementById('destination-input');
+            const dropdown = document.getElementById('autocomplete-dropdown');
+
+            function normalize(str) {
+                return str.toLowerCase().trim()
+                    .replace(/[áàảãạăắặẳẵặâấầẩẫậ]/g, 'a')
+                    .replace(/[éèẻẽẹêếềểễệ]/g, 'e')
+                    .replace(/[íìỉĩị]/g, 'i')
+                    .replace(/[óòỏõọôốồổỗộơớờởỡợ]/g, 'o')
+                    .replace(/[úùủũụưứừửữự]/g, 'u')
+                    .replace(/[ýỳỷỹỵ]/g, 'y')
+                    .replace(/[đ]/g, 'd');
+            }
+
+            function renderDropdown(query) {
+                const norm = normalize(query);
+                dropdown.innerHTML = '';
+
+                if (norm.length < 1) {
+                    dropdown.classList.add('hidden');
+                    return;
+                }
+
+                let cityResults = CITY_DATA.filter(c =>
+                    c.aliases.some(a => normalize(a).includes(norm)) ||
+                    normalize(c.label).includes(norm)
+                ).slice(0, 5);
+
+                let tourResults = TOUR_KEYWORDS.filter(t =>
+                    normalize(t.value).includes(norm) || normalize(t.label).includes(norm)
+                ).slice(0, 3);
+
+                if (cityResults.length === 0 && tourResults.length === 0) {
+                    // Generic suggestion
+                    cityResults = CITY_DATA.slice(0, 4);
+                }
+
+                if (cityResults.length > 0) {
+                    const header = document.createElement('div');
+                    header.className = 'px-4 py-2 text-xs font-bold text-on-surface-variant uppercase tracking-wider bg-surface-variant/50';
+                    header.textContent = '📍 Destinations';
+                    dropdown.appendChild(header);
+
+                    cityResults.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'px-4 py-3 hover:bg-primary-container/40 cursor-pointer text-sm text-on-surface flex items-center gap-3 transition-colors';
+                        div.innerHTML = `<span class="material-symbols-outlined text-primary text-sm shrink-0">location_on</span><div><span class="font-bold">${item.label}</span><span class="text-xs text-on-surface-variant ml-1">Vietnam</span></div>`;
+                        div.addEventListener('click', () => {
+                            destInput.value = item.value;
+                            dropdown.classList.add('hidden');
+                            destInput.closest('form').submit();
+                        });
+                        dropdown.appendChild(div);
+                    });
+                }
+
+                if (tourResults.length > 0) {
+                    const header2 = document.createElement('div');
+                    header2.className = 'px-4 py-2 text-xs font-bold text-on-surface-variant uppercase tracking-wider bg-surface-variant/50 border-t border-outline-variant/20';
+                    header2.textContent = '🎯 Experiences';
+                    dropdown.appendChild(header2);
+
+                    tourResults.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'px-4 py-3 hover:bg-primary-container/40 cursor-pointer text-sm text-on-surface flex items-center gap-3 transition-colors';
+                        div.innerHTML = `<span class="material-symbols-outlined text-on-surface-variant text-sm shrink-0">explore</span><span class="font-medium">${item.label}</span>`;
+                        div.addEventListener('click', () => {
+                            destInput.value = item.value;
+                            dropdown.classList.add('hidden');
+                            destInput.closest('form').submit();
+                        });
+                        dropdown.appendChild(div);
+                    });
+                }
+
+                dropdown.classList.remove('hidden');
+            }
+
+            if (destInput && dropdown) {
+                destInput.addEventListener('input', function() {
+                    renderDropdown(this.value.trim());
+                });
+                destInput.addEventListener('focus', function() {
+                    if (this.value.trim().length > 0) renderDropdown(this.value.trim());
+                });
+                document.addEventListener('click', function(e) {
+                    if (!destInput.contains(e.target) && !dropdown.contains(e.target)) {
+                        dropdown.classList.add('hidden');
+                    }
+                });
+                destInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') { dropdown.classList.add('hidden'); }
+                });
+            }
+        });
     </script>
 </body>
 </html>

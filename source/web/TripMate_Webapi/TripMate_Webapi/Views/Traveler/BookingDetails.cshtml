@@ -1,3 +1,4 @@
+@model TripMate_Webapi.Entities.BookingEntity
 @{
     ViewData["Title"] = "Booking Details";
     Layout = "~/Views/Shared/_Layout.cshtml";
@@ -11,12 +12,29 @@
                 <span class="material-symbols-outlined">arrow_back</span>
             </a>
             <div>
-                <h1 class="text-3xl font-extrabold text-on-surface">Hanoi Art & Culture Walk</h1>
-                <p class="text-on-surface-variant font-medium">Booking Reference: #TM-2026-8942</p>
+                <h1 class="text-3xl font-extrabold text-on-surface">@(Model.ExperiencePackage?.Title ?? "Custom Tour")</h1>
+                <p class="text-on-surface-variant font-medium">Booking Reference: #@Model.Id?.Substring(0, 8).ToUpper()</p>
             </div>
             
-            <div class="ml-auto bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-bold border border-blue-200 flex items-center gap-2">
-                <span class="material-symbols-outlined text-sm">check_circle</span> Approved
+            <div class="ml-auto flex items-center gap-2">
+                @if (Model.Status == 0)
+                {
+                    <div class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full text-sm font-bold border border-yellow-200 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">schedule</span> Pending
+                    </div>
+                }
+                else if (Model.Status == 1)
+                {
+                    <div class="bg-blue-100 text-blue-700 px-4 py-2 rounded-full text-sm font-bold border border-blue-200 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">check_circle</span> Approved
+                    </div>
+                }
+                else
+                {
+                    <div class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-bold border border-green-200 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">task_alt</span> Completed
+                    </div>
+                }
             </div>
         </div>
 
@@ -29,20 +47,20 @@
                     
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8">
                         <div>
-                            <p class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Start Date</p>
-                            <p class="font-bold text-on-surface">Jun 15, 2026</p>
+                            <p class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Date</p>
+                            <p class="font-bold text-on-surface">@Model.BookingDate.ToString("MMM dd, yyyy")</p>
                         </div>
                         <div>
-                            <p class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">End Date</p>
-                            <p class="font-bold text-on-surface">Jun 17, 2026</p>
+                            <p class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Time</p>
+                            <p class="font-bold text-on-surface">@Model.StartTime.ToString("hh:mm tt")</p>
                         </div>
                         <div>
                             <p class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Guests</p>
-                            <p class="font-bold text-on-surface">2 People</p>
+                            <p class="font-bold text-on-surface">@Model.GuestCount People</p>
                         </div>
                         <div>
                             <p class="text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Location</p>
-                            <p class="font-bold text-on-surface">Hanoi, VN</p>
+                            <p class="font-bold text-on-surface">@(Model.GuideProfile?.CityArea ?? "TBD")</p>
                         </div>
                     </div>
 
@@ -62,41 +80,15 @@
 
                 <!-- Itinerary Timeline -->
                 <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
-                    <h2 class="text-2xl font-bold text-on-surface mb-8 border-b border-outline-variant/30 pb-4">Your Custom Itinerary</h2>
+                    <h2 class="text-2xl font-bold text-on-surface mb-8 border-b border-outline-variant/30 pb-4">Itinerary Details</h2>
                     
                     <div class="relative pl-8 border-l-2 border-primary/30 space-y-10">
-                        <!-- Day 1 -->
                         <div class="relative">
                             <div class="absolute -left-[41px] w-5 h-5 rounded-full bg-primary border-4 border-white shadow-sm"></div>
-                            <h3 class="text-xl font-bold text-on-surface mb-1">Day 1: Old Quarter & Hidden Cafes</h3>
-                            <p class="text-sm font-bold text-primary mb-4">Jun 15 • 09:00 AM - 04:00 PM</p>
+                            <h3 class="text-xl font-bold text-on-surface mb-1">Tour Experience</h3>
+                            <p class="text-sm font-bold text-primary mb-4">@Model.BookingDate.ToString("MMM dd") • @Model.StartTime.ToString("hh:mm tt")</p>
                             <div class="bg-surface-variant p-5 rounded-xl text-on-surface-variant space-y-2">
-                                <p>• Meet at Hoan Kiem Lake fountain.</p>
-                                <p>• Walk through the 36 streets, visiting a hidden temple.</p>
-                                <p>• Lunch at a famous local Pho stall (not the touristy ones).</p>
-                                <p>• Relax at a secret egg coffee shop overlooking the lake.</p>
-                            </div>
-                        </div>
-
-                        <!-- Day 2 -->
-                        <div class="relative">
-                            <div class="absolute -left-[41px] w-5 h-5 rounded-full bg-primary border-4 border-white shadow-sm"></div>
-                            <h3 class="text-xl font-bold text-on-surface mb-1">Day 2: Art Galleries & Sunset</h3>
-                            <p class="text-sm font-bold text-primary mb-4">Jun 16 • 02:00 PM - 08:00 PM</p>
-                            <div class="bg-surface-variant p-5 rounded-xl text-on-surface-variant space-y-2">
-                                <p>• Visit 2 contemporary art galleries in French colonial villas.</p>
-                                <p>• Sunset walk along West Lake.</p>
-                                <p>• Dinner at a local BBQ joint near the lake.</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Day 3 -->
-                        <div class="relative">
-                            <div class="absolute -left-[41px] w-5 h-5 rounded-full bg-outline-variant border-4 border-white shadow-sm"></div>
-                            <h3 class="text-xl font-bold text-on-surface mb-1">Day 3: Free & Easy</h3>
-                            <p class="text-sm font-bold text-on-surface-variant mb-4">Jun 17</p>
-                            <div class="bg-surface-variant p-5 rounded-xl text-on-surface-variant">
-                                <p>No scheduled activities. Guide will provide a customized list of recommendations for shopping and souvenirs.</p>
+                                <p>@Model.ExperiencePackage?.Description</p>
                             </div>
                         </div>
                     </div>
@@ -108,18 +100,22 @@
                 <!-- Guide Profile Card -->
                 <div class="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/30 tonal-elevation text-center">
                     <div class="w-24 h-24 mx-auto rounded-full bg-gray-200 mb-4 overflow-hidden relative border-2 border-primary/20">
-                        <div class="absolute inset-0 flex items-center justify-center">
-                            <span class="material-symbols-outlined text-6xl text-gray-400">face_3</span>
-                        </div>
+                        <img src="@(string.IsNullOrEmpty(Model.GuideProfile?.Profile?.AvatarUrl) ? "/images/default_avatar.png" : Model.GuideProfile.Profile.AvatarUrl)" alt="Guide" class="w-full h-full object-cover"/>
                     </div>
-                    <h3 class="text-xl font-bold text-on-surface mb-1">Minh Anh</h3>
-                    <p class="text-sm text-primary font-bold mb-4">Your Local Soulmate</p>
+                    <h3 class="text-xl font-bold text-on-surface mb-1">@(Model.GuideProfile?.Profile?.FullName ?? "Unknown Guide")</h3>
+                    <p class="text-sm text-primary font-bold mb-4">Your Local Expert</p>
                     
                     <div class="flex flex-col gap-3">
-                        <button class="w-full bg-primary-container text-primary hover:bg-primary hover:text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
-                            <span class="material-symbols-outlined">chat</span> Message Guide
-                        </button>
-                        <a href="/Guide/Profile/1" class="w-full border-2 border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+                        @if(Model.Status == 0) {
+                            <button class="w-full bg-surface-variant text-on-surface-variant py-3 rounded-xl font-bold flex items-center justify-center gap-2 cursor-not-allowed opacity-70" title="Messaging unlocks after guide accepts" disabled>
+                                <span class="material-symbols-outlined">lock</span> Awaiting Guide
+                            </button>
+                        } else {
+                            <button class="w-full bg-primary-container text-primary hover:bg-primary hover:text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+                                <span class="material-symbols-outlined">chat</span> Message Guide
+                            </button>
+                        }
+                        <a href="/Traveler/GuideProfile/@Model.GuideProfile?.Id" class="w-full border-2 border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
                             <span class="material-symbols-outlined">person</span> View Profile
                         </a>
                     </div>
@@ -131,27 +127,23 @@
                     
                     <div class="space-y-4 mb-6 border-b border-outline-variant/30 pb-6">
                         <div class="flex justify-between text-on-surface-variant">
-                            <span>Guide Fee (2 Days)</span>
-                            <span class="font-medium text-on-surface">1,000,000₫</span>
-                        </div>
-                        <div class="flex justify-between text-on-surface-variant">
-                            <span>Custom Itinerary Planning</span>
-                            <span class="font-medium text-on-surface">400,000₫</span>
+                            <span>Subtotal (@Model.GuestCount Guests)</span>
+                            <span class="font-medium text-on-surface">@((Model.TotalAmount - Model.PlatformFee).ToString("#,##0")) ₫</span>
                         </div>
                         <div class="flex justify-between text-on-surface-variant">
                             <span>Platform Fee</span>
-                            <span class="font-medium text-on-surface">100,000₫</span>
+                            <span class="font-medium text-on-surface">@(Model.PlatformFee.ToString("#,##0")) ₫</span>
                         </div>
                     </div>
                     
                     <div class="flex justify-between items-end mb-8">
                         <span class="font-bold text-on-surface">Total</span>
-                        <span class="text-3xl font-extrabold text-primary">1,500,000₫</span>
+                        <span class="text-3xl font-extrabold text-primary">@(Model.TotalAmount.ToString("#,##0")) ₫</span>
                     </div>
 
-                    <a href="/Traveler/Checkout/1" class="block w-full text-center bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold text-lg shadow-lg hover:-translate-y-1 transition-all flex justify-center items-center gap-2">
-                        <span class="material-symbols-outlined">lock</span> Proceed to Pay
-                    </a>
+                    <div class="block w-full text-center bg-green-500/10 border border-green-500/20 text-green-700 py-4 rounded-xl font-bold text-lg shadow-sm flex justify-center items-center gap-2 mt-4">
+                        <span class="material-symbols-outlined text-green-600">verified_user</span> Paid & Escrowed
+                    </div>
                 </div>
             </div>
         </div>

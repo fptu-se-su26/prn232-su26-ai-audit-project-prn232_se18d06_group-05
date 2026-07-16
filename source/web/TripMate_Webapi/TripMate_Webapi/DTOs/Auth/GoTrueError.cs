@@ -12,7 +12,7 @@ internal class GoTrueError
     public string? ErrorCode { get; set; }
 
     [JsonPropertyName("code")]
-    public int? Code { get; set; }
+    public System.Text.Json.JsonElement? Code { get; set; }
 
     // Legacy format: {"error":"...", "error_description":"..."}
     [JsonPropertyName("error")]

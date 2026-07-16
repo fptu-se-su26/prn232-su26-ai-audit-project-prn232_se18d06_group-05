@@ -1,0 +1,172 @@
+@{
+    ViewData["Title"] = "Saved Guides";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="min-h-screen bg-surface flex">
+
+    <partial name="_TravelerSidebar" />
+
+    <!-- Main Content -->
+    <main class="flex-1 p-8 md:p-12 overflow-y-auto h-[calc(100vh-80px)]" x-data="savedGuides()">
+
+        <div class="mb-10 flex justify-between items-end">
+            <div>
+                <h1 class="text-4xl font-extrabold text-on-surface mb-2 flex items-center gap-3">
+                    <span class="material-symbols-outlined text-red-500 text-4xl" style="font-variation-settings: 'FILL' 1;">favorite</span>
+                    Saved Local Soulmates
+                </h1>
+                <p class="text-lg text-on-surface-variant">
+                    Guides you've bookmarked for future adventures.
+                    <span class="font-bold text-primary" x-text="saved.length > 0 ? '(' + saved.length + ' saved)' : ''"></span>
+                </p>
+            </div>
+            <button x-show="saved.length > 0" @@click="clearAll()"
+                    class="text-sm text-on-surface-variant hover:text-red-500 font-bold flex items-center gap-1 transition-colors">
+                <span class="material-symbols-outlined text-sm">delete_sweep</span>
+                Clear All
+            </button>
+        </div>
+
+        <!-- Empty State -->
+        <div x-show="saved.length === 0" class="flex flex-col items-center justify-center h-[60vh] text-center">
+            <span class="material-symbols-outlined text-7xl text-on-surface-variant/40 mb-4">favorite_border</span>
+            <h3 class="text-2xl font-bold text-on-surface mb-2">No saved guides yet</h3>
+            <p class="text-on-surface-variant max-w-sm mb-8">
+                Tap the ♡ heart button on any Guide Profile to save them here for quick access later.
+            </p>
+            <a href="/Home/Explore" class="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md">
+                Browse Guides
+            </a>
+        </div>
+
+        <!-- Saved Guide Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" x-show="saved.length > 0">
+            <template x-for="(guide, index) in saved" :key="guide.guideId">
+                <div class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col group">
+
+                    <!-- Remove button -->
+                    <button @@click="removeGuide(guide.guideId)"
+                            class="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-red-500 hover:bg-red-50 transition-all z-10 shadow-sm"
+                            title="Remove from saved">
+                        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">favorite</span>
+                    </button>
+
+                    <!-- Rating badge -->
+                    <template x-if="guide.averageRating > 0">
+                        <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-on-surface flex items-center gap-1 z-10 shadow-sm">
+                            <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+                            <span x-text="guide.averageRating.toFixed(1)"></span>
+                            <span class="text-on-surface-variant" x-text="guide.totalReviews ? '(' + guide.totalReviews + ')' : ''"></span>
+                        </div>
+                    </template>
+
+                    <!-- Photo -->
+                    <div class="h-64 relative bg-gray-200 overflow-hidden">
+                        <template x-if="guide.coverPhotoUrl">
+                            <img :src="guide.coverPhotoUrl" :alt="guide.name"
+                                 class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                        </template>
+                        <template x-if="!guide.coverPhotoUrl">
+                            <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-container to-surface-variant">
+                                <span class="material-symbols-outlined text-6xl text-primary/40">face_4</span>
+                            </div>
+                        </template>
+                    </div>
+
+                    <div class="p-6 flex-1 flex flex-col">
+                        <div class="flex justify-between items-center mb-1">
+                            <h4 class="text-2xl font-bold text-on-surface" x-text="guide.name"></h4>
+                            <span class="text-xs font-bold bg-primary-container text-primary px-2 py-1 rounded-md border border-primary/20"
+                                  x-show="guide.personalityType"
+                                  x-text="guide.personalityType || ''"></span>
+                        </div>
+                        <p class="text-on-surface-variant text-sm mb-4 flex items-center gap-1 font-medium">
+                            <span class="material-symbols-outlined text-sm">location_on</span>
+                            <span x-text="guide.cityArea || 'Vietnam'"></span>
+                        </p>
+
+                        <!-- Specialties -->
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <template x-for="tag in (guide.specialties || []).slice(0, 3)" :key="tag">
+                                <span class="bg-surface-variant text-xs font-bold px-2 py-1 rounded" x-text="tag"></span>
+                            </template>
+                        </div>
+
+                        <!-- Saved date -->
+                        <p class="text-xs text-on-surface-variant mb-4" x-text="'Saved ' + formatDate(guide.savedAt)"></p>
+
+                        <div class="mt-auto">
+                            <a :href="'/Traveler/GuideProfile/' + guide.guideId"
+                               class="flex-1 bg-surface-variant text-on-surface-variant px-4 py-2 rounded-xl text-sm font-bold text-center hover:bg-outline-variant/30 transition-colors border border-outline-variant/30">
+                                View Profile
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <!-- Browse More CTA -->
+        <div x-show="saved.length > 0" class="mt-12 text-center">
+            <p class="text-on-surface-variant mb-4">Looking for more guides?</p>
+            <a href="/Home/Explore" class="border-2 border-primary text-primary px-8 py-3 rounded-xl font-bold hover:bg-primary-container transition-all">
+                Browse All Guides
+            </a>
+        </div>
+
+    </main>
+</div>
+
+<script>
+    document.addEventListener('alpine:init', () => {
+        Alpine.data('savedGuides', () => ({
+            saved: [],
+
+            async init() {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=/Traveler/Saved';
+                    return;
+                }
+                try {
+                    const res = await fetch('/Traveler/GetSavedGuidesAjax', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) {
+                        this.saved = await res.json();
+                    }
+                } catch(e) { console.error(e); }
+            },
+
+            async removeGuide(guideId) {
+                const token = localStorage.getItem('accessToken');
+                if (!token) return;
+                try {
+                    const res = await fetch('/Traveler/ToggleSaveGuideAjax/' + guideId, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) {
+                        this.saved = this.saved.filter(g => g.guideId !== guideId);
+                    }
+                } catch(e) { console.error(e); }
+            },
+
+            clearAll() {
+                alert('Clear all is currently disabled. Please remove guides individually.');
+            },
+
+            formatDate(isoString) {
+                if (!isoString) return '';
+                const d = new Date(isoString);
+                const now = new Date();
+                const diffDays = Math.floor((now - d) / (1000 * 60 * 60 * 24));
+                if (diffDays === 0) return 'today';
+                if (diffDays === 1) return 'yesterday';
+                if (diffDays < 7) return diffDays + ' days ago';
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
+        }))
+    })
+</script>

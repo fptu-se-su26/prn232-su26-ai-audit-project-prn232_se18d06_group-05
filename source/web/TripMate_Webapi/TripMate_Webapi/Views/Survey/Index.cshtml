@@ -33,7 +33,7 @@
                 </div>
                 <!-- Custom Destination Input -->
                 <div x-show="answers.destination === 'Other'" x-transition class="mt-4">
-                    <input type="text" x-model="answers.customDestination" placeholder="Type your destination..." class="w-full bg-white border-outline-variant/50 rounded-lg p-4 text-on-surface focus:ring-primary focus:border-primary">
+                    <input type="text" list="vietnam_locations" x-model="answers.customDestination" placeholder="Type your destination..." class="w-full bg-white border-outline-variant/50 rounded-lg p-4 text-on-surface focus:ring-primary focus:border-primary">
                 </div>
             </div>
 
@@ -65,16 +65,10 @@
             <div x-show="step === 3" x-transition.opacity class="space-y-6" style="display: none;">
                 <div class="bg-gray-50 p-6 rounded-xl border border-outline-variant/30">
                     <label class="block text-sm font-bold text-on-surface mb-4">When are you traveling?</label>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Start Date</label>
-                            <input type="date" x-model="answers.startDate" class="w-full bg-white border-outline-variant/50 rounded-lg p-3 text-on-surface focus:ring-primary focus:border-primary">
+                        <div class="col-span-1 md:col-span-2">
+                            <label class="block text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Travel Dates</label>
+                            <input type="text" x-model="answers.dateRange" placeholder="Select your travel dates..." class="date-picker cursor-pointer w-full bg-white border-outline-variant/50 rounded-lg p-3 text-on-surface focus:ring-primary focus:border-primary">
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">End Date</label>
-                            <input type="date" x-model="answers.endDate" :min="answers.startDate" class="w-full bg-white border-outline-variant/50 rounded-lg p-3 text-on-surface focus:ring-primary focus:border-primary">
-                        </div>
-                    </div>
                 </div>
                 <div class="bg-gray-50 p-6 rounded-xl border border-outline-variant/30">
                     <label class="block text-sm font-bold text-on-surface mb-2">How many people?</label>
@@ -146,8 +140,7 @@
                 customDestination: '',
                 vibe: '',
                 customVibe: '',
-                startDate: '',
-                endDate: '',
+                dateRange: '',
                 guests: 1,
                 budget: ''
             },
@@ -194,7 +187,7 @@
                     if (this.answers.vibe === 'Other') return this.answers.customVibe.trim() !== '';
                     return this.answers.vibe !== '';
                 }
-                if (this.step === 3) return this.answers.startDate !== '' && this.answers.endDate !== '';
+                if (this.step === 3) return this.answers.dateRange !== '';
                 if (this.step === 4) return this.answers.budget !== '';
                 return true;
             },
@@ -207,12 +200,24 @@
 
             submitSurvey() {
                 if (this.canProceed()) {
-                    // Save to local storage for the next step (Matching/Auth)
+                    // 1. Lưu vào localStorage (fallback UX cho trình duyệt hiện tại)
                     localStorage.setItem('tripPreferences', JSON.stringify(this.answers));
                     
-                    // Show loading state or redirect
-                    // Redirect to the Matches page
-                    window.location.href = '/Survey/Matches'; 
+                    // 2. M2: Đồng bộ lên Server Session để không mất sau khi đăng nhập
+                    // Dùng sendBeacon để đảm bảo request được gửi ngay cả khi đang redirect
+                    const payload = JSON.stringify(this.answers);
+                    
+                    // Thử dùng fetch async, nếu lỗi vẫn chuyển trang
+                    const saveToSession = fetch('/Survey/SavePreferences', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: payload
+                    }).catch(err => console.warn('[Quiz] Could not sync to server session:', err));
+                    
+                    // Chuyển trang sau 100ms để fetch có thời gian bắt đầu
+                    setTimeout(() => {
+                        window.location.href = '/Survey/Matches';
+                    }, 100);
                 }
             }
         }))
