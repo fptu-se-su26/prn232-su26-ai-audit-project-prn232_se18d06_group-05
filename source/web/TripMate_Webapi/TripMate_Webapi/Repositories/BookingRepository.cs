@@ -120,11 +120,32 @@ namespace TripMate_Webapi.Repositories
 
         public async Task UpdateBookingStatusAsync(string bookingId, int status)
         {
-            await _supabase.From<BookingEntity>()
-                .Where(b => b.Id == bookingId)
-                .Set(b => b.Status, status)
-                .Set(b => b.UpdatedAt, DateTime.UtcNow)
-                .Update();
+            var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
+            var anonKey = Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
+            var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+            var tokenToUse = serviceKey ?? anonKey;
+            
+            using var http = new System.Net.Http.HttpClient();
+            var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Patch, $"{supabaseUrl}/rest/v1/bookings?id=eq.{bookingId}");
+            req.Headers.Add("apikey", anonKey);
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenToUse);
+            req.Headers.Add("Prefer", "return=representation");
+            
+            var bodyObj = new System.Collections.Generic.Dictionary<string, object?>
+            {
+                { "status", status },
+                { "updated_at", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ") }
+            };
+            
+            var json = System.Text.Json.JsonSerializer.Serialize(bodyObj);
+            req.Content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            
+            var response = await http.SendAsync(req);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Failed to update booking status: {error}");
+            }
         }
 
         public async Task DeleteBookingAsync(string id)

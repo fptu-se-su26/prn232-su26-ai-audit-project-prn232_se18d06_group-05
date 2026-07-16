@@ -34,6 +34,9 @@ builder.Configuration["EmailSettings:SmtpHost"] = Environment.GetEnvironmentVari
 builder.Configuration["EmailSettings:SmtpPort"] = Environment.GetEnvironmentVariable("SMTP_PORT") ?? builder.Configuration["EmailSettings:SmtpPort"];
 builder.Configuration["EmailSettings:SmtpUser"] = Environment.GetEnvironmentVariable("SMTP_USER") ?? builder.Configuration["EmailSettings:SmtpUser"];
 builder.Configuration["EmailSettings:SmtpPass"] = Environment.GetEnvironmentVariable("SMTP_PASS") ?? builder.Configuration["EmailSettings:SmtpPass"];
+builder.Configuration["PayOS:ClientId"] = Environment.GetEnvironmentVariable("PAYOS_CLIENT_ID") ?? builder.Configuration["PayOS:ClientId"];
+builder.Configuration["PayOS:ApiKey"] = Environment.GetEnvironmentVariable("PAYOS_API_KEY") ?? builder.Configuration["PayOS:ApiKey"];
+builder.Configuration["PayOS:ChecksumKey"] = Environment.GetEnvironmentVariable("PAYOS_CHECKSUM_KEY") ?? builder.Configuration["PayOS:ChecksumKey"];
 
 // ── Supabase Client (singleton) ───────────────────────────────────────────────
 var supabaseUrl = builder.Configuration["Supabase:Url"]!;
@@ -98,6 +101,9 @@ builder.Services.AddScoped<GuideApprovalService>();
 // ── Admin Service ─────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<AdminService>();
 builder.Services.AddScoped<AdminService>();
+
+// ── PayOS Service ─────────────────────────────────────────────────────────────
+builder.Services.AddScoped<IPayOSService, PayOSService>();
 
 // ── Chat & Notification Services ─────────────────────────────────────────────
 builder.Services.AddHttpClient<ChatService>();
