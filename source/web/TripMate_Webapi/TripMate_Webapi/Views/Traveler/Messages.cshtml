@@ -18,10 +18,10 @@
             <!-- Chat List -->
             <div class="w-1/3 border-r border-outline-variant/30 flex flex-col">
                 <div class="p-6 border-b border-outline-variant/30">
-                    <h2 class="text-2xl font-bold text-on-surface mb-4">Tin nh?n</h2>
+                    <h2 class="text-2xl font-bold text-on-surface mb-4">Messages</h2>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-4 top-3 text-on-surface-variant">search</span>
-                        <input type="text" x-model="searchQuery" placeholder="Tìm ki?m cu?c trò chuy?n..." class="w-full bg-surface border-none rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary text-on-surface">
+                        <input type="text" x-model="searchQuery" placeholder="Search conversations..." class="w-full bg-surface border-none rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary text-on-surface">
                     </div>
                 </div>
 
@@ -29,8 +29,8 @@
                     <template x-if="threads.length === 0">
                         <div class="p-8 text-center text-on-surface-variant">
                             <span class="material-symbols-outlined text-4xl mb-2">chat_bubble_outline</span>
-                            <p class="text-sm">B?n ch?a có cu?c trò chuy?n nào. ??t booking ?? b?t ??u liên l?c v?i guide!</p>
-                            <a href="/Traveler/Trips" class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold">Xem chuy?n c?a tôi</a>
+                            <p class="text-sm">You don't have any conversations yet. Place a booking to start contacting your guide!</p>
+                            <a href="/Traveler/Trips" class="mt-4 inline-block bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold">View My Trips</a>
                         </div>
                     </template>
 
@@ -59,8 +59,8 @@
                         <div class="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-blue-500 mb-6">
                             <span class="material-symbols-outlined text-[40px]">forum</span>
                         </div>
-                        <h3 class="text-xl font-bold text-on-surface mb-2">Ch?n cu?c trò chuy?n</h3>
-                        <p class="text-on-surface-variant">Ch?n m?t guide ? c?t bên trái ?? xem tin nh?n ho?c b?t ??u trò chuy?n.</p>
+                        <h3 class="text-xl font-bold text-on-surface mb-2">Select a conversation</h3>
+                        <p class="text-on-surface-variant">Select a guide from the left sidebar to view messages or start a conversation.</p>
                     </div>
                 </template>
 
@@ -94,7 +94,7 @@
                         <div class="bg-white border-t border-outline-variant/30 p-4">
                             <form @@submit.prevent="sendMessage" class="flex items-end gap-3 max-w-4xl mx-auto" onsubmit="event.preventDefault(); return false;">
                                 <div class="flex-1 bg-surface border border-outline-variant/30 rounded-2xl overflow-hidden">
-                                    <textarea x-model="newMessage" @@keydown.enter.prevent="sendMessage" @@input="autoSize" rows="1" placeholder="Nh?p tin nh?n..." class="w-full bg-transparent border-none text-on-surface text-sm px-4 py-3 max-h-32 resize-none focus:ring-0 outline-none"></textarea>
+                                    <textarea x-model="newMessage" @@keydown.enter.prevent="sendMessage" @@input="autoSize" rows="1" placeholder="Type a message..." class="w-full bg-transparent border-none text-on-surface text-sm px-4 py-3 max-h-32 resize-none focus:ring-0 outline-none"></textarea>
                                 </div>
                                 <button type="button" @@click="sendMessage()" :disabled="!newMessage.trim()" class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-50">
                                     <span class="material-symbols-outlined">send</span>
@@ -168,12 +168,12 @@
                                 Messages: messages.map(m => ({
                                     Text: m.Text,
                                     IsMine: m.SenderId === userId,
-                                    Time: new Date(m.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                                    Time: new Date(m.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
                                     IsRead: m.IsRead
                                 })),
-                                LastMessage: messages.length ? messages[messages.length -1].Text : 'Không có tin nh?n',
+                                LastMessage: messages.length ? messages[messages.length -1].Text : 'No messages yet',
                                 TimeAgo: messages.length ? this.formatTimeAgo(messages[messages.length -1].SentAt) : '',
-                                Date: messages.length ? new Date(messages[messages.length -1].SentAt).toLocaleDateString('vi-VN') : '',
+                                Date: messages.length ? new Date(messages[messages.length -1].SentAt).toLocaleDateString('en-US') : '',
                                 UnreadCount: messages.filter(m => !m.IsRead && m.ReceiverId === userId).length
                             });
                         }
@@ -204,7 +204,7 @@
                                         Messages: [],
                                         LastMessage: 'No messages yet',
                                         TimeAgo: '',
-                                        Date: (ab.bookingDate ? new Date(ab.bookingDate).toLocaleDateString('vi-VN') : ''),
+                                        Date: (ab.bookingDate ? new Date(ab.bookingDate).toLocaleDateString('en-US') : ''),
                                         UnreadCount: 0
                                     });
                                 }
@@ -264,7 +264,7 @@
                         thread.Messages = rows.map(r => ({
                             Text: r.messageText || r.MessageText || '',
                             IsMine: (r.senderId || r.SenderId) === userId,
-                            Time: new Date(r.sentAt || r.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                            Time: new Date(r.sentAt || r.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
                             IsRead: !!(r.isRead || r.IsRead)
                         }));
 
@@ -292,19 +292,19 @@
                         });
                         if (!res.ok) throw new Error('Send failed');
                         const msg = await res.json();
-                        const sent = { Text: msg.messageText || msg.MessageText || text, IsMine: true, Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }), IsRead: !!(msg.isRead || msg.IsRead) };
+                        const sent = { Text: msg.messageText || msg.MessageText || text, IsMine: true, Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), IsRead: !!(msg.isRead || msg.IsRead) };
                         this.activeThread.Messages.push(sent);
                         this.activeThread.LastMessage = sent.Text;
                         this.newMessage = '';
                         this.scrollToBottom();
-                    } catch (e) { console.error(e); showToast('error', 'G?i tin nh?n th?t b?i'); }
+                    } catch (e) { console.error(e); showToast('error', 'Failed to send message'); }
                 },
 
                 autoSize() { const ta = this.$event.target; ta.style.height='auto'; ta.style.height = ta.scrollHeight + 'px'; },
 
                 scrollToBottom() { setTimeout(()=>{ const c = document.getElementById('travelerChatContainer'); if (c) c.scrollTop = c.scrollHeight; }, 50); },
 
-                formatTimeAgo(iso) { if (!iso) return ''; const d = new Date(iso); const diff = (Date.now() - d.getTime())/1000; if (diff<60) return 'V?a xong'; if (diff<3600) return Math.floor(diff/60)+' phút tr??c'; if (diff<86400) return Math.floor(diff/3600)+' gi? tr??c'; return d.toLocaleDateString('vi-VN'); }
+                formatTimeAgo(iso) { if (!iso) return ''; const d = new Date(iso); const diff = (Date.now() - d.getTime())/1000; if (diff<60) return 'Just now'; if (diff<3600) return Math.floor(diff/60)+' minutes ago'; if (diff<86400) return Math.floor(diff/3600)+' hours ago'; return d.toLocaleDateString('en-US'); }
             }
         }
     </script>
