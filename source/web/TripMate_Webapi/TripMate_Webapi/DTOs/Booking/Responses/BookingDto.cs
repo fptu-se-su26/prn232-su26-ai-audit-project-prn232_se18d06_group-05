@@ -17,11 +17,7 @@ public record BookingDto(
     decimal PlatformFee,
     decimal GuideEarnings,
     string Status,              // mapped from smallint: pending/confirmed/completed/cancelled
-    string? PaymentReference,
-    string? PaymentMethod,
-    bool EscrowReleased,
     string? TravelerNotes,
-    string? CancelReason,
     DateTime CreatedAt,
     DateTime UpdatedAt
 );

@@ -118,7 +118,7 @@ namespace TripMate_WebAPI.Services
         {
             try
             {
-                var url = $"{_supabaseUrl}/rest/v1/bookings?select=status,total_amount,platform_fee,guide_earnings,escrow_released";
+                var url = $"{_supabaseUrl}/rest/v1/bookings?select=status,total_amount,platform_fee,guide_earnings";
                 var request = BuildAdminRequest(HttpMethod.Get, url);
                 var response = await _http.SendAsync(request);
                 var content = await response.Content.ReadAsStringAsync();
@@ -144,12 +144,12 @@ namespace TripMate_WebAPI.Services
                         platformRevenue += b.PlatformFee;
                     }
 
-                    if (b.Status == 1 && !b.EscrowReleased) // Confirmed & Escrow held
+                    if (b.Status == 1) // Confirmed & Escrow held
                     {
                         escrowHeld += b.TotalAmount;
                     }
 
-                    if (b.Status == 2 && !b.EscrowReleased) // Completed but not yet released (pending disbursement to guide)
+                    if (b.Status == 2) // Completed (pending disbursement to guide)
                     {
                         pendingDisbursement += b.GuideEarnings;
                     }
@@ -186,11 +186,11 @@ namespace TripMate_WebAPI.Services
 
                     var rows = JsonSerializer.Deserialize<List<BookingKpiRow>>(content, _json);
                     var b = rows?.FirstOrDefault();
-                    if (b == null || b.EscrowReleased) continue;
+                    if (b == null) continue;
 
-                    // 2. Update booking: escrow_released = true, status = 2 (Completed) if it was Confirmed
+                    // 2. Update booking: status = 2 (Completed) if it was Confirmed
                     var newStatus = b.Status == 1 ? 2 : b.Status;
-                    var updates = new { escrow_released = true, status = newStatus, updated_at = DateTime.UtcNow };
+                    var updates = new { status = newStatus, updated_at = DateTime.UtcNow };
                     var patchReq = BuildAdminRequest(HttpMethod.Patch, $"{_supabaseUrl}/rest/v1/bookings?id=eq.{id}");
                     patchReq.Content = new StringContent(JsonSerializer.Serialize(updates), Encoding.UTF8, "application/json");
                     var patchRes = await _http.SendAsync(patchReq);
@@ -600,7 +600,6 @@ namespace TripMate_WebAPI.Services
         [JsonPropertyName("total_amount")] public decimal TotalAmount { get; set; }
         [JsonPropertyName("platform_fee")] public decimal PlatformFee { get; set; }
         [JsonPropertyName("guide_earnings")] public decimal GuideEarnings { get; set; }
-        [JsonPropertyName("escrow_released")] public bool EscrowReleased { get; set; }
     }
 
     public class AdminReviewRow
@@ -651,8 +650,6 @@ namespace TripMate_WebAPI.Services
         [JsonPropertyName("platform_fee")] public decimal PlatformFee { get; set; }
         [JsonPropertyName("guide_earnings")] public decimal GuideEarnings { get; set; }
         [JsonPropertyName("status")] public int Status { get; set; }
-        [JsonPropertyName("escrow_released")] public bool EscrowReleased { get; set; }
-        [JsonPropertyName("cancel_reason")] public string? CancelReason { get; set; }
         [JsonPropertyName("created_at")] public DateTime CreatedAt { get; set; }
         [JsonPropertyName("profiles")] public ProfileData? Traveler { get; set; }
         [JsonPropertyName("experience_packages")] public BookingPackageJoined? Package { get; set; }
