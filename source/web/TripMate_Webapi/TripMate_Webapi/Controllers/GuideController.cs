@@ -54,7 +54,7 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/Dashboard
-        [HttpGet("Guide/Dashboard")]
+        [HttpGet("/Guide/Dashboard")]
         [Authorize(Roles = "guide")]
         public async Task<IActionResult> Dashboard()
         {
@@ -83,7 +83,7 @@ namespace TripMate_Webapi.Controllers
 
         // GET: /Guide/Profile/{id}
         // This is the public profile viewed by the Traveler
-        [HttpGet("Guide/Profile/{id}")]
+        [HttpGet("/Guide/Profile/{id}")]
         public IActionResult Profile(string id)
         {
             return RedirectToAction("GuideProfile", "Traveler", new { id });
@@ -126,7 +126,7 @@ namespace TripMate_Webapi.Controllers
             // ponytail: certificate, phone number, full name, email explicitly excluded per requirements
         }
 
-        [HttpPost("Guide/UpdateProfile")]
+        [HttpPost("/Guide/UpdateProfile")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateGuideProfileDto dto, [FromServices] Supabase.Client supabase)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
