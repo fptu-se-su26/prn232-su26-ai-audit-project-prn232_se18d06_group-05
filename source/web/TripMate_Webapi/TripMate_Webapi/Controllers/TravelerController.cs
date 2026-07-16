@@ -202,6 +202,41 @@ namespace TripMate_Webapi.Controllers
             return View();
         }
 
+        // ponytail ultra: minimal inline update
+        public class UpdateTravelerProfileDto
+        {
+            public string? FullName { get; set; }
+            public string? Phone { get; set; }
+            public string? Location { get; set; }
+            public string? AvatarUrl { get; set; }
+            public string? Email { get; set; }
+        }
+
+        [HttpPost("Traveler/UpdateProfile")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateTravelerProfileDto dto, [FromServices] Supabase.Client supabase)
+        {
+            // Simplified auth check based on current project pattern
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                      ?? User.FindFirst("sub")?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var profileResponse = await supabase.From<Entities.ProfileEntity>().Where(x => x.Id == userId).Get();
+            var profile = profileResponse.Models.FirstOrDefault();
+            if (profile != null)
+            {
+                if (dto.FullName != null) profile.FullName = dto.FullName;
+                if (dto.Phone != null) profile.Phone = dto.Phone;
+                if (dto.Location != null) profile.Location = dto.Location;
+                if (dto.AvatarUrl != null) profile.AvatarUrl = dto.AvatarUrl;
+                if (dto.Email != null) profile.Email = dto.Email;
+                await supabase.From<Entities.ProfileEntity>().Update(profile);
+            }
+
+            return Ok(new { success = true });
+        }
+
+        // GET: /Traveler/Review/{id}
+        public IActionResult Review(string id = "1")
         // GET: /Traveler/Review/{id} [Auth required]
         public async Task<IActionResult> Review(string id)
         {
