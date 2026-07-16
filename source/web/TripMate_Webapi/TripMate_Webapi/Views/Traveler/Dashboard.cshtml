@@ -31,10 +31,7 @@
                 <h1 class="text-4xl font-extrabold text-on-surface mb-2" data-welcome>Welcome back, @(ViewBag.TravelerName ?? "Traveler")!</h1>
                 <p class="text-lg text-on-surface-variant">Ready for your next adventure?</p>
             </div>
-            <a href="/Traveler/CreateTripRequest" class="bg-primary text-on-primary px-6 py-3 rounded-full font-bold flex items-center gap-2 hover:bg-primary/90 transition-all shadow-md">
-                <span class="material-symbols-outlined">add</span>
-                Plan New Trip
-            </a>
+
         </div>
 
         <div x-data="dashboardBookings()">

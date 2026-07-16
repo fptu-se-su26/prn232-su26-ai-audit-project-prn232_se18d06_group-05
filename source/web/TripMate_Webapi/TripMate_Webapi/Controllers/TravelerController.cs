@@ -141,12 +141,7 @@ namespace TripMate_Webapi.Controllers
             return View(booking);
         }
 
-        // GET: /Traveler/Checkout/{id} [Auth required]
-        public IActionResult Checkout(string id)
-        {
-            ViewBag.RequiresAuth = true;
-            return RedirectToAction("BookingDetails", new { id });
-        }
+
 
 
 
