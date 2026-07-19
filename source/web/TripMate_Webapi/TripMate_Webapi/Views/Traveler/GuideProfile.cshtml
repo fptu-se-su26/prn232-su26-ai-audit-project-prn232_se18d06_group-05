@@ -188,18 +188,11 @@
                     }
                     else
                     {
-                        <!-- Fallback Package if Guide hasn't created one -->
-                        <div class="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                            <div class="flex-1">
-                                <h3 class="text-xl font-bold text-on-surface mb-2">Custom Itinerary</h3>
-                                <p class="text-on-surface-variant text-sm mb-4">A personalized tour based on your preferences. Book this guide and discuss your dream trip!</p>
-                            </div>
-                            <div class="md:w-48 shrink-0 flex flex-col items-end border-t md:border-t-0 md:border-l border-outline-variant/30 pt-4 md:pt-0 md:pl-6 text-right">
-                                <button @@click="bookGuide()"
-                                        class="w-full text-center bg-primary text-white py-3 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-sm hover:shadow-md">
-                                    Book Custom
-                                </button>
-                            </div>
+                        <!-- Fallback Message if Guide hasn't created one -->
+                        <div class="bg-surface-variant/30 rounded-3xl p-8 text-center border border-dashed border-outline-variant">
+                            <span class="material-symbols-outlined text-4xl text-on-surface-variant mb-2">inventory_2</span>
+                            <h3 class="text-xl font-bold text-on-surface mb-2">No Packages Yet</h3>
+                            <p class="text-on-surface-variant">This guide hasn't created any experience packages yet.</p>
                         </div>
                     }
                 </div>
@@ -647,13 +640,18 @@
                     });
 
                     if (res.ok) {
+                        const data = await res.json();
+                        if (data.paymentUrl) {
+                            window.location.href = data.paymentUrl;
+                            return;
+                        }
+                        
                         this.showWizard = false;
                         await Swal.fire({
-                            title: 'Payment Received! 🎉',
-                            html: `<p class="text-gray-600">Your booking & payment are secured in escrow.</p><p class="mt-2 font-semibold">The guide will confirm within <strong>48 hours</strong>.</p>`,
+                            title: 'Booking Created 🎉',
+                            html: `<p class="text-gray-600">Your booking is secured.</p>`,
                             icon: 'success',
-                            confirmButtonColor: '#ff7a00',
-                            confirmButtonText: 'View My Bookings'
+                            confirmButtonColor: '#ff7a00'
                         });
                         window.location.href = '/Traveler/Dashboard';
                     } else if (res.status === 400) {

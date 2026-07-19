@@ -69,7 +69,19 @@
                         </template>
                         <template x-if="!guide.coverPhotoUrl">
                             <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-container to-surface-variant">
-                                <span class="material-symbols-outlined text-6xl text-primary/40">face_4</span>
+                                <span class="material-symbols-outlined text-6xl text-primary/40">landscape</span>
+                            </div>
+                        </template>
+                        
+                        <!-- Avatar Overlay -->
+                        <template x-if="guide.avatarUrl">
+                            <div class="absolute bottom-4 left-4 w-16 h-16 rounded-full border-4 border-white shadow-lg overflow-hidden z-20">
+                                <img :src="guide.avatarUrl" :alt="guide.name" class="w-full h-full object-cover" />
+                            </div>
+                        </template>
+                        <template x-if="!guide.avatarUrl">
+                            <div class="absolute bottom-4 left-4 w-16 h-16 rounded-full border-4 border-white shadow-lg bg-surface flex items-center justify-center z-20">
+                                <span class="material-symbols-outlined text-3xl text-primary/40">face</span>
                             </div>
                         </template>
                     </div>

@@ -539,22 +539,9 @@
 
                     if (res.ok) {
                         const data = await res.json();
-                        if (data.bookingId) {
-                            Swal.fire({
-                                title: 'Success!',
-                                text: 'Booking request sent successfully!',
-                                icon: 'success',
-                                showCancelButton: true,
-                                confirmButtonText: 'Proceed to Pay',
-                                cancelButtonText: 'Close',
-                                confirmButtonColor: '#ff7a00',
-                                cancelButtonColor: '#6b7280',
-                                customClass: { popup: 'swal-top-fix' }
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    window.location.href = '/Traveler/Checkout/' + data.bookingId;
-                                }
-                            });
+                        if (data.paymentUrl) {
+                            window.location.href = data.paymentUrl;
+                            return;
                         }
                     } else if (res.status === 400) {
                         const errorData = await res.json();
