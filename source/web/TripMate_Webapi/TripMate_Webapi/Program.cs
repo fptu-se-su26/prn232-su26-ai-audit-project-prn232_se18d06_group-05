@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using Supabase;
 using TripMate_WebAPI.Services;
 using TripMate_Webapi.Repositories;
+using TripMate_Webapi.Services;
 using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -86,7 +87,8 @@ builder.Services.AddScoped<BookingService>();
 // ── Calendar Service ──────────────────────────────────────────────────────────
 builder.Services.AddScoped<ICalendarService, CalendarService>();
 
-// ── Repositories ──────────────────────────────────────────────────────────────
+// ── Repositories & Additional Services ──────────────────────────────────────────
+builder.Services.AddScoped<ITripRequestService, TripRequestService>();
 builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IGuideRepository, GuideRepository>();
