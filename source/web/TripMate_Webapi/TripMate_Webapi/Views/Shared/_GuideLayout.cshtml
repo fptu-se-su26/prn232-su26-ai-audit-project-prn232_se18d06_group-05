@@ -21,6 +21,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    @if (ViewData["TurboVisitControl"] is string turboVisitControl)
+    {
+        <meta name="turbo-visit-control" content="@turboVisitControl">
+    }
+    @if (ViewData["TurboCacheControl"] is string turboCacheControl)
+    {
+        <meta name="turbo-cache-control" content="@turboCacheControl">
+    }
     <title>@ViewData["Title"] | TripMate Guide Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -83,6 +91,11 @@
             <a href="/Guide/Dashboard" class="@(ViewData["ActivePage"]?.ToString() == "Dashboard" ? "bg-orange-100 text-primary font-bold" : "hover:bg-orange-50 text-gray-600 hover:text-primary font-medium") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group">
                 <span class="material-symbols-outlined @(ViewData["ActivePage"]?.ToString() == "Dashboard" ? "text-primary" : "text-gray-400 group-hover:text-primary") text-[22px]">grid_view</span>
                 <span>Dashboard</span>
+            </a>
+
+            <a href="/Guide/TripRequests" data-turbo="false" class="@(ViewData["ActivePage"]?.ToString() == "TripRequests" ? "bg-orange-100 text-primary font-bold" : "hover:bg-orange-50 text-gray-600 hover:text-primary font-medium") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group">
+                <span class="material-symbols-outlined @(ViewData["ActivePage"]?.ToString() == "TripRequests" ? "text-primary" : "text-gray-400 group-hover:text-primary") text-[22px]">travel_explore</span>
+                <span>Trip Requests</span>
             </a>
             
             <a href="/Guide/Bookings" class="@(ViewData["ActivePage"]?.ToString() == "Bookings" ? "bg-orange-100 text-primary font-bold" : "hover:bg-orange-50 text-gray-600 hover:text-primary font-medium") flex items-center justify-between px-3 py-2.5 rounded-xl transition-all group">

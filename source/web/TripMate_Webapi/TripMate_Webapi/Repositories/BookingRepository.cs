@@ -84,8 +84,13 @@ namespace TripMate_Webapi.Repositories
 
         public async Task<int> GetPendingBookingsCountAsync(string guideProfileId)
         {
+            var responseWindowStartUtc = DateTime.UtcNow
+                .AddHours(-24)
+                .ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+
             var response = await _supabase.From<BookingEntity>()
                 .Where(b => b.GuideProfileId == guideProfileId && b.Status == 0) // Status 0 = Pending
+                .Filter("created_at", Postgrest.Constants.Operator.GreaterThan, responseWindowStartUtc)
                 .Count(Postgrest.Constants.CountType.Exact);
                 
             return response;

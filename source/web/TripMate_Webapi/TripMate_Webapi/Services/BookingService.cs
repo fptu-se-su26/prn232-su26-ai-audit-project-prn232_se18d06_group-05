@@ -41,6 +41,7 @@ public class BookingService
 
     // Platform fee rate (e.g. 15%)
     private const decimal PlatformFeeRate = 0.15m;
+    private static readonly TimeSpan GuideResponseWindow = TimeSpan.FromHours(24);
 
     public BookingService(HttpClient http, IConfiguration config,
         INotificationService notif, ChatService chat, TripMate_Webapi.Repositories.IBookingRepository repo)
@@ -198,8 +199,13 @@ public class BookingService
 
         foreach (var b in entities)
         {
-            var secondsRemaining = (int)(b.CreatedAt.AddHours(24) - DateTime.UtcNow).TotalSeconds;
-            if (secondsRemaining < 0) secondsRemaining = 0;
+            var responseDeadlineUtc = GetGuideResponseDeadlineUtc(b.CreatedAt);
+            var remaining = responseDeadlineUtc - DateTime.UtcNow;
+            var isExpired = b.Status == 0 && remaining <= TimeSpan.Zero;
+            var secondsRemaining = b.Status == 0 && !isExpired
+                ? (int)Math.Ceiling(remaining.TotalSeconds)
+                : 0;
+            var effectiveStatus = isExpired ? "Expired" : MapStatus(b.Status);
 
             dtos.Add(new TripMate_WebAPI.DTOs.Booking.Responses.GuideBookingViewDto(
                 Id: b.Id,
@@ -216,7 +222,7 @@ public class BookingService
                 PlatformFee: b.PlatformFee,
                 NetEarnings: b.GuideEarnings,
                 Note: b.TravelerNotes,
-                Status: MapStatus(b.Status),
+                Status: effectiveStatus,
                 SecondsRemaining: secondsRemaining,
                 CreatedAt: b.CreatedAt
             ));
@@ -238,6 +244,9 @@ public class BookingService
         if (booking.Status != 0)
             throw new Exception("Chỉ có thể cập nhật trạng thái của booking đang chờ duyệt (Pending)");
 
+        if (DateTime.UtcNow >= GetGuideResponseDeadlineUtc(booking.CreatedAt))
+            throw new Exception("Booking đã hết hạn phản hồi sau 24 giờ và không thể cập nhật.");
+
         await _repo.UpdateBookingStatusAsync(bookingId, newStatus);
         
         // Optional: Send notification to traveler
@@ -255,6 +264,18 @@ public class BookingService
                 $"Guide không thể nhận yêu cầu đặt tour này.",
                 new { bookingId });
         }
+    }
+
+    private static DateTime GetGuideResponseDeadlineUtc(DateTime createdAt)
+    {
+        var createdAtUtc = createdAt.Kind switch
+        {
+            DateTimeKind.Utc => createdAt,
+            DateTimeKind.Local => createdAt.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(createdAt, DateTimeKind.Utc)
+        };
+
+        return createdAtUtc.Add(GuideResponseWindow);
     }
 
     // ── Get Guide Unavailable Dates ───────────────────────────────────────────
