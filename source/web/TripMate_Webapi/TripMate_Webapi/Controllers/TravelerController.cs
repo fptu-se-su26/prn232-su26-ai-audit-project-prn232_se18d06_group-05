@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using TripMate_Webapi.Repositories;
 using TripMate_Webapi.Entities;
 using TripMate_WebAPI.Services;
@@ -22,6 +23,7 @@ namespace TripMate_Webapi.Controllers
         private readonly ISavedGuideRepository _savedGuideRepository;
         private readonly IPayOSService _payOSService;
         private readonly Supabase.Client _supabase;
+        private readonly INotificationService _notifications;
 
         private const string LOGIN_URL = "/Auth/Login";
 
@@ -35,7 +37,8 @@ namespace TripMate_Webapi.Controllers
             IGuideRepository guideRepository,
             ISavedGuideRepository savedGuideRepository,
             IPayOSService payOSService,
-            Supabase.Client supabase)
+            Supabase.Client supabase,
+            INotificationService notifications)
         {
             _logger = logger;
             _authService = authService;
@@ -47,6 +50,7 @@ namespace TripMate_Webapi.Controllers
             _savedGuideRepository = savedGuideRepository;
             _payOSService = payOSService;
             _supabase = supabase;
+            _notifications = notifications;
         }
 
         // ────────────────────────────────────────────────────────────────────
@@ -160,19 +164,29 @@ namespace TripMate_Webapi.Controllers
                 var bookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
                 var activeBookings = bookings.Where(b => b.Status >= 1).ToList();
                 
-                // Trích xuất các Guide duy nhất từ các booking này
-                var guideProfiles = activeBookings
+                // Prepare active bookings info for client (include booking id + guide profile)
+                var activeList = activeBookings
                     .Where(b => b.GuideProfile != null)
-                    .Select(b => b.GuideProfile)
-                    .GroupBy(g => g!.Id)
-                    .Select(g => g.First())
+                    .Select(b => new TripMate_WebAPI.DTOs.Chat.ActiveBookingDto
+                    {
+                        BookingId = b.Id ?? string.Empty,
+                        GuideProfileId = b.GuideProfile?.Id,
+                        GuideUserId = b.GuideProfile?.UserId,
+                        GuideName = b.GuideProfile?.Profile?.FullName ?? b.GuideProfile?.UserId,
+                        GuideAvatar = b.GuideProfile?.Profile?.AvatarUrl,
+                        TourName = b.ExperiencePackage?.Title,
+                        BookingDate = b.BookingDate.ToString("yyyy-MM-dd")
+                    })
                     .ToList();
 
-                ViewBag.Guides = guideProfiles;
+                ViewBag.ActiveBookings = activeList;
             }
 
             return View();
         }
+
+        [Authorize(Roles = "traveler")]
+        public IActionResult Notifications() => View();
 
         // GET: /Traveler/GuideProfile/{id} [Public]
         public async Task<IActionResult> GuideProfile(string id)
@@ -433,12 +447,43 @@ namespace TripMate_Webapi.Controllers
 
                 if (cancel == "true" || status != "PAID")
                 {
-                    await _bookingRepository.UpdateBookingStatusAsync(booking.Id, 3); // Cancelled
+                    await _bookingRepository.UpdateBookingStatusAsync(booking.Id, 3); // Original PayOS callback behavior
+                    await _notifications.SendAsync(
+                        booking.TravelerId,
+                        NotificationTypes.PaymentFailed,
+                        "Payment was not completed",
+                        $"Payment for booking {booking.Id} was cancelled or failed.",
+                        new { bookingId = booking.Id, orderCode, status },
+                        $"/Traveler/BookingDetails/{booking.Id}",
+                        $"payment-failed:{booking.Id}");
                     TempData["ErrorMessage"] = "Payment was cancelled.";
                 }
                 else if (status == "PAID" && booking.Status == -1)
                 {
-                    await _bookingRepository.UpdateBookingStatusAsync(booking.Id, 0); // Pending Guide Approval
+                    await _bookingRepository.UpdateBookingStatusAsync(booking.Id, 0); // Original PayOS callback behavior
+                    await _notifications.SendAsync(
+                        booking.TravelerId,
+                        NotificationTypes.PaymentSucceeded,
+                        "Payment successful",
+                        $"Payment for booking {booking.Id} was received. The guide can now review it.",
+                        new { bookingId = booking.Id, orderCode, amount = booking.TotalAmount },
+                        $"/Traveler/BookingDetails/{booking.Id}",
+                        $"payment-succeeded:{booking.Id}",
+                        sendEmail: true);
+
+                    var guide = await _guideRepository.GetGuideByProfileIdAsync(booking.GuideProfileId);
+                    if (!string.IsNullOrWhiteSpace(guide?.UserId))
+                    {
+                        await _notifications.SendAsync(
+                            guide.UserId,
+                            NotificationTypes.BookingAwaitingGuide,
+                            "New paid booking awaiting your response",
+                            $"Booking {booking.Id} is ready for your review.",
+                            new { bookingId = booking.Id, booking.BookingDate, booking.GuestCount },
+                            "/Guide/Bookings",
+                            $"booking-awaiting-guide:{booking.Id}",
+                            sendEmail: true);
+                    }
                     TempData["SuccessMessage"] = "Payment successful! Your booking is now pending guide approval.";
                 }
                 
@@ -556,6 +601,7 @@ namespace TripMate_Webapi.Controllers
             try
             {
                 await _reviewRepository.CreateReviewAsync(review);
+                await NotifyGuideReviewAsync(booking.GuideProfileId, travelerId, id, rating);
                 _logger.LogInformation("[Review] Traveler={TravelerId} rated Guide={GuideId} with {Rating}★ for Booking={BookingId}",
                     travelerId, booking.GuideProfileId, rating, id);
 
@@ -761,6 +807,7 @@ namespace TripMate_Webapi.Controllers
             };
 
             var created = await _reviewRepository.CreateReviewAsync(review);
+            await NotifyGuideReviewAsync(booking.GuideProfileId, travelerId, req.BookingId, req.Rating);
             return Json(new { success = true });
         }
 
@@ -790,10 +837,58 @@ namespace TripMate_Webapi.Controllers
                 return Unauthorized(new { error = "Not authorized" });
 
             if (booking.Status != 0)
-                return BadRequest(new { error = "Only pending bookings can be deleted" });
+                return BadRequest(new { error = "Only pending bookings can be cancelled" });
 
-            await _bookingRepository.DeleteBookingAsync(id);
+            // Preserve the booking so admins can review the cancellation/refund.
+            await _bookingRepository.UpdateBookingStatusAsync(id, 3);
+            var guide = await _guideRepository.GetGuideByProfileIdAsync(booking.GuideProfileId);
+            var cancellationData = new { bookingId = id, cancelledBy = "traveler" };
+            if (!string.IsNullOrWhiteSpace(guide?.UserId))
+            {
+                await _notifications.SendAsync(
+                    guide.UserId,
+                    NotificationTypes.BookingCancelled,
+                    "Pending booking cancelled",
+                    $"The traveler cancelled booking {id}.",
+                    cancellationData,
+                    "/Guide/Bookings",
+                    $"booking-cancelled:{id}:guide");
+            }
+            await _notifications.SendAsync(
+                travelerId,
+                NotificationTypes.BookingCancelled,
+                "Cancellation submitted",
+                $"Booking {id} was cancelled and is awaiting any required refund review.",
+                cancellationData,
+                $"/Traveler/BookingDetails/{id}",
+                $"booking-cancelled:{id}:traveler");
+            await _notifications.SendToRoleAsync(
+                "admin",
+                NotificationTypes.CancellationReviewRequired,
+                "Booking cancellation recorded",
+                $"Booking {id} was cancelled by the traveler.",
+                cancellationData,
+                "/Admin/Moderation",
+                $"cancellation-review:{id}");
             return Json(new { success = true });
+        }
+
+        private async Task NotifyGuideReviewAsync(
+            string guideProfileId,
+            string travelerId,
+            string bookingId,
+            int rating)
+        {
+            var guide = await _guideRepository.GetGuideByProfileIdAsync(guideProfileId);
+            if (string.IsNullOrWhiteSpace(guide?.UserId)) return;
+            await _notifications.SendAsync(
+                guide.UserId,
+                NotificationTypes.ReviewReceived,
+                "New review received",
+                $"A traveler rated booking {bookingId} {rating} star(s).",
+                new { bookingId, travelerId, guideProfileId, rating },
+                "/Guide/Profile",
+                $"review:{bookingId}");
         }
 
         // POST: /Traveler/ToggleTripStatusAjax/{id}  [Bearer Auth via header]

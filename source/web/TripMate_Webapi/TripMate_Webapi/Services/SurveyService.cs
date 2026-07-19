@@ -76,7 +76,7 @@ public class SurveyService
             await RecalculateGuideRatingAsync(request.GuideProfileId, userToken);
 
             // Send notification to guide
-            await SendGuideNotificationAsync(request.GuideProfileId, userId, request.Rating, userToken);
+            await SendGuideNotificationAsync(request.GuideProfileId, request.BookingId, userId, request.Rating, userToken);
 
             // Check for first-time survey and create voucher
             var voucher = await CreateFirstTimeSurveyVoucherAsync(userId, userToken);
@@ -455,7 +455,7 @@ public class SurveyService
     }
 
     private async Task SendGuideNotificationAsync(
-        string guideProfileId, string travelerId, int rating, string userToken)
+        string guideProfileId, string bookingId, string travelerId, int rating, string userToken)
     {
         try
         {
@@ -467,10 +467,12 @@ public class SurveyService
             // Send notification to the guide's user_id
             await _notificationService.SendAsync(
                 guideInfo.UserId ?? "",
-                "new_review",
-                "Đánh giá mới",
-                $"{travelerName} đã đánh giá bạn với {rating} sao",
-                new { guide_profile_id = guideProfileId, rating }
+                NotificationTypes.ReviewReceived,
+                "New review received",
+                $"{travelerName} rated you {rating} star(s).",
+                new { guideProfileId, bookingId, rating },
+                "/Guide/Profile",
+                $"review:{bookingId}"
             );
         }
         catch (Exception ex)
@@ -510,10 +512,12 @@ public class SurveyService
 
                 await _notificationService.SendAsync(
                     userId,
-                    "discount_voucher",
-                    "Mã giảm giá cho bạn!",
-                    $"Cảm ơn bạn đã đánh giá đầu tiên! Sử dụng mã {voucherCode} để được giảm 5% cho booking tiếp theo.",
-                    new { voucher_code = voucherCode, discount_percent = 5, expires_at = expiresAt }
+                    NotificationTypes.VoucherIssued,
+                    "Your 5% voucher is ready",
+                    $"Thanks for your first review. Use {voucherCode} on your next booking.",
+                    new { voucherCode, discountPercent = 5, expiresAt },
+                    "/Home/Tours",
+                    $"voucher:{voucherCode}"
                 );
 
                 return new DiscountVoucherDto(voucherCode, 5, expiresAt);

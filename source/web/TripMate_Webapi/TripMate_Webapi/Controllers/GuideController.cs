@@ -129,6 +129,7 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/Dashboard
+        [HttpGet("/Guide/Dashboard")]
         [Authorize(Roles = "guide")]
         public async Task<IActionResult> Dashboard()
         {
@@ -153,6 +154,14 @@ namespace TripMate_Webapi.Controllers
                 _logger.LogError(ex, "Error loading Guide Dashboard");
                 return View(new GuideDashboardViewModel()); // Return empty on error to not crash UI
             }
+        }
+
+        // GET: /Guide/Profile/{id}
+        // This is the public profile viewed by the Traveler
+        [HttpGet("/Guide/Profile/{id}")]
+        public IActionResult Profile(string id)
+        {
+            return RedirectToAction("GuideProfile", "Traveler", new { id });
         }
 
         // GET: /Guide/Profile
@@ -192,7 +201,7 @@ namespace TripMate_Webapi.Controllers
             // ponytail: certificate, phone number, full name, email explicitly excluded per requirements
         }
 
-        [HttpPost]
+        [HttpPost("/Guide/UpdateProfile")]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateGuideProfileDto dto, [FromServices] Supabase.Client supabase)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
@@ -477,59 +486,46 @@ namespace TripMate_Webapi.Controllers
         // GET: /Guide/Messages
         public IActionResult Messages()
         {
-            // Mock data for UI
-            var threads = new List<dynamic>
+            // Previously this action returned hard-coded mock threads for the UI.
+            // Those mocks were replaced by live data fetched on the client, so
+            // keeping them caused duplication and dead code. Removed mock threads
+            // to let the client rely solely on the live conversations + active bookings.
+
+            // Also provide active bookings for this guide so chat threads can be created even without messages
+            try
             {
-                new {
-                    Id = "t1",
-                    TravelerName = "Trần Thị Bảo Châu",
-                    TravelerAvatar = "/images/AVATAR.png",
-                    TourName = "Bình minh Mỹ Sơn + Ẩm thực địa phương",
-                    Date = "Thứ 7, 15/06/2026",
-                    LastMessage = "Hẹn gặp lúc 6h nhé",
-                    TimeAgo = "2 phút trước",
-                    UnreadCount = 2,
-                    IsLocked = false,
-                    Messages = new List<dynamic>
+                var guideProfileIdTask = GetCurrentGuideProfileIdAsync();
+                guideProfileIdTask.Wait();
+                var guideProfileId = guideProfileIdTask.Result;
+                if (!string.IsNullOrEmpty(guideProfileId))
+                {
+                    var guideBookingsTask = _bookingService.GetGuideBookingsAsync(guideProfileId);
+                    guideBookingsTask.Wait();
+                    var guideBookings = guideBookingsTask.Result;
+
+                    // Map to simple DTO to pass to view
+                    var active = guideBookings.Select(b => new TripMate_WebAPI.DTOs.Chat.ActiveBookingDto
                     {
-                        new { Text = "Xin chào Guide Minh!", IsMine = false, Time = "08:15", IsRead = true },
-                        new { Text = "Chào bạn Châu! Mình đã nhận được booking của bạn rồi nhé.", IsMine = true, Time = "08:16", IsRead = true },
-                        new { Text = "Bạn có thể đón mình tại khách sạn ở phố cổ được không?", IsMine = false, Time = "08:18", IsRead = true },
-                        new { Text = "Dạ được nhé, bạn cho mình xin địa chỉ cụ thể nha.", IsMine = true, Time = "08:20", IsRead = true },
-                        new { Text = "Mình ở Mường Thanh Holiday, số 15 Âu Cơ", IsMine = false, Time = "09:00", IsRead = false },
-                        new { Text = "Hẹn gặp lúc 6h nhé", IsMine = false, Time = "09:01", IsRead = false }
-                    }
-                },
-                new {
-                    Id = "t2",
-                    TravelerName = "Nguyễn Văn Hùng Anh",
-                    TravelerAvatar = "/images/AVATAR.png",
-                    TourName = "Khám phá phố cổ Hội An về đêm",
-                    Date = "Chủ Nhật, 16/06/2026",
-                    LastMessage = "Cảm ơn bạn rất nhiều!",
-                    TimeAgo = "Hôm qua",
-                    UnreadCount = 0,
-                    IsLocked = false,
-                    Messages = new List<dynamic>
-                    {
-                        new { Text = "Cảm ơn bạn rất nhiều!", IsMine = false, Time = "10:00", IsRead = true }
-                    }
-                },
-                new {
-                    Id = "t3",
-                    TravelerName = "Lê Hoàng Phúc",
-                    TravelerAvatar = "/images/AVATAR.png",
-                    TourName = "Đạp xe đồng quê & Làng rau Trà Quế",
-                    Date = "Thứ 2, 17/06/2026",
-                    LastMessage = "Booking chưa xác nhận",
-                    TimeAgo = "1 giờ trước",
-                    UnreadCount = 0,
-                    IsLocked = true, // Locked because it's pending
-                    Messages = new List<dynamic>()
+                        BookingId = b.Id ?? string.Empty,
+                        TravelerId = b.TravelerId,
+                        TravelerName = b.TravelerName,
+                        TravelerAvatar = b.TravelerAvatar,
+                        TourName = b.TourName,
+                        BookingDate = b.Date
+                    }).ToList();
+
+                    ViewBag.ActiveBookings = active;
                 }
-            };
-            
-            ViewBag.Threads = threads;
+                else
+                {
+                    ViewBag.ActiveBookings = new List<object>();
+                }
+            }
+            catch
+            {
+                ViewBag.ActiveBookings = new List<object>();
+            }
+
             return View();
         }
 
@@ -567,16 +563,9 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/Notifications
+        [Authorize(Roles = "guide")]
         public IActionResult Notifications()
         {
-            var notifications = new List<dynamic>
-            {
-                new { Id = 1, Type = "booking_new", Title = "Booking mới từ Trần Thị Bảo Châu", Message = "Đặt 'Bình minh Mỹ Sơn' vào 15/06/2026. Phản hồi trong 24h", Time = "10 phút trước", IsRead = false },
-                new { Id = 2, Type = "payment", Title = "Thanh toán đã được giải ngân", Message = "850,000đ từ booking #BK-2024-008 đã về ví", Time = "1 giờ trước", IsRead = false },
-                new { Id = 3, Type = "review", Title = "Đánh giá mới 5 sao từ Nguyễn Văn An", Message = "\"Guide rất nhiệt tình, rất recommend!\"", Time = "Hôm qua 14:23", IsRead = true },
-                new { Id = 4, Type = "admin", Title = "Tài khoản của bạn đã được xác minh", Message = "Chào mừng bạn đến với TripMate Local Guide. Bắt đầu tạo tour ngay nhé!", Time = "2 ngày trước", IsRead = true }
-            };
-            ViewBag.Notifications = notifications;
             return View();
         }
 
