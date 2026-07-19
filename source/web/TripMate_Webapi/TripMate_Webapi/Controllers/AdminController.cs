@@ -37,6 +37,7 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/Dashboard
         public async Task<IActionResult> Dashboard()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 // Load data from services
@@ -103,12 +104,14 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/Survey
         public IActionResult Survey()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             return View();
         }
 
         // GET: /Admin/GuideApprovals
         public async Task<IActionResult> GuideApprovals()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 var pendingApplications = await _guideApprovalService.GetPendingApplicationsAsync();
@@ -132,6 +135,7 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/GuideDetail/{id}
         public async Task<IActionResult> GuideDetail(string id)
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 var application = await _guideApprovalService.GetApplicationByIdAsync(id);
@@ -152,18 +156,21 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/Escrow
         public IActionResult Escrow()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             return View();
         }
 
         // GET: /Admin/Moderation
         public IActionResult Moderation()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             return View();
         }
 
         // GET: /Admin/Guides
         public async Task<IActionResult> Guides()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 var guides = await _adminService.GetGuidesAsync();
@@ -179,6 +186,7 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/Users
         public async Task<IActionResult> Users()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 var users = await _adminService.GetUsersAsync();
@@ -194,6 +202,7 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/Bookings
         public async Task<IActionResult> Bookings()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 var bookings = await _adminService.GetBookingsAsync();
@@ -209,6 +218,7 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/Analytics
         public async Task<IActionResult> Analytics()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 var kpis = await _adminService.GetKpisAsync();
@@ -501,7 +511,7 @@ namespace TripMate_Webapi.Controllers
         {
             // 1. Fallback for seed user email
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
-            if (email == "admin@tripmate.com") return true;
+            if (email == "admin@tripmate.com" || email == "admin2@tripmate.com") return true;
 
             // 2. Main claim check (JWT user_metadata claim)
             var metadataClaim = User.FindFirst("user_metadata")?.Value;
@@ -705,6 +715,34 @@ namespace TripMate_Webapi.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error exporting transactions");
+                return StatusCode(500, new { message = "File export error" });
+            }
+        }
+
+        // GET: /api/admin/users/export
+        [HttpGet("/api/admin/users/export")]
+        public async Task<IActionResult> ExportUsers()
+        {
+            if (!IsAdmin()) return Forbid();
+
+            try
+            {
+                var users = await _adminService.GetUsersAsync();
+
+                var builder = new System.Text.StringBuilder();
+                builder.AppendLine("User ID,Email,Full Name,Phone Number,Role,Is Active,Created At");
+
+                foreach (var u in users)
+                {
+                    builder.AppendLine($"\"{u.Id}\",\"{u.Email}\",\"{u.FullName}\",\"{u.PhoneNumber}\",\"{u.Role}\",{u.IsActive},\"{u.CreatedAt:yyyy-MM-dd HH:mm:ss}\"");
+                }
+
+                var content = System.Text.Encoding.UTF8.GetBytes(builder.ToString());
+                return File(content, "text/csv", $"users_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting users");
                 return StatusCode(500, new { message = "File export error" });
             }
         }
