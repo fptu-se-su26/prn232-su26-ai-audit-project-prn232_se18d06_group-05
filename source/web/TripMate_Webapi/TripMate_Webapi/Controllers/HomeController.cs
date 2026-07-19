@@ -38,7 +38,7 @@ namespace TripMate_Webapi.Controllers
                 foreach (var alias in aliases)
                     if (RemoveDiacritics(alias) == norm) return canonical;
             }
-            return input.Trim(); // fallback: pass original
+            return null; // Return null if not a known city so we know it's a general search term
         }
 
         private static string RemoveDiacritics(string s) =>
@@ -104,19 +104,51 @@ namespace TripMate_Webapi.Controllers
                 var rawQuery = search ?? destination;
                 var normalizedCity = string.IsNullOrWhiteSpace(rawQuery) ? null : NormalizeCity(rawQuery);
 
-                var guides = await _guideRepository.GetGuidesFilteredAsync(normalizedCity, specialty);
-                var tours = await _tourService.GetToursAsync(rawQuery); // title/description search
+                var guides = await _guideRepository.GetAllGuidesAsync();
+                var tours = await _tourService.GetToursAsync();
 
-                // Also filter tours by guide's city_area when a city was searched
-                if (!string.IsNullOrWhiteSpace(normalizedCity))
+                // Filter Guides
+                if (!string.IsNullOrWhiteSpace(rawQuery))
                 {
-                    tours = tours.Where(t =>
-                        t.GuideProfile?.CityArea != null &&
-                        t.GuideProfile.CityArea.Contains(normalizedCity, StringComparison.OrdinalIgnoreCase)
-                    ).ToList();
+                    if (normalizedCity != null)
+                    {
+                        guides = guides.Where(g => g.CityArea != null && g.CityArea.Contains(normalizedCity, StringComparison.OrdinalIgnoreCase)).ToList();
+                    }
+                    else
+                    {
+                        guides = guides.Where(g => 
+                            (g.CityArea != null && g.CityArea.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) ||
+                            (g.Profile?.FullName != null && g.Profile.FullName.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) ||
+                            (g.Specialties != null && g.Specialties.Any(s => s.Contains(rawQuery, StringComparison.OrdinalIgnoreCase))) ||
+                            (g.Bio != null && g.Bio.Contains(rawQuery, StringComparison.OrdinalIgnoreCase))
+                        ).ToList();
+                    }
                 }
 
-                ViewBag.Destination = normalizedCity;
+                if (!string.IsNullOrWhiteSpace(specialty))
+                {
+                    guides = guides.Where(g => g.Specialties != null && g.Specialties.Any(s => s.Contains(specialty, StringComparison.OrdinalIgnoreCase))).ToList();
+                }
+
+                // Filter Tours
+                if (!string.IsNullOrWhiteSpace(rawQuery))
+                {
+                    if (normalizedCity != null)
+                    {
+                        tours = tours.Where(t => t.GuideProfile?.CityArea != null && t.GuideProfile.CityArea.Contains(normalizedCity, StringComparison.OrdinalIgnoreCase)).ToList();
+                    }
+                    else
+                    {
+                        tours = tours.Where(t => 
+                            (t.Title != null && t.Title.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) ||
+                            (t.Description != null && t.Description.Contains(rawQuery, StringComparison.OrdinalIgnoreCase)) ||
+                            (t.Tags != null && t.Tags.Any(tag => tag.Contains(rawQuery, StringComparison.OrdinalIgnoreCase))) ||
+                            (t.GuideProfile?.CityArea != null && t.GuideProfile.CityArea.Contains(rawQuery, StringComparison.OrdinalIgnoreCase))
+                        ).ToList();
+                    }
+                }
+
+                ViewBag.Destination = normalizedCity ?? (string.IsNullOrWhiteSpace(rawQuery) ? null : rawQuery);
                 ViewBag.Specialty = specialty;
                 ViewBag.Search = rawQuery;
                 ViewBag.Tours = tours;
@@ -135,13 +167,24 @@ namespace TripMate_Webapi.Controllers
         {
             try
             {
-                var tours = await _tourService.GetToursAsync(search);
+                var tours = await _tourService.GetToursAsync();
                 
-                if (!string.IsNullOrEmpty(destination))
+                if (!string.IsNullOrWhiteSpace(search))
                 {
                     tours = tours.Where(t => 
+                        (t.Title != null && t.Title.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                        (t.Description != null && t.Description.Contains(search, StringComparison.OrdinalIgnoreCase)) ||
+                        (t.Tags != null && t.Tags.Any(tag => tag.Contains(search, StringComparison.OrdinalIgnoreCase))) ||
+                        (t.GuideProfile?.CityArea != null && t.GuideProfile.CityArea.Contains(search, StringComparison.OrdinalIgnoreCase))
+                    ).ToList();
+                }
+
+                if (!string.IsNullOrWhiteSpace(destination))
+                {
+                    var normDest = NormalizeCity(destination) ?? destination;
+                    tours = tours.Where(t => 
                         t.GuideProfile?.CityArea != null && 
-                        t.GuideProfile.CityArea.Contains(destination, StringComparison.OrdinalIgnoreCase)
+                        t.GuideProfile.CityArea.Contains(normDest, StringComparison.OrdinalIgnoreCase)
                     ).ToList();
                 }
 

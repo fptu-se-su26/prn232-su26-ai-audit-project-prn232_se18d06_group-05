@@ -17,9 +17,10 @@
     <!-- Main Content -->
     <main class="flex-1 p-8 md:p-12 overflow-y-auto h-[calc(100vh-80px)]">
 
-        <!-- Header -->
-        <div class="mb-10">
-            <h1 class="text-4xl font-extrabold text-on-surface mb-2">Account Settings</h1>
+        <div class="max-w-3xl mx-auto">
+            <!-- Header -->
+            <div class="mb-10">
+                <h1 class="text-4xl font-extrabold text-on-surface mb-2">Account Settings</h1>
             <p class="text-lg text-on-surface-variant">Manage your profile, travel preferences, and personality details.</p>
         </div>
 
@@ -45,7 +46,7 @@
             <span>Preferences saved!</span>
         </div>
 
-        <div class="max-w-3xl space-y-8">
+        <div class="space-y-8">
 
             <!-- ── Personal Information ─────────────────────────────────────── -->
             <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
@@ -208,6 +209,7 @@
             </div>
 
         </div>
+        </div>
     </main>
 </div>
 
@@ -224,29 +226,54 @@
         setTimeout(() => toast.classList.add('hidden'), 3000);
     }
 
-    function loadSettings() {
-        const userEmail = localStorage.getItem('userEmail') || '';
+    async function loadSettings() {
+        const token = localStorage.getItem('jwt_token');
+        let profileData = {};
+
+        if (token) {
+            try {
+                const res = await fetch('/Traveler/GetProfileAjax', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    profileData = await res.json();
+                }
+            } catch (err) {
+                console.error("Failed to load profile from backend", err);
+            }
+        }
+
+        const userEmail = profileData.email || localStorage.getItem('userEmail') || '';
         const atIdx = userEmail.indexOf('\u0040');
-        const displayName = atIdx > 0 ? userEmail.substring(0, atIdx) : userEmail;
+        const displayName = profileData.displayName || (atIdx > 0 ? userEmail.substring(0, atIdx) : userEmail);
 
         // Load stored profile
         const profile = JSON.parse(localStorage.getItem('travelerProfile') || '{}');
 
         // Avatar initials
-        const initials = (profile.displayName || displayName).substring(0, 2).toUpperCase() || '?';
+        const initials = (profileData.displayName || profile.displayName || displayName).substring(0, 2).toUpperCase() || '?';
         const avatarEl = document.getElementById('avatarInitials');
-        if (avatarEl) avatarEl.textContent = initials;
+        if (avatarEl) {
+            avatarEl.textContent = initials;
+            // Also handle showing actual avatar photo if available
+            if (profileData.avatarUrl) {
+                avatarEl.parentElement.style.backgroundImage = `url(${profileData.avatarUrl})`;
+                avatarEl.parentElement.style.backgroundSize = 'cover';
+                avatarEl.parentElement.style.backgroundPosition = 'center';
+                avatarEl.textContent = ''; // Hide initials
+            }
+        }
         const nameEl = document.getElementById('avatarName');
-        if (nameEl) nameEl.textContent = profile.displayName || displayName || 'Traveler';
+        if (nameEl) nameEl.textContent = profileData.displayName || profile.displayName || displayName || 'Traveler';
         const emailEl = document.getElementById('avatarEmail');
         if (emailEl && !emailEl.value) emailEl.textContent = userEmail;
 
         // Profile fields
         const setVal = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
-        setVal('displayNameInput', profile.displayName || displayName);
-        setVal('phoneInput', profile.phone || '');
-        setVal('nationalityInput', profile.nationality || '');
-        setVal('bioInput', profile.bio || '');
+        setVal('displayNameInput', profileData.displayName || profile.displayName || displayName);
+        setVal('phoneInput', profileData.phone || profile.phone || '');
+        setVal('nationalityInput', profileData.nationality || profile.nationality || '');
+        setVal('bioInput', profile.bio || ''); // Bio is local only for now
 
         // Travel preferences (from tripPreferences in localStorage)
         const prefs = JSON.parse(localStorage.getItem('tripPreferences') || '{}');
@@ -267,19 +294,47 @@
         }
     }
 
-    function saveProfile() {
+    async function saveProfile() {
+        const token = localStorage.getItem('jwt_token');
+        const displayName = document.getElementById('displayNameInput').value.trim();
+        const phone = document.getElementById('phoneInput').value.trim();
+        const nationality = document.getElementById('nationalityInput').value.trim();
+        const bio = document.getElementById('bioInput').value.trim();
+
+        if (token) {
+            try {
+                await fetch('/Traveler/UpdateProfileAjax', {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        displayName: displayName,
+                        phone: phone,
+                        nationality: nationality
+                    })
+                });
+            } catch (err) {
+                console.error("Failed to save to backend", err);
+            }
+        }
+
         const profile = JSON.parse(localStorage.getItem('travelerProfile') || '{}');
-        profile.displayName = document.getElementById('displayNameInput').value.trim();
-        profile.phone = document.getElementById('phoneInput').value.trim();
-        profile.nationality = document.getElementById('nationalityInput').value.trim();
-        profile.bio = document.getElementById('bioInput').value.trim();
+        profile.displayName = displayName;
+        profile.phone = phone;
+        profile.nationality = nationality;
+        profile.bio = bio;
         profile.updatedAt = new Date().toISOString();
 
         localStorage.setItem('travelerProfile', JSON.stringify(profile));
 
         // Cập nhật avatar initials ngay
         const initials = profile.displayName.substring(0, 2).toUpperCase() || '?';
-        document.getElementById('avatarInitials').textContent = initials;
+        const avatarEl = document.getElementById('avatarInitials');
+        if (avatarEl && !avatarEl.parentElement.style.backgroundImage) {
+            avatarEl.textContent = initials;
+        }
         document.getElementById('avatarName').textContent = profile.displayName;
 
         showToast('Profile saved successfully!', false);

@@ -21,6 +21,7 @@ namespace TripMate_Webapi.Controllers
         private readonly IGuideRepository _guideRepository;
         private readonly ISavedGuideRepository _savedGuideRepository;
         private readonly IPayOSService _payOSService;
+        private readonly Supabase.Client _supabase;
 
         private const string LOGIN_URL = "/Auth/Login";
 
@@ -33,7 +34,8 @@ namespace TripMate_Webapi.Controllers
             IReviewRepository reviewRepository,
             IGuideRepository guideRepository,
             ISavedGuideRepository savedGuideRepository,
-            IPayOSService payOSService)
+            IPayOSService payOSService,
+            Supabase.Client supabase)
         {
             _logger = logger;
             _authService = authService;
@@ -44,6 +46,7 @@ namespace TripMate_Webapi.Controllers
             _guideRepository = guideRepository;
             _savedGuideRepository = savedGuideRepository;
             _payOSService = payOSService;
+            _supabase = supabase;
         }
 
         // ────────────────────────────────────────────────────────────────────
@@ -141,12 +144,7 @@ namespace TripMate_Webapi.Controllers
             return View(booking);
         }
 
-        // GET: /Traveler/Checkout/{id} [Auth required]
-        public IActionResult Checkout(string id)
-        {
-            ViewBag.RequiresAuth = true;
-            return RedirectToAction("BookingDetails", new { id });
-        }
+
 
 
 
@@ -626,6 +624,67 @@ namespace TripMate_Webapi.Controllers
                 createdAt = t.CreatedAt.ToString("MMM dd, yyyy HH:mm")
             });
             return Json(result);
+        }
+
+        [HttpGet("Traveler/GetProfileAjax")]
+        public async Task<IActionResult> GetProfileAjax()
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                var profile = await _supabase.From<ProfileEntity>().Where(x => x.Id == travelerId).Single();
+                if (profile == null) return NotFound(new { error = "Profile not found" });
+
+                return Json(new {
+                    displayName = profile.FullName,
+                    email = profile.Email,
+                    phone = profile.Phone,
+                    nationality = profile.Location,
+                    avatarUrl = profile.AvatarUrl
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching profile");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        public class UpdateProfileRequest
+        {
+            public string DisplayName { get; set; } = string.Empty;
+            public string Phone { get; set; } = string.Empty;
+            public string Nationality { get; set; } = string.Empty;
+        }
+
+        [HttpPost("Traveler/UpdateProfileAjax")]
+        public async Task<IActionResult> UpdateProfileAjax([FromBody] UpdateProfileRequest req)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                var profile = await _supabase.From<ProfileEntity>().Where(x => x.Id == travelerId).Single();
+                if (profile != null)
+                {
+                    profile.FullName = req.DisplayName;
+                    profile.Phone = req.Phone;
+                    profile.Location = req.Nationality;
+                    await _supabase.From<ProfileEntity>().Update(profile);
+                    return Json(new { success = true });
+                }
+                return NotFound(new { error = "Profile not found" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating profile");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
         }
 
         // GET: /Traveler/GetMyBookings  [Bearer Auth via header]
