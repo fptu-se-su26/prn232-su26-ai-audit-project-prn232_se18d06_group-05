@@ -94,5 +94,17 @@ namespace TripMate_Webapi.Repositories
 
             return response.Models.Any();
         }
+
+        // ── Lấy toàn bộ reviews ────────────────────────────────────────────────
+        public async Task<List<ReviewEntity>> GetAllReviewsAsync()
+        {
+            var response = await _supabase.From<ReviewEntity>()
+                .Select("*, traveler:profiles(*), guide:guide_profiles(*, profile:profiles(*))")
+                .Order(r => r.CreatedAt, Postgrest.Constants.Ordering.Descending)
+                .Limit(50) // Limit to avoid pulling too much data
+                .Get();
+
+            return response.Models;
+        }
     }
 }

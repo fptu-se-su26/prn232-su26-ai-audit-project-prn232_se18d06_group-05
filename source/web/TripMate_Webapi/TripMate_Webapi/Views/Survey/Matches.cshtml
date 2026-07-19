@@ -11,6 +11,28 @@
     </script>
 }
 
+<style>
+    .match-tooltip {
+        visibility: hidden;
+        opacity: 0;
+        transition: all 0.25s ease;
+        pointer-events: none;
+    }
+    .match-badge-wrap:hover .match-tooltip,
+    .match-badge-wrap.show-tooltip .match-tooltip {
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+    }
+    .match-badge-glow {
+        animation: glowPulse 2.5s ease-in-out infinite;
+    }
+    @@keyframes glowPulse {
+        0%, 100% { box-shadow: 0 0 8px rgba(255,122,0,0.3); }
+        50% { box-shadow: 0 0 20px rgba(255,122,0,0.6); }
+    }
+</style>
+
 <div class="min-h-screen bg-surface" x-data="matchingResults()">
     <!-- Loading State -->
     <div x-show="isLoading" class="flex flex-col items-center justify-center h-[80vh]">
@@ -21,9 +43,14 @@
                 <span class="material-symbols-outlined text-5xl animate-pulse">magic_button</span>
             </div>
         </div>
-        <h2 class="text-3xl font-bold text-on-surface mb-2">Analyzing your preferences...</h2>
+        <h2 class="text-3xl font-bold text-on-surface mb-2">AI is analyzing your preferences...</h2>
         <p class="text-on-surface-variant text-lg">Finding the perfect Local Soulmates for your trip to <strong class="text-primary" x-text="preferences.destination === 'Other' ? preferences.customDestination : preferences.destination"></strong></p>
-        <p class="text-sm text-on-surface-variant mt-2 animate-pulse">Calculating compatibility scores...</p>
+        <div class="mt-4 flex items-center gap-2 text-sm text-on-surface-variant">
+            <div class="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
+            <div class="w-2 h-2 bg-primary rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+            <div class="w-2 h-2 bg-primary rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+            <span class="ml-2">Running Jaccard Similarity &amp; Weighted Scoring...</span>
+        </div>
     </div>
 
     <!-- Error State -->
@@ -40,13 +67,14 @@
     <div x-show="!isLoading && !hasError" style="display: none;" class="py-16 px-6 md:px-12 max-w-[1440px] mx-auto" x-transition.opacity.duration.1000ms>
 
         <div class="text-center mb-16">
-            <span class="bg-primary-container text-primary px-4 py-1.5 rounded-full text-sm font-bold mb-4 inline-block tracking-widest uppercase">Matches Found</span>
+            <span class="bg-primary-container text-primary px-4 py-1.5 rounded-full text-sm font-bold mb-4 inline-block tracking-widest uppercase">AI Matches Found</span>
             <h2 class="text-5xl font-extrabold text-on-surface mb-4">Meet Your Local Soulmates</h2>
             <p class="text-xl text-on-surface-variant">
-                We've found <span class="font-bold text-primary" x-text="guides.length"></span> perfect guides for your
+                Our AI found <span class="font-bold text-primary" x-text="guides.length"></span> perfect guides for your
                 <span class="lowercase" x-text="preferences.vibe || 'travel'"></span> trip to
                 <span class="font-bold" x-text="preferences.destination || 'Vietnam'"></span>.
             </p>
+            <p class="text-sm text-on-surface-variant mt-2">Scored using Jaccard Similarity &#215; Weighted Matching</p>
         </div>
 
         <!-- No matches fallback -->
@@ -59,14 +87,42 @@
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-10" x-show="guides.length > 0">
 
-            <!-- 🏆 Top Match Card (first guide — full width, highlighted) -->
+            <!-- Top Match Card (first guide - full width, highlighted) -->
             <template x-if="guides.length > 0">
                 <a :href="'/Traveler/GuideProfile/' + guides[0].guideId" class="md:col-span-3 bg-white rounded-3xl overflow-hidden border-2 border-primary/40 flex flex-col md:flex-row relative group cursor-pointer hover:shadow-2xl transition-all duration-300" style="box-shadow: 0 0 30px rgba(255,122,0,0.15), 0 12px 40px -10px rgba(0,0,0,0.1);">
-                    <!-- 🏆 Best Match Crown Badge -->
-                    <div class="absolute top-4 left-4 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2 z-10 animate-pulse">
-                        <span class="text-lg">🏆</span>
-                        <span>Best Match</span>
-                        <span class="bg-white/20 px-2 py-0.5 rounded-full text-xs" x-text="guides[0].matchScore + '%'"></span>
+                    <!-- Best Match Crown Badge -->
+                    <div class="absolute top-4 left-4 z-10 flex items-center gap-2">
+                        <div class="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white px-5 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2 animate-pulse">
+                            <span class="text-lg">&#127942;</span>
+                            <span>Best Match</span>
+                        </div>
+                    </div>
+
+                    <!-- Explainable AI Match Score Badge (Top Card) -->
+                    <div class="absolute top-4 right-4 z-10 match-badge-wrap" @@click.prevent.stop="toggleTooltip($event)">
+                        <div class="match-badge-glow bg-white/95 backdrop-blur-sm text-primary px-4 py-2 rounded-full text-sm font-bold shadow-lg flex items-center gap-2 cursor-pointer hover:bg-white transition-all border border-primary/20">
+                            <span>&#127775;</span>
+                            <span x-text="guides[0].matchScore + '% Match'"></span>
+                            <span class="material-symbols-outlined text-[16px] text-on-surface-variant">info</span>
+                        </div>
+                        <!-- Tooltip: Explainable AI -->
+                        <div class="match-tooltip absolute top-full right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-outline-variant/30 p-5 z-50">
+                            <div class="flex items-center gap-2 mb-3 pb-3 border-b border-outline-variant/20">
+                                <span class="material-symbols-outlined text-primary">psychology</span>
+                                <h4 class="font-bold text-on-surface text-sm">Why this match?</h4>
+                            </div>
+                            <ul class="space-y-2">
+                                <template x-for="(reason, idx) in (guides[0].matchReasons || [])" :key="idx">
+                                    <li class="flex items-start gap-2 text-sm text-on-surface-variant">
+                                        <span class="material-symbols-outlined text-green-500 text-[16px] mt-0.5 shrink-0">check_circle</span>
+                                        <span x-text="reason"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                            <template x-if="!guides[0].matchReasons || guides[0].matchReasons.length === 0">
+                                <p class="text-sm text-on-surface-variant">Score based on profile compatibility analysis.</p>
+                            </template>
+                        </div>
                     </div>
 
                     <!-- Guide Photo -->
@@ -80,6 +136,16 @@
                                 <span class="material-symbols-outlined text-9xl text-primary/40">face_3</span>
                             </div>
                         </template>
+                        
+                        <!-- Top Match Guide Avatar -->
+                        <div class="absolute bottom-4 left-4 z-10 w-20 h-20 rounded-full border-4 border-white overflow-hidden shadow-lg bg-gray-200">
+                            <template x-if="guides[0].avatarUrl">
+                                <img :src="guides[0].avatarUrl" class="w-full h-full object-cover"/>
+                            </template>
+                            <template x-if="!guides[0].avatarUrl">
+                                <img src="/images/default_avatar.png" class="w-full h-full object-cover"/>
+                            </template>
+                        </div>
                     </div>
 
                     <div class="md:w-3/5 p-8 md:p-12 flex flex-col justify-center">
@@ -112,7 +178,7 @@
                                 <span class="material-symbols-outlined text-primary">sell</span>
                                 <div>
                                     <p class="font-bold text-on-surface text-sm" x-text="guides[0].packageTitle"></p>
-                                    <p class="text-primary font-bold" x-text="guides[0].pricePerSession > 0 ? formatPrice(guides[0].pricePerSession) + '/buổi' : (guides[0].pricePerPerson ? formatPrice(guides[0].pricePerPerson) + '/người' : 'Liên hệ')"></p>
+                                    <p class="text-primary font-bold" x-text="guides[0].pricePerSession > 0 ? formatPrice(guides[0].pricePerSession) + '/session' : (guides[0].pricePerPerson ? formatPrice(guides[0].pricePerPerson) + '/person' : 'Contact')"></p>
                                 </div>
                             </div>
                         </template>
@@ -138,10 +204,32 @@
             <!-- Other Match Cards (guides[1..n]) -->
             <template x-for="(guide, index) in guides.slice(1)" :key="guide.guideId">
                 <a :href="'/Traveler/GuideProfile/' + guide.guideId" class="bg-white rounded-3xl overflow-hidden tonal-elevation border border-outline-variant/30 relative flex flex-col group cursor-pointer hover:shadow-xl hover:-translate-y-2 transition-all duration-300">
-                    <!-- Match Badge -->
-                    <div class="absolute top-4 left-4 bg-white/90 backdrop-blur-sm text-primary px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 z-10">
-                        <span class="material-symbols-outlined text-[14px]">local_fire_department</span>
-                        <span x-text="guide.matchScore + '% Match'"></span>
+
+                    <!-- Explainable AI Match Badge with Tooltip -->
+                    <div class="absolute top-4 left-4 z-10 match-badge-wrap" @@click.prevent.stop="toggleTooltip($event)">
+                        <div class="match-badge-glow bg-white/95 backdrop-blur-sm text-primary px-3 py-1.5 rounded-full text-xs font-bold shadow-md flex items-center gap-1.5 cursor-pointer hover:bg-white transition-all border border-primary/20">
+                            <span>&#127775;</span>
+                            <span x-text="guide.matchScore + '% Match'"></span>
+                            <span class="material-symbols-outlined text-[12px] text-on-surface-variant">info</span>
+                        </div>
+                        <!-- Tooltip: Explainable AI -->
+                        <div class="match-tooltip absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-outline-variant/30 p-4 z-50">
+                            <div class="flex items-center gap-2 mb-2 pb-2 border-b border-outline-variant/20">
+                                <span class="material-symbols-outlined text-primary text-sm">psychology</span>
+                                <h4 class="font-bold text-on-surface text-xs">Why this match?</h4>
+                            </div>
+                            <ul class="space-y-1.5">
+                                <template x-for="(reason, idx) in (guide.matchReasons || [])" :key="idx">
+                                    <li class="flex items-start gap-1.5 text-xs text-on-surface-variant">
+                                        <span class="material-symbols-outlined text-green-500 text-[14px] mt-0.5 shrink-0">check_circle</span>
+                                        <span x-text="reason"></span>
+                                    </li>
+                                </template>
+                            </ul>
+                            <template x-if="!guide.matchReasons || guide.matchReasons.length === 0">
+                                <p class="text-xs text-on-surface-variant">Score based on profile compatibility.</p>
+                            </template>
+                        </div>
                     </div>
 
                     <!-- Photo -->
@@ -155,6 +243,16 @@
                                 <span class="material-symbols-outlined text-7xl text-primary/40">face_4</span>
                             </div>
                         </template>
+                        
+                        <!-- Other Guide Avatar -->
+                        <div class="absolute bottom-4 left-4 z-10 w-16 h-16 rounded-full border-4 border-white overflow-hidden shadow-lg bg-gray-200">
+                            <template x-if="guide.avatarUrl">
+                                <img :src="guide.avatarUrl" class="w-full h-full object-cover"/>
+                            </template>
+                            <template x-if="!guide.avatarUrl">
+                                <img src="/images/default_avatar.png" class="w-full h-full object-cover"/>
+                            </template>
+                        </div>
                     </div>
 
                     <div class="p-6 flex-1 flex flex-col">
@@ -181,7 +279,7 @@
                         <!-- Price -->
                         <template x-if="guide.pricePerSession > 0">
                             <p class="text-sm text-on-surface-variant mb-4">
-                                From <span class="font-bold text-primary" x-text="formatPrice(guide.pricePerSession)"></span>/buổi
+                                From <span class="font-bold text-primary" x-text="formatPrice(guide.pricePerSession)"></span>/session
                             </p>
                         </template>
 
@@ -206,7 +304,7 @@
             <div class="bg-primary-container rounded-3xl p-8 flex flex-col items-center justify-center text-center border-2 border-dashed border-primary/30">
                 <span class="material-symbols-outlined text-6xl text-primary mb-4">psychology</span>
                 <h4 class="text-xl font-bold text-on-primary-container mb-2">Want better matches?</h4>
-                <p class="text-on-surface-variant text-sm mb-6">Complete your personality profile to unlock 99% accuracy matches.</p>
+                <p class="text-on-surface-variant text-sm mb-6">Complete your personality profile to unlock higher accuracy matches.</p>
                 <a href="/Survey/Personality" class="bg-primary text-white px-6 py-3 rounded-xl font-bold shadow-md hover:bg-primary/90 transition-all">
                     Take Personality Test
                 </a>
@@ -231,11 +329,9 @@
             },
 
             init() {
-                // Load saved guides từ localStorage
                 const raw = localStorage.getItem('savedGuides');
                 this.savedIds = raw ? JSON.parse(raw).map(g => g.guideId) : [];
 
-                // M2: Ưu tiên đọc từ Server Session, fallback localStorage
                 if (window.__serverQuizData) {
                     this.preferences = window.__serverQuizData;
                     localStorage.setItem('tripPreferences', JSON.stringify(this.preferences));
@@ -244,7 +340,6 @@
                     if (saved) this.preferences = JSON.parse(saved);
                 }
 
-                // M3: Gọi Real Matching API
                 this.fetchMatches();
             },
 
@@ -266,25 +361,39 @@
                     if (vibe) params.set('vibe', vibe);
                     if (budget) params.set('budget', budget);
 
-                    const response = await fetch(`/Survey/CalculateMatches?${params.toString()}`);
+                    const vibeInterests = this.getVibeInterests(vibe);
+                    if (vibeInterests) params.set('interests', vibeInterests);
 
+                    const response = await fetch(`/Survey/CalculateMatches?${params.toString()}`);
                     if (!response.ok) throw new Error('Server error: ' + response.status);
 
                     const data = await response.json();
-
                     if (data.success) {
                         this.guides = data.guides || [];
                     } else {
                         throw new Error(data.message || 'Could not load matches');
                     }
                 } catch (err) {
-                    console.error('[Matching] Error:', err);
+                    console.error('[AI Matching] Error:', err);
                     this.hasError = true;
                     this.errorMessage = 'Could not load guides. Please check your connection and try again.';
                 } finally {
-                    // Minimum 2.5s loading cho hiệu ứng "đang phân tích"
                     setTimeout(() => { this.isLoading = false; }, 2500);
                 }
+            },
+
+            getVibeInterests(vibe) {
+                if (!vibe) return '';
+                const lower = vibe.toLowerCase();
+                if (lower.includes('chill') || lower.includes('relax'))
+                    return 'cafe,coffee,nature,sunset,spa,beach,relax';
+                if (lower.includes('adventure') || lower.includes('active'))
+                    return 'adventure,hiking,trekking,outdoor,sport,climbing,motorbike';
+                if (lower.includes('culture') || lower.includes('history'))
+                    return 'history,culture,heritage,museum,temple,art,tradition';
+                if (lower.includes('food'))
+                    return 'food,street food,cooking,cuisine,restaurant,market,culinary';
+                return '';
             },
 
             formatPrice(price) {
@@ -305,15 +414,14 @@
                 let list = raw ? JSON.parse(raw) : [];
 
                 if (this.isSaved(guide.guideId)) {
-                    // Remove from saved
                     list = list.filter(g => g.guideId !== guide.guideId);
                     this.savedIds = this.savedIds.filter(id => id !== guide.guideId);
                 } else {
-                    // Add to saved
                     list.push({
                         guideId: guide.guideId,
                         name: guide.name,
                         coverPhotoUrl: guide.coverPhotoUrl || '',
+                        avatarUrl: guide.avatarUrl || '',
                         cityArea: guide.cityArea || '',
                         specialties: guide.specialties || [],
                         averageRating: guide.averageRating || 0,
@@ -326,7 +434,18 @@
                 localStorage.setItem('savedGuides', JSON.stringify(list));
             },
 
-            // Cards are now direct <a> links. This is kept as fallback for any programmatic navigation.
+            toggleTooltip(event) {
+                const wrap = event.currentTarget;
+                wrap.classList.toggle('show-tooltip');
+                const closeHandler = (e) => {
+                    if (!wrap.contains(e.target)) {
+                        wrap.classList.remove('show-tooltip');
+                        document.removeEventListener('click', closeHandler);
+                    }
+                };
+                setTimeout(() => document.addEventListener('click', closeHandler), 10);
+            },
+
             navigateToProfile(guideId) {
                 window.location.href = `/Traveler/GuideProfile/${guideId}`;
             }

@@ -18,5 +18,10 @@ namespace TripMate_Webapi.Repositories
         /// Kiểm tra xem booking này đã được review chưa (tránh review 2 lần).
         /// </summary>
         Task<bool> HasReviewForBookingAsync(string bookingId);
+
+        /// <summary>
+        /// Lấy toàn bộ reviews để hiển thị ở trang chủ
+        /// </summary>
+        Task<List<ReviewEntity>> GetAllReviewsAsync();
     }
 }

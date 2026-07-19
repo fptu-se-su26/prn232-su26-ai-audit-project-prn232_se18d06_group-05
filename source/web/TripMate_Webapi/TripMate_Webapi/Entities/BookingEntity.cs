@@ -39,6 +39,9 @@ namespace TripMate_Webapi.Entities
         [Column("status")]
         public int Status { get; set; } = 0; // 0=Pending, 1=Confirmed, 2=Completed, 3=Cancelled
 
+        [Column("amount_paid")]
+        public decimal AmountPaid { get; set; } = 0;
+
         [Column("traveler_notes")]
         public string? TravelerNotes { get; set; }
 

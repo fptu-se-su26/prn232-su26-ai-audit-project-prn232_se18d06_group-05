@@ -43,6 +43,9 @@
                 <button @@click="tab = 'past'" :class="tab === 'past' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'" class="border-b-2 pb-4 px-2 font-bold whitespace-nowrap transition-colors">
                     Past Trips <span id="past-count" class="ml-1 text-on-surface-variant">(0)</span>
                 </button>
+                <button @@click="tab = 'rejected'" :class="tab === 'rejected' ? 'border-red-500 text-red-600' : 'border-transparent text-on-surface-variant hover:text-on-surface'" class="border-b-2 pb-4 px-2 font-bold whitespace-nowrap transition-colors">
+                    Rejected Trips <span id="rejected-count" class="ml-1 text-on-surface-variant">(0)</span>
+                </button>
             </div>
 
             <!-- Requests Tab -->
@@ -88,6 +91,18 @@
                 <div id="past-list" class="space-y-6 hidden"></div>
                 <div id="past-empty" class="hidden text-center py-10">
                     <p class="text-on-surface-variant">You have no past trips.</p>
+                </div>
+            </div>
+
+            <!-- Rejected Trips Tab -->
+            <div x-show="tab === 'rejected'" style="display: none;" class="space-y-6 animate-fade-in-up">
+                <div id="rejected-loading" class="text-center py-16 hidden">
+                    <div class="w-10 h-10 border-4 border-red-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p class="text-on-surface-variant">Loading...</p>
+                </div>
+                <div id="rejected-list" class="space-y-6 hidden"></div>
+                <div id="rejected-empty" class="hidden text-center py-10">
+                    <p class="text-on-surface-variant">You have no rejected trips.</p>
                 </div>
             </div>
 
@@ -236,9 +251,11 @@
 
             const upcoming = bookings.filter(b => b.status === 0 || b.status === 1);
             const past = bookings.filter(b => b.status === 2);
+            const rejected = bookings.filter(b => b.status === 3);
 
             document.getElementById('upcoming-count').textContent = `(${upcoming.length})`;
             document.getElementById('past-count').textContent = `(${past.length})`;
+            document.getElementById('rejected-count').textContent = `(${rejected.length})`;
 
             // Upcoming
             if (upcoming.length === 0) {
@@ -301,6 +318,34 @@
                                     <span class="material-symbols-outlined text-[16px]">star</span> Leave a Review
                                 </button>
                                 ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            // Rejected
+            if (rejected.length === 0) {
+                document.getElementById('rejected-empty').classList.remove('hidden');
+            } else {
+                const rejList = document.getElementById('rejected-list');
+                rejList.classList.remove('hidden');
+                rejList.innerHTML = rejected.map(b => `
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-red-200/50 flex flex-col md:flex-row gap-6 items-start opacity-75">
+                        <div class="w-14 h-14 rounded-full bg-gray-100 flex items-center justify-center shrink-0 filter grayscale">
+                            ${b.guideAvatar ? `<img src="${b.guideAvatar}" class="w-14 h-14 rounded-full object-cover">` : `<span class="material-symbols-outlined text-gray-400 text-2xl">person</span>`}
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-1">
+                                <h3 class="text-xl font-bold text-on-surface line-through">${b.packageTitle}</h3>
+                                <span class="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-sm uppercase">Rejected</span>
+                            </div>
+                            <p class="text-sm text-on-surface-variant mb-1">${b.bookingDate}</p>
+                            <p class="text-sm font-medium text-on-surface mb-3">Guided by <span class="text-primary">${b.guideName}</span></p>
+                            <div class="flex gap-3">
+                                <a href="/Traveler/BookingDetails/${b.id}" class="text-on-surface-variant text-sm font-bold flex items-center gap-1 hover:underline">
+                                    <span class="material-symbols-outlined text-[16px]">info</span> View Details
+                                </a>
                             </div>
                         </div>
                     </div>

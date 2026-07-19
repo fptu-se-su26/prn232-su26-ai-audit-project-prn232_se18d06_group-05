@@ -183,8 +183,46 @@ namespace TripMate_Webapi.Controllers
             var packages = await _tourService.GetToursByGuideAsync(id);
             var reviews = await _reviewRepository.GetReviewsByGuideAsync(id);
 
+            // Enrich reviews with traveler name & tour title
+            var reviewDetails = new List<ReviewDetailDto>();
+            foreach (var rev in reviews)
+            {
+                string travelerName = "Traveler";
+                string tourTitle = "";
+
+                try
+                {
+                    // Get traveler name
+                    var travelerProfile = await _supabase.From<ProfileEntity>()
+                        .Where(p => p.Id == rev.TravelerId)
+                        .Single();
+                    if (travelerProfile != null && !string.IsNullOrEmpty(travelerProfile.FullName))
+                        travelerName = travelerProfile.FullName;
+
+                    // Get tour title from booking
+                    if (!string.IsNullOrEmpty(rev.BookingId))
+                    {
+                        var booking = await _bookingRepository.GetBookingByIdAsync(rev.BookingId);
+                        if (booking?.ExperiencePackage != null)
+                            tourTitle = booking.ExperiencePackage.Title ?? "";
+                    }
+                }
+                catch { /* non-critical enrichment */ }
+
+                reviewDetails.Add(new ReviewDetailDto
+                {
+                    ReviewId = rev.Id,
+                    TravelerName = travelerName,
+                    TourTitle = tourTitle,
+                    Rating = rev.Rating,
+                    Comment = rev.Comment ?? "",
+                    CreatedAt = rev.CreatedAt
+                });
+            }
+
             ViewBag.Packages = packages;
             ViewBag.Reviews = reviews;
+            ViewBag.ReviewDetails = reviewDetails;
 
             return View(guide);
         }
@@ -300,7 +338,10 @@ namespace TripMate_Webapi.Controllers
             // Xóa Ghost Booking session sau khi booking thật đã tạo
             HttpContext.Session.Remove("GhostBooking");
 
-            string paymentUrl = await _payOSService.CreatePaymentLink(createdBooking, orderCode);
+            // M7: 2-step payment for custom trips as well (30% deposit)
+            int depositAmount = (int)Math.Round(createdBooking.TotalAmount * 0.3m);
+
+            string paymentUrl = await _payOSService.CreatePaymentLink(createdBooking, orderCode, depositAmount);
 
             return Json(new { bookingId = createdBooking.Id, paymentUrl = paymentUrl });
         }
@@ -346,7 +387,7 @@ namespace TripMate_Webapi.Controllers
             // Duplicate booking check
             var existingBookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
             bool hasDuplicate = existingBookings.Any(b => 
-                b.Status >= 0 && b.Status < 2 && 
+                b.Status >= -1 && b.Status < 2 && 
                 b.ExperiencePackageId == packageId && 
                 b.GuideProfileId == guideId && 
                 b.BookingDate.Date == targetDate);
@@ -376,7 +417,8 @@ namespace TripMate_Webapi.Controllers
             var createdBooking = await _bookingRepository.CreateBookingAsync(booking);
             HttpContext.Session.Remove("GhostBooking");
 
-            string paymentUrl = await _payOSService.CreatePaymentLink(createdBooking, orderCode);
+            int depositAmount = Convert.ToInt32(basePrice * 0.3m);
+            string paymentUrl = await _payOSService.CreatePaymentLink(createdBooking, orderCode, depositAmount);
 
             return Json(new { bookingId = createdBooking.Id, paymentUrl = paymentUrl });
         }
@@ -397,13 +439,25 @@ namespace TripMate_Webapi.Controllers
 
                 if (cancel == "true" || status != "PAID")
                 {
-                    await _bookingRepository.UpdateBookingStatusAsync(booking.Id, 3); // Cancelled
+                    // Do not cancel the booking in the DB if the user just clicked "Cancel" on PayOS.
+                    // This allows them to retry the payment later from the Action Required list.
                     TempData["ErrorMessage"] = "Payment was cancelled.";
                 }
-                else if (status == "PAID" && booking.Status == -1)
+                else if (status == "PAID")
                 {
-                    await _bookingRepository.UpdateBookingStatusAsync(booking.Id, 0); // Pending Guide Approval
-                    TempData["SuccessMessage"] = "Payment successful! Your booking is now pending guide approval.";
+                    if (booking.Status == -1) // 30% Deposit paid
+                    {
+                        booking.AmountPaid = booking.TotalAmount * 0.3m;
+                        booking.Status = 0; // Pending Guide Approval
+                        await _bookingRepository.UpdateBookingAsync(booking);
+                        TempData["SuccessMessage"] = "Deposit (30%) paid successfully! Your booking is now pending guide approval.";
+                    }
+                    else if (booking.Status == 1 && booking.AmountPaid < booking.TotalAmount) // 70% Final payment
+                    {
+                        booking.AmountPaid = booking.TotalAmount;
+                        await _bookingRepository.UpdateBookingAsync(booking);
+                        TempData["SuccessMessage"] = "Final payment (70%) successful! You are all set for the tour.";
+                    }
                 }
                 
                 return RedirectToAction("Dashboard");
@@ -413,6 +467,50 @@ namespace TripMate_Webapi.Controllers
                 TempData["ErrorMessage"] = $"Payment processing error: {ex.Message} - Please take a screenshot and report to technical support.";
                 return RedirectToAction("Dashboard");
             }
+        }
+
+        /// <summary>
+        /// POST: /Traveler/RetryPayment
+        /// Re-creates a PayOS payment link for a booking that is still in status -1 (Pending Payment).
+        /// </summary>
+        [HttpPost]
+        public async Task<IActionResult> RetryPayment([FromBody] RetryPaymentRequest req)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            var booking = await _bookingRepository.GetBookingByIdAsync(req.BookingId);
+            if (booking == null || booking.TravelerId != travelerId)
+                return NotFound(new { error = "Booking not found" });
+
+            if (booking.Status != -1 && (booking.Status != 1 || booking.AmountPaid >= booking.TotalAmount))
+                return BadRequest(new { error = "This booking does not require payment." });
+
+            try
+            {
+                long orderCode = long.Parse(DateTimeOffset.UtcNow.ToString("yyMMddHHmmssfff"));
+                booking.PaymentReference = orderCode.ToString();
+                // Update the payment reference on the booking record
+                await _bookingRepository.UpdateBookingAsync(booking);
+
+                int amountToPay = booking.Status == -1 
+                    ? Convert.ToInt32(booking.TotalAmount * 0.3m) 
+                    : Convert.ToInt32(booking.TotalAmount * 0.7m);
+
+                string paymentUrl = await _payOSService.CreatePaymentLink(booking, orderCode, amountToPay);
+                return Json(new { success = true, paymentUrl });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[RetryPayment] Error for booking {BookingId}", req.BookingId);
+                return StatusCode(500, new { error = "Failed to create payment link. Please try again." });
+            }
+        }
+
+        public class RetryPaymentRequest
+        {
+            public string BookingId { get; set; } = string.Empty;
         }
         
         /// <summary>
@@ -523,12 +621,37 @@ namespace TripMate_Webapi.Controllers
                 _logger.LogInformation("[Review] Traveler={TravelerId} rated Guide={GuideId} with {Rating}★ for Booking={BookingId}",
                     travelerId, booking.GuideProfileId, rating, id);
 
-                TempData["SuccessMessage"] = $"Cảm ơn bạn đã để lại đánh giá {rating}★! Guide sẽ nhận được phản hồi của bạn.";
+                // ── Recalculate average_rating & total_reviews for this guide ──
+                try
+                {
+                    var allReviews = await _reviewRepository.GetReviewsByGuideAsync(booking.GuideProfileId);
+                    var totalReviews = allReviews.Count;
+                    var avgRating = totalReviews > 0
+                        ? Math.Round(allReviews.Average(r => r.Rating), 2)
+                        : 0;
+
+                    // Update guide_profiles via Supabase client
+                    await _supabase.From<GuideProfileEntity>()
+                        .Where(g => g.Id == booking.GuideProfileId)
+                        .Set(g => g.AverageRating!, (decimal)avgRating)
+                        .Set(g => g.TotalReviews!, totalReviews)
+                        .Update();
+
+                    _logger.LogInformation("[Review] Updated Guide {GuideId}: avg={Avg}, total={Total}",
+                        booking.GuideProfileId, avgRating, totalReviews);
+                }
+                catch (Exception ratingEx)
+                {
+                    _logger.LogWarning(ratingEx, "[Review] Could not recalculate rating for Guide {GuideId}", booking.GuideProfileId);
+                    // Non-critical: review was saved, rating update can be retried
+                }
+
+                TempData["SuccessMessage"] = $"Thank you for your {rating}★ review! Your guide will receive your feedback.";
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[Review] Failed to save review for BookingId={BookingId}", id);
-                TempData["ErrorMessage"] = "Không thể lưu đánh giá lúc này. Vui lòng thử lại sau.";
+                TempData["ErrorMessage"] = "Could not save review. Please try again later.";
             }
 
             return RedirectToAction("Trips");
@@ -668,18 +791,41 @@ namespace TripMate_Webapi.Controllers
                     hasReviewed = await _reviewRepository.HasReviewForBookingAsync(b.Id);
                 }
 
+                bool isPastDeadline = false;
+                bool isApproachingDeadline = false;
+                if (b.Status == 1 && b.AmountPaid < b.TotalAmount)
+                {
+                    // 72h deadline before StartTime for 2nd payment
+                    // b.StartTime contains time, b.BookingDate contains date
+                    var actualStartTime = b.BookingDate.Date.Add(b.StartTime.TimeOfDay);
+                    var deadline = actualStartTime.AddHours(-72);
+                    if (DateTime.UtcNow > deadline)
+                    {
+                        isPastDeadline = true;
+                    }
+                    else if (DateTime.UtcNow > deadline.AddHours(-24))
+                    {
+                        isApproachingDeadline = true;
+                    }
+                }
+
                 resultList.Add(new
                 {
                     id = b.Id,
                     status = b.Status,
                     bookingDate = b.BookingDate.ToString("MMM dd, yyyy"),
                     totalAmount = b.TotalAmount,
+                    amountPaid = b.AmountPaid,
+                    isPastDeadline = isPastDeadline,
+                    isApproachingDeadline = isApproachingDeadline,
                     notes = b.TravelerNotes,
                     guideName = b.GuideProfile?.Profile?.FullName ?? "Local Guide",
                     guideAvatar = b.GuideProfile?.Profile?.AvatarUrl ?? "",
                     guideCoverPhoto = b.GuideProfile?.CoverPhotoUrl ?? "",
                     guideProfileId = b.GuideProfileId,
                     packageTitle = b.ExperiencePackage?.Title ?? "Custom Tour",
+                    guestCount = b.GuestCount,
+                    paymentReference = b.PaymentReference ?? "",
                     hasReviewed = hasReviewed
                 });
             }
@@ -753,7 +899,7 @@ namespace TripMate_Webapi.Controllers
             if (booking == null || booking.TravelerId != travelerId)
                 return Unauthorized(new { error = "Not authorized" });
 
-            if (booking.Status != 0)
+            if (booking.Status != 0 && booking.Status != -1)
                 return BadRequest(new { error = "Only pending bookings can be deleted" });
 
             await _bookingRepository.DeleteBookingAsync(id);
@@ -863,5 +1009,18 @@ namespace TripMate_Webapi.Controllers
                 return Ok(new { saved = false });
             }
         }
+    }
+
+    /// <summary>
+    /// DTO for displaying enriched review info on the Guide Profile page
+    /// </summary>
+    public class ReviewDetailDto
+    {
+        public string ReviewId { get; set; } = string.Empty;
+        public string TravelerName { get; set; } = "Traveler";
+        public string TourTitle { get; set; } = string.Empty;
+        public int Rating { get; set; }
+        public string Comment { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
     }
 }

@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using TripMate_Webapi.Repositories;
 
 namespace TripMate_WebAPI.Services
 {
@@ -23,12 +24,14 @@ namespace TripMate_WebAPI.Services
         private readonly string _serviceRoleKey;
         private readonly ILogger<NotificationService> _logger;
         private readonly JsonSerializerOptions _json;
+        private readonly INotificationRepository _notificationRepository;
 
         public NotificationService(
             HttpClient http,
             IEmailService emailService,
             IConfiguration config,
-            ILogger<NotificationService> logger)
+            ILogger<NotificationService> logger,
+            INotificationRepository notificationRepository)
         {
             _http = http;
             _emailService = emailService;
@@ -37,6 +40,7 @@ namespace TripMate_WebAPI.Services
             _serviceRoleKey = config["Supabase:ServiceRoleKey"] ?? throw new Exception("Supabase Service Role Key not configured");
             _logger = logger;
             _json = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            _notificationRepository = notificationRepository;
         }
 
         public async Task NotifyAdminNewGuideApplicationAsync(string guideId, string guideName, string guideEmail)
@@ -219,18 +223,37 @@ namespace TripMate_WebAPI.Services
             }
         }
 
-        // Legacy method for realtime notifications - implementing for compatibility
         public async Task SendAsync(string userId, string type, string title, string message, object? data = null)
         {
             try
             {
-                // For now, just log the notification - can be extended to use SignalR or other realtime service
+                string linkUrl = "/Traveler/Trips";
+                if (data != null)
+                {
+                    try {
+                        var json = JsonSerializer.Serialize(data);
+                        var doc = JsonDocument.Parse(json);
+                        if (doc.RootElement.TryGetProperty("bookingId", out var bookingIdProp))
+                        {
+                            linkUrl = "/Traveler/BookingDetails/" + bookingIdProp.GetString();
+                        }
+                    } catch {}
+                }
+
+                var notification = new TripMate_Webapi.Entities.NotificationEntity
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserId = userId,
+                    Title = title,
+                    Message = message,
+                    Type = type,
+                    IsRead = false,
+                    LinkUrl = linkUrl,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await _notificationRepository.CreateNotificationAsync(notification);
                 _logger.LogInformation("Realtime notification sent to user {UserId}: {Type} - {Title}", userId, type, title);
-                
-                // Could implement SignalR hub connection here if needed
-                // await _hubContext.Clients.User(userId).SendAsync("ReceiveNotification", new { type, title, message, data });
-                
-                await Task.CompletedTask;
             }
             catch (Exception ex)
             {
