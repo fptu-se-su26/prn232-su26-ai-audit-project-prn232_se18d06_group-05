@@ -3,10 +3,10 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using TripMate_WebAPI.Services;
 using TripMate_Webapi.Entities;
-using System.Security.Claims;
 using TripMate_WebAPI.DTOs.Tour.Requests;
 using TripMate_Webapi.Repositories;
 using TripMate_WebAPI.DTOs;
+using TripMate_Webapi.Services;
 
 namespace TripMate_Webapi.Controllers
 {
@@ -49,13 +49,86 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/TripRequests (For Guides to see public requests)
+        [Authorize(Roles = "guide")]
         public IActionResult TripRequests()
         {
             return View();
         }
 
+        [HttpGet]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> GetTripRequestsData([FromServices] ITripRequestService tripRequestService)
+        {
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
+
+            var requests = await tripRequestService.GetOpenRequestsAsync(guideProfileId);
+            return Json(requests);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> GetMyOffersData([FromServices] ITripRequestService tripRequestService)
+        {
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
+
+            var offers = await tripRequestService.GetGuideOffersAsync(guideProfileId);
+            return Json(offers);
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> SendTripOffer([FromBody] TripMate_Webapi.DTOs.Guide.SendTripOfferRequest dto, [FromServices] ITripRequestService tripRequestService)
+        {
+            var traceId = HttpContext.TraceIdentifier;
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (string.IsNullOrEmpty(guideProfileId))
+            {
+                _logger.LogWarning("Trip offer rejected because no guide profile was found. TraceId: {TraceId}", traceId);
+                return Unauthorized(new { success = false, message = "Không xác định được hồ sơ guide.", traceId });
+            }
+
+            _logger.LogInformation(
+                "Submitting trip offer. GuideProfileId: {GuideProfileId}, TripRequestId: {TripRequestId}, TraceId: {TraceId}",
+                guideProfileId,
+                dto.TripRequestId,
+                traceId);
+
+            var result = await tripRequestService.SendOfferAsync(guideProfileId, dto);
+            if (result.Success)
+            {
+                _logger.LogInformation("Trip offer persisted. OfferId: {OfferId}, TraceId: {TraceId}", result.OfferId, traceId);
+                return Json(new { success = true, offerId = result.OfferId });
+            }
+
+            _logger.LogWarning(
+                "Trip offer rejected. GuideProfileId: {GuideProfileId}, TripRequestId: {TripRequestId}, Reason: {Reason}, TraceId: {TraceId}",
+                guideProfileId,
+                dto.TripRequestId,
+                result.ErrorMessage,
+                traceId);
+
+            if (result.ErrorMessage?.Contains("đã gửi offer", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                return Conflict(new { success = false, message = result.ErrorMessage, traceId });
+            }
+
+            return BadRequest(new { success = false, message = result.ErrorMessage ?? "Không thể gửi offer", traceId });
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> GetOfferStats([FromServices] ITripRequestService tripRequestService)
+        {
+            var guideProfileId = await GetCurrentGuideProfileIdAsync();
+            if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
+
+            var stats = await tripRequestService.GetGuideOfferStatsAsync(guideProfileId);
+            return Json(stats);
+        }
+
         // GET: /Guide/Dashboard
-        [HttpGet("Guide/Dashboard")]
         [Authorize(Roles = "guide")]
         public async Task<IActionResult> Dashboard()
         {
@@ -82,10 +155,6 @@ namespace TripMate_Webapi.Controllers
             }
         }
 
-        // GET: /Guide/Profile/{id}
-        // This is the public profile viewed by the Traveler
-        [HttpGet("Guide/Profile/{id}")]
-        public IActionResult Profile(string id = "1")
         // GET: /Guide/Profile
         [Authorize(Roles = "guide")]
         public IActionResult Profile()
@@ -123,7 +192,7 @@ namespace TripMate_Webapi.Controllers
             // ponytail: certificate, phone number, full name, email explicitly excluded per requirements
         }
 
-        [HttpPost("Guide/UpdateProfile")]
+        [HttpPost]
         public async Task<IActionResult> UpdateProfile([FromBody] UpdateGuideProfileDto dto, [FromServices] Supabase.Client supabase)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
@@ -153,7 +222,6 @@ namespace TripMate_Webapi.Controllers
 
             return Ok(new { success = true });
         }
-    }
 
         // GET: /Guide/Calendar
         [Authorize(Roles = "guide")]
