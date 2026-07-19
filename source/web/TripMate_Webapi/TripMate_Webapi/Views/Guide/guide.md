@@ -453,7 +453,7 @@ Nhắn tin trực tiếp với Traveler. Chat chỉ mở khi booking Status = Co
 │  "Cảm ơn bạn rất nhiều"│                                   │
 │  Hôm qua               │   [bubble: Xin chào Guide Minh!] │
 │  ─────────────────     │   [bubble: Chào bạn! Mình đã...] │
-│  [Thread 3 - Locked]   │   [typing indicator...]           │
+│  [Thread 3 - Locked]   │   [message history]               │
 │  [🔒] Booking chưa xác │   ────────────────────────────────│
 │  nhận                  │   INPUT BAR                       │
 │                        │   [📎][Nhập tin nhắn...] [➤ Gửi] │
@@ -469,7 +469,6 @@ Mỗi bubble: text + timestamp nhỏ bên dưới + read receipt (✓ / ✓✓ b
 ```
 
 ### Chat Interaction Features
-- **Typing indicator**: 3 dots animation khi đối phương đang nhập (SignalR `TypingIndicator`)
 - **Read receipt**: ✓✓ màu xanh khi `IsRead = true` (SignalR `MessagesRead`)
 - **Infinite scroll**: load 50 message gần nhất, scroll lên load thêm (cursor-based pagination)
 - **Locked chat**: Thread có booking Pending hiển thị overlay "Chat sẽ mở sau khi bạn xác nhận booking"
@@ -481,17 +480,9 @@ chatConn.on("ReceiveMessage", (msg) => {
   appendMessage(msg);
   markAsRead(msg.bookingId, msg.senderId);
 });
-chatConn.on("TypingIndicator", ({ senderId, isTyping }) => {
-  isTyping ? showTypingDots() : hideTypingDots();
-});
 chatConn.on("MessagesRead", ({ bookingId }) => {
   updateReadReceipts(bookingId);
 });
-
-// Typing debounce (500ms)
-inputEl.addEventListener('input', debounce(() => {
-  chatConn.invoke("SendTypingIndicator", receiverId, inputEl.value.length > 0);
-}, 300));
 ```
 
 ### States

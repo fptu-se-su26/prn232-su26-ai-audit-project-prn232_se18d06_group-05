@@ -119,23 +119,32 @@ public class BookingService
 
         var dto = MapToDto(row, package.Title);
 
-        // 5. Send notifications
+        // 5. Persist notifications after the booking exists. Dedupe keys make retries safe.
         var guideUserId = await GetGuideUserIdAsync(package.GuideProfileId!);
         if (guideUserId != null)
         {
-            _ = _notif.SendAsync(guideUserId, "booking_created",
-                "Có người đặt gói trải nghiệm!",
-                $"{package.Title} — {req.GuestCount} khách ngày {req.BookingDate}",
-                new { bookingId = dto.Id, travelerId });
+            await _notif.SendAsync(
+                guideUserId,
+                NotificationTypes.BookingAwaitingGuide,
+                "New booking awaiting your response",
+                $"{package.Title} — {req.GuestCount} guest(s) on {req.BookingDate:yyyy-MM-dd}.",
+                new { bookingId = dto.Id, travelerId, req.GuestCount, req.BookingDate },
+                "/Guide/Bookings",
+                $"booking-awaiting-guide:{dto.Id}",
+                sendEmail: true);
 
-            _ = _chat.GetOrCreateConversationAsync(
+            await _chat.GetOrCreateConversationAsync(
                 travelerId, guideUserId, dto.Id, userToken);
         }
 
-        _ = _notif.SendAsync(travelerId, "booking_confirmed",
-            "Đặt tour thành công!",
-            $"Bạn đã đặt {package.Title} ngày {req.BookingDate}",
-            new { bookingId = dto.Id });
+        await _notif.SendAsync(
+            travelerId,
+            NotificationTypes.BookingAwaitingGuide,
+            "Booking submitted",
+            $"Your booking for {package.Title} is awaiting the guide's response.",
+            new { bookingId = dto.Id, req.BookingDate },
+            $"/Traveler/BookingDetails/{dto.Id}",
+            $"booking-submitted:{dto.Id}");
 
         return dto;
     }
@@ -188,6 +197,39 @@ public class BookingService
 
         var response = await _http.SendAsync(request);
         EnsureSuccess(response, await response.Content.ReadAsStringAsync());
+
+        var guideUserId = await GetGuideUserIdAsync(booking.GuideProfileId);
+        var data = new { bookingId, cancelledBy = "traveler" };
+        if (!string.IsNullOrWhiteSpace(guideUserId))
+        {
+            await _notif.SendAsync(
+                guideUserId,
+                NotificationTypes.BookingCancelled,
+                "Booking cancelled by traveler",
+                $"Booking {bookingId} was cancelled by the traveler.",
+                data,
+                "/Guide/Bookings",
+                $"booking-cancelled:{bookingId}:guide",
+                sendEmail: true);
+        }
+
+        await _notif.SendAsync(
+            travelerId,
+            NotificationTypes.BookingCancelled,
+            "Booking cancelled",
+            "Your booking cancellation has been recorded.",
+            data,
+            $"/Traveler/BookingDetails/{bookingId}",
+            $"booking-cancelled:{bookingId}:traveler");
+
+        await _notif.SendToRoleAsync(
+            "admin",
+            NotificationTypes.CancellationReviewRequired,
+            "Cancellation requires review",
+            $"Booking {bookingId} was cancelled and may require a refund review.",
+            data,
+            "/Admin/Moderation",
+            $"cancellation-review:{bookingId}");
     }
 
     // ── Get Guide Bookings ────────────────────────────────────────────────────
@@ -249,20 +291,29 @@ public class BookingService
 
         await _repo.UpdateBookingStatusAsync(bookingId, newStatus);
         
-        // Optional: Send notification to traveler
         if (newStatus == 1) // Confirmed
         {
-            _ = _notif.SendAsync(booking.TravelerId, "booking_confirmed",
-                "Booking đã được xác nhận!",
-                $"Guide đã xác nhận yêu cầu đặt tour của bạn.",
-                new { bookingId });
+            await _notif.SendAsync(
+                booking.TravelerId,
+                NotificationTypes.BookingConfirmed,
+                "Booking confirmed",
+                "Your guide accepted the booking request.",
+                new { bookingId },
+                $"/Traveler/BookingDetails/{bookingId}",
+                $"booking-confirmed:{bookingId}",
+                sendEmail: true);
         }
         else if (newStatus == 3) // Cancelled
         {
-            _ = _notif.SendAsync(booking.TravelerId, "booking_rejected",
-                "Booking đã bị từ chối",
-                $"Guide không thể nhận yêu cầu đặt tour này.",
-                new { bookingId });
+            await _notif.SendAsync(
+                booking.TravelerId,
+                NotificationTypes.BookingDeclined,
+                "Booking declined",
+                "The guide could not accept this booking request.",
+                new { bookingId },
+                $"/Traveler/BookingDetails/{bookingId}",
+                $"booking-declined:{bookingId}",
+                sendEmail: true);
         }
     }
 

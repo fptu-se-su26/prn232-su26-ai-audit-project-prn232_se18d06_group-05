@@ -2,15 +2,10 @@
     ViewData["Title"] = "Tin Nhắn";
     ViewData["ActivePage"] = "Messages";
     Layout = "_GuideLayout";
-    
-    var threads = ViewBag.Threads as IEnumerable<dynamic>;
+
 }
 
 <!-- JSON data cho AlpineJS -->
-<script>
-    window.initialThreads = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(threads));
-</script>
-
 <script>
     window.initialActiveBookings = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(ViewBag.ActiveBookings ?? new object[0]));
 </script>
@@ -62,7 +57,7 @@
                             <span class="text-[11px] text-gray-400 whitespace-nowrap" :class="{'text-primary font-bold': t.UnreadCount > 0}" x-text="t.TimeAgo"></span>
                         </div>
                         
-                        <p class="text-xs text-gray-500 truncate" :class="{'font-bold text-gray-800': t.UnreadCount > 0}" x-text="t.LastMessage"></p>
+                        <p class="text-xs text-gray-500 truncate" :class="{'font-bold text-gray-800': t.UnreadCount > 0}" x-text="getThreadPreview(t)"></p>
                     </div>
                 </button>
             </template>
@@ -111,19 +106,67 @@
 
                 <!-- Chat Messages Area -->
                 <div class="flex-1 overflow-y-auto p-6 space-y-4" id="chatContainer">
-                    <div class="text-center mb-8">
+                    <div class="text-center mb-4">
+                        <template x-if="activeThread && activeThread._hasMore">
+                            <div class="mb-3">
+                                <button type="button" @@click="loadMoreMessages()" class="text-sm text-primary underline">Load older messages</button>
+                            </div>
+                        </template>
                         <span class="text-xs font-medium bg-gray-100 text-gray-500 px-3 py-1 rounded-full" x-text="activeThread.Date"></span>
                     </div>
 
                     <template x-for="(msg, index) in activeThread.Messages" :key="index">
-                        <div class="flex flex-col" :class="msg.IsMine ? 'items-end' : 'items-start'">
-                            <div class="max-w-[75%] px-4 py-2.5 shadow-sm text-[15px]"
-                                 :class="[
-                                    msg.IsMine ? 'bg-primary text-white rounded-2xl rounded-br-sm' : 'bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-sm'
-                                 ]">
-                                <span x-text="msg.Text"></span>
+                        <div class="flex flex-col group" :class="msg.IsMine ? 'items-end' : 'items-start'" :data-msg-id="msg.Id">
+                            <div class="flex items-center gap-2 max-w-[75%]">
+                                <!-- Edit button outside the message bubble -->
+                                <template x-if="msg.IsMine && !msg.editing && !isUrl(msg.Text)">
+                                    <button type="button" @@click.stop="startEdit(msg)" class="hidden group-hover:flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-500 shadow-sm hover:bg-gray-50 hover:text-primary transition-colors" title="Edit" aria-label="Edit message">
+                                        <span class="material-symbols-outlined text-[14px]">edit</span>
+                                    </button>
+                                </template>
+
+                                <div class="relative min-w-0 px-4 py-2.5 shadow-sm text-[15px]"
+                                     :class="[
+                                        msg.IsMine ? 'bg-primary text-white rounded-2xl rounded-br-sm' : 'bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-sm'
+                                     ]">
+
+                                <!-- Editing state -->
+                                <template x-if="msg.editing">
+                                    <div class="">
+                                        <textarea x-model="msg.editText" rows="1" class="w-full resize-none p-2 rounded bg-white text-gray-900" data-edit-textarea @@input="resizeEditTextarea($event)"></textarea>
+                                        <div class="flex justify-end gap-2 mt-2">
+                                            <button type="button" @@click="saveEdit(msg)" class="bg-primary text-white px-3 py-1 rounded">Save</button>
+                                            <button type="button" @@click="cancelEdit(msg)" class="bg-gray-100 text-gray-700 px-3 py-1 rounded">Cancel</button>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <template x-if="!msg.editing">
+                                    <div>
+                                        <template x-if="isImageUrl(msg.Text)">
+                                            <div class="flex flex-col gap-2">
+                                                <img :src="msg.Text" class="max-w-[320px] rounded-md" />
+                                                <a :href="msg.Text" target="_blank" rel="noopener" :class="msg.IsMine ? 'text-white text-sm underline' : 'text-primary text-sm underline'" x-text="getFilename(msg.Text)"></a>
+                                            </div>
+                                        </template>
+                                        <template x-if="!isImageUrl(msg.Text) && isUrl(msg.Text)">
+                                            <a :href="msg.Text" target="_blank" rel="noopener" class="flex items-center gap-3 p-3 rounded-md" :class="msg.IsMine ? 'bg-primary/20 text-white' : 'bg-white'">
+                                                <span class="material-symbols-outlined text-[20px]" x-text="fileIconForUrl(msg.Text)"></span>
+                                                <div class="min-w-0">
+                                                    <div class="font-medium truncate" :class="msg.IsMine ? 'text-white' : 'text-on-surface'" x-text="getFilename(msg.Text)"></div>
+                                                    <div class="text-xs opacity-70 truncate" :class="msg.IsMine ? 'text-white/80' : 'text-on-surface-variant'" x-text="getFileType(msg.Text)"></div>
+                                                </div>
+                                            </a>
+                                        </template>
+                                        <template x-if="!isUrl(msg.Text)">
+                                            <div :class="msg.IsMine ? 'text-white break-words' : 'text-gray-900 break-words'" style="white-space: pre-wrap;" x-text="msg.Text"></div>
+                                        </template>
+                                    </div>
+                                </template>
+
                             </div>
-                            
+                            </div>
+
                             <!-- Metadata below message -->
                             <div class="flex items-center gap-1 mt-1 text-[11px] text-gray-400 px-1">
                                 <span x-text="msg.Time"></span>
@@ -134,27 +177,20 @@
                         </div>
                     </template>
                     
-                    <!-- Typing Indicator -->
-                    <div x-show="isTyping" class="flex items-start gap-2" style="display: none;">
-                        <div class="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm flex items-center gap-1">
-                            <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
-                            <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                            <div class="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
-                        </div>
-                    </div>
                 </div>
 
                 <!-- Chat Input Area -->
                 <div class="bg-white border-t border-gray-100 p-4">
                     <form @@submit.prevent="sendMessage" class="flex items-end gap-3 max-w-4xl mx-auto" onsubmit="event.preventDefault(); return false;">
-                        <button type="button" class="w-10 h-10 flex-shrink-0 flex items-center justify-center text-gray-400 hover:text-primary transition-colors rounded-full hover:bg-gray-50">
+                        <label class="w-10 h-10 flex-shrink-0 flex items-center justify-center text-gray-400 hover:text-primary transition-colors rounded-full hover:bg-gray-50 cursor-pointer">
+                            <input type="file" class="hidden" @@change="uploadAttachment($event)" />
                             <span class="material-symbols-outlined text-[24px]">attach_file</span>
-                        </button>
+                        </label>
                         
                         <div class="flex-1 bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-all">
                             <textarea x-model="newMessage" 
                                       @@keydown.enter.prevent="sendMessage"
-                                      @@input="handleTyping"
+                                      @@input="resizeMessageTextarea"
                                       rows="1" 
                                       placeholder="Nhập tin nhắn..." 
                                       class="w-full bg-transparent border-none text-gray-900 text-sm px-4 py-3 max-h-32 resize-none focus:ring-0 outline-none"></textarea>
@@ -181,12 +217,158 @@
                 activeThread: null,
                 searchQuery: '',
                 newMessage: '',
-                isTyping: false,
-                typingTimeout: null,
 
                 // Called by x-init
                 init() {
                     this.loadConversations();
+                },
+                resizeEditTextarea(e) {
+                    try {
+                        const ta = e.target;
+                        ta.style.height = 'auto';
+                        ta.style.height = (ta.scrollHeight) + 'px';
+                    } catch (err) { console.warn('resizeEditTextarea', err); }
+                },
+                getFilename(url) {
+                    if (!url) return '';
+                    try {
+                        const u = new URL(url);
+                        const parts = u.pathname.split('/');
+                        return decodeURIComponent(parts[parts.length-1].split('.')[0]) || url;
+                    } catch (e) { return url; }
+                },
+                getFileType(url) {
+                    if (!this.isUrl(url)) return '';
+                    const m = url.match(/\.([a-z0-9]+)(\?|$)/i);
+                    if (!m) return 'file';
+                    const ext = m[1].toLowerCase();
+                    if (['jpg','jpeg','png','gif','webp','bmp'].includes(ext)) return 'image';
+                    if (['pdf'].includes(ext)) return 'pdf';
+                    if (['mp4','mov','webm','mkv'].includes(ext)) return 'video';
+                    if (['mp3','wav','m4a','flac'].includes(ext)) return 'audio';
+                    if (['doc','docx','txt','rtf'].includes(ext)) return 'document';
+                    return ext;
+                },
+                fileIconForUrl(url) {
+                    const t = this.getFileType(url);
+                    switch (t) {
+                        case 'image': return 'image';
+                        case 'pdf': return 'picture_as_pdf';
+                        case 'video': return 'movie';
+                        case 'audio': return 'audiotrack';
+                        case 'document': return 'description';
+                        default: return 'insert_drive_file';
+                    }
+                },
+                isUrl(s) {
+                    return !!(s && typeof s === 'string' && (s.startsWith('http://') || s.startsWith('https://')));
+                },
+                isImageUrl(s) {
+                    if (!this.isUrl(s)) return false;
+                    return (s.match(/\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i) != null);
+                },
+                truncateText(s, n = 80) {
+                    if (!s) return '';
+                    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+                },
+                getThreadPreview(thread) {
+                    const m = thread?.LastMessage || '';
+                    if (!m) return '';
+                    if (this.isUrl(m)) {
+                        const t = this.getFileType(m);
+                        switch (t) {
+                            case 'image': return 'Image';
+                            case 'pdf': return 'PDF';
+                            case 'video': return 'Video';
+                            case 'audio': return 'Audio';
+                            case 'document': return 'Document';
+                            default: return 'Attachment';
+                        }
+                    }
+                    return this.truncateText(m, 80);
+                },
+
+                async uploadAttachment(e) {
+                    const files = e.target.files || e.dataTransfer?.files;
+                    if (!files || files.length === 0) return;
+                    const file = files[0];
+                    if (!this.activeThread) return;
+                    if (this.activeThread.IsLocked) { showToast('warning', 'Booking chưa được xác nhận'); return; }
+
+                    const token = localStorage.getItem('accessToken');
+                    const userId = localStorage.getItem('userId');
+                    const receiverId = (this.activeThread.TravelerId === userId) ? this.activeThread.GuideId : this.activeThread.TravelerId;
+
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    fd.append('receiverId', receiverId || '');
+
+                    try {
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.BookingId)}/attachments`, {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + token },
+                            body: fd
+                        });
+                        if (!res.ok) throw new Error('Upload failed');
+                        const msg = await res.json();
+                        const sent = {
+                            Id: msg.id || msg.Id,
+                            Text: msg.messageText || msg.MessageText || msg.message_text || msg.MessageText || '',
+                            SentAt: msg.sentAt || msg.SentAt,
+                            IsMine: true,
+                            Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                            IsRead: !!(msg.isRead || msg.IsRead)
+                        };
+                        this.activeThread.Messages.push(sent);
+                        this.activeThread.LastMessage = sent.Text;
+                        this.activeThread.TimeAgo = 'Vừa xong';
+                        this.scrollToBottom();
+                    } catch (e) { console.error(e); showToast('error', 'Tải tệp thất bại'); }
+                    finally { e.target.value = null; }
+                },
+
+                // Message editing helpers
+                startEdit(msg) {
+                    msg.editing = true;
+                    msg.editText = msg.Text;
+                    // after DOM update, auto-size textarea and focus
+                    setTimeout(() => {
+                        try {
+                            const ta = document.querySelector(`[data-msg-id="${msg.Id}"] [data-edit-textarea]`);
+                            if (ta) {
+                                ta.style.height = 'auto';
+                                ta.style.height = (ta.scrollHeight) + 'px';
+                                ta.focus();
+                            }
+                        } catch (e) { console.warn('startEdit resize failed', e); }
+                    }, 0);
+                },
+                cancelEdit(msg) {
+                    msg.editing = false;
+                    delete msg.editText;
+                },
+                async saveEdit(msg) {
+                    if (!this.activeThread || !msg || !msg.Id) return;
+                    const token = localStorage.getItem('accessToken');
+                    if (!token) return;
+                    // prevent editing attachments
+                    if (this.isUrl(msg.Text)) { showToast('warning', 'Không thể chỉnh sửa tệp đính kèm'); msg.editing = false; return; }
+                    try {
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.BookingId)}/messages/${encodeURIComponent(msg.Id)}`, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ Content: msg.editText })
+                        });
+                        if (!res.ok) throw new Error('Edit failed');
+                        const updated = await res.json();
+                        msg.Text = updated.messageText || updated.MessageText || msg.editText;
+                        msg.SentAt = updated.sentAt || updated.SentAt || msg.SentAt;
+                        msg.Time = msg.SentAt ? new Date(msg.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : msg.Time;
+                        msg.editing = false;
+                    } catch (e) {
+                        console.error(e);
+                        showToast('error', 'Chỉnh sửa tin nhắn thất bại');
+                    }
                 },
 
                 get filteredThreads() {
@@ -233,7 +415,10 @@
                                 SentAt: r.sentAt || r.SentAt
                             }));
 
-                            const last = messages.length ? messages[messages.length - 1] : null;
+                            // The API returns newest-first. Keep that item for the sidebar
+                            // preview, but reverse the collection used by the chat window.
+                            const newest = messages.length ? messages[0] : null;
+                            const chronologicalMessages = messages.slice().reverse();
                             const otherId = (travelerId === userId) ? guideId : travelerId;
 
                             threads.push({
@@ -244,15 +429,18 @@
                                 ParticipantId: otherId,
                                 TravelerName: otherId || (travelerId || guideId) || 'User',
                                 TravelerAvatar: '/images/AVATAR.png',
-                                Messages: messages.map(m => ({
+                                Messages: chronologicalMessages.map(m => ({
+                                    Id: m.Id,
                                     Text: m.Text,
+                                    SentAt: m.SentAt,
                                     IsMine: m.SenderId === userId,
                                     Time: new Date(m.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
                                     IsRead: m.IsRead
                                 })),
-                                LastMessage: last ? (last.Text) : 'Không có tin nhắn',
-                                TimeAgo: last ? this.formatTimeAgo(last.SentAt) : '',
-                                Date: last ? new Date(last.SentAt).toLocaleDateString('vi-VN') : '',
+                                LastMessage: newest ? newest.Text : 'Không có tin nhắn',
+                                TimeAgo: newest ? this.formatTimeAgo(newest.SentAt) : '',
+                                Date: newest ? new Date(newest.SentAt).toLocaleDateString('vi-VN') : '',
+                                LastMessageAt: newest ? newest.SentAt : null,
                                 UnreadCount: messages.filter(m => !m.IsRead && m.ReceiverId === userId).length,
                                 IsLocked: false,
                                 OtherId: otherId
@@ -261,8 +449,8 @@
 
                         // Sort threads by most recent message
                         threads.sort((a, b) => {
-                            const aLast = a.Messages.length ? new Date(a.Messages[a.Messages.length - 1].Time) : new Date(0);
-                            const bLast = b.Messages.length ? new Date(b.Messages[b.Messages.length - 1].Time) : new Date(0);
+                            const aLast = a.LastMessageAt ? new Date(a.LastMessageAt) : new Date(0);
+                            const bLast = b.LastMessageAt ? new Date(b.LastMessageAt) : new Date(0);
                             return bLast - aLast;
                         });
 
@@ -290,6 +478,7 @@
                                         TravelerAvatar: avatar,
                                         Messages: [],
                                         LastMessage: 'Không có tin nhắn',
+                                        LastMessageAt: null,
                                         TimeAgo: '',
                                         Date: ab.bookingDate ? new Date(ab.bookingDate).toLocaleDateString('vi-VN') : '',
                                         UnreadCount: 0,
@@ -300,6 +489,28 @@
                             }
                         } catch (e) { console.warn('merge active bookings failed', e); }
 
+                        // Determine locked state for threads by fetching booking details
+                        // (UI mock set IsLocked for pending bookings; live API needs this)
+                        try {
+                            for (const th of this.threads) {
+                                try {
+                                    if (!th.BookingId) { th.IsLocked = false; continue; }
+                                    const bres = await fetch(`/api/bookings/${encodeURIComponent(th.BookingId)}`, {
+                                        headers: { 'Authorization': 'Bearer ' + token }
+                                    });
+                                    if (!bres.ok) { th.IsLocked = false; continue; }
+                                    const bdata = await bres.json();
+                                    // booking DTO may use 'status' or 'Status'
+                                    const status = (bdata && (bdata.status ?? bdata.Status));
+                                    // Consider 0 = pending (locked for messaging until confirmed)
+                                    th.IsLocked = (status === 0 || status === '0');
+                                } catch (e) {
+                                    console.warn('Failed to fetch booking status for', th.BookingId, e);
+                                    th.IsLocked = false;
+                                }
+                            }
+                        } catch (e) { console.warn('fetch booking status failed', e); }
+
                         // Deduplicate threads by participant (one chat per traveler)
                         try {
                             const map = new Map();
@@ -309,7 +520,12 @@
                                 const existing = map.get(key);
                                 const existingDate = existing && existing.Date ? new Date(existing.Date) : new Date(0);
                                 const thDate = th.Date ? new Date(th.Date) : new Date(0);
-                                if (!existing || (th.Messages && th.Messages.length > 0 && (!existing.Messages || existing.Messages.length === 0)) || thDate > existingDate) {
+                                // Prefer thread with messages, then prefer unlocked (not locked), then most recent date
+                                const preferThis = !existing
+                                    || ((th.Messages && th.Messages.length > 0) && (!(existing.Messages && existing.Messages.length > 0)))
+                                    || ((th.Messages && th.Messages.length > 0) === (existing.Messages && existing.Messages.length > 0) && (existing.IsLocked && !th.IsLocked))
+                                    || (thDate > existingDate);
+                                if (preferThis) {
                                     map.set(key, th);
                                 }
                             }
@@ -331,6 +547,7 @@
                                 th.TravelerName = p.fullName || p.FullName || th.TravelerName;
                             }).catch(() => {});
                         }
+
                     } catch (err) {
                         console.error(err);
                         showToast('error', 'Lỗi khi tải cuộc trò chuyện');
@@ -358,22 +575,36 @@
                     const userId = localStorage.getItem('userId');
                     if (!token) return;
                     try {
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/messages`, {
+                        const pageSize = 30;
+                        // Initialize paging state on thread
+                        thread._pageSize = pageSize;
+                        thread._offset = 0; // offset in pages (0 == newest page)
+                        // Fetch newest page (newest-first) and then reverse for chronological
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/messages?limit=${pageSize}&offset=0`, {
                             headers: { 'Authorization': 'Bearer ' + token }
                         });
                         if (!res.ok) throw new Error('Không thể tải tin nhắn');
                         const data = await res.json();
                         const rows = data?.messages || [];
-                        thread.Messages = rows.map(r => ({
+                        console.log('loaded rows for', thread.BookingId, rows);
+                        // rows are newest-first; reverse to chronological
+                        const ordered = (rows || []).slice().reverse();
+                        thread.Messages = ordered.map(r => ({
+                            Id: r.id || r.Id,
                             Text: r.messageText || r.MessageText || '',
+                            SentAt: r.sentAt || r.SentAt,
                             IsMine: (r.senderId || r.SenderId) === userId,
                             Time: new Date(r.sentAt || r.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
                             IsRead: !!(r.isRead || r.IsRead)
                         }));
+                        thread._loaded = rows.length;
+                        console.log('thread.Messages', thread.Messages);
+                        thread._hasMore = (rows.length === pageSize);
 
-                        const last = rows.length ? rows[rows.length - 1] : null;
-                        thread.LastMessage = last ? (last.messageText || last.MessageText) : thread.LastMessage;
-                        thread.TimeAgo = last ? this.formatTimeAgo(last.sentAt || last.SentAt) : thread.TimeAgo;
+                        const newest = rows.length ? rows[0] : null;
+                        thread.LastMessage = newest ? (newest.messageText || newest.MessageText) : thread.LastMessage;
+                        thread.LastMessageAt = newest ? (newest.sentAt || newest.SentAt) : thread.LastMessageAt;
+                        thread.TimeAgo = newest ? this.formatTimeAgo(newest.sentAt || newest.SentAt) : thread.TimeAgo;
                         thread.UnreadCount = rows.filter(m => !(m.isRead || m.IsRead) && (m.receiverId || m.ReceiverId) === userId).length;
                         // Mark messages as read on server for this user
                         try {
@@ -386,6 +617,39 @@
                         }
                     } catch (err) {
                         console.error(err);
+                    }
+                },
+
+                async loadMoreMessages() {
+                    const thread = this.activeThread;
+                    if (!thread || !thread._hasMore) return;
+                    const token = localStorage.getItem('accessToken');
+                    if (!token) return;
+                    try {
+                        const pageSize = thread._pageSize || 30;
+                        const offset = thread._loaded || 0;
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/messages?limit=${pageSize}&offset=${offset}`, {
+                            headers: { 'Authorization': 'Bearer ' + token }
+                        });
+                        if (!res.ok) throw new Error('Không thể tải tin nhắn cũ');
+                        const data = await res.json();
+                        const rows = data?.messages || [];
+                        const ordered = (rows || []).slice().reverse();
+                        // Prepend older messages
+                        const prep = ordered.map(r => ({
+                            Id: r.id || r.Id,
+                            Text: r.messageText || r.MessageText || '',
+                            SentAt: r.sentAt || r.SentAt,
+                            IsMine: (r.senderId || r.SenderId) === localStorage.getItem('userId'),
+                            Time: new Date(r.sentAt || r.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+                            IsRead: !!(r.isRead || r.IsRead)
+                        }));
+                        thread.Messages = prep.concat(thread.Messages || []);
+                        thread._loaded = (thread._loaded || 0) + rows.length;
+                        thread._hasMore = (rows.length === pageSize);
+                    } catch (e) {
+                        console.error(e);
+                        showToast('error', 'Không thể tải thêm tin nhắn');
                     }
                 },
 
@@ -412,7 +676,9 @@
 
                         // msg may be the created message object
                         const sent = {
+                            Id: msg.id || msg.Id,
                             Text: msg.messageText || msg.MessageText || msg.message_text || msg.MessageText || text,
+                            SentAt: msg.sentAt || msg.SentAt,
                             IsMine: true,
                             Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
                             IsRead: !!(msg.isRead || msg.IsRead)
@@ -430,6 +696,7 @@
                         }
 
                         this.newMessage = '';
+
                         this.scrollToBottom();
                     } catch (err) {
                         console.error(err);
@@ -437,7 +704,7 @@
                     }
                 },
 
-                handleTyping() {
+                resizeMessageTextarea() {
                     const textarea = this.$event.target;
                     textarea.style.height = 'auto';
                     textarea.style.height = (textarea.scrollHeight) + 'px';

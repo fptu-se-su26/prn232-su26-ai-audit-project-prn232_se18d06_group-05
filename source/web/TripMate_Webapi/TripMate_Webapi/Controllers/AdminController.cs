@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using TripMate_WebAPI.Services;
 using System.Text.Json;
 using System.Security.Claims;
@@ -6,6 +7,7 @@ using ClosedXML.Excel;
 
 namespace TripMate_Webapi.Controllers
 {
+    [Authorize(Roles = "admin")]
     public class AdminController : Controller
     {
         private readonly TourService _tourService;
@@ -84,6 +86,9 @@ namespace TripMate_Webapi.Controllers
         {
             return View();
         }
+
+        [Authorize(Roles = "admin")]
+        public IActionResult Notifications() => View();
 
         // GET: /Admin/GuideApprovals
         public async Task<IActionResult> GuideApprovals()
@@ -241,7 +246,8 @@ namespace TripMate_Webapi.Controllers
         {
             try
             {
-                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "");
+                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "")
+                            ?? Request.Cookies["access_token"];
                 var application = await _guideApprovalService.GetApplicationByIdAsync(request.GuideId);
                 var success = await _guideApprovalService.ApproveGuideAsync(request.GuideId, request.Comment ?? "", token);
                 
@@ -256,6 +262,18 @@ namespace TripMate_Webapi.Controllers
                             true, 
                             request.Comment ?? "Congratulations! Your Guide profile has been approved on TripMate!",
                             loginLink); // Approved: send login link
+                    }
+                    if (!string.IsNullOrWhiteSpace(application?.UserId))
+                    {
+                        await _notificationService.SendAsync(
+                            application.UserId,
+                            NotificationTypes.GuideApplicationApproved,
+                            "Guide application approved",
+                            "Your guide profile has been approved. You can now publish tours and accept bookings.",
+                            new { guideId = request.GuideId },
+                            "/Guide/Dashboard",
+                            $"guide-application-approved:{request.GuideId}",
+                            sendEmail: false);
                     }
                     return Ok(new { message = "Guide approved successfully!" });
                 }
@@ -282,7 +300,8 @@ namespace TripMate_Webapi.Controllers
                     return BadRequest(new { message = "Rejection reason is required" });
                 }
 
-                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "");
+                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "")
+                            ?? Request.Cookies["access_token"];
                 var application = await _guideApprovalService.GetApplicationByIdAsync(request.GuideId);
                 var success = await _guideApprovalService.RejectGuideAsync(request.GuideId, request.Comment, token);
                 
@@ -296,6 +315,18 @@ namespace TripMate_Webapi.Controllers
                             false, 
                             request.Comment,
                             string.Empty); // Rejected: no link
+                    }
+                    if (!string.IsNullOrWhiteSpace(application?.UserId))
+                    {
+                        await _notificationService.SendAsync(
+                            application.UserId,
+                            NotificationTypes.GuideApplicationRejected,
+                            "Guide application update",
+                            request.Comment,
+                            new { guideId = request.GuideId, reason = request.Comment },
+                            "/Home/BecomeAGuide",
+                            $"guide-application-rejected:{request.GuideId}",
+                            sendEmail: false);
                     }
                     return Ok(new { message = "Guide registration rejected" });
                 }
@@ -329,11 +360,13 @@ namespace TripMate_Webapi.Controllers
 
         // GET: /Admin/GetNotifications (API for notifications)
         [HttpGet]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> GetNotifications()
         {
             try
             {
-                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "");
+                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "")
+                            ?? Request.Cookies["access_token"];
                 if (string.IsNullOrEmpty(token))
                 {
                     return Unauthorized();
@@ -351,11 +384,13 @@ namespace TripMate_Webapi.Controllers
 
         // POST: /Admin/MarkNotificationRead
         [HttpPost]
+        [Authorize(Roles = "admin")]
         public async Task<IActionResult> MarkNotificationRead([FromBody] MarkNotificationRequest request)
         {
             try
             {
-                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "");
+                var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "")
+                            ?? Request.Cookies["access_token"];
                 if (string.IsNullOrEmpty(token))
                 {
                     return Unauthorized();
@@ -494,6 +529,17 @@ namespace TripMate_Webapi.Controllers
                             body?.Comment ?? "Congratulations! Your Guide profile has been approved on TripMate!",
                             loginLink);
                     }
+                    if (!string.IsNullOrWhiteSpace(application.UserId))
+                    {
+                        await _notificationService.SendAsync(
+                            application.UserId,
+                            NotificationTypes.GuideApplicationApproved,
+                            "Guide application approved",
+                            "Your guide profile has been approved. You can now publish tours and accept bookings.",
+                            new { guideId = id },
+                            "/Guide/Dashboard",
+                            $"guide-application-approved:{id}");
+                    }
                     return Ok(new { message = "Guide approved successfully!" });
                 }
                 return BadRequest(new { message = "Failed to approve guide" });
@@ -533,6 +579,17 @@ namespace TripMate_Webapi.Controllers
                             false,
                             body.Comment,
                             string.Empty);
+                    }
+                    if (!string.IsNullOrWhiteSpace(application.UserId))
+                    {
+                        await _notificationService.SendAsync(
+                            application.UserId,
+                            NotificationTypes.GuideApplicationRejected,
+                            "Guide application update",
+                            body.Comment,
+                            new { guideId = id, reason = body.Comment },
+                            "/Home/BecomeAGuide",
+                            $"guide-application-rejected:{id}");
                     }
                     return Ok(new { message = "Guide registration rejected." });
                 }

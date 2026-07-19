@@ -45,7 +45,7 @@
                                     <h4 class="font-bold text-on-surface truncate" x-text="t.OtherName"></h4>
                                     <span class="text-xs text-on-surface-variant" x-text="t.TimeAgo"></span>
                                 </div>
-                                <p class="text-sm text-on-surface-variant truncate" x-text="t.LastMessage"></p>
+                                <p class="text-sm text-on-surface-variant truncate" x-text="getThreadPreview(t)"></p>
                             </div>
                         </button>
                     </template>
@@ -75,17 +75,63 @@
                         </div>
 
                         <div class="flex-1 overflow-y-auto p-6 space-y-4" id="travelerChatContainer">
-                            <div class="text-center mb-8">
+                            <div class="text-center mb-4">
+                                <template x-if="activeThread && activeThread._hasMore">
+                                    <div class="mb-3">
+                                        <button type="button" @@click="loadMoreMessages()" class="text-sm text-primary underline">Load older messages</button>
+                                    </div>
+                                </template>
                                 <span class="text-xs font-medium bg-gray-100 text-gray-500 px-3 py-1 rounded-full" x-text="activeThread.Date"></span>
                             </div>
 
                             <template x-for="(m, i) in activeThread.Messages" :key="i">
-                                <div class="flex flex-col" :class="m.IsMine ? 'items-end' : 'items-start'">
-                                    <div class="max-w-[75%] px-4 py-2.5 shadow-sm text-[15px]" :class="m.IsMine ? 'bg-primary text-white rounded-2xl rounded-br-sm' : 'bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-sm'">
-                                        <span x-text="m.Text"></span>
+                                <div class="flex flex-col group" :class="m.IsMine ? 'items-end' : 'items-start'" :data-msg-id="m.Id">
+                                    <div class="flex items-center gap-2 max-w-[75%]">
+                                        <template x-if="m.IsMine && !m.editing && !isUrl(m.Text)">
+                                            <button type="button" @@click.stop="startEdit(m)" class="hidden group-hover:flex items-center justify-center w-8 h-8 rounded-full bg-white border border-outline-variant/40 text-on-surface-variant shadow-sm hover:bg-surface hover:text-primary transition-colors" title="Edit" aria-label="Edit message">
+                                                <span class="material-symbols-outlined text-[14px]">edit</span>
+                                            </button>
+                                        </template>
+
+                                        <div class="relative min-w-0 px-4 py-2.5 shadow-sm text-[15px]" :class="m.IsMine ? 'bg-primary text-white rounded-2xl rounded-br-sm' : 'bg-white border border-gray-200 text-gray-900 rounded-2xl rounded-bl-sm'">
+                                        <template x-if="m.editing">
+                                            <div>
+                                                <textarea x-model="m.editText" rows="1" class="w-full resize-none p-2 rounded bg-white text-gray-900" data-edit-textarea @@input="resizeEditTextarea($event)"></textarea>
+                                                <div class="flex justify-end gap-2 mt-2">
+                                                    <button type="button" @@click="saveEdit(m)" class="bg-primary text-white px-3 py-1 rounded">Save</button>
+                                                    <button type="button" @@click="cancelEdit(m)" class="bg-gray-100 text-gray-700 px-3 py-1 rounded">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </template>
+                                        <template x-if="!m.editing">
+                                            <div>
+                                                <template x-if="isImageUrl(m.Text)">
+                                                    <div class="flex flex-col gap-2">
+                                                        <img :src="m.Text" class="max-w-[320px] rounded-md" />
+                                                        <a :href="m.Text" target="_blank" rel="noopener" :class="m.IsMine ? 'text-white text-sm underline' : 'text-primary text-sm underline'" x-text="getFilename(m.Text)"></a>
+                                                    </div>
+                                                </template>
+                                                <template x-if="!isImageUrl(m.Text) && isUrl(m.Text)">
+                                                    <a :href="m.Text" target="_blank" rel="noopener" class="flex items-center gap-3 p-3 rounded-md" :class="m.IsMine ? 'bg-primary/20 text-white' : 'bg-white'">
+                                                        <span class="material-symbols-outlined text-[20px]" x-text="fileIconForUrl(m.Text)"></span>
+                                                        <div class="min-w-0">
+                                                            <div class="font-medium truncate" :class="m.IsMine ? 'text-white' : 'text-on-surface'" x-text="getFilename(m.Text)"></div>
+                                                            <div class="text-xs opacity-70 truncate" :class="m.IsMine ? 'text-white/80' : 'text-on-surface-variant'" x-text="getFileType(m.Text)"></div>
+                                                        </div>
+                                                    </a>
+                                                </template>
+                                                <template x-if="!isUrl(m.Text)">
+                                                    <div :class="m.IsMine ? 'text-white break-words' : 'text-gray-900 break-words'" style="white-space: pre-wrap;" x-text="m.Text"></div>
+                                                </template>
+                                            </div>
+                                        </template>
+                                    </div>
                                     </div>
                                     <div class="flex items-center gap-1 mt-1 text-[11px] text-gray-400 px-1">
                                         <span x-text="m.Time"></span>
+                                        <template x-if="m.IsMine">
+                                            <span class="material-symbols-outlined text-[14px]" :class="m.IsRead ? 'text-blue-500' : ''" x-text="m.IsRead ? 'done_all' : 'check'"></span>
+                                        </template>
                                     </div>
                                 </div>
                             </template>
@@ -93,6 +139,10 @@
 
                         <div class="bg-white border-t border-outline-variant/30 p-4">
                             <form @@submit.prevent="sendMessage" class="flex items-end gap-3 max-w-4xl mx-auto" onsubmit="event.preventDefault(); return false;">
+                                <label class="w-10 h-10 flex items-center justify-center mr-2 text-on-surface-variant cursor-pointer">
+                                    <input type="file" class="hidden" @@change="uploadAttachment($event)" />
+                                    <span class="material-symbols-outlined">attach_file</span>
+                                </label>
                                 <div class="flex-1 bg-surface border border-outline-variant/30 rounded-2xl overflow-hidden">
                                     <textarea x-model="newMessage" @@keydown.enter.prevent="sendMessage" @@input="autoSize" rows="1" placeholder="Type a message..." class="w-full bg-transparent border-none text-on-surface text-sm px-4 py-3 max-h-32 resize-none focus:ring-0 outline-none"></textarea>
                                 </div>
@@ -120,6 +170,104 @@
 
                 init() {
                     this.loadConversations();
+                },
+                resizeEditTextarea(e) {
+                    try {
+                        const ta = e.target;
+                        ta.style.height = 'auto';
+                        ta.style.height = (ta.scrollHeight) + 'px';
+                    } catch (err) { console.warn('resizeEditTextarea', err); }
+                },
+
+                getFilename(url) {
+                    if (!url) return '';
+                    try {
+                        const u = new URL(url);
+                        const parts = u.pathname.split('/');
+                        return decodeURIComponent(parts[parts.length-1].split('.')[0]) || url;
+                    } catch (e) { return url; }
+                },
+                getFileType(url) {
+                    if (!this.isUrl(url)) return '';
+                    const m = url.match(/\.([a-z0-9]+)(\?|$)/i);
+                    if (!m) return 'file';
+                    const ext = m[1].toLowerCase();
+                    if (['jpg','jpeg','png','gif','webp','bmp'].includes(ext)) return 'image';
+                    if (['pdf'].includes(ext)) return 'pdf';
+                    if (['mp4','mov','webm','mkv'].includes(ext)) return 'video';
+                    if (['mp3','wav','m4a','flac'].includes(ext)) return 'audio';
+                    if (['doc','docx','txt','rtf'].includes(ext)) return 'document';
+                    return ext;
+                },
+                fileIconForUrl(url) {
+                    const t = this.getFileType(url);
+                    switch (t) {
+                        case 'image': return 'image';
+                        case 'pdf': return 'picture_as_pdf';
+                        case 'video': return 'movie';
+                        case 'audio': return 'audiotrack';
+                        case 'document': return 'description';
+                        default: return 'insert_drive_file';
+                    }
+                },
+
+                isUrl(s) {
+                    return !!(s && typeof s === 'string' && (s.startsWith('http://') || s.startsWith('https://')));
+                },
+                isImageUrl(s) {
+                    if (!this.isUrl(s)) return false;
+                    return (s.match(/\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i) != null);
+                },
+                truncateText(s, n = 80) {
+                    if (!s) return '';
+                    return s.length > n ? s.slice(0, n - 1) + '…' : s;
+                },
+                getThreadPreview(thread) {
+                    const m = thread?.LastMessage || '';
+                    if (!m) return '';
+                    if (this.isUrl(m)) {
+                        const t = this.getFileType(m);
+                        switch (t) {
+                            case 'image': return 'Image';
+                            case 'pdf': return 'PDF';
+                            case 'video': return 'Video';
+                            case 'audio': return 'Audio';
+                            case 'document': return 'Document';
+                            default: return 'Attachment';
+                        }
+                    }
+                    return this.truncateText(m, 80);
+                },
+
+                async uploadAttachment(e) {
+                    const files = e.target.files || e.dataTransfer?.files;
+                    if (!files || files.length === 0) return;
+                    const file = files[0];
+                    if (!this.activeThread) return;
+
+                    const token = localStorage.getItem('accessToken');
+                    const userId = localStorage.getItem('userId');
+                    const receiverId = this.activeThread.OtherId;
+
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    fd.append('receiverId', receiverId || '');
+
+                    try {
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.BookingId)}/attachments`, {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + token },
+                            body: fd
+                        });
+                        if (!res.ok) throw new Error('Upload failed');
+                        const msg = await res.json();
+                        const sent = { Id: msg.id || msg.Id, Text: msg.messageText || msg.MessageText || '', SentAt: msg.sentAt || msg.SentAt, IsMine: true, Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), IsRead: !!(msg.isRead || msg.IsRead) };
+                        this.activeThread.Messages.push(sent);
+                        this.activeThread.LastMessage = sent.Text;
+                        this.newMessage = '';
+                        this.scrollToBottom();
+                    } catch (e) { console.error(e); showToast('error', 'Failed to upload file'); }
+                    finally { e.target.value = null; }
                 },
 
                 get filteredThreads() {
@@ -157,6 +305,10 @@
                                 IsRead: !!(r.isRead || r.IsRead),
                                 SentAt: r.sentAt || r.SentAt
                             }));
+                            // Message pages are returned newest-first. The preview uses
+                            // the first row while the message pane remains chronological.
+                            const newest = messages.length ? messages[0] : null;
+                            const chronologicalMessages = messages.slice().reverse();
 
                             threads.push({
                                 Id: bookingId,
@@ -165,20 +317,33 @@
                                 OtherId: otherId,
                                 OtherName: otherId,
                                 OtherAvatar: '/images/AVATAR.png',
-                                Messages: messages.map(m => ({
+                                Messages: chronologicalMessages.map(m => ({
+                                    Id: m.Id,
                                     Text: m.Text,
+                                    SentAt: m.SentAt,
                                     IsMine: m.SenderId === userId,
                                     Time: new Date(m.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
                                     IsRead: m.IsRead
                                 })),
-                                LastMessage: messages.length ? messages[messages.length -1].Text : 'No messages yet',
-                                TimeAgo: messages.length ? this.formatTimeAgo(messages[messages.length -1].SentAt) : '',
-                                Date: messages.length ? new Date(messages[messages.length -1].SentAt).toLocaleDateString('en-US') : '',
+                                LastMessage: newest ? newest.Text : 'No messages yet',
+                                TimeAgo: newest ? this.formatTimeAgo(newest.SentAt) : '',
+                                Date: newest ? new Date(newest.SentAt).toLocaleDateString('en-US') : '',
+                                LastMessageAt: newest ? newest.SentAt : null,
                                 UnreadCount: messages.filter(m => !m.IsRead && m.ReceiverId === userId).length
                             });
                         }
 
                         this.threads = threads;
+
+                        // If page was opened with a bookingId query param, auto-open that conversation
+                        try {
+                            const params = new URLSearchParams(window.location.search);
+                            const bookingIdParam = params.get('bookingId');
+                            if (bookingIdParam) {
+                                const target = this.threads.find(t => (t.BookingId || t.Id || '').toString() === bookingIdParam.toString());
+                                if (target) await this.selectThread(target);
+                            }
+                        } catch(e) { console.warn('auto-open thread failed', e); }
 
                         // Merge server-provided active bookings (confirmed trips) so user can chat even if no messages exist
                         try {
@@ -203,6 +368,7 @@
                                         OtherAvatar: otherAvatar,
                                         Messages: [],
                                         LastMessage: 'No messages yet',
+                                        LastMessageAt: null,
                                         TimeAgo: '',
                                         Date: (ab.bookingDate ? new Date(ab.bookingDate).toLocaleDateString('en-US') : ''),
                                         UnreadCount: 0
@@ -257,20 +423,32 @@
                     const userId = localStorage.getItem('userId');
                     if (!token) return;
                     try {
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/messages`, { headers: { 'Authorization': 'Bearer ' + token } });
+                        const pageSize = 30;
+                        thread._pageSize = pageSize;
+                        thread._offset = 0;
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/messages?limit=${pageSize}&offset=0`, { headers: { 'Authorization': 'Bearer ' + token } });
                         if (!res.ok) throw new Error('Failed to load messages');
                         const data = await res.json();
                         const rows = data?.messages || [];
-                        thread.Messages = rows.map(r => ({
+                        console.log('loaded rows for', thread.BookingId, rows);
+                        const ordered = (rows || []).slice().reverse();
+                        thread.Messages = ordered.map(r => ({
+                            Id: r.id || r.Id,
                             Text: r.messageText || r.MessageText || '',
+                            SentAt: r.sentAt || r.SentAt,
                             IsMine: (r.senderId || r.SenderId) === userId,
                             Time: new Date(r.sentAt || r.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
                             IsRead: !!(r.isRead || r.IsRead)
                         }));
 
-                        const last = rows.length ? rows[rows.length -1] : null;
-                        thread.LastMessage = last ? (last.messageText || last.MessageText) : thread.LastMessage;
-                        thread.TimeAgo = last ? this.formatTimeAgo(last.sentAt || last.SentAt) : thread.TimeAgo;
+                        thread._loaded = rows.length;
+                        console.log('thread.Messages', thread.Messages);
+                        thread._hasMore = (rows.length === pageSize);
+
+                        const newest = rows.length ? rows[0] : null;
+                        thread.LastMessage = newest ? (newest.messageText || newest.MessageText) : thread.LastMessage;
+                        thread.LastMessageAt = newest ? (newest.sentAt || newest.SentAt) : thread.LastMessageAt;
+                        thread.TimeAgo = newest ? this.formatTimeAgo(newest.sentAt || newest.SentAt) : thread.TimeAgo;
                         thread.UnreadCount = rows.filter(m => !(m.isRead || m.IsRead) && (m.receiverId || m.ReceiverId) === userId).length;
 
                         // mark as read on server
@@ -278,6 +456,33 @@
                             await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/mark-read`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
                         } catch (e) { console.warn('mark-read failed', e); }
                     } catch (e) { console.error(e); }
+                },
+
+                async loadMoreMessages() {
+                    const thread = this.activeThread;
+                    if (!thread || !thread._hasMore) return;
+                    const token = localStorage.getItem('accessToken');
+                    if (!token) return;
+                    try {
+                        const pageSize = thread._pageSize || 30;
+                        const offset = thread._loaded || 0;
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/messages?limit=${pageSize}&offset=${offset}`, { headers: { 'Authorization': 'Bearer ' + token } });
+                        if (!res.ok) throw new Error('Failed to load older messages');
+                        const data = await res.json();
+                        const rows = data?.messages || [];
+                        const ordered = (rows || []).slice().reverse();
+                        const prep = ordered.map(r => ({
+                            Id: r.id || r.Id,
+                            Text: r.messageText || r.MessageText || '',
+                            SentAt: r.sentAt || r.SentAt,
+                            IsMine: (r.senderId || r.SenderId) === localStorage.getItem('userId'),
+                            Time: new Date(r.sentAt || r.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                            IsRead: !!(r.isRead || r.IsRead)
+                        }));
+                        thread.Messages = prep.concat(thread.Messages || []);
+                        thread._loaded = (thread._loaded || 0) + rows.length;
+                        thread._hasMore = (rows.length === pageSize);
+                    } catch (e) { console.error(e); showToast('error', 'Failed to load older messages'); }
                 },
 
                 async sendMessage() {
@@ -292,12 +497,55 @@
                         });
                         if (!res.ok) throw new Error('Send failed');
                         const msg = await res.json();
-                        const sent = { Text: msg.messageText || msg.MessageText || text, IsMine: true, Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), IsRead: !!(msg.isRead || msg.IsRead) };
+                        const sent = { Id: msg.id || msg.Id, Text: msg.messageText || msg.MessageText || text, SentAt: msg.sentAt || msg.SentAt, IsMine: true, Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), IsRead: !!(msg.isRead || msg.IsRead) };
                         this.activeThread.Messages.push(sent);
                         this.activeThread.LastMessage = sent.Text;
                         this.newMessage = '';
                         this.scrollToBottom();
                     } catch (e) { console.error(e); showToast('error', 'Failed to send message'); }
+                },
+
+                // Message editing helpers
+                startEdit(msg) {
+                    msg.editing = true;
+                    msg.editText = msg.Text;
+                    setTimeout(() => {
+                        try {
+                            const ta = document.querySelector(`[data-msg-id="${msg.Id}"] [data-edit-textarea]`);
+                            if (ta) {
+                                ta.style.height = 'auto';
+                                ta.style.height = (ta.scrollHeight) + 'px';
+                                ta.focus();
+                            }
+                        } catch (e) { console.warn('startEdit resize failed', e); }
+                    }, 0);
+                },
+                cancelEdit(msg) {
+                    msg.editing = false;
+                    delete msg.editText;
+                },
+                async saveEdit(msg) {
+                    if (!this.activeThread || !msg || !msg.Id) return;
+                    const token = localStorage.getItem('accessToken');
+                    if (!token) return;
+                    // prevent editing attachments
+                    if (this.isUrl(msg.Text)) { showToast('warning', 'Không th? ch?nh s?a t?p ?ính kèm'); msg.editing = false; return; }
+                    try {
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.BookingId)}/messages/${encodeURIComponent(msg.Id)}`, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ Content: msg.editText })
+                        });
+                        if (!res.ok) throw new Error('Edit failed');
+                        const updated = await res.json();
+                        msg.Text = updated.messageText || updated.MessageText || msg.editText;
+                        msg.SentAt = updated.sentAt || updated.SentAt || msg.SentAt;
+                        msg.Time = msg.SentAt ? new Date(msg.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : msg.Time;
+                        msg.editing = false;
+                    } catch (e) {
+                        console.error(e);
+                        showToast('error', 'Failed to edit message');
+                    }
                 },
 
                 autoSize() { const ta = this.$event.target; ta.style.height='auto'; ta.style.height = ta.scrollHeight + 'px'; },

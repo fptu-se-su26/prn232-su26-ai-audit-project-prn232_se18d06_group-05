@@ -13,15 +13,17 @@ namespace TripMate_WebAPI.Services;
 public class ChatService
 {
     private readonly HttpClient _http;
+    private readonly INotificationService _notifications;
     private readonly string _supabaseUrl;
     private readonly string _anonKey;
 
     private static readonly JsonSerializerOptions _json = new()
     { PropertyNameCaseInsensitive = true };
 
-    public ChatService(HttpClient http, IConfiguration config)
+    public ChatService(HttpClient http, IConfiguration config, INotificationService notifications)
     {
         _http = http;
+        _notifications = notifications;
         _supabaseUrl = config["Supabase:Url"]!;
         _anonKey = config["Supabase:AnonKey"]!;
     }
@@ -31,9 +33,10 @@ internal class ProfileRow
     [JsonPropertyName("id")] public string? Id { get; set; }
     [JsonPropertyName("full_name")] public string? FullName { get; set; }
     [JsonPropertyName("avatar_url")] public string? AvatarUrl { get; set; }
+    [JsonPropertyName("role")] public string? Role { get; set; }
 }
 
-public record ProfileDto(string Id, string FullName, string? AvatarUrl);
+public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? Role = null);
 
     // ── Get or create "conversation" (= messages grouped by booking_id) ───────
 
@@ -100,14 +103,17 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl);
     // ── Get messages by booking_id ────────────────────────────────────────────
 
     public async Task<List<MessageDto>> GetMessagesAsync(
-        string bookingId, string userToken)
+        string bookingId, string userToken, int limit = 50, int offset = 0)
     {
+        // Return newest-first page using desc ordering. Client will reverse to chronological display.
         var url = $"{_supabaseUrl}/rest/v1/chat_messages" +
                   $"?booking_id=eq.{bookingId}" +
-                  $"&order=sent_at.asc" +
+                  $"&order=sent_at.desc" +
+                  $"&limit={limit}" +
+                  $"&offset={offset}" +
                   $"&select=*";
 
-        var rows = await GetAsync<List<ChatMessageRow>>(url, userToken) ?? [];
+        var rows = await GetAsync<List<ChatMessageRow>>(url, userToken) ?? new List<ChatMessageRow>();
         return rows.Select(r => new MessageDto(
             r.Id, r.BookingId ?? "", r.SenderId ?? "", r.ReceiverId ?? "",
             r.MessageText ?? "", r.IsRead, r.SentAt)).ToList();
@@ -140,9 +146,61 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl);
 
         var rows = JsonSerializer.Deserialize<List<ChatMessageRow>>(c, _json);
         var row = rows!.First();
-        return new MessageDto(
+        var result = new MessageDto(
             row.Id, row.BookingId ?? "", row.SenderId ?? "", row.ReceiverId ?? "",
             row.MessageText ?? "", row.IsRead, row.SentAt);
+
+        var sender = await GetProfileAsync(senderId, userToken);
+        var receiver = await GetProfileAsync(receiverId, userToken);
+        var preview = content.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? "Sent an attachment"
+            : content.Length > 120 ? $"{content[..120]}…" : content;
+        var actionUrl = string.Equals(receiver?.Role, "guide", StringComparison.OrdinalIgnoreCase)
+            ? $"/Guide/Messages?bookingId={Uri.EscapeDataString(bookingId)}"
+            : $"/Traveler/Messages?bookingId={Uri.EscapeDataString(bookingId)}";
+        await _notifications.SendAsync(
+            receiverId,
+            NotificationTypes.MessageReceived,
+            $"New message from {sender?.FullName ?? "a TripMate user"}",
+            preview,
+            new { bookingId, messageId = row.Id, senderId },
+            actionUrl,
+            $"message:{row.Id}");
+
+        return result;
+    }
+
+    /// <summary>
+    /// Edit a message. Only the sender may edit their message.
+    /// </summary>
+    public async Task<MessageDto> EditMessageAsync(long messageId, string userId, string content, string userToken)
+    {
+        // Fetch the existing message row to verify ownership
+        var getUrl = $"{_supabaseUrl}/rest/v1/chat_messages?id=eq.{messageId}&select=*";
+        var existing = await GetAsync<List<ChatMessageRow>>(getUrl, userToken) ?? new List<ChatMessageRow>();
+        var row = existing.FirstOrDefault();
+        if (row == null) throw new Exception("Message not found");
+        if ((row.SenderId ?? "") != (userId ?? "")) throw new UnauthorizedAccessException("Not the message owner");
+
+        var body = new
+        {
+            message_text = content,
+            edited_at = DateTime.UtcNow
+        };
+
+        var req = BuildRequest(HttpMethod.Patch, $"{_supabaseUrl}/rest/v1/chat_messages?id=eq.{messageId}", userToken);
+        req.Headers.Add("Prefer", "return=representation");
+        req.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+
+        var res = await _http.SendAsync(req);
+        var c = await res.Content.ReadAsStringAsync();
+        EnsureSuccess(res, c);
+
+        var rows = JsonSerializer.Deserialize<List<ChatMessageRow>>(c, _json);
+        var updated = rows!.First();
+        return new MessageDto(
+            updated.Id, updated.BookingId ?? "", updated.SenderId ?? "", updated.ReceiverId ?? "",
+            updated.MessageText ?? "", updated.IsRead, updated.SentAt);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
@@ -190,11 +248,11 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl);
     /// </summary>
     public async Task<ProfileDto?> GetProfileAsync(string userId, string userToken)
     {
-        var url = $"{_supabaseUrl}/rest/v1/profiles?id=eq.{userId}&select=id,full_name,avatar_url&limit=1";
+        var url = $"{_supabaseUrl}/rest/v1/profiles?id=eq.{userId}&select=id,full_name,avatar_url,role&limit=1";
         var rows = await GetAsync<List<ProfileRow>>(url, userToken);
         var r = rows?.FirstOrDefault();
         if (r == null) return null;
-        return new ProfileDto(r.Id ?? "", r.FullName ?? "", r.AvatarUrl);
+        return new ProfileDto(r.Id ?? "", r.FullName ?? "", r.AvatarUrl, r.Role);
     }
 
     private static void EnsureSuccess(HttpResponseMessage r, string c)

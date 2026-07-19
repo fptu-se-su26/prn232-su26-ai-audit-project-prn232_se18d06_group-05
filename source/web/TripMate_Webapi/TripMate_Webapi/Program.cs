@@ -112,6 +112,10 @@ builder.Services.AddHttpClient<ChatService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddHttpClient<NotificationService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddSignalR();
+builder.Services.AddHttpClient<BookingReminderService>();
+builder.Services.AddScoped<BookingReminderService>();
+builder.Services.AddHostedService<BookingReminderWorker>();
 
 // ── Survey Service ────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SurveyService>();
@@ -165,6 +169,12 @@ builder.Services
                     if (!string.IsNullOrEmpty(token))
                     {
                         context.Token = token;
+                    }
+                    else if (context.HttpContext.Request.Path.StartsWithSegments("/hubs/notifications"))
+                    {
+                        // SignalR's browser client sends bearer tokens in the query string.
+                        var hubToken = context.Request.Query["access_token"].FirstOrDefault();
+                        if (!string.IsNullOrWhiteSpace(hubToken)) context.Token = hubToken;
                     }
                 }
                 return Task.CompletedTask;
@@ -276,6 +286,7 @@ app.UseSession();          // Phải trước UseAuthentication để Session s�
 app.UseAuthentication();   // phải trước UseAuthorization
 app.UseAuthorization();
 app.MapControllers(); // Map API controllers
+app.MapHub<NotificationHub>("/hubs/notifications");
 app.MapControllerRoute( // Map MVC routes
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
