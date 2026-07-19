@@ -42,6 +42,9 @@ namespace TripMate_Webapi.Entities
         [Column("traveler_notes")]
         public string? TravelerNotes { get; set; }
 
+        [Column("payment_reference")]
+        public string? PaymentReference { get; set; }
+
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 

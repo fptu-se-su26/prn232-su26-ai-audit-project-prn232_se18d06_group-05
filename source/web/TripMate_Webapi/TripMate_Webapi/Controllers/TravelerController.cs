@@ -20,6 +20,8 @@ namespace TripMate_Webapi.Controllers
         private readonly IReviewRepository _reviewRepository;
         private readonly IGuideRepository _guideRepository;
         private readonly ISavedGuideRepository _savedGuideRepository;
+        private readonly IPayOSService _payOSService;
+        private readonly Supabase.Client _supabase;
 
         private const string LOGIN_URL = "/Auth/Login";
 
@@ -31,7 +33,9 @@ namespace TripMate_Webapi.Controllers
             TourService tourService,
             IReviewRepository reviewRepository,
             IGuideRepository guideRepository,
-            ISavedGuideRepository savedGuideRepository)
+            ISavedGuideRepository savedGuideRepository,
+            IPayOSService payOSService,
+            Supabase.Client supabase)
         {
             _logger = logger;
             _authService = authService;
@@ -41,6 +45,8 @@ namespace TripMate_Webapi.Controllers
             _reviewRepository = reviewRepository;
             _guideRepository = guideRepository;
             _savedGuideRepository = savedGuideRepository;
+            _payOSService = payOSService;
+            _supabase = supabase;
         }
 
         // ────────────────────────────────────────────────────────────────────
@@ -138,12 +144,7 @@ namespace TripMate_Webapi.Controllers
             return View(booking);
         }
 
-        // GET: /Traveler/Checkout/{id} [Auth required]
-        public IActionResult Checkout(string id)
-        {
-            ViewBag.RequiresAuth = true;
-            return RedirectToAction("BookingDetails", new { id });
-        }
+
 
 
 
@@ -295,7 +296,7 @@ namespace TripMate_Webapi.Controllers
             // Duplicate booking check
             var existingBookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
             bool hasDuplicate = existingBookings.Any(b => 
-                b.Status < 2 && 
+                b.Status >= 0 && b.Status < 2 && 
                 b.ExperiencePackageId == packageId && 
                 b.GuideProfileId == guideId && 
                 b.BookingDate.Date == date.Date);
@@ -311,6 +312,8 @@ namespace TripMate_Webapi.Controllers
             var platformFee = Math.Round(basePrice * 0.15m, 0);
             var guideEarnings = basePrice - platformFee;
 
+            long orderCode = long.Parse(DateTimeOffset.UtcNow.ToString("yyMMddHHmmssfff"));
+
             var booking = new BookingEntity
             {
                 TravelerId = travelerId,
@@ -323,7 +326,8 @@ namespace TripMate_Webapi.Controllers
                 PlatformFee = platformFee,
                 GuideEarnings = guideEarnings,
                 TravelerNotes = notes,
-                Status = 0 // M4: Pending — chờ Guide Accept (KHÔNG nhảy thẳng Completed)
+                PaymentReference = orderCode.ToString(),
+                Status = -1 // Pending Payment
             };
 
             var createdBooking = await _bookingRepository.CreateBookingAsync(booking);
@@ -331,7 +335,9 @@ namespace TripMate_Webapi.Controllers
             // Xóa Ghost Booking session sau khi booking thật đã tạo
             HttpContext.Session.Remove("GhostBooking");
 
-            return Json(new { bookingId = createdBooking.Id });
+            string paymentUrl = await _payOSService.CreatePaymentLink(createdBooking, orderCode);
+
+            return Json(new { bookingId = createdBooking.Id, paymentUrl = paymentUrl });
         }
 
         /// <summary>
@@ -378,7 +384,7 @@ namespace TripMate_Webapi.Controllers
             // Duplicate booking check
             var existingBookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
             bool hasDuplicate = existingBookings.Any(b => 
-                b.Status < 2 && 
+                b.Status >= 0 && b.Status < 2 && 
                 b.ExperiencePackageId == packageId && 
                 b.GuideProfileId == guideId && 
                 b.BookingDate.Date == targetDate);
@@ -387,6 +393,8 @@ namespace TripMate_Webapi.Controllers
             {
                 return BadRequest(new { error = "You already have an active booking for this tour on this date." });
             }
+
+            long orderCode = long.Parse(DateTimeOffset.UtcNow.ToString("yyMMddHHmmssfff"));
 
             var booking = new BookingEntity
             {
@@ -399,17 +407,52 @@ namespace TripMate_Webapi.Controllers
                 TotalAmount = basePrice,
                 PlatformFee = platformFee,
                 GuideEarnings = guideEarnings,
-                Status = 0
+                PaymentReference = orderCode.ToString(),
+                Status = -1 // Pending Payment
             };
 
             var createdBooking = await _bookingRepository.CreateBookingAsync(booking);
             HttpContext.Session.Remove("GhostBooking");
 
-            return Json(new { bookingId = createdBooking.Id });
+            string paymentUrl = await _payOSService.CreatePaymentLink(createdBooking, orderCode);
+
+            return Json(new { bookingId = createdBooking.Id, paymentUrl = paymentUrl });
         }
 
+        /// <summary>
+        /// GET: /Traveler/PaymentCallback
+        /// Handles redirect from PayOS after payment attempt.
+        /// </summary>
+        [HttpGet]
+        public async Task<IActionResult> PaymentCallback([FromQuery] string bookingId, [FromQuery] string cancel, [FromQuery] string status, [FromQuery] string orderCode)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(bookingId)) return RedirectToAction("Dashboard");
 
+                var booking = await _bookingRepository.GetBookingByIdAsync(bookingId);
+                if (booking == null) return RedirectToAction("Dashboard");
 
+                if (cancel == "true" || status != "PAID")
+                {
+                    await _bookingRepository.UpdateBookingStatusAsync(booking.Id, 3); // Cancelled
+                    TempData["ErrorMessage"] = "Payment was cancelled.";
+                }
+                else if (status == "PAID" && booking.Status == -1)
+                {
+                    await _bookingRepository.UpdateBookingStatusAsync(booking.Id, 0); // Pending Guide Approval
+                    TempData["SuccessMessage"] = "Payment successful! Your booking is now pending guide approval.";
+                }
+                
+                return RedirectToAction("Dashboard");
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Payment processing error: {ex.Message} - Please take a screenshot and report to technical support.";
+                return RedirectToAction("Dashboard");
+            }
+        }
+        
         /// <summary>
         /// POST: /Traveler/CreateTripRequest
         /// M1: Require auth. Fix: Đọc groupSize từ form.
@@ -581,6 +624,67 @@ namespace TripMate_Webapi.Controllers
                 createdAt = t.CreatedAt.ToString("MMM dd, yyyy HH:mm")
             });
             return Json(result);
+        }
+
+        [HttpGet("Traveler/GetProfileAjax")]
+        public async Task<IActionResult> GetProfileAjax()
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                var profile = await _supabase.From<ProfileEntity>().Where(x => x.Id == travelerId).Single();
+                if (profile == null) return NotFound(new { error = "Profile not found" });
+
+                return Json(new {
+                    displayName = profile.FullName,
+                    email = profile.Email,
+                    phone = profile.Phone,
+                    nationality = profile.Location,
+                    avatarUrl = profile.AvatarUrl
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching profile");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        public class UpdateProfileRequest
+        {
+            public string DisplayName { get; set; } = string.Empty;
+            public string Phone { get; set; } = string.Empty;
+            public string Nationality { get; set; } = string.Empty;
+        }
+
+        [HttpPost("Traveler/UpdateProfileAjax")]
+        public async Task<IActionResult> UpdateProfileAjax([FromBody] UpdateProfileRequest req)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                var profile = await _supabase.From<ProfileEntity>().Where(x => x.Id == travelerId).Single();
+                if (profile != null)
+                {
+                    profile.FullName = req.DisplayName;
+                    profile.Phone = req.Phone;
+                    profile.Location = req.Nationality;
+                    await _supabase.From<ProfileEntity>().Update(profile);
+                    return Json(new { success = true });
+                }
+                return NotFound(new { error = "Profile not found" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating profile");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
         }
 
         // GET: /Traveler/GetMyBookings  [Bearer Auth via header]
