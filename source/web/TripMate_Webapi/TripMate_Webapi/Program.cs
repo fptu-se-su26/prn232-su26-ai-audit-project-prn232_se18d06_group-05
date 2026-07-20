@@ -113,6 +113,7 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddHttpClient<NotificationService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, SupabaseUserIdProvider>();
 builder.Services.AddHttpClient<BookingReminderService>();
 builder.Services.AddScoped<BookingReminderService>();
 builder.Services.AddHostedService<BookingReminderWorker>();
@@ -170,7 +171,8 @@ builder.Services
                     {
                         context.Token = token;
                     }
-                    else if (context.HttpContext.Request.Path.StartsWithSegments("/hubs/notifications"))
+                    else if (context.HttpContext.Request.Path.StartsWithSegments("/hubs/notifications") ||
+                             context.HttpContext.Request.Path.StartsWithSegments("/hubs/chat"))
                     {
                         // SignalR's browser client sends bearer tokens in the query string.
                         var hubToken = context.Request.Query["access_token"].FirstOrDefault();
@@ -287,6 +289,7 @@ app.UseAuthentication();   // phải trước UseAuthorization
 app.UseAuthorization();
 app.MapControllers(); // Map API controllers
 app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<ChatHub>("/hubs/chat");
 app.MapControllerRoute( // Map MVC routes
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
