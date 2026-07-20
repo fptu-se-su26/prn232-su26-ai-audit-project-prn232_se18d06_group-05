@@ -30,5 +30,11 @@ namespace TripMate_Webapi.Entities
 
         [Column("created_at")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        [Reference(typeof(ProfileEntity))]
+        public ProfileEntity? Traveler { get; set; }
+
+        [Reference(typeof(GuideProfileEntity))]
+        public GuideProfileEntity? Guide { get; set; }
     }
 }

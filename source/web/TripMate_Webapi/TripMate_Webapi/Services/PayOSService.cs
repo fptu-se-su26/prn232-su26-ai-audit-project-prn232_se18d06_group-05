@@ -22,12 +22,11 @@ namespace TripMate_WebAPI.Services
             );
         }
 
-        public async Task<string> CreatePaymentLink(BookingEntity booking, long orderCode)
+        public async Task<string> CreatePaymentLink(BookingEntity booking, long orderCode, int amount)
         {
             var returnUrl = _config["PayOS:ReturnUrl"] + "?bookingId=" + booking.Id;
             var cancelUrl = _config["PayOS:CancelUrl"] + "&bookingId=" + booking.Id;
 
-            var amount = Convert.ToInt32(booking.TotalAmount);
             if (amount <= 0) amount = 10000; // Fallback minimum for testing
 
             var paymentData = new CreatePaymentLinkRequest

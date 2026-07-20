@@ -85,8 +85,7 @@
                 <form action="/Home/Explore" method="get" class="relative group hidden lg:flex bg-white rounded-full border border-outline-variant/30 items-center transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary shadow-sm hover:shadow-md">
                     <div class="flex items-center px-4 py-2 relative">
                         <span class="material-symbols-outlined text-on-surface-variant text-lg mr-2">search</span>
-                        <input type="text" id="destination-input" name="search" autocomplete="off" placeholder="Guides, tours, destinations..." class="bg-transparent text-on-surface text-sm w-52 focus:outline-none border-none p-0 placeholder-on-surface-variant/70">
-                        <!-- Autocomplete Dropdown -->
+                        <input type="text" id="destination-input" name="search" autocomplete="off" placeholder="Guides, tours, keywords..." class="bg-transparent text-on-surface text-sm w-48 focus:outline-none border-none p-0 placeholder-on-surface-variant/70">
                         <div id="autocomplete-dropdown" class="absolute top-[120%] left-0 w-80 bg-white border border-outline-variant/30 rounded-xl shadow-xl hidden z-[100] max-h-72 overflow-y-auto">
                         </div>
                     </div>
@@ -106,6 +105,53 @@
                 <a class="text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap font-bold" href="/Home/BecomeAGuide">Become a guide</a>
                 
                 <div class="flex items-center gap-4">
+                    <div class="relative flex items-center justify-center" x-data="notificationDropdown()" x-show="isLoggedIn" style="display: none;">
+                        <button @@click="toggleDropdown()" class="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center relative">
+                            <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+                            <span x-show="unreadCount > 0" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full" x-text="unreadCount > 99 ? '99+' : unreadCount" style="display: none;"></span>
+                        </button>
+                        
+                        <!-- Dropdown -->
+                        <div x-show="isOpen" @@click.outside="closeDropdown()" style="display: none;" class="absolute right-0 top-full mt-4 w-[350px] bg-white rounded-3xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.2)] border border-outline-variant/30 z-50 overflow-hidden" x-transition.opacity.scale.95>
+                            <div class="p-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface">
+                                <h3 class="font-bold text-on-surface text-lg">Notifications</h3>
+                                <button x-show="unreadCount > 0" @@click="markAllAsRead()" class="text-xs bg-primary-container text-primary px-2 py-1 rounded-full font-bold hover:bg-primary hover:text-white transition-colors">Mark all read</button>
+                            </div>
+                            <div class="max-h-96 overflow-y-auto">
+                                <div x-show="isLoading" class="p-8 text-center">
+                                    <div class="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                </div>
+                                <template x-if="!isLoading && notifications.length === 0">
+                                    <div class="p-10 text-center text-on-surface-variant flex flex-col items-center">
+                                        <div class="w-16 h-16 bg-surface-variant rounded-full flex items-center justify-center mb-3">
+                                            <span class="material-symbols-outlined text-3xl">notifications_paused</span>
+                                        </div>
+                                        <p class="font-bold text-on-surface">You're all caught up!</p>
+                                        <p class="text-sm">No new notifications right now.</p>
+                                    </div>
+                                </template>
+                                <template x-for="notif in notifications" :key="notif.id">
+                                    <div @@click="handleNotificationClick(notif)" 
+                                         class="p-4 border-b border-outline-variant/20 hover:bg-surface-variant transition-colors cursor-pointer flex gap-4 items-start"
+                                         :class="!notif.isRead ? 'bg-primary/5' : ''">
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center shrink-0 mt-0.5" 
+                                             :class="getIconClass(notif.type)">
+                                            <span class="material-symbols-outlined text-[18px]" x-text="getIcon(notif.type)"></span>
+                                        </div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-bold text-on-surface mb-1" x-text="notif.title"></p>
+                                            <p class="text-sm text-on-surface-variant mb-2 line-clamp-2 leading-relaxed" x-text="notif.message"></p>
+                                            <p class="text-xs text-on-surface-variant/80 font-medium" x-text="formatDate(notif.createdAt)"></p>
+                                        </div>
+                                        <div x-show="!notif.isRead" class="w-2 h-2 bg-primary rounded-full mt-2 shrink-0"></div>
+                                    </div>
+                                </template>
+                            </div>
+                            <div class="p-3 bg-surface border-t border-outline-variant/30 text-center">
+                                <a href="#" class="text-sm font-bold text-primary hover:underline">View all notifications</a>
+                            </div>
+                        </div>
+                    </div>
                     <a id="notificationLink" href="/Traveler/Notifications" class="relative text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center" aria-label="Notifications">
                         <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
                         <span data-notification-count class="hidden absolute -top-3 -right-3 min-w-5 h-5 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full items-center justify-center"></span>
@@ -214,14 +260,21 @@
                                     <span class="font-medium">Guide Dashboard</span>
                                 </a>
                                 ` : ''}
-                                <a href="${userRole === 'guide' ? '/Guide/Profile' : '#'}" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                ${userRole === 'guide' ? `
+                                <a href="/Guide/Profile" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
                                     <span class="material-symbols-outlined text-on-surface-variant">person</span>
                                     <span class="font-medium">Profile</span>
                                 </a>
-                                <a href="${userRole === 'guide' ? '/Guide/Profile' : '#'}" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                <a href="/Guide/Profile" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
                                     <span class="material-symbols-outlined text-on-surface-variant">settings</span>
                                     <span class="font-medium">Settings</span>
                                 </a>
+                                ` : `
+                                <a href="/Traveler/Settings" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                                    <span class="material-symbols-outlined text-on-surface-variant">manage_accounts</span>
+                                    <span class="font-medium">Profile & Setting</span>
+                                </a>
+                                `}
                                 <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-lg transition-all text-red-600 font-medium">
                                     <span class="material-symbols-outlined">logout</span>
                                     <span>Logout</span>
@@ -407,6 +460,142 @@
                 });
                 destInput.addEventListener('keydown', function(e) {
                     if (e.key === 'Enter') { dropdown.classList.add('hidden'); }
+                });
+            }
+        });
+
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('notificationDropdown', () => ({
+                isLoggedIn: false,
+                isOpen: false,
+                isLoading: false,
+                unreadCount: 0,
+                notifications: [],
+                token: localStorage.getItem('accessToken'),
+
+                init() {
+                    if (this.token) {
+                        this.isLoggedIn = true;
+                        this.fetchUnreadCount();
+                        // Poll every 30 seconds
+                        setInterval(() => this.fetchUnreadCount(), 30000);
+                    }
+                },
+
+                toggleDropdown() {
+                    this.isOpen = !this.isOpen;
+                    if (this.isOpen && this.notifications.length === 0) {
+                        this.fetchNotifications();
+                    }
+                },
+
+                closeDropdown() {
+                    this.isOpen = false;
+                },
+
+                async fetchUnreadCount() {
+                    try {
+                        const res = await fetch('/Notification/GetUnreadCount', {
+                            headers: { 'Authorization': 'Bearer ' + this.token }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) this.unreadCount = data.count;
+                        }
+                    } catch (e) { console.error('Error fetching unread count', e); }
+                },
+
+                async fetchNotifications() {
+                    this.isLoading = true;
+                    try {
+                        const res = await fetch('/Notification/GetMyNotifications', {
+                            headers: { 'Authorization': 'Bearer ' + this.token }
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.success) {
+                                this.notifications = data.notifications;
+                                this.unreadCount = this.notifications.filter(n => !n.isRead).length;
+                            }
+                        }
+                    } catch (e) { console.error('Error fetching notifications', e); }
+                    finally { this.isLoading = false; }
+                },
+
+                async markAllAsRead() {
+                    try {
+                        await fetch('/Notification/MarkAllAsRead', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + this.token }
+                        });
+                        this.notifications.forEach(n => n.isRead = true);
+                        this.unreadCount = 0;
+                    } catch (e) { console.error('Error marking all as read', e); }
+                },
+
+                async handleNotificationClick(notif) {
+                    if (!notif.isRead) {
+                        try {
+                            await fetch(`/Notification/MarkAsRead?id=${notif.id}`, {
+                                method: 'POST',
+                                headers: { 'Authorization': 'Bearer ' + this.token }
+                            });
+                            notif.isRead = true;
+                            this.unreadCount = Math.max(0, this.unreadCount - 1);
+                        } catch (e) { console.error('Error marking as read', e); }
+                    }
+                    if (notif.linkUrl) {
+                        window.location.href = notif.linkUrl;
+                    }
+                    this.closeDropdown();
+                },
+
+                getIcon(type) {
+                    const icons = {
+                        'booking_request': 'event_available',
+                        'booking_confirmed': 'check_circle',
+                        'booking_cancelled': 'cancel',
+                        'new_review': 'star',
+                        'system': 'info'
+                    };
+                    return icons[type] || 'notifications';
+                },
+
+                getIconClass(type) {
+                    const classes = {
+                        'booking_request': 'bg-blue-100 text-blue-600',
+                        'booking_confirmed': 'bg-green-100 text-green-600',
+                        'booking_cancelled': 'bg-red-100 text-red-600',
+                        'new_review': 'bg-yellow-100 text-yellow-600',
+                        'system': 'bg-gray-100 text-gray-600'
+                    };
+                    return classes[type] || 'bg-primary-container text-primary';
+                },
+
+                formatDate(dateString) {
+                    const date = new Date(dateString);
+                    const now = new Date();
+                    const diff = Math.floor((now - date) / 1000);
+                    
+                    if (diff < 60) return 'Just now';
+                    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+                    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+                    if (diff < 604800) return `${Math.floor(diff/86400)}d ago`;
+                    
+                    return date.toLocaleDateString();
+                }
+            }));
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateInputs = document.querySelectorAll('.date-picker');
+            if (dateInputs.length > 0) {
+                flatpickr(dateInputs, {
+                    mode: "range",
+                    minDate: "today",
+                    dateFormat: "Y-m-d",
+                    altInput: true,
+                    altFormat: "M j, Y",
                 });
             }
         });

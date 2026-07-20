@@ -5,6 +5,6 @@ namespace TripMate_WebAPI.Services
 
     public interface IPayOSService
     {
-        Task<string> CreatePaymentLink(BookingEntity booking, long orderCode);
+        Task<string> CreatePaymentLink(BookingEntity booking, long orderCode, int amount);
     }
 }

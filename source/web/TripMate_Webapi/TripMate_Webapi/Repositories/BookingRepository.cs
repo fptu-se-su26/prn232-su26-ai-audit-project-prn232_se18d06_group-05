@@ -78,8 +78,37 @@ namespace TripMate_Webapi.Repositories
 
         public async Task<BookingEntity> UpdateBookingAsync(BookingEntity booking)
         {
-            var response = await _supabase.From<BookingEntity>().Update(booking);
-            return response.Models.FirstOrDefault() ?? booking;
+            var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
+            var anonKey = Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
+            var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+            var tokenToUse = serviceKey ?? anonKey;
+            
+            using var http = new System.Net.Http.HttpClient();
+            var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Patch, $"{supabaseUrl}/rest/v1/bookings?id=eq.{booking.Id}");
+            req.Headers.Add("apikey", anonKey);
+            req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenToUse);
+            req.Headers.Add("Prefer", "return=representation");
+            
+            var bodyObj = new System.Collections.Generic.Dictionary<string, object?>
+            {
+                { "status", booking.Status },
+                { "amount_paid", booking.AmountPaid },
+                { "updated_at", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ") }
+                // Only send the fields we actually update during PaymentCallback/Updates
+                // If we need to update other fields later, we add them here.
+                // We omit start_time so we don't trigger the "invalid time format" error.
+            };
+            
+            var json = System.Text.Json.JsonSerializer.Serialize(bodyObj);
+            req.Content = new System.Net.Http.StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            
+            var response = await http.SendAsync(req);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new Exception($"Failed to update booking: {error}");
+            }
+            return booking;
         }
 
         public async Task<int> GetPendingBookingsCountAsync(string guideProfileId)

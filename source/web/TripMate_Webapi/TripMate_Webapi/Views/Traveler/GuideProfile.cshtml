@@ -4,7 +4,7 @@
     Layout = "~/Views/Shared/_Layout.cshtml";
 
     var packages = ViewBag.Packages as List<TripMate_WebAPI.Services.ExperiencePackageRow> ?? new();
-    var reviews = ViewBag.Reviews as List<TripMate_Webapi.Entities.ReviewEntity> ?? new();
+    var reviews = ViewBag.ReviewDetails as List<TripMate_Webapi.Controllers.ReviewDetailDto> ?? new();
 }
 
 <div class="min-h-screen bg-surface" x-data="guideProfilePage()">
@@ -211,11 +211,18 @@
                                 <div class="flex items-center justify-between mb-4">
                                     <div class="flex items-center gap-3">
                                         <div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center text-primary font-bold">
-                                            T
+                                            @(review.TravelerName.Length > 0 ? review.TravelerName.Substring(0, 1).ToUpper() : "T")
                                         </div>
                                         <div>
-                                            <p class="font-bold text-on-surface">Traveler</p>
-                                            <p class="text-xs text-on-surface-variant">@(review.CreatedAt.ToString("MMMM yyyy"))</p>
+                                            <p class="font-bold text-on-surface">@review.TravelerName</p>
+                                            <p class="text-xs text-on-surface-variant flex items-center gap-1">
+                                                @(review.CreatedAt.ToString("MMMM yyyy"))
+                                                @if (!string.IsNullOrEmpty(review.TourTitle))
+                                                {
+                                                    <span>•</span>
+                                                    <span class="text-primary truncate max-w-[200px]" title="@review.TourTitle">@review.TourTitle</span>
+                                                }
+                                            </p>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1">
@@ -418,9 +425,18 @@
                             <span x-text="new Intl.NumberFormat('vi-VN').format(platformFee) + ' ₫'"></span>
                         </div>
                         <div class="flex justify-between font-bold text-lg text-primary pt-2 border-t border-outline-variant/30 mt-2">
-                            <span>Total (Escrow)</span>
+                            <span>Total</span>
                             <span x-text="new Intl.NumberFormat('vi-VN').format(computedTotal) + ' ₫'"></span>
                         </div>
+                    </div>
+                    
+                    <div class="bg-orange-50 border border-orange-200 rounded-2xl p-4 text-sm text-orange-800">
+                        <p class="font-bold flex items-center gap-1 mb-1"><span class="material-symbols-outlined text-[16px]">info</span> Payment Schedule</p>
+                        <ul class="list-disc pl-5 space-y-1 mb-2">
+                            <li><strong>Due Now (30% Deposit):</strong> <span x-text="new Intl.NumberFormat('vi-VN').format(computedTotal * 0.3) + ' ₫'"></span></li>
+                            <li><strong>Due 24h Before Tour (70%):</strong> <span x-text="new Intl.NumberFormat('vi-VN').format(computedTotal * 0.7) + ' ₫'"></span></li>
+                        </ul>
+                        <p class="text-xs font-bold text-red-600">Note: The 30% deposit is non-refundable if you cancel the tour.</p>
                     </div>
                 </div>
 

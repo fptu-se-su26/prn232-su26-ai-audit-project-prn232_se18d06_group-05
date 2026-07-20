@@ -95,6 +95,7 @@ builder.Services.AddScoped<IGuideRepository, GuideRepository>();
 builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 builder.Services.AddScoped<IExperiencePackageRepository, ExperiencePackageRepository>();
 builder.Services.AddScoped<ISavedGuideRepository, SavedGuideRepository>();
+builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();
