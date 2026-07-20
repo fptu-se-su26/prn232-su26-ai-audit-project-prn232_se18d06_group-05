@@ -167,9 +167,134 @@
                 activeThread: null,
                 searchQuery: '',
                 newMessage: '',
+                _messageCreatedHandler: null,
+                _messageUpdatedHandler: null,
+                _chatReconnectedHandler: null,
 
                 init() {
+                    this._messageCreatedHandler = event => this.handleRealtimeMessage(event.detail);
+                    this._messageUpdatedHandler = event => this.handleRealtimeMessageUpdate(event.detail);
+                    this._chatReconnectedHandler = () => this.reloadAfterReconnect();
+                    document.addEventListener('tripmate:message-created', this._messageCreatedHandler);
+                    document.addEventListener('tripmate:message-updated', this._messageUpdatedHandler);
+                    document.addEventListener('tripmate:chat-reconnected', this._chatReconnectedHandler);
                     this.loadConversations();
+                    window.TripMateChat?.start();
+                },
+                destroy() {
+                    document.removeEventListener('tripmate:message-created', this._messageCreatedHandler);
+                    document.removeEventListener('tripmate:message-updated', this._messageUpdatedHandler);
+                    document.removeEventListener('tripmate:chat-reconnected', this._chatReconnectedHandler);
+                },
+                normalizeMessage(raw) {
+                    if (!raw) return null;
+                    return {
+                        Id: raw.id ?? raw.Id,
+                        BookingId: raw.bookingId ?? raw.BookingId,
+                        SenderId: raw.senderId ?? raw.SenderId ?? '',
+                        ReceiverId: raw.receiverId ?? raw.ReceiverId ?? '',
+                        Text: raw.messageText ?? raw.MessageText ?? raw.Text ?? '',
+                        SentAt: raw.sentAt ?? raw.SentAt,
+                        IsRead: !!(raw.isRead ?? raw.IsRead)
+                    };
+                },
+                toDisplayMessage(message) {
+                    const userId = localStorage.getItem('userId');
+                    return {
+                        Id: message.Id,
+                        Text: message.Text,
+                        SentAt: message.SentAt,
+                        SenderId: message.SenderId,
+                        ReceiverId: message.ReceiverId,
+                        IsMine: message.SenderId === userId,
+                        Time: new Date(message.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                        IsRead: message.IsRead
+                    };
+                },
+                appendMessageIfMissing(thread, raw) {
+                    const message = this.normalizeMessage(raw);
+                    if (!message || message.Id == null) return false;
+                    thread.Messages ||= [];
+                    const displayMessage = this.toDisplayMessage(message);
+                    const existing = thread.Messages.find(item => String(item.Id) === String(message.Id));
+                    if (existing) {
+                        existing.Text = displayMessage.Text;
+                        existing.SentAt = displayMessage.SentAt;
+                        existing.SenderId = displayMessage.SenderId;
+                        existing.ReceiverId = displayMessage.ReceiverId;
+                        existing.IsMine = displayMessage.IsMine;
+                        existing.Time = displayMessage.Time;
+                        existing.IsRead = displayMessage.IsRead;
+                        return false;
+                    }
+                    thread.Messages.push(displayMessage);
+                    return true;
+                },
+                async handleRealtimeMessage(raw) {
+                    const message = this.normalizeMessage(raw);
+                    if (!message?.BookingId) return;
+
+                    let thread = this.threads.find(item => String(item.BookingId) === String(message.BookingId));
+                    if (!thread) {
+                        await this.loadConversations();
+                        thread = this.threads.find(item => String(item.BookingId) === String(message.BookingId));
+                        if (!thread) return;
+                    }
+
+                    const added = this.appendMessageIfMissing(thread, message);
+                    thread.LastMessage = message.Text;
+                    thread.LastMessageAt = message.SentAt;
+                    thread.TimeAgo = this.formatTimeAgo(message.SentAt);
+
+                    const userId = localStorage.getItem('userId');
+                    const isActive = String(this.activeThread?.BookingId) === String(message.BookingId);
+                    if (message.ReceiverId === userId) {
+                        if (isActive) {
+                            thread.UnreadCount = 0;
+                            await this.markThreadRead(thread);
+                        } else if (added) {
+                            thread.UnreadCount = (thread.UnreadCount || 0) + 1;
+                        }
+                    }
+
+                    const index = this.threads.indexOf(thread);
+                    if (index > 0) this.threads.unshift(this.threads.splice(index, 1)[0]);
+                    if (isActive) this.scrollToBottom();
+                },
+                handleRealtimeMessageUpdate(raw) {
+                    const message = this.normalizeMessage(raw);
+                    if (!message?.BookingId) return;
+                    const thread = this.threads.find(item => String(item.BookingId) === String(message.BookingId));
+                    const existing = thread?.Messages?.find(item => String(item.Id) === String(message.Id));
+                    if (!existing) return;
+                    existing.Text = message.Text;
+                    existing.SentAt = message.SentAt;
+                    existing.Time = new Date(message.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    if (thread.Messages[thread.Messages.length - 1] === existing) thread.LastMessage = message.Text;
+                },
+                async markThreadRead(thread) {
+                    const token = localStorage.getItem('accessToken');
+                    if (!token || !thread?.BookingId) return;
+                    try {
+                        const response = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/mark-read`, {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + token }
+                        });
+                        if (response.ok) window.TripMateMessages?.refreshUnreadThreads();
+                    } catch (error) {
+                        console.warn('Failed to mark realtime message as read', error);
+                    }
+                },
+                async reloadAfterReconnect() {
+                    const bookingId = this.activeThread?.BookingId;
+                    await this.loadConversations();
+                    if (!bookingId) return;
+                    const thread = this.threads.find(item => String(item.BookingId) === String(bookingId));
+                    if (thread) {
+                        this.activeThread = thread;
+                        await this.loadMessagesForThread(thread);
+                        this.scrollToBottom();
+                    }
                 },
                 resizeEditTextarea(e) {
                     try {
@@ -262,7 +387,11 @@
                         if (!res.ok) throw new Error('Upload failed');
                         const msg = await res.json();
                         const sent = { Id: msg.id || msg.Id, Text: msg.messageText || msg.MessageText || '', SentAt: msg.sentAt || msg.SentAt, IsMine: true, Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), IsRead: !!(msg.isRead || msg.IsRead) };
-                        this.activeThread.Messages.push(sent);
+                        this.appendMessageIfMissing(this.activeThread, {
+                            ...msg,
+                            senderId: userId,
+                            receiverId
+                        });
                         this.activeThread.LastMessage = sent.Text;
                         this.newMessage = '';
                         this.scrollToBottom();
@@ -499,7 +628,11 @@
                         if (!res.ok) throw new Error('Send failed');
                         const msg = await res.json();
                         const sent = { Id: msg.id || msg.Id, Text: msg.messageText || msg.MessageText || text, SentAt: msg.sentAt || msg.SentAt, IsMine: true, Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), IsRead: !!(msg.isRead || msg.IsRead) };
-                        this.activeThread.Messages.push(sent);
+                        this.appendMessageIfMissing(this.activeThread, {
+                            ...msg,
+                            senderId: userId,
+                            receiverId
+                        });
                         this.activeThread.LastMessage = sent.Text;
                         this.newMessage = '';
                         this.scrollToBottom();
