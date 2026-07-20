@@ -1,0 +1,71 @@
+@{
+    ViewData["Title"] = "Admin Notifications";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TripMate | Admin Notifications</title>
+    <script>
+        if (!localStorage.getItem('accessToken') || localStorage.getItem('userRole') !== 'admin') {
+            window.location.replace('/Auth/Login');
+        }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+    <script src="/notifications.js"></script>
+    <script>tailwind.config = { theme: { extend: { colors: { primary: '#FF6B35' } } } };</script>
+    <style>body { font-family: Inter, sans-serif; }</style>
+</head>
+<body class="bg-gray-50">
+    <aside class="fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 p-6">
+        <a href="/Admin/Dashboard" class="text-2xl font-extrabold text-primary">TripMate</a>
+        <p class="text-sm text-gray-500 mt-1 mb-8">Admin Portal</p>
+        <nav class="space-y-2">
+            <a href="/Admin/Dashboard" class="flex gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100"><span class="material-symbols-outlined">dashboard</span>Dashboard</a>
+            <a href="/Admin/GuideApprovals" class="flex gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100"><span class="material-symbols-outlined">badge</span>Guide approvals</a>
+            <a href="/Admin/Escrow" class="flex gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100"><span class="material-symbols-outlined">payments</span>Escrow</a>
+            <a href="/Admin/Moderation" class="flex gap-3 px-4 py-3 rounded-xl text-gray-600 hover:bg-gray-100"><span class="material-symbols-outlined">gavel</span>Moderation</a>
+            <a href="/Admin/Notifications" class="flex gap-3 px-4 py-3 rounded-xl bg-orange-50 text-primary font-bold"><span class="material-symbols-outlined">notifications</span>Notifications <span data-notification-count class="hidden ml-auto bg-red-500 text-white text-xs px-2 rounded-full"></span></a>
+        </nav>
+    </aside>
+    <main class="ml-64 min-h-screen p-10">
+        <details class="max-w-5xl mx-auto mb-6 bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+            <summary class="font-bold text-gray-900 cursor-pointer">Send system announcement</summary>
+            <form id="announcement-form" class="grid md:grid-cols-2 gap-4 mt-5">
+                <input id="announcement-title" required maxlength="120" placeholder="Title" class="border border-gray-200 rounded-xl px-4 py-3" />
+                <select id="announcement-role" class="border border-gray-200 rounded-xl px-4 py-3">
+                    <option value="">Everyone</option><option value="traveler">Travelers</option><option value="guide">Guides</option><option value="admin">Admins</option>
+                </select>
+                <textarea id="announcement-message" required maxlength="1000" placeholder="Message" class="md:col-span-2 border border-gray-200 rounded-xl px-4 py-3"></textarea>
+                <button class="w-fit bg-primary text-white font-bold px-5 py-3 rounded-xl">Send announcement</button>
+                <span id="announcement-result" class="self-center text-sm"></span>
+            </form>
+        </details>
+        <partial name="_NotificationsPanel" />
+    </main>
+    <script>
+        document.getElementById('announcement-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const result = document.getElementById('announcement-result');
+            result.textContent = 'Sending…';
+            const response = await fetch('/api/notifications/admin/announce', {
+                method: 'POST',
+                headers: { ...TripMateNotifications.headers(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: document.getElementById('announcement-title').value,
+                    message: document.getElementById('announcement-message').value,
+                    role: document.getElementById('announcement-role').value || null
+                })
+            });
+            result.textContent = response.ok ? 'Announcement queued.' : 'Unable to send announcement.';
+            result.className = response.ok ? 'self-center text-sm text-green-600' : 'self-center text-sm text-red-600';
+            if (response.ok) event.target.reset();
+        });
+    </script>
+</body>
+</html>

@@ -36,6 +36,8 @@
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/@@alpinejs/collapse@3.x.x/dist/cdn.min.js" data-turbo-track="reload"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" data-turbo-track="reload"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+    <script src="/notifications.js"></script>
     
     <!-- Hotwire Turbo -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/@@hotwired/turbo@8.0.4/dist/turbo.es2017-esm.js" data-turbo-track="reload"></script>
@@ -130,7 +132,7 @@
                     <span class="material-symbols-outlined @(ViewData["ActivePage"]?.ToString() == "Notifications" ? "text-primary" : "text-gray-400 group-hover:text-primary") text-[22px]">notifications_none</span>
                     <span>Notifications</span>
                 </div>
-                <span class="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">21</span>
+                <span data-notification-count class="hidden bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm"></span>
             </a>
         </nav>
 
@@ -195,7 +197,7 @@
                 <!-- Notification Bell -->
                 <a href="/Guide/Notifications" class="relative text-gray-500 hover:text-primary transition-colors focus:outline-none">
                     <span class="material-symbols-outlined">notifications</span>
-                    <span class="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm"></span>
+                    <span data-notification-dot class="hidden absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white shadow-sm"></span>
                 </a>
                 
                 <!-- Avatar -->
