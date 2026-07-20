@@ -1,8 +1,8 @@
 using System.Security.Claims;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using TripMate_WebAPI.Services;
 
 namespace TripMate_WebAPI.Controllers;
@@ -19,7 +19,20 @@ public class ChatController : ControllerBase
 {
     private readonly ChatService _chat;
     private readonly TripMate_WebAPI.Services.ICloudinaryService _cloud;
-    public ChatController(ChatService chat, TripMate_WebAPI.Services.ICloudinaryService cloud) { _chat = chat; _cloud = cloud; }
+    private readonly IHubContext<ChatHub> _hub;
+    private readonly ILogger<ChatController> _logger;
+
+    public ChatController(
+        ChatService chat,
+        TripMate_WebAPI.Services.ICloudinaryService cloud,
+        IHubContext<ChatHub> hub,
+        ILogger<ChatController> logger)
+    {
+        _chat = chat;
+        _cloud = cloud;
+        _hub = hub;
+        _logger = logger;
+    }
 
     private string UserId => User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                           ?? User.FindFirst("sub")?.Value ?? "";
@@ -55,6 +68,7 @@ public class ChatController : ControllerBase
 
             // Create message with the cloudinary url as message text
             var msg = await _chat.SendMessageAsync(bookingId, UserId, receiverId, url, UserToken);
+            await BroadcastMessageAsync("MessageCreated", msg);
             return Ok(msg);
         }
         catch (Exception ex)
@@ -140,6 +154,7 @@ public class ChatController : ControllerBase
         {
             var msg = await _chat.SendMessageAsync(
                 bookingId, UserId, req.ReceiverId, req.Content, UserToken);
+            await BroadcastMessageAsync("MessageCreated", msg);
             return Ok(msg);
         }
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
@@ -152,9 +167,10 @@ public class ChatController : ControllerBase
         try
         {
             var updated = await _chat.EditMessageAsync(messageId, UserId, req.Content, UserToken);
+            await BroadcastMessageAsync("MessageUpdated", updated);
             return Ok(updated);
         }
-        catch (UnauthorizedAccessException ex)
+        catch (UnauthorizedAccessException)
         {
             return Forbid();
         }
@@ -165,4 +181,25 @@ public class ChatController : ControllerBase
     }
 
     public record EditMessageRequest(string Content);
+
+    private async Task BroadcastMessageAsync(string eventName, MessageDto message)
+    {
+        var userIds = new[] { message.SenderId, message.ReceiverId }
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (userIds.Length == 0) return;
+
+        try
+        {
+            await _hub.Clients.Users(userIds).SendAsync(eventName, message);
+        }
+        catch (Exception ex)
+        {
+            // Persistence already succeeded. A transient realtime failure must not
+            // turn the REST request into a 500 and encourage duplicate retries.
+            _logger.LogWarning(ex, "Failed to broadcast {EventName} for chat message {MessageId}", eventName, message.Id);
+        }
+    }
 }
