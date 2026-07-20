@@ -9,6 +9,7 @@ namespace TripMate_Webapi.Controllers
     {
         private readonly TourService _tourService;
         private readonly IGuideRepository _guideRepository;
+        private readonly IReviewRepository _reviewRepository;
         private readonly ILogger<HomeController> _logger;
 
         // City alias map: canonical DB value (city_area) → fuzzy aliases
@@ -26,7 +27,7 @@ namespace TripMate_Webapi.Controllers
             ["Ha Long"]      = new[] { "halong", "hạ long", "vịnh hạ long", "ha long bay" },
         };
 
-        private static string NormalizeCity(string input)
+        private static string? NormalizeCity(string input)
         {
             var norm = RemoveDiacritics(input.Trim().ToLowerInvariant());
 
@@ -48,10 +49,11 @@ namespace TripMate_Webapi.Controllers
                         .ToArray())
                 .Replace("đ", "d").Replace("Đ", "D");
 
-        public HomeController(TourService tourService, IGuideRepository guideRepository, ILogger<HomeController> logger)
+        public HomeController(TourService tourService, IGuideRepository guideRepository, IReviewRepository reviewRepository, ILogger<HomeController> logger)
         {
             _tourService = tourService;
             _guideRepository = guideRepository;
+            _reviewRepository = reviewRepository;
             _logger = logger;
         }
 
@@ -63,6 +65,7 @@ namespace TripMate_Webapi.Controllers
                 // Load tours and guides
                 var tours = await _tourService.GetToursAsync();
                 var guides = await _guideRepository.GetAllGuidesAsync();
+                var reviews = await _reviewRepository.GetAllReviewsAsync();
                 
                 // Prepare view model
                 var viewModel = new HomeViewModel
@@ -70,7 +73,8 @@ namespace TripMate_Webapi.Controllers
                     FeaturedTours = tours.Take(2).ToList(),
                     CuratedStays = tours.Skip(2).Take(4).ToList(),
                     AllTours = tours.ToList(),
-                    PopularGuides = guides.Take(4).ToList()
+                    PopularGuides = guides.Take(4).ToList(),
+                    RecentReviews = reviews.Where(r => r.Rating >= 4).OrderByDescending(r => r.Rating).ThenByDescending(r => r.CreatedAt).Take(6).ToList() // Only show top 6 positive reviews
                 };
 
                 return View(viewModel);
@@ -300,5 +304,6 @@ namespace TripMate_Webapi.Controllers
         public List<ExperiencePackageRow> CuratedStays { get; set; } = new();
         public List<ExperiencePackageRow> AllTours { get; set; } = new();
         public List<GuideProfileEntity> PopularGuides { get; set; } = new();
+        public List<ReviewEntity> RecentReviews { get; set; } = new();
     }
 }

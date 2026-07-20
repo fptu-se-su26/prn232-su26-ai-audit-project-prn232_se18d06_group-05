@@ -16,7 +16,7 @@
             const role = localStorage.getItem('userRole');
             const email = localStorage.getItem('userEmail');
             
-            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com')) {
+            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com' && email !== 'admin2@tripmate.com')) {
                 window.location.href = '/Auth/Login';
             }
         })();
@@ -52,7 +52,7 @@
     </style>
 </head>
 <body class="bg-gray-50 flex" x-data="{
-    activeTab: 'users',
+    activeTab: 'reviews',
     users: [],
     reviews: [],
     disputes: [],
@@ -61,6 +61,51 @@
     showModerateModal: false,
     moderateReviewId: '',
     moderateAdminNote: '',
+    
+    reports: [],
+    showResolveReportModal: false,
+    selectedReport: null,
+    resolveComment: '',
+
+    async loadReports() {
+        try {
+            const res = await fetch('/api/SupportApi/admin/reports', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+            });
+            if (res.ok) this.reports = await res.json();
+        } catch (err) {
+            console.error('Error loading reports:', err);
+        }
+    },
+
+    openResolveReport(report) {
+        this.selectedReport = report;
+        this.resolveComment = '';
+        this.showResolveReportModal = true;
+    },
+
+    async submitResolveReport() {
+        if (!this.resolveComment.trim()) return alert('Please enter resolve comment');
+        try {
+            const res = await fetch(`/api/SupportApi/admin/reports/${this.selectedReport.id}/resolve`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                },
+                body: JSON.stringify({ adminComment: this.resolveComment })
+            });
+            const data = await res.json();
+            alert(data.message || 'Resolved successfully');
+            if (res.ok) {
+                this.showResolveReportModal = false;
+                await this.loadReports();
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to resolve report');
+        }
+    },
 
     async loadUsers() {
         const res = await fetch('/api/admin/users', {
@@ -82,8 +127,8 @@
         });
         if (res.ok) {
             const all = await res.json();
-            // Filter bookings with status cancelled (3) or having cancel_reason
-            this.disputes = all.filter(b => b.status === 3 || b.cancel_reason);
+            // Filter bookings with status Confirmed (1) and having cancel_reason
+            this.disputes = all.filter(b => b.status === 1 && b.cancel_reason);
         }
     },
 
@@ -184,9 +229,9 @@
     },
 
     init() {
-        this.loadUsers();
         this.loadReviews();
         this.loadDisputes();
+        this.loadReports();
     }
 }">
 
@@ -220,8 +265,16 @@
                 <span>Content & Disputes</span>
             </a>
             <a id="nav-guides" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Guides">
-                <span class="material-symbols-outlined">group</span>
+                <span class="material-symbols-outlined">assignment_ind</span>
                 <span>Guides</span>
+            </a>
+            <a id="nav-users" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Users">
+                <span class="material-symbols-outlined">group</span>
+                <span>Users</span>
+            </a>
+            <a id="nav-bookings" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Bookings">
+                <span class="material-symbols-outlined">explore</span>
+                <span>Bookings</span>
             </a>
             <a id="nav-analytics" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Analytics">
                 <span class="material-symbols-outlined">insights</span>
@@ -253,12 +306,7 @@
             <p class="text-lg text-gray-600">Moderate content, resolve booking disputes, view chat logs, manage user accounts, and review reports.</p>
         </header>
 
-        <!-- Sub Tabs -->
         <div class="flex gap-4 border-b border-gray-200 pb-4">
-            <button @@click="activeTab = 'users'" :class="activeTab === 'users' ? 'bg-primary text-white font-bold' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'" class="px-6 py-2.5 rounded-lg shadow-sm transition-all text-sm flex items-center gap-2">
-                <span class="material-symbols-outlined text-sm">group</span>
-                User Management
-            </button>
             <button @@click="activeTab = 'reviews'" :class="activeTab === 'reviews' ? 'bg-primary text-white font-bold' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'" class="px-6 py-2.5 rounded-lg shadow-sm transition-all text-sm flex items-center gap-2">
                 <span class="material-symbols-outlined text-sm">reviews</span>
                 Review Moderation
@@ -271,61 +319,12 @@
                 <span class="material-symbols-outlined text-sm">chat</span>
                 Chat Log Viewer
             </button>
+            <button @@click="activeTab = 'reports'" :class="activeTab === 'reports' ? 'bg-primary text-white font-bold' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'" class="px-6 py-2.5 rounded-lg shadow-sm transition-all text-sm flex items-center gap-2">
+                <span class="material-symbols-outlined text-sm">support</span>
+                User Reports
+            </button>
         </div>
 
-        <!-- TAB CONTENT: User Management -->
-        <div x-show="activeTab === 'users'" class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" x-cloak>
-            <div class="px-8 py-5 border-b border-gray-200">
-                <h3 class="text-xl font-bold text-gray-900">User Account Management</h3>
-                <p class="text-xs text-gray-500 mt-1">Activate/suspend users or force role updates.</p>
-            </div>
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-200">
-                        <th class="py-4 px-6">Full Name / Email</th>
-                        <th class="py-4 px-6">Role</th>
-                        <th class="py-4 px-6 text-center">Status</th>
-                        <th class="py-4 px-6 text-center">Change Role</th>
-                        <th class="py-4 px-6 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-100 text-sm">
-                    <template x-for="u in users" :key="u.id">
-                        <tr class="hover:bg-gray-50/50 transition-colors">
-                            <td class="py-4 px-6">
-                                <p class="font-bold text-gray-900" x-text="u.full_name || 'No Name'"></p>
-                                <p class="text-xs text-gray-400" x-text="u.email"></p>
-                            </td>
-                            <td class="py-4 px-6">
-                                <span :class="{
-                                    'bg-orange-100 text-orange-800 border-orange-200': u.role === 'guide',
-                                    'bg-blue-100 text-blue-800 border-blue-200': u.role === 'traveler',
-                                    'bg-purple-100 text-purple-800 border-purple-200': u.role === 'admin'
-                                }" class="px-2 py-0.5 rounded-full text-xs font-bold border uppercase" x-text="u.role"></span>
-                            </td>
-                            <td class="py-4 px-6 text-center">
-                                <span :class="u.is_active ? 'text-green-700 bg-green-50' : 'text-red-700 bg-red-50'" class="px-2.5 py-0.5 rounded-full text-xs font-semibold" x-text="u.is_active ? 'Active' : 'Suspended'"></span>
-                            </td>
-                            <!-- Force Role -->
-                            <td class="py-4 px-6 text-center">
-                                <select @@change="changeUserRole(u.id, $event.target.value)" class="bg-gray-50 border border-gray-300 text-gray-900 text-xs rounded-lg focus:ring-primary focus:border-primary p-2">
-                                    <option value="">-- Choose Role --</option>
-                                    <option value="traveler">Traveler</option>
-                                    <option value="guide">Guide</option>
-                                    <option value="admin">Admin</option>
-                                </select>
-                            </td>
-                            <!-- Status Toggle -->
-                            <td class="py-4 px-6 text-center">
-                                <button @@click="toggleUserStatus(u.id, !u.is_active)" :class="u.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'" class="px-4 py-1.5 rounded-lg font-bold text-xs transition-all">
-                                    <span x-text="u.is_active ? 'Suspend' : 'Activate'"></span>
-                                </button>
-                            </td>
-                        </tr>
-                    </template>
-                </tbody>
-            </table>
-        </div>
 
         <!-- TAB CONTENT: Review Moderation -->
         <div x-show="activeTab === 'reviews'" class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" x-cloak>
@@ -458,6 +457,85 @@
                 </div>
             </div>
         </div>
+
+        <!-- TAB CONTENT: User Reports -->
+        <div x-show="activeTab === 'reports'" class="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden" x-cloak>
+            <div class="px-8 py-5 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-900">User Reports & Support Tickets</h3>
+                    <p class="text-xs text-gray-500 mt-1">Review, comment and resolve support requests submitted by Travelers and Guides.</p>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-200">
+                            <th class="py-4 px-6">User</th>
+                            <th class="py-4 px-6">Type</th>
+                            <th class="py-4 px-6">Ticket Title & Description</th>
+                            <th class="py-4 px-6">Booking Rel.</th>
+                            <th class="py-4 px-6">Status</th>
+                            <th class="py-4 px-6 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 text-sm">
+                        <template x-for="rep in reports" :key="rep.id">
+                            <tr class="hover:bg-gray-50/50 transition-colors">
+                                <td class="py-4 px-6">
+                                    <p class="font-bold text-gray-900" x-text="rep.profiles?.full_name || (rep.user?.full_name || 'N/A')"></p>
+                                    <p class="text-xs text-gray-400" x-text="rep.profiles?.email || (rep.user?.email || '')"></p>
+                                </td>
+                                <td class="py-4 px-6">
+                                    <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase"
+                                          :class="{
+                                              'bg-blue-50 text-blue-700 border border-blue-200': rep.type === 'booking',
+                                              'bg-purple-50 text-purple-700 border border-purple-200': rep.type === 'payment',
+                                              'bg-amber-50 text-amber-700 border border-amber-200': rep.type === 'account',
+                                              'bg-red-50 text-red-700 border border-red-200': rep.type === 'technical',
+                                              'bg-gray-50 text-gray-700 border border-gray-200': rep.type !== 'booking' && rep.type !== 'payment' && rep.type !== 'account' && rep.type !== 'technical'
+                                          }"
+                                          x-text="rep.type">
+                                    </span>
+                                </td>
+                                <td class="py-4 px-6 max-w-xs">
+                                    <h4 class="font-bold text-gray-900" x-text="rep.title"></h4>
+                                    <p class="text-xs text-gray-500 mt-1 whitespace-pre-wrap" x-text="rep.description"></p>
+                                    <template x-if="rep.status === 'resolved' && rep.adminComment">
+                                        <div class="mt-2 text-xs text-green-700 bg-green-50 border border-green-200 p-2 rounded-lg">
+                                            <b>Reply:</b> <span x-text="rep.adminComment"></span>
+                                        </div>
+                                    </template>
+                                </td>
+                                <td class="py-4 px-6 font-mono text-xs text-gray-500" x-text="rep.bookingId ? '#' + rep.bookingId.substring(0,8) : 'None'"></td>
+                                <td class="py-4 px-6">
+                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase"
+                                          :class="rep.status === 'pending' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-green-50 text-green-700 border border-green-200'"
+                                          x-text="rep.status === 'pending' ? 'Pending' : 'Resolved'">
+                                    </span>
+                                </td>
+                                <td class="py-4 px-6 text-center">
+                                    <template x-if="rep.status === 'pending'">
+                                        <button @@click="openResolveReport(rep)" class="bg-primary hover:bg-primary-dark text-white font-bold px-3 py-1.5 rounded-lg text-xs transition-all shadow-sm">
+                                            Resolve
+                                        </button>
+                                    </template>
+                                    <template x-if="rep.status !== 'pending'">
+                                        <span class="text-gray-400 text-xs">-</span>
+                                    </template>
+                                </td>
+                            </tr>
+                        </template>
+                        <tr x-show="reports.length === 0">
+                            <td colspan="6" class="py-8 text-center text-gray-400">
+                                <span class="material-symbols-outlined text-4xl block mb-1">support</span>
+                                No support reports found.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </main>
 
     <!-- Review Moderation Modal -->
@@ -487,6 +565,38 @@
         </div>
     </div>
 
+    <!-- Resolve Report Modal -->
+    <div x-show="showResolveReportModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" x-cloak>
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="material-symbols-outlined text-4xl text-green-600 font-bold">support_agent</span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Resolve Report</h3>
+                <p class="text-sm text-gray-600">Provide an answer or resolution note to resolve this ticket.</p>
+            </div>
+
+            <div class="mb-4 text-sm text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100 max-h-40 overflow-y-auto">
+                <p class="font-bold text-gray-900 mb-1" x-text="selectedReport?.title"></p>
+                <p class="text-xs text-gray-500" x-text="selectedReport?.description"></p>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Admin Reply/Comment (Required)</label>
+                <textarea x-model="resolveComment" rows="3" required class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm" placeholder="Enter solution or status details..."></textarea>
+            </div>
+
+            <div class="flex gap-3">
+                <button @@click="showResolveReportModal = false" class="flex-1 px-6 py-3 bg-gray-100 text-gray-900 rounded-xl font-semibold hover:bg-gray-200 transition-all text-sm">
+                    Cancel
+                </button>
+                <button @@click="submitResolveReport()" class="flex-1 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-all text-sm shadow-md">
+                    Resolve Ticket
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             // Set active tab styling dynamically based on path
@@ -502,6 +612,10 @@
                 activeEl = document.getElementById("nav-moderation");
             } else if (path.includes("/Admin/Guides")) {
                 activeEl = document.getElementById("nav-guides");
+            } else if (path.includes("/Admin/Users")) {
+                activeEl = document.getElementById("nav-users");
+            } else if (path.includes("/Admin/Bookings")) {
+                activeEl = document.getElementById("nav-bookings");
             } else if (path.includes("/Admin/Analytics")) {
                 activeEl = document.getElementById("nav-analytics");
             }

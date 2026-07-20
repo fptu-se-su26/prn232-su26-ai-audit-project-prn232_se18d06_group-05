@@ -141,11 +141,89 @@
                         <span class="text-3xl font-extrabold text-primary">@(Model.TotalAmount.ToString("#,##0")) ₫</span>
                     </div>
 
-                    <div class="block w-full text-center bg-green-500/10 border border-green-500/20 text-green-700 py-4 rounded-xl font-bold text-lg shadow-sm flex justify-center items-center gap-2 mt-4">
-                        <span class="material-symbols-outlined text-green-600">verified_user</span> Paid & Escrowed
+                    <div class="mt-4">
+                        @{
+                            var actualStartTime = Model.BookingDate.Date.Add(Model.StartTime.TimeOfDay);
+                            var isPastDeadline = DateTime.UtcNow > actualStartTime.AddHours(-72);
+                        }
+
+                        @if (Model.Status == -1)
+                        {
+                            <button onclick="retryPayment('@Model.Id')" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold text-lg shadow-sm flex justify-center items-center gap-2 transition-all">
+                                <span class="material-symbols-outlined">payment</span> Pay 30% Deposit
+                            </button>
+                        }
+                        else if (Model.Status == 0)
+                        {
+                            <div class="w-full text-center bg-yellow-50 border border-yellow-200 text-yellow-700 py-4 rounded-xl font-bold shadow-sm flex justify-center items-center gap-2">
+                                <span class="material-symbols-outlined">schedule</span> 30% Paid - Awaiting Guide
+                            </div>
+                        }
+                        else if (Model.Status == 1 && Model.AmountPaid < Model.TotalAmount)
+                        {
+                            if (isPastDeadline)
+                            {
+                                <div class="w-full text-center bg-red-50 border border-red-200 text-red-700 py-4 rounded-xl font-bold shadow-sm flex justify-center items-center gap-2">
+                                    <span class="material-symbols-outlined">error</span> Payment Deadline Passed
+                                </div>
+                            }
+                            else
+                            {
+                                <button onclick="retryPayment('@Model.Id')" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold text-lg shadow-sm flex justify-center items-center gap-2 transition-all">
+                                    <span class="material-symbols-outlined">payment</span> Pay 70% Final Balance
+                                </button>
+                                <p class="text-center text-xs text-on-surface-variant mt-2 font-medium">Due by @actualStartTime.AddHours(-72).ToString("MMM dd, yyyy HH:mm")</p>
+                            }
+                        }
+                        else if (Model.Status == 3)
+                        {
+                            <div class="w-full text-center bg-gray-100 border border-gray-300 text-gray-600 py-4 rounded-xl font-bold shadow-sm flex justify-center items-center gap-2">
+                                <span class="material-symbols-outlined">cancel</span> Booking Cancelled
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="w-full text-center bg-green-500/10 border border-green-500/20 text-green-700 py-4 rounded-xl font-bold text-lg shadow-sm flex justify-center items-center gap-2">
+                                <span class="material-symbols-outlined text-green-600">verified_user</span> Paid & Escrowed
+                            </div>
+                        }
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    async function retryPayment(bookingId) {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            window.location.href = '/Auth/Login';
+            return;
+        }
+        
+        try {
+            const res = await fetch('/Traveler/RetryPayment', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': 'Bearer ' + token 
+                },
+                body: JSON.stringify({ bookingId: bookingId })
+            });
+            
+            if (res.ok) {
+                const data = await res.json();
+                if (data.paymentUrl) {
+                    window.location.href = data.paymentUrl;
+                }
+            } else {
+                const err = await res.json();
+                alert(err.error || 'Failed to initialize payment.');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Connection error occurred.');
+        }
+    }
+</script>
