@@ -10,11 +10,9 @@ public static class NotificationTypes
     public const string BookingReminder = "booking.reminder";
     public const string BookingCompleted = "booking.completed";
     public const string PaymentSucceeded = "payment.succeeded";
-    public const string PaymentFailed = "payment.failed";
     public const string RefundProcessed = "refund.processed";
     public const string PayoutReleased = "payout.released";
     public const string PayoutFailed = "payout.failed";
-    public const string MessageReceived = "message.received";
     public const string ReviewReceived = "review.received";
     public const string ReviewRequested = "review.requested";
     public const string GuideApplicationSubmitted = "guide.application_submitted";

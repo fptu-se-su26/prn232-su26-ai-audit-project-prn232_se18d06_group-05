@@ -608,10 +608,11 @@
                         thread.UnreadCount = rows.filter(m => !(m.isRead || m.IsRead) && (m.receiverId || m.ReceiverId) === userId).length;
                         // Mark messages as read on server for this user
                         try {
-                            await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/mark-read`, {
+                            const markReadResponse = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/mark-read`, {
                                 method: 'POST',
                                 headers: { 'Authorization': 'Bearer ' + token }
                             });
+                            if (markReadResponse.ok) window.TripMateMessages?.refreshUnreadThreads();
                         } catch (e) {
                             console.warn('Failed to mark messages as read', e);
                         }

@@ -2,7 +2,7 @@
     <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7">
         <div>
             <h1 id="notifications-title" class="text-3xl font-extrabold text-gray-900">Notifications</h1>
-            <p class="text-gray-500 mt-1">Bookings, payments, messages, reviews, and account updates.</p>
+            <p class="text-gray-500 mt-1">Bookings, payments, reviews, and account updates.</p>
         </div>
         <button id="notifications-read-all" type="button" class="text-sm font-bold text-primary hover:underline">
             Mark all as read
@@ -13,7 +13,6 @@
         <button type="button" data-filter="all" class="notification-filter bg-gray-900 text-white px-4 py-2 rounded-full text-sm font-bold">All</button>
         <button type="button" data-filter="booking" class="notification-filter bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold">Bookings</button>
         <button type="button" data-filter="money" class="notification-filter bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold">Payments</button>
-        <button type="button" data-filter="message" class="notification-filter bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold">Messages</button>
         <button type="button" data-filter="account" class="notification-filter bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold">Account</button>
     </div>
 
@@ -47,7 +46,6 @@
         const canonical = type.replaceAll('_', '.');
         if (canonical.startsWith('booking.') || canonical.startsWith('review.') || canonical === 'new.review') return 'booking';
         if (canonical.startsWith('payment.') || canonical.startsWith('refund.') || canonical.startsWith('payout.') || canonical === 'escrow.released' || canonical === 'discount.voucher' || canonical === 'voucher.issued') return 'money';
-        if (canonical === 'message.received' || canonical === 'message') return 'message';
         return 'account';
     };
     const icon = type => {

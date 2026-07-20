@@ -70,8 +70,6 @@ public sealed class BookingReminderService
 
     public async Task SendDueRemindersAsync(CancellationToken cancellationToken = default)
     {
-        await NotifyExpiredPendingPaymentsAsync(cancellationToken);
-
         var now = DateTimeOffset.Now;
         var firstDate = now.Date.ToString("yyyy-MM-dd");
         var lastDate = now.AddHours(25).Date.ToString("yyyy-MM-dd");
@@ -133,30 +131,6 @@ public sealed class BookingReminderService
 
         startsAt = new DateTimeOffset(date.ToDateTime(time), TimeZoneInfo.Local.GetUtcOffset(date.ToDateTime(time)));
         return true;
-    }
-
-    private async Task NotifyExpiredPendingPaymentsAsync(CancellationToken cancellationToken)
-    {
-        var cutoff = Uri.EscapeDataString(DateTime.UtcNow.AddMinutes(-30).ToString("O"));
-        var url = $"{_supabaseUrl}/rest/v1/bookings?status=eq.-1&created_at=lt.{cutoff}&select=id,traveler_id&limit=1000";
-        using var request = BuildRequest(HttpMethod.Get, url);
-        using var response = await _http.SendAsync(request, cancellationToken);
-        var content = await response.Content.ReadAsStringAsync(cancellationToken);
-        response.EnsureSuccessStatusCode();
-        var expired = JsonSerializer.Deserialize<List<ReminderBooking>>(content, JsonOptions) ?? [];
-
-        foreach (var booking in expired.Where(x => !string.IsNullOrWhiteSpace(x.Id)))
-        {
-            await _notifications.SendAsync(
-                booking.TravelerId ?? string.Empty,
-                NotificationTypes.PaymentFailed,
-                "Payment expired",
-                $"Payment for booking {booking.Id} was not completed within 30 minutes.",
-                new { bookingId = booking.Id, reason = "expired" },
-                $"/Traveler/BookingDetails/{booking.Id}",
-                $"payment-failed:{booking.Id}",
-                sendEmail: true);
-        }
     }
 
     private async Task<string?> GetGuideUserIdAsync(string? guideProfileId, CancellationToken cancellationToken)

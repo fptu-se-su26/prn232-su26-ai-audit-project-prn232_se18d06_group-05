@@ -13,17 +13,15 @@ namespace TripMate_WebAPI.Services;
 public class ChatService
 {
     private readonly HttpClient _http;
-    private readonly INotificationService _notifications;
     private readonly string _supabaseUrl;
     private readonly string _anonKey;
 
     private static readonly JsonSerializerOptions _json = new()
     { PropertyNameCaseInsensitive = true };
 
-    public ChatService(HttpClient http, IConfiguration config, INotificationService notifications)
+    public ChatService(HttpClient http, IConfiguration config)
     {
         _http = http;
-        _notifications = notifications;
         _supabaseUrl = config["Supabase:Url"]!;
         _anonKey = config["Supabase:AnonKey"]!;
     }
@@ -100,6 +98,22 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
         return conversations;
     }
 
+    public async Task<int> GetUnreadConversationCountAsync(string userId, string userToken)
+    {
+        if (string.IsNullOrWhiteSpace(userId)) return 0;
+
+        var url = $"{_supabaseUrl}/rest/v1/chat_messages" +
+                  $"?receiver_id=eq.{Uri.EscapeDataString(userId)}" +
+                  "&is_read=eq.false&select=booking_id";
+        var unreadMessages = await GetAsync<List<ChatMessageRow>>(url, userToken) ?? [];
+
+        return unreadMessages
+            .Select(message => message.BookingId)
+            .Where(bookingId => !string.IsNullOrWhiteSpace(bookingId))
+            .Distinct(StringComparer.Ordinal)
+            .Count();
+    }
+
     // ── Get messages by booking_id ────────────────────────────────────────────
 
     public async Task<List<MessageDto>> GetMessagesAsync(
@@ -149,23 +163,6 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
         var result = new MessageDto(
             row.Id, row.BookingId ?? "", row.SenderId ?? "", row.ReceiverId ?? "",
             row.MessageText ?? "", row.IsRead, row.SentAt);
-
-        var sender = await GetProfileAsync(senderId, userToken);
-        var receiver = await GetProfileAsync(receiverId, userToken);
-        var preview = content.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-            ? "Sent an attachment"
-            : content.Length > 120 ? $"{content[..120]}…" : content;
-        var actionUrl = string.Equals(receiver?.Role, "guide", StringComparison.OrdinalIgnoreCase)
-            ? $"/Guide/Messages?bookingId={Uri.EscapeDataString(bookingId)}"
-            : $"/Traveler/Messages?bookingId={Uri.EscapeDataString(bookingId)}";
-        await _notifications.SendAsync(
-            receiverId,
-            NotificationTypes.MessageReceived,
-            $"New message from {sender?.FullName ?? "a TripMate user"}",
-            preview,
-            new { bookingId, messageId = row.Id, senderId },
-            actionUrl,
-            $"message:{row.Id}");
 
         return result;
     }

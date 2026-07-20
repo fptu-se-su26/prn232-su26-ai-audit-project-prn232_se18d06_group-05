@@ -4,7 +4,7 @@
 
 1. Run [`Infrastructure/Sql/notifications.sql`](Infrastructure/Sql/notifications.sql) in the Supabase SQL editor.
 2. Set `App:BaseUrl` (or `App__BaseUrl`) in production so email action buttons use the public site URL.
-3. Scheduled 24-hour/2-hour reminders and expired-payment notices are enabled by default. Set `Notifications__RemindersEnabled=false` to disable the worker.
+3. Scheduled 24-hour/2-hour reminders are enabled by default. Set `Notifications__RemindersEnabled=false` to disable the worker.
 
 The application service role creates notifications. Authenticated reads, updates, and deletes are protected by Supabase RLS and also filter on `user_id` in the API.
 
@@ -29,8 +29,8 @@ Realtime clients connect to `/hubs/notifications` and receive `NotificationRecei
 Types are defined in `DTOs/Notification/NotificationTypes.cs`:
 
 - Booking: `booking.awaiting_guide`, `booking.confirmed`, `booking.declined`, `booking.cancelled`, `booking.reminder`, `booking.completed`
-- Money: `payment.succeeded`, `payment.failed`, `refund.processed`, `payout.released`, `payout.failed`
-- Communication: `message.received`, `review.received`, `review.requested`
+- Money: `payment.succeeded`, `refund.processed`, `payout.released`, `payout.failed`
+- Reviews: `review.received`, `review.requested`
 - Account/admin: `guide.application_submitted`, `guide.application_approved`, `guide.application_rejected`, `cancellation.review_required`, `support.ticket_updated`, `voucher.issued`, `system.announcement`
 
 The existing `notifications` table stores navigation targets in `link_url` and does not have metadata or deduplication columns. For business events with a deduplication key, the application derives a stable notification UUID from the recipient and key. Retries therefore conflict with the existing primary key and do not create duplicate rows or duplicate critical emails.

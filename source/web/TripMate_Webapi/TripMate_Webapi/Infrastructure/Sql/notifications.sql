@@ -17,6 +17,9 @@ create index if not exists notifications_user_created_idx
 create index if not exists notifications_user_unread_idx
     on public.notifications (user_id, is_read, created_at desc);
 
+-- This notification type has been retired. Remove rows created by older builds.
+delete from public.notifications where type = 'payment.failed';
+
 alter table public.notifications enable row level security;
 
 grant usage on schema public to authenticated, service_role;

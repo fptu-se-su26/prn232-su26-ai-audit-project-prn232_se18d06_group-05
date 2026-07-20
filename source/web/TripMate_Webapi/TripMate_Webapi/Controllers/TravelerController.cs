@@ -448,14 +448,6 @@ namespace TripMate_Webapi.Controllers
                 if (cancel == "true" || status != "PAID")
                 {
                     await _bookingRepository.UpdateBookingStatusAsync(booking.Id, 3); // Original PayOS callback behavior
-                    await _notifications.SendAsync(
-                        booking.TravelerId,
-                        NotificationTypes.PaymentFailed,
-                        "Payment was not completed",
-                        $"Payment for booking {booking.Id} was cancelled or failed.",
-                        new { bookingId = booking.Id, orderCode, status },
-                        $"/Traveler/BookingDetails/{booking.Id}",
-                        $"payment-failed:{booking.Id}");
                     TempData["ErrorMessage"] = "Payment was cancelled.";
                 }
                 else if (status == "PAID" && booking.Status == -1)
