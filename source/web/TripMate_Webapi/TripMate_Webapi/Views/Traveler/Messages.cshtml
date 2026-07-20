@@ -453,7 +453,8 @@
 
                         // mark as read on server
                         try {
-                            await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/mark-read`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+                            const markReadResponse = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/mark-read`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+                            if (markReadResponse.ok) window.TripMateMessages?.refreshUnreadThreads();
                         } catch (e) { console.warn('mark-read failed', e); }
                     } catch (e) { console.error(e); }
                 },

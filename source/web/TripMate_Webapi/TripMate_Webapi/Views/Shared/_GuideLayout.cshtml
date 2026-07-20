@@ -38,6 +38,7 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" data-turbo-track="reload"></script>
     <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
     <script src="/notifications.js"></script>
+    <script src="/message-badge.js"></script>
     
     <!-- Hotwire Turbo -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/@@hotwired/turbo@8.0.4/dist/turbo.es2017-esm.js" data-turbo-track="reload"></script>
@@ -122,9 +123,10 @@
                 <span>My Tours</span>
             </a>
 
-            <a href="/Guide/Messages" class="@(ViewData["ActivePage"]?.ToString() == "Messages" ? "bg-orange-100 text-primary font-bold" : "hover:bg-orange-50 text-gray-600 hover:text-primary font-medium") flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group">
+            <a href="/Guide/Messages" class="@(ViewData["ActivePage"]?.ToString() == "Messages" ? "bg-orange-100 text-primary font-bold" : "hover:bg-orange-50 text-gray-600 hover:text-primary font-medium") relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group">
                 <span class="material-symbols-outlined @(ViewData["ActivePage"]?.ToString() == "Messages" ? "text-primary" : "text-gray-400 group-hover:text-primary") text-[22px]">person_outline</span>
                 <span>Messages</span>
+                <span data-message-thread-count class="hidden ml-auto min-w-5 h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold items-center justify-center rounded-full shadow-sm"></span>
             </a>
 
             <a href="/Guide/Notifications" class="@(ViewData["ActivePage"]?.ToString() == "Notifications" ? "bg-orange-100 text-primary font-bold" : "hover:bg-orange-50 text-gray-600 hover:text-primary font-medium") flex items-center justify-between px-3 py-2.5 rounded-xl transition-all group">

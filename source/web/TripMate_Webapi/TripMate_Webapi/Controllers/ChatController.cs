@@ -75,6 +75,17 @@ public class ChatController : ControllerBase
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
     }
 
+    [HttpGet("unread-conversation-count")]
+    public async Task<IActionResult> GetUnreadConversationCount()
+    {
+        try
+        {
+            var count = await _chat.GetUnreadConversationCountAsync(UserId, UserToken);
+            return Ok(new { count });
+        }
+        catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+    }
+
     /// <summary>Lấy messages theo booking_id</summary>
     [HttpGet("conversations/{bookingId}/messages")]
     public async Task<IActionResult> GetMessages(string bookingId)
