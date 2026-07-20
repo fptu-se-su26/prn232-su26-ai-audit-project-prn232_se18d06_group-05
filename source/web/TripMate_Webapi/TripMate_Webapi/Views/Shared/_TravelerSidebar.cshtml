@@ -22,10 +22,10 @@
             <span class="material-symbols-outlined">favorite</span>
             <span class="sidebar-text whitespace-nowrap">Saved Guides</span>
         </a>
-        <a href="/Traveler/Messages" class="flex items-center gap-4 px-6 py-3 @(currentPath.Contains("/messages") ? "bg-primary-container text-primary font-bold" : "text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-medium") rounded-xl transition-all group" title="Messages">
+        <a href="/Traveler/Messages" class="relative flex items-center gap-4 px-6 py-3 @(currentPath.Contains("/messages") ? "bg-primary-container text-primary font-bold" : "text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-medium") rounded-xl transition-all group" title="Messages">
             <span class="material-symbols-outlined">chat</span>
             <span class="sidebar-text whitespace-nowrap">Messages</span>
-            <span class="sidebar-text ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">2</span>
+            <span data-message-thread-count class="hidden absolute right-2 top-1/2 -translate-y-1/2 min-w-5 h-5 px-1.5 bg-red-500 text-white text-[10px] font-bold items-center justify-center rounded-full"></span>
         </a>
         <a href="/Traveler/Notifications" class="flex items-center gap-4 px-6 py-3 @(currentPath.Contains("/notifications") ? "bg-primary-container text-primary font-bold" : "text-on-surface-variant hover:bg-surface-variant hover:text-on-surface font-medium") rounded-xl transition-all group" title="Notifications">
             <span class="material-symbols-outlined">notifications</span>
