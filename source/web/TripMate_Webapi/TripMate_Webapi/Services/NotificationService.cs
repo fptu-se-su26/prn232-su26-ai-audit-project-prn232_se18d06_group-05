@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -94,21 +95,22 @@ public sealed class NotificationService : INotificationService
 
         try
         {
+            var notificationId = CreateNotificationId(userId, dedupeKey);
             var payload = new
             {
-                id = Guid.NewGuid(),
+                id = notificationId,
                 user_id = userId,
                 type,
                 title,
                 message,
-                data = data ?? new { },
-                action_url = actionUrl,
+                link_url = actionUrl,
                 is_read = false,
-                created_at = DateTime.UtcNow,
-                dedupe_key = dedupeKey
+                created_at = DateTime.UtcNow
             };
 
-            var url = $"{_supabaseUrl}/rest/v1/notifications?on_conflict=user_id,dedupe_key";
+            // The existing notifications table has no dedupe_key column. A stable
+            // primary key preserves idempotency for events that provide a dedupe key.
+            var url = $"{_supabaseUrl}/rest/v1/notifications?on_conflict=id";
             using var request = BuildServiceRequest(HttpMethod.Post, url);
             request.Headers.Add("Prefer", "resolution=ignore-duplicates,return=representation");
             request.Content = JsonContent(payload);
@@ -150,6 +152,14 @@ public sealed class NotificationService : INotificationService
             // Notifications must not roll back the business operation that emitted them.
             _logger.LogError(ex, "Error delivering {Type} notification to {UserId}", type, userId);
         }
+    }
+
+    private static Guid CreateNotificationId(string userId, string? dedupeKey)
+    {
+        if (string.IsNullOrWhiteSpace(dedupeKey)) return Guid.NewGuid();
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{userId}:{dedupeKey}"));
+        return new Guid(hash.AsSpan(0, 16));
     }
 
     public async Task SendToRoleAsync(
@@ -213,7 +223,7 @@ public sealed class NotificationService : INotificationService
         var rows = JsonSerializer.Deserialize<List<NotificationDto>>(content, JsonOptions) ?? [];
         var hasMore = rows.Count > limit;
         var items = rows.Take(limit).ToList();
-        var nextCursor = hasMore ? items.LastOrDefault()?.CreatedAt.ToUniversalTime().ToString("O") : null;
+        var nextCursor = hasMore ? items.LastOrDefault()?.CreatedAt?.ToUniversalTime().ToString("O") : null;
         var unreadCount = await GetUnreadCountAsync(userId, userToken);
         return new NotificationPageDto(items, unreadCount, nextCursor);
     }

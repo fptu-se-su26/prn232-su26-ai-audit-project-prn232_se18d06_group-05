@@ -3,16 +3,13 @@
 
 create table if not exists public.notifications (
     id uuid primary key default gen_random_uuid(),
-    user_id uuid not null references auth.users(id) on delete cascade,
-    type text not null,
+    user_id uuid null references public.profiles(id) on delete cascade,
     title text not null,
     message text not null,
-    data jsonb not null default '{}'::jsonb,
-    action_url text null,
-    is_read boolean not null default false,
-    created_at timestamptz not null default now(),
-    dedupe_key text null,
-    constraint notifications_user_dedupe unique (user_id, dedupe_key)
+    type text not null,
+    is_read boolean null default false,
+    link_url text null,
+    created_at timestamptz null default timezone('utc'::text, now())
 );
 
 create index if not exists notifications_user_created_idx
@@ -21,6 +18,10 @@ create index if not exists notifications_user_unread_idx
     on public.notifications (user_id, is_read, created_at desc);
 
 alter table public.notifications enable row level security;
+
+grant usage on schema public to authenticated, service_role;
+grant select, update, delete on table public.notifications to authenticated;
+grant select, insert, update, delete on table public.notifications to service_role;
 
 drop policy if exists "Users can read their notifications" on public.notifications;
 create policy "Users can read their notifications"
@@ -52,6 +53,8 @@ create table if not exists public.admin_notifications (
 );
 
 alter table public.admin_notifications enable row level security;
+grant select, update on table public.admin_notifications to authenticated;
+grant select, insert, update, delete on table public.admin_notifications to service_role;
 drop policy if exists "Admins manage admin notifications" on public.admin_notifications;
 create policy "Admins manage admin notifications"
     on public.admin_notifications for all to authenticated

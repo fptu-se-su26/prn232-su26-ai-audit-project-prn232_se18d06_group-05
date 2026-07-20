@@ -60,6 +60,7 @@
         return 'notifications_active';
     };
     const timeAgo = raw => {
+        if (!raw) return '';
         const date = new Date(raw);
         if (Number.isNaN(date.getTime())) return '';
         const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
@@ -91,7 +92,7 @@
             content.appendChild(node('p', 'text-sm text-gray-600 mt-1', value(item, 'message', 'message')));
             const meta = node('div', 'flex flex-wrap items-center gap-3 mt-2');
             meta.appendChild(node('span', 'text-xs text-gray-400', timeAgo(value(item, 'createdAt', 'created_at'))));
-            const actionUrl = value(item, 'actionUrl', 'action_url');
+            const actionUrl = item.actionUrl ?? item.action_url ?? item.linkUrl ?? item.link_url;
             if (actionUrl) {
                 const action = node('a', 'text-xs font-bold text-primary hover:underline', 'Open →');
                 action.href = actionUrl;

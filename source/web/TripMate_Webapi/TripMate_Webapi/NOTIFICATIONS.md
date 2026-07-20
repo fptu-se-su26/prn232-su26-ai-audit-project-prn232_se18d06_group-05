@@ -33,4 +33,4 @@ Types are defined in `DTOs/Notification/NotificationTypes.cs`:
 - Communication: `message.received`, `review.received`, `review.requested`
 - Account/admin: `guide.application_submitted`, `guide.application_approved`, `guide.application_rejected`, `cancellation.review_required`, `support.ticket_updated`, `voucher.issued`, `system.announcement`
 
-Every business event supplies a stable `dedupe_key`. Replaying a webhook, retrying a request, or running multiple reminder scans therefore does not create duplicate rows or duplicate critical emails.
+The existing `notifications` table stores navigation targets in `link_url` and does not have metadata or deduplication columns. For business events with a deduplication key, the application derives a stable notification UUID from the recipient and key. Retries therefore conflict with the existing primary key and do not create duplicate rows or duplicate critical emails.
