@@ -69,30 +69,6 @@ public sealed class NotificationService : INotificationService
         IConfiguration config,
         ILogger<NotificationService> logger)
     {
-        private readonly HttpClient _http;
-        private readonly IEmailService _emailService;
-        private readonly string _supabaseUrl;
-        private readonly string _anonKey;
-        private readonly string _serviceRoleKey;
-        private readonly ILogger<NotificationService> _logger;
-        private readonly JsonSerializerOptions _json;
-        private readonly INotificationRepository _notificationRepository;
-
-        public NotificationService(
-            HttpClient http,
-            IEmailService emailService,
-            IConfiguration config,
-            ILogger<NotificationService> logger,
-            INotificationRepository notificationRepository)
-        {
-            _http = http;
-            _emailService = emailService;
-            _supabaseUrl = config["Supabase:Url"] ?? throw new Exception("Supabase URL not configured");
-            _anonKey = config["Supabase:AnonKey"] ?? throw new Exception("Supabase Anon Key not configured");
-            _serviceRoleKey = config["Supabase:ServiceRoleKey"] ?? throw new Exception("Supabase Service Role Key not configured");
-            _logger = logger;
-            _json = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            _notificationRepository = notificationRepository;
         _http = http;
         _emailService = emailService;
         _hub = hub;
@@ -421,39 +397,7 @@ public sealed class NotificationService : INotificationService
         }
     }
 
-        public async Task SendAsync(string userId, string type, string title, string message, object? data = null)
-        {
-            try
-            {
-                string linkUrl = "/Traveler/Trips";
-                if (data != null)
-                {
-                    try {
-                        var json = JsonSerializer.Serialize(data);
-                        var doc = JsonDocument.Parse(json);
-                        if (doc.RootElement.TryGetProperty("bookingId", out var bookingIdProp))
-                        {
-                            linkUrl = "/Traveler/BookingDetails/" + bookingIdProp.GetString();
-                        }
-                    } catch {}
-                }
 
-                var notification = new TripMate_Webapi.Entities.NotificationEntity
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    UserId = userId,
-                    Title = title,
-                    Message = message,
-                    Type = type,
-                    IsRead = false,
-                    LinkUrl = linkUrl,
-                    CreatedAt = DateTime.UtcNow
-                };
-
-                await _notificationRepository.CreateNotificationAsync(notification);
-                _logger.LogInformation("Realtime notification sent to user {UserId}: {Type} - {Title}", userId, type, title);
-            }
-            catch (Exception ex)
     private async Task NotifyAdminsByEmailAsync(string guideName, string guideEmail)
     {
         try
