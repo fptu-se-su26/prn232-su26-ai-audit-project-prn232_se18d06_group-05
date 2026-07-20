@@ -10,7 +10,7 @@
     var displaySearch = searchStr ?? searchDest ?? "";
 }
 
-<div class="bg-surface min-h-screen" x-data="{ activeTab: 'guides' }">
+<div class="bg-surface min-h-screen" x-data="exploreGuides()">
 
     <!-- Hero Header -->
     <div class="bg-gradient-to-br from-on-surface via-gray-800 to-gray-900 pt-12 pb-16 px-6 md:px-12 relative overflow-hidden">
@@ -70,43 +70,55 @@
                 {
                     foreach (var guide in Model)
                     {
-                        <a href="/Traveler/GuideProfile/@guide.Id" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 relative flex flex-col">
-                            <div class="h-64 overflow-hidden relative">
-                                <img src="@(string.IsNullOrEmpty(guide.CoverPhotoUrl) ? "/images/halong.jpg" : guide.CoverPhotoUrl)" alt="Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                                <div class="absolute top-4 left-4 z-10 w-16 h-16 rounded-full border-2 border-white overflow-hidden shadow-lg">
-                                    <img src="@(string.IsNullOrEmpty(guide.Profile?.AvatarUrl) ? "/images/default_avatar.png" : guide.Profile.AvatarUrl)" alt="@guide.Profile?.FullName" class="w-full h-full object-cover"/>
-                                </div>
-                                <div class="absolute bottom-0 left-0 right-0 p-5 pt-16 z-10">
-                                    <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">@(guide.Profile?.FullName ?? "Unknown Guide")</h3>
-                                    <p class="text-sm text-white/90 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> @guide.CityArea</p>
-                                </div>
-                                @if (guide.IsVerified == true)
-                                {
-                                    <div class="absolute top-4 right-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center gap-1 shadow-sm">
-                                        <span class="material-symbols-outlined text-[14px]">verified</span> Verified
+                        var guideId = guide.Id ?? "";
+                        <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 relative flex flex-col"
+                             x-data="guideCard('@guideId')">
+                            <!-- Save heart button -->
+                            <button @@click.prevent="toggleSave()"
+                                    class="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-white/90 backdrop-blur-sm shadow-md flex items-center justify-center transition-all hover:scale-110"
+                                    :class="isSaved ? 'text-red-500' : 'text-gray-400 hover:text-red-400'"
+                                    :title="isSaved ? 'Remove from saved' : 'Save guide'">
+                                <span class="material-symbols-outlined text-[22px]" :style="isSaved ? 'font-variation-settings: FILL 1' : ''">favorite</span>
+                            </button>
+
+                            <a href="/Traveler/GuideProfile/@guideId" class="flex flex-col flex-1">
+                                <div class="h-64 overflow-hidden relative">
+                                    <img src="@(string.IsNullOrEmpty(guide.CoverPhotoUrl) ? "/images/halong.jpg" : guide.CoverPhotoUrl)" alt="Cover" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+                                    <div class="absolute top-4 left-4 z-10 w-16 h-16 rounded-full border-2 border-white overflow-hidden shadow-lg">
+                                        <img src="@(string.IsNullOrEmpty(guide.Profile?.AvatarUrl) ? "/images/default_avatar.png" : guide.Profile.AvatarUrl)" alt="@guide.Profile?.FullName" class="w-full h-full object-cover"/>
                                     </div>
-                                }
-                            </div>
-                            <div class="p-6 flex-1 flex flex-col">
-                                <div class="flex justify-between items-center mb-4">
-                                    <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
-                                        <span class="material-symbols-outlined text-[20px] text-yellow-500" style="font-variation-settings: 'FILL' 1;">star</span> @(guide.AverageRating?.ToString("0.0") ?? "0.0") <span class="text-on-surface-variant font-normal">(@(guide.TotalReviews ?? 0))</span>
+                                    <div class="absolute bottom-0 left-0 right-0 p-5 pt-16 z-10">
+                                        <h3 class="text-2xl font-bold text-white mb-1 drop-shadow-md">@(guide.Profile?.FullName ?? "Unknown Guide")</h3>
+                                        <p class="text-sm text-white/90 flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[16px]">location_on</span> @guide.CityArea</p>
                                     </div>
-                                    <div class="text-primary font-bold bg-primary-container px-3 py-1 rounded-lg text-sm">@(guide.PricePerHour?.ToString("#,##0") ?? "0") ₫ / hr</div>
-                                </div>
-                                <p class="text-on-surface-variant italic mb-5 line-clamp-2 leading-relaxed">"@guide.Bio"</p>
-                                <div class="flex flex-wrap gap-2 mt-auto">
-                                    @if (guide.Specialties != null)
+                                    @if (guide.IsVerified == true)
                                     {
-                                        foreach (var spec in guide.Specialties.Take(3))
-                                        {
-                                            <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">@spec</span>
-                                        }
+                                        <div class="absolute top-4 right-16 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-primary flex items-center gap-1 shadow-sm z-10">
+                                            <span class="material-symbols-outlined text-[14px]">verified</span> Verified
+                                        </div>
                                     }
                                 </div>
-                            </div>
-                        </a>
+                                <div class="p-6 flex-1 flex flex-col">
+                                    <div class="flex justify-between items-center mb-4">
+                                        <div class="flex items-center gap-1 text-sm font-bold text-on-surface">
+                                            <span class="material-symbols-outlined text-[20px] text-yellow-500" style="font-variation-settings: 'FILL' 1;">star</span> @(guide.AverageRating?.ToString("0.0") ?? "0.0") <span class="text-on-surface-variant font-normal">(@(guide.TotalReviews ?? 0))</span>
+                                        </div>
+                                        <div class="text-primary font-bold bg-primary-container px-3 py-1 rounded-lg text-sm">@(guide.PricePerHour?.ToString("#,##0") ?? "0") ₫ / hr</div>
+                                    </div>
+                                    <p class="text-on-surface-variant italic mb-5 line-clamp-2 leading-relaxed">"@guide.Bio"</p>
+                                    <div class="flex flex-wrap gap-2 mt-auto">
+                                        @if (guide.Specialties != null)
+                                        {
+                                            foreach (var spec in guide.Specialties.Take(3))
+                                            {
+                                                <span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] rounded-md font-bold uppercase tracking-wider border border-outline-variant/20">@spec</span>
+                                            }
+                                        }
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
                     }
                 }
                 else
@@ -184,3 +196,60 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('alpine:init', () => {
+    Alpine.data('exploreGuides', () => ({
+        activeTab: 'guides',
+    }));
+
+    Alpine.data('guideCard', (guideProfileId) => ({
+        isSaved: false,
+        guideId: guideProfileId,
+
+        async init() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) return;
+            try {
+                const res = await fetch(`/Traveler/IsGuideSavedAjax/${this.guideId}`, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.isSaved = data.saved;
+                }
+            } catch (e) { /* not logged in or error, ignore */ }
+        },
+
+        async toggleSave() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname + window.location.search);
+                return;
+            }
+            try {
+                const res = await fetch(`/Traveler/ToggleSaveGuideAjax/${this.guideId}`, {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    this.isSaved = data.saved;
+                    // Toast notification
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: this.isSaved ? 'success' : 'info',
+                            title: this.isSaved ? 'Guide saved!' : 'Removed from saved',
+                            showConfirmButton: false,
+                            timer: 1800,
+                            timerProgressBar: true,
+                        });
+                    }
+                }
+            } catch (e) { console.error('Save guide error:', e); }
+        }
+    }));
+});
+</script>

@@ -41,6 +41,7 @@ public class BookingService
 
     // Platform fee rate (e.g. 15%)
     private const decimal PlatformFeeRate = 0.15m;
+    private static readonly TimeSpan GuideResponseWindow = TimeSpan.FromHours(24);
 
     public BookingService(HttpClient http, IConfiguration config,
         INotificationService notif, ChatService chat, TripMate_Webapi.Repositories.IBookingRepository repo)
@@ -118,23 +119,32 @@ public class BookingService
 
         var dto = MapToDto(row, package.Title);
 
-        // 5. Send notifications
+        // 5. Persist notifications after the booking exists. Dedupe keys make retries safe.
         var guideUserId = await GetGuideUserIdAsync(package.GuideProfileId!);
         if (guideUserId != null)
         {
-            _ = _notif.SendAsync(guideUserId, "booking_created",
-                "Có người đặt gói trải nghiệm!",
-                $"{package.Title} — {req.GuestCount} khách ngày {req.BookingDate}",
-                new { bookingId = dto.Id, travelerId });
+            await _notif.SendAsync(
+                guideUserId,
+                NotificationTypes.BookingAwaitingGuide,
+                "New booking awaiting your response",
+                $"{package.Title} — {req.GuestCount} guest(s) on {req.BookingDate:yyyy-MM-dd}.",
+                new { bookingId = dto.Id, travelerId, req.GuestCount, req.BookingDate },
+                "/Guide/Bookings",
+                $"booking-awaiting-guide:{dto.Id}",
+                sendEmail: true);
 
-            _ = _chat.GetOrCreateConversationAsync(
+            await _chat.GetOrCreateConversationAsync(
                 travelerId, guideUserId, dto.Id, userToken);
         }
 
-        _ = _notif.SendAsync(travelerId, "booking_confirmed",
-            "Đặt tour thành công!",
-            $"Bạn đã đặt {package.Title} ngày {req.BookingDate}",
-            new { bookingId = dto.Id });
+        await _notif.SendAsync(
+            travelerId,
+            NotificationTypes.BookingAwaitingGuide,
+            "Booking submitted",
+            $"Your booking for {package.Title} is awaiting the guide's response.",
+            new { bookingId = dto.Id, req.BookingDate },
+            $"/Traveler/BookingDetails/{dto.Id}",
+            $"booking-submitted:{dto.Id}");
 
         return dto;
     }
@@ -187,6 +197,39 @@ public class BookingService
 
         var response = await _http.SendAsync(request);
         EnsureSuccess(response, await response.Content.ReadAsStringAsync());
+
+        var guideUserId = await GetGuideUserIdAsync(booking.GuideProfileId);
+        var data = new { bookingId, cancelledBy = "traveler" };
+        if (!string.IsNullOrWhiteSpace(guideUserId))
+        {
+            await _notif.SendAsync(
+                guideUserId,
+                NotificationTypes.BookingCancelled,
+                "Booking cancelled by traveler",
+                $"Booking {bookingId} was cancelled by the traveler.",
+                data,
+                "/Guide/Bookings",
+                $"booking-cancelled:{bookingId}:guide",
+                sendEmail: true);
+        }
+
+        await _notif.SendAsync(
+            travelerId,
+            NotificationTypes.BookingCancelled,
+            "Booking cancelled",
+            "Your booking cancellation has been recorded.",
+            data,
+            $"/Traveler/BookingDetails/{bookingId}",
+            $"booking-cancelled:{bookingId}:traveler");
+
+        await _notif.SendToRoleAsync(
+            "admin",
+            NotificationTypes.CancellationReviewRequired,
+            "Cancellation requires review",
+            $"Booking {bookingId} was cancelled and may require a refund review.",
+            data,
+            "/Admin/Moderation",
+            $"cancellation-review:{bookingId}");
     }
 
     // ── Get Guide Bookings ────────────────────────────────────────────────────
@@ -198,11 +241,17 @@ public class BookingService
 
         foreach (var b in entities)
         {
-            var secondsRemaining = (int)(b.CreatedAt.AddHours(24) - DateTime.UtcNow).TotalSeconds;
-            if (secondsRemaining < 0) secondsRemaining = 0;
+            var responseDeadlineUtc = GetGuideResponseDeadlineUtc(b.CreatedAt);
+            var remaining = responseDeadlineUtc - DateTime.UtcNow;
+            var isExpired = b.Status == 0 && remaining <= TimeSpan.Zero;
+            var secondsRemaining = b.Status == 0 && !isExpired
+                ? (int)Math.Ceiling(remaining.TotalSeconds)
+                : 0;
+            var effectiveStatus = isExpired ? "Expired" : MapStatus(b.Status);
 
             dtos.Add(new TripMate_WebAPI.DTOs.Booking.Responses.GuideBookingViewDto(
                 Id: b.Id,
+                TravelerId: b.TravelerId ?? b.Traveler?.Id ?? "",
                 TravelerName: b.Traveler?.FullName ?? "Unknown Traveler",
                 TravelerAvatar: b.Traveler?.AvatarUrl ?? "/images/AVATAR.png",
                 TravelerRating: b.Traveler?.AverageRating ?? 5.0m,
@@ -215,8 +264,9 @@ public class BookingService
                 PlatformFee: b.PlatformFee,
                 NetEarnings: b.GuideEarnings,
                 Note: b.TravelerNotes,
-                Status: MapStatus(b.Status),
-                SecondsRemaining: secondsRemaining
+                Status: effectiveStatus,
+                SecondsRemaining: secondsRemaining,
+                CreatedAt: b.CreatedAt
             ));
         }
 
@@ -236,23 +286,47 @@ public class BookingService
         if (booking.Status != 0)
             throw new Exception("Chỉ có thể cập nhật trạng thái của booking đang chờ duyệt (Pending)");
 
+        if (DateTime.UtcNow >= GetGuideResponseDeadlineUtc(booking.CreatedAt))
+            throw new Exception("Booking đã hết hạn phản hồi sau 24 giờ và không thể cập nhật.");
+
         await _repo.UpdateBookingStatusAsync(bookingId, newStatus);
         
-        // Optional: Send notification to traveler
         if (newStatus == 1) // Confirmed
         {
-            _ = _notif.SendAsync(booking.TravelerId, "booking_confirmed",
-                "Booking đã được xác nhận!",
-                $"Guide đã xác nhận yêu cầu đặt tour của bạn.",
-                new { bookingId });
+            await _notif.SendAsync(
+                booking.TravelerId,
+                NotificationTypes.BookingConfirmed,
+                "Booking confirmed",
+                "Your guide accepted the booking request.",
+                new { bookingId },
+                $"/Traveler/BookingDetails/{bookingId}",
+                $"booking-confirmed:{bookingId}",
+                sendEmail: true);
         }
         else if (newStatus == 3) // Cancelled
         {
-            _ = _notif.SendAsync(booking.TravelerId, "booking_rejected",
-                "Booking đã bị từ chối",
-                $"Guide không thể nhận yêu cầu đặt tour này.",
-                new { bookingId });
+            await _notif.SendAsync(
+                booking.TravelerId,
+                NotificationTypes.BookingDeclined,
+                "Booking declined",
+                "The guide could not accept this booking request.",
+                new { bookingId },
+                $"/Traveler/BookingDetails/{bookingId}",
+                $"booking-declined:{bookingId}",
+                sendEmail: true);
         }
+    }
+
+    private static DateTime GetGuideResponseDeadlineUtc(DateTime createdAt)
+    {
+        var createdAtUtc = createdAt.Kind switch
+        {
+            DateTimeKind.Utc => createdAt,
+            DateTimeKind.Local => createdAt.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(createdAt, DateTimeKind.Utc)
+        };
+
+        return createdAtUtc.Add(GuideResponseWindow);
     }
 
     // ── Get Guide Unavailable Dates ───────────────────────────────────────────
@@ -339,11 +413,7 @@ public class BookingService
             PlatformFee: row.PlatformFee,
             GuideEarnings: row.GuideEarnings,
             Status: MapStatus(row.Status),
-            PaymentReference: row.PaymentReference,
-            PaymentMethod: row.PaymentMethod,
-            EscrowReleased: row.EscrowReleased,
             TravelerNotes: row.TravelerNotes,
-            CancelReason: row.CancelReason,
             CreatedAt: row.CreatedAt,
             UpdatedAt: row.UpdatedAt
         );
@@ -370,12 +440,7 @@ internal class BookingRow
     [JsonPropertyName("platform_fee")]          public decimal PlatformFee { get; set; }
     [JsonPropertyName("guide_earnings")]        public decimal GuideEarnings { get; set; }
     [JsonPropertyName("status")]                public int Status { get; set; }
-    [JsonPropertyName("payment_reference")]     public string? PaymentReference { get; set; }
-    [JsonPropertyName("payment_method")]        public string? PaymentMethod { get; set; }
-    [JsonPropertyName("escrow_released")]       public bool EscrowReleased { get; set; }
     [JsonPropertyName("traveler_notes")]        public string? TravelerNotes { get; set; }
-    [JsonPropertyName("guide_response_at")]     public DateTime? GuideResponseAt { get; set; }
-    [JsonPropertyName("cancel_reason")]         public string? CancelReason { get; set; }
     [JsonPropertyName("created_at")]            public DateTime CreatedAt { get; set; }
     [JsonPropertyName("updated_at")]            public DateTime UpdatedAt { get; set; }
 }

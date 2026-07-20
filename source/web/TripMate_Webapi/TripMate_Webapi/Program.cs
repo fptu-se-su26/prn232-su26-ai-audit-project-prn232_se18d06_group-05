@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using Supabase;
 using TripMate_WebAPI.Services;
 using TripMate_Webapi.Repositories;
+using TripMate_Webapi.Services;
 using DotNetEnv;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,6 +35,9 @@ builder.Configuration["EmailSettings:SmtpHost"] = Environment.GetEnvironmentVari
 builder.Configuration["EmailSettings:SmtpPort"] = Environment.GetEnvironmentVariable("SMTP_PORT") ?? builder.Configuration["EmailSettings:SmtpPort"];
 builder.Configuration["EmailSettings:SmtpUser"] = Environment.GetEnvironmentVariable("SMTP_USER") ?? builder.Configuration["EmailSettings:SmtpUser"];
 builder.Configuration["EmailSettings:SmtpPass"] = Environment.GetEnvironmentVariable("SMTP_PASS") ?? builder.Configuration["EmailSettings:SmtpPass"];
+builder.Configuration["PayOS:ClientId"] = Environment.GetEnvironmentVariable("PAYOS_CLIENT_ID") ?? builder.Configuration["PayOS:ClientId"];
+builder.Configuration["PayOS:ApiKey"] = Environment.GetEnvironmentVariable("PAYOS_API_KEY") ?? builder.Configuration["PayOS:ApiKey"];
+builder.Configuration["PayOS:ChecksumKey"] = Environment.GetEnvironmentVariable("PAYOS_CHECKSUM_KEY") ?? builder.Configuration["PayOS:ChecksumKey"];
 
 // ── Supabase Client (singleton) ───────────────────────────────────────────────
 var supabaseUrl = builder.Configuration["Supabase:Url"]!;
@@ -83,12 +87,14 @@ builder.Services.AddScoped<BookingService>();
 // ── Calendar Service ──────────────────────────────────────────────────────────
 builder.Services.AddScoped<ICalendarService, CalendarService>();
 
-// ── Repositories ──────────────────────────────────────────────────────────────
+// ── Repositories & Additional Services ──────────────────────────────────────────
+builder.Services.AddScoped<ITripRequestService, TripRequestService>();
 builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IGuideRepository, GuideRepository>();
 builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 builder.Services.AddScoped<IExperiencePackageRepository, ExperiencePackageRepository>();
+builder.Services.AddScoped<ISavedGuideRepository, SavedGuideRepository>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();
@@ -102,11 +108,19 @@ builder.Services.AddScoped<AdminService>();
 builder.Services.AddHttpClient<ProblemReportService>();
 builder.Services.AddScoped<ProblemReportService>();
 
+// ── PayOS Service ─────────────────────────────────────────────────────────────
+builder.Services.AddScoped<IPayOSService, PayOSService>();
+
 // ── Chat & Notification Services ─────────────────────────────────────────────
 builder.Services.AddHttpClient<ChatService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddHttpClient<NotificationService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, SupabaseUserIdProvider>();
+builder.Services.AddHttpClient<BookingReminderService>();
+builder.Services.AddScoped<BookingReminderService>();
+builder.Services.AddHostedService<BookingReminderWorker>();
 
 // ── Survey Service ────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SurveyService>();
@@ -160,6 +174,13 @@ builder.Services
                     if (!string.IsNullOrEmpty(token))
                     {
                         context.Token = token;
+                    }
+                    else if (context.HttpContext.Request.Path.StartsWithSegments("/hubs/notifications") ||
+                             context.HttpContext.Request.Path.StartsWithSegments("/hubs/chat"))
+                    {
+                        // SignalR's browser client sends bearer tokens in the query string.
+                        var hubToken = context.Request.Query["access_token"].FirstOrDefault();
+                        if (!string.IsNullOrWhiteSpace(hubToken)) context.Token = hubToken;
                     }
                 }
                 return Task.CompletedTask;
@@ -271,6 +292,8 @@ app.UseSession();          // Phải trước UseAuthentication để Session s�
 app.UseAuthentication();   // phải trước UseAuthorization
 app.UseAuthorization();
 app.MapControllers(); // Map API controllers
+app.MapHub<NotificationHub>("/hubs/notifications");
+app.MapHub<ChatHub>("/hubs/chat");
 app.MapControllerRoute( // Map MVC routes
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");

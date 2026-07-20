@@ -270,6 +270,7 @@
                                     <span class="material-symbols-outlined text-[16px]">delete</span> Cancel
                                 </button>
                                 ` : ''}
+
                             </div>
                         </div>
                     </div>
@@ -295,9 +296,11 @@
                             <p class="text-sm text-on-surface-variant mb-1">${b.bookingDate}</p>
                             <p class="text-sm font-medium text-on-surface mb-3">Guided by <span class="text-primary">${b.guideName}</span></p>
                             <div class="flex gap-3">
-                                <a href="/Traveler/Review/${b.id}" class="text-primary text-sm font-bold flex items-center gap-1 hover:underline">
+                                ${!b.hasReviewed ? `
+                                <button onclick="leaveReview('${b.id}')" class="text-primary text-sm font-bold flex items-center gap-1 hover:underline">
                                     <span class="material-symbols-outlined text-[16px]">star</span> Leave a Review
-                                </a>
+                                </button>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
@@ -355,8 +358,7 @@
             confirmButtonColor: '#ff7a00',
             cancelButtonColor: '#6b7280',
             confirmButtonText: 'Yes, cancel it!',
-            cancelButtonText: 'No, keep it',
-            customClass: { popup: 'swal-top-fix' }
+            cancelButtonText: 'No, keep it'
         }).then(async (result) => {
             if (result.isConfirmed) {
                 if (!token) return;
@@ -381,6 +383,59 @@
                 }
             }
         });
+    }
+
+    async function leaveReview(id) {
+        const { value: formValues } = await Swal.fire({
+            title: 'Rate your Trip',
+            html: `
+                <div class="mb-4">
+                    <label class="block text-sm font-bold text-on-surface mb-2">Rating (1-5 Stars)</label>
+                    <input id="swal-rating" type="number" min="1" max="5" class="w-full border rounded p-2" value="5">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-on-surface mb-2">Comment</label>
+                    <textarea id="swal-comment" class="w-full border rounded p-2" rows="3" placeholder="Tell us about your experience..."></textarea>
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: 'Submit Review',
+            confirmButtonColor: '#ff7a00',
+            preConfirm: () => {
+                return {
+                    rating: document.getElementById('swal-rating').value,
+                    comment: document.getElementById('swal-comment').value
+                }
+            }
+        });
+
+        if (formValues) {
+            try {
+                const res = await fetch('/Traveler/SubmitReviewAjax', {
+                    method: 'POST',
+                    headers: { 
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        bookingId: id,
+                        rating: parseInt(formValues.rating),
+                        comment: formValues.comment
+                    })
+                });
+
+                if (res.ok) {
+                    Swal.fire({ title: 'Success', text: 'Thank you for your review!', icon: 'success', customClass: { popup: 'swal-top-fix' }});
+                    loadBookings(); // reload to update UI
+                } else {
+                    const err = await res.json();
+                    Swal.fire({ title: 'Error', text: err.error || 'Failed to submit review.', icon: 'error', customClass: { popup: 'swal-top-fix' }});
+                }
+            } catch (e) {
+                Swal.fire({ title: 'Error', text: 'Connection error.', icon: 'error', customClass: { popup: 'swal-top-fix' }});
+            }
+        }
     }
 
     // Load data on page ready

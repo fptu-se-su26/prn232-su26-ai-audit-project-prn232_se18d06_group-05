@@ -1,0 +1,173 @@
+<section class="max-w-5xl mx-auto" aria-labelledby="notifications-title">
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-7">
+        <div>
+            <h1 id="notifications-title" class="text-3xl font-extrabold text-gray-900">Notifications</h1>
+            <p class="text-gray-500 mt-1">Bookings, payments, reviews, and account updates.</p>
+        </div>
+        <button id="notifications-read-all" type="button" class="text-sm font-bold text-primary hover:underline">
+            Mark all as read
+        </button>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-6" id="notification-filters">
+        <button type="button" data-filter="all" class="notification-filter bg-gray-900 text-white px-4 py-2 rounded-full text-sm font-bold">All</button>
+        <button type="button" data-filter="booking" class="notification-filter bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold">Bookings</button>
+        <button type="button" data-filter="money" class="notification-filter bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold">Payments</button>
+        <button type="button" data-filter="account" class="notification-filter bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-bold">Account</button>
+    </div>
+
+    <div id="notifications-error" class="hidden mb-4 rounded-xl bg-red-50 border border-red-200 text-red-700 p-4"></div>
+    <div id="notifications-loading" class="bg-white border border-gray-100 shadow-sm rounded-2xl p-10 text-center text-gray-500">Loading notifications…</div>
+    <div id="notifications-empty" class="hidden bg-white border border-gray-100 shadow-sm rounded-2xl p-12 text-center">
+        <span class="material-symbols-outlined text-5xl text-gray-300">notifications_off</span>
+        <h2 class="font-bold text-gray-900 mt-3">No notifications here</h2>
+        <p class="text-sm text-gray-500 mt-1">New activity will appear here.</p>
+    </div>
+    <div id="notifications-list" class="hidden bg-white border border-gray-100 shadow-sm rounded-2xl divide-y divide-gray-100 overflow-hidden"></div>
+    <div class="text-center mt-5">
+        <button id="notifications-load-more" type="button" class="hidden bg-white border border-gray-200 px-5 py-2 rounded-xl text-sm font-bold hover:bg-gray-50">Load more</button>
+    </div>
+</section>
+
+<script>
+(() => {
+    const state = { items: [], filter: 'all', cursor: null, loading: false };
+    const list = document.getElementById('notifications-list');
+    const loading = document.getElementById('notifications-loading');
+    const empty = document.getElementById('notifications-empty');
+    const errorBox = document.getElementById('notifications-error');
+    const loadMore = document.getElementById('notifications-load-more');
+
+    const value = (item, camel, snake) => item[camel] ?? item[snake];
+    const typeOf = item => value(item, 'type', 'type') || '';
+    const isRead = item => Boolean(value(item, 'isRead', 'is_read'));
+    const idOf = item => value(item, 'id', 'id');
+    const category = type => {
+        const canonical = type.replaceAll('_', '.');
+        if (canonical.startsWith('booking.') || canonical.startsWith('review.') || canonical === 'new.review') return 'booking';
+        if (canonical.startsWith('payment.') || canonical.startsWith('refund.') || canonical.startsWith('payout.') || canonical === 'escrow.released' || canonical === 'discount.voucher' || canonical === 'voucher.issued') return 'money';
+        return 'account';
+    };
+    const icon = type => {
+        if (type === 'message.received') return 'chat';
+        if (type.startsWith('payment.') || type.startsWith('refund.') || type.startsWith('payout.')) return 'payments';
+        if (type.startsWith('review.')) return 'star';
+        if (type.includes('cancel') || type.includes('declined') || type.includes('failed') || type.includes('rejected')) return 'error';
+        if (type.includes('confirmed') || type.includes('completed') || type.includes('approved')) return 'check_circle';
+        if (type.startsWith('guide.') || type.startsWith('system.')) return 'verified';
+        return 'notifications_active';
+    };
+    const timeAgo = raw => {
+        if (!raw) return '';
+        const date = new Date(raw);
+        if (Number.isNaN(date.getTime())) return '';
+        const seconds = Math.max(0, Math.floor((Date.now() - date.getTime()) / 1000));
+        if (seconds < 60) return 'Just now';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+        if (seconds < 604800) return `${Math.floor(seconds / 86400)}d ago`;
+        return date.toLocaleDateString();
+    };
+    const node = (tag, className, text) => {
+        const element = document.createElement(tag);
+        if (className) element.className = className;
+        if (text != null) element.textContent = text;
+        return element;
+    };
+
+    function render() {
+        const visible = state.items.filter(item => state.filter === 'all' || category(typeOf(item)) === state.filter);
+        list.replaceChildren();
+        visible.forEach(item => {
+            const type = typeOf(item);
+            const row = node('article', `relative flex gap-4 p-5 hover:bg-gray-50 transition-colors ${isRead(item) ? '' : 'bg-orange-50/40'}`);
+            if (!isRead(item)) row.appendChild(node('span', 'absolute left-0 inset-y-0 w-1 bg-primary'));
+            const iconWrap = node('div', 'w-11 h-11 shrink-0 rounded-full bg-orange-100 text-primary flex items-center justify-center');
+            iconWrap.appendChild(node('span', 'material-symbols-outlined', icon(type)));
+            row.appendChild(iconWrap);
+            const content = node('div', 'min-w-0 flex-1');
+            content.appendChild(node('h2', 'font-bold text-gray-900', value(item, 'title', 'title')));
+            content.appendChild(node('p', 'text-sm text-gray-600 mt-1', value(item, 'message', 'message')));
+            const meta = node('div', 'flex flex-wrap items-center gap-3 mt-2');
+            meta.appendChild(node('span', 'text-xs text-gray-400', timeAgo(value(item, 'createdAt', 'created_at'))));
+            const actionUrl = item.actionUrl ?? item.action_url ?? item.linkUrl ?? item.link_url;
+            if (actionUrl) {
+                const action = node('a', 'text-xs font-bold text-primary hover:underline', 'Open →');
+                action.href = actionUrl;
+                meta.appendChild(action);
+            }
+            content.appendChild(meta);
+            row.appendChild(content);
+            const remove = node('button', 'shrink-0 w-8 h-8 rounded-full text-gray-400 hover:bg-red-50 hover:text-red-600', '×');
+            remove.type = 'button'; remove.title = 'Delete notification';
+            remove.addEventListener('click', event => { event.stopPropagation(); deleteItem(item); });
+            row.appendChild(remove);
+            if (!isRead(item)) row.addEventListener('click', () => markRead(item));
+            list.appendChild(row);
+        });
+        loading.classList.add('hidden');
+        const hasVisible = visible.length > 0;
+        list.classList.toggle('hidden', !hasVisible);
+        empty.classList.toggle('hidden', hasVisible);
+        loadMore.classList.toggle('hidden', !state.cursor);
+    }
+
+    async function load(append = false) {
+        if (state.loading) return;
+        state.loading = true; errorBox.classList.add('hidden');
+        try {
+            const cursor = append && state.cursor ? `&before=${encodeURIComponent(state.cursor)}` : '';
+            const response = await fetch(`/api/notifications?limit=30${cursor}`, { headers: TripMateNotifications.headers() });
+            if (!response.ok) throw new Error(`Unable to load notifications (${response.status})`);
+            const page = await response.json();
+            state.items = append ? state.items.concat(page.items || []) : (page.items || []);
+            state.cursor = page.nextCursor || null;
+            TripMateNotifications.setUnreadCount(page.unreadCount || 0);
+            render();
+        } catch (error) {
+            loading.classList.add('hidden');
+            errorBox.textContent = error.message;
+            errorBox.classList.remove('hidden');
+        } finally { state.loading = false; }
+    }
+
+    async function markRead(item) {
+        if (isRead(item)) return;
+        const response = await fetch(`/api/notifications/${encodeURIComponent(idOf(item))}/read`, { method: 'PATCH', headers: TripMateNotifications.headers() });
+        if (!response.ok) return;
+        item.is_read = true; item.isRead = true;
+        TripMateNotifications.decrement(); render();
+    }
+    async function deleteItem(item) {
+        const response = await fetch(`/api/notifications/${encodeURIComponent(idOf(item))}`, { method: 'DELETE', headers: TripMateNotifications.headers() });
+        if (!response.ok) return;
+        if (!isRead(item)) TripMateNotifications.decrement();
+        state.items = state.items.filter(value => idOf(value) !== idOf(item)); render();
+    }
+    document.getElementById('notifications-read-all').addEventListener('click', async () => {
+        const response = await fetch('/api/notifications/read-all', { method: 'POST', headers: TripMateNotifications.headers() });
+        if (!response.ok) {
+            const result = await response.json().catch(() => ({}));
+            errorBox.textContent = result.message || 'Could not mark notifications as read.';
+            errorBox.classList.remove('hidden');
+            return;
+        }
+        state.items.forEach(item => { item.is_read = true; item.isRead = true; });
+        TripMateNotifications.setUnreadCount(0); render();
+    });
+    document.querySelectorAll('.notification-filter').forEach(button => button.addEventListener('click', () => {
+        state.filter = button.dataset.filter;
+        document.querySelectorAll('.notification-filter').forEach(item => {
+            const active = item === button;
+            item.classList.toggle('bg-gray-900', active); item.classList.toggle('text-white', active);
+            item.classList.toggle('bg-white', !active); item.classList.toggle('text-gray-600', !active);
+        });
+        render();
+    }));
+    loadMore.addEventListener('click', () => load(true));
+    document.addEventListener('tripmate:notification', event => {
+        state.items.unshift(event.detail); render();
+    });
+    load();
+})();
+</script>

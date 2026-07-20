@@ -35,7 +35,7 @@
             <p class="text-on-surface-variant max-w-sm mb-8">
                 Tap the ♡ heart button on any Guide Profile to save them here for quick access later.
             </p>
-            <a href="/Guide/Index" class="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md">
+            <a href="/Home/Explore" class="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90 transition-all shadow-md">
                 Browse Guides
             </a>
         </div>
@@ -69,7 +69,19 @@
                         </template>
                         <template x-if="!guide.coverPhotoUrl">
                             <div class="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary-container to-surface-variant">
-                                <span class="material-symbols-outlined text-6xl text-primary/40">face_4</span>
+                                <span class="material-symbols-outlined text-6xl text-primary/40">landscape</span>
+                            </div>
+                        </template>
+                        
+                        <!-- Avatar Overlay -->
+                        <template x-if="guide.avatarUrl">
+                            <div class="absolute bottom-4 left-4 w-16 h-16 rounded-full border-4 border-white shadow-lg overflow-hidden z-20">
+                                <img :src="guide.avatarUrl" :alt="guide.name" class="w-full h-full object-cover" />
+                            </div>
+                        </template>
+                        <template x-if="!guide.avatarUrl">
+                            <div class="absolute bottom-4 left-4 w-16 h-16 rounded-full border-4 border-white shadow-lg bg-surface flex items-center justify-center z-20">
+                                <span class="material-symbols-outlined text-3xl text-primary/40">face</span>
                             </div>
                         </template>
                     </div>
@@ -110,7 +122,7 @@
         <!-- Browse More CTA -->
         <div x-show="saved.length > 0" class="mt-12 text-center">
             <p class="text-on-surface-variant mb-4">Looking for more guides?</p>
-            <a href="/Guide/Index" class="border-2 border-primary text-primary px-8 py-3 rounded-xl font-bold hover:bg-primary-container transition-all">
+            <a href="/Home/Explore" class="border-2 border-primary text-primary px-8 py-3 rounded-xl font-bold hover:bg-primary-container transition-all">
                 Browse All Guides
             </a>
         </div>
@@ -123,25 +135,38 @@
         Alpine.data('savedGuides', () => ({
             saved: [],
 
-            init() {
-                // Đọc danh sách guide đã save từ localStorage
-                const raw = localStorage.getItem('savedGuides');
-                this.saved = raw ? JSON.parse(raw) : [];
-
-                // Sort by savedAt mới nhất trước
-                this.saved.sort((a, b) => new Date(b.savedAt) - new Date(a.savedAt));
+            async init() {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=/Traveler/Saved';
+                    return;
+                }
+                try {
+                    const res = await fetch('/Traveler/GetSavedGuidesAjax', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) {
+                        this.saved = await res.json();
+                    }
+                } catch(e) { console.error(e); }
             },
 
-            removeGuide(guideId) {
-                this.saved = this.saved.filter(g => g.guideId !== guideId);
-                localStorage.setItem('savedGuides', JSON.stringify(this.saved));
+            async removeGuide(guideId) {
+                const token = localStorage.getItem('accessToken');
+                if (!token) return;
+                try {
+                    const res = await fetch('/Traveler/ToggleSaveGuideAjax/' + guideId, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) {
+                        this.saved = this.saved.filter(g => g.guideId !== guideId);
+                    }
+                } catch(e) { console.error(e); }
             },
 
             clearAll() {
-                if (confirm('Remove all saved guides?')) {
-                    this.saved = [];
-                    localStorage.removeItem('savedGuides');
-                }
+                alert('Clear all is currently disabled. Please remove guides individually.');
             },
 
             formatDate(isoString) {

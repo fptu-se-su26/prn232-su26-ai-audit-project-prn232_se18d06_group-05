@@ -6,6 +6,10 @@
     <title>@ViewData["Title"] - TripMate</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+    <script src="/notifications.js"></script>
+    <script src="/chat-realtime.js"></script>
+    <script src="/message-badge.js"></script>
     
     <!-- SweetAlert2 -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
@@ -41,18 +45,7 @@
     </script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .hero-gradient {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0) 50%, rgba(0,0,0,0.5) 100%);
-        }
-        /* Fix SweetAlert layout issues */
-        .swal2-container {
-            z-index: 9999 !important;
-            align-items: flex-start !important;
-            padding-top: 15vh !important;
-        }
-        .swal-top-fix {
-            margin: 0 auto !important;
-        }
+        /* End of custom layout styles */
         .tonal-elevation {
             box-shadow: 0 12px 30px -10px rgba(255, 122, 0, 0.12), 0 4px 10px -5px rgba(0, 0, 0, 0.04);
         }
@@ -65,8 +58,8 @@
             animation: pageFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
         @@keyframes pageFadeIn {
-            from { opacity: 0; transform: translateY(15px); }
-            to { opacity: 1; transform: translateY(0); }
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         /* Global scrollbar styling for smoothness */
         ::-webkit-scrollbar { width: 8px; }
@@ -75,6 +68,8 @@
         ::-webkit-scrollbar-thumb:hover { background: #ff7a00; }
     </style>
 </head>
+@* in Views/Shared/_Layout.cshtml, before </body> *@
+@RenderSection("Scripts", required: false)
 <body class="bg-background text-on-background page-enter" data-requires-auth="@(ViewBag.RequiresAuth == true ? "true" : "false")">
     <!-- TopNavBar -->
     <header class="sticky top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm border-b border-outline-variant/30">
@@ -87,18 +82,13 @@
             </div>
             <nav id="mainNav" class="hidden md:flex items-center gap-6 text-sm font-bold flex-1 ml-8">
                 <!-- Search Bar in Header -->
-                <form action="/Home/Explore" method="get" class="relative group hidden lg:flex bg-surface-variant rounded-full border border-outline-variant/30 items-center transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary shadow-sm hover:shadow-md bg-white">
-                    <div class="flex items-center px-4 py-2 border-r border-outline-variant/30 relative">
+                <form action="/Home/Explore" method="get" class="relative group hidden lg:flex bg-white rounded-full border border-outline-variant/30 items-center transition-all focus-within:ring-2 focus-within:ring-primary focus-within:border-primary shadow-sm hover:shadow-md">
+                    <div class="flex items-center px-4 py-2 relative">
                         <span class="material-symbols-outlined text-on-surface-variant text-lg mr-2">search</span>
-                        <input type="text" id="destination-input" name="destination" autocomplete="off" placeholder="Where to?" class="bg-transparent text-on-surface text-sm w-32 focus:outline-none border-none p-0 placeholder-on-surface-variant/70">
-                        
+                        <input type="text" id="destination-input" name="search" autocomplete="off" placeholder="Guides, tours, destinations..." class="bg-transparent text-on-surface text-sm w-52 focus:outline-none border-none p-0 placeholder-on-surface-variant/70">
                         <!-- Autocomplete Dropdown -->
-                        <div id="autocomplete-dropdown" class="absolute top-[120%] left-0 w-72 bg-white border border-outline-variant/30 rounded-xl shadow-xl hidden z-[100] max-h-60 overflow-y-auto">
+                        <div id="autocomplete-dropdown" class="absolute top-[120%] left-0 w-80 bg-white border border-outline-variant/30 rounded-xl shadow-xl hidden z-[100] max-h-72 overflow-y-auto">
                         </div>
-                    </div>
-                    <div class="flex items-center px-4 py-2">
-                        <span class="material-symbols-outlined text-on-surface-variant text-lg mr-2">calendar_month</span>
-                        <input type="text" name="when" placeholder="When?" class="date-picker bg-transparent text-on-surface text-sm w-40 focus:outline-none border-none p-0 placeholder-on-surface-variant/70 cursor-pointer">
                     </div>
                     <button type="submit" class="bg-primary hover:bg-primary/90 text-white px-6 py-2 h-full font-bold transition-all shadow-md rounded-r-full">Search</button>
                 </form>
@@ -107,14 +97,19 @@
                     <span class="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>
                     AI Matchmaker
                 </a>
+                <a class="text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 whitespace-nowrap" href="/Traveler/CreateTripRequest">
+                    <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                    Post a Trip Request
+                </a>
             </nav>
             <div id="headerTools" class="flex items-center gap-6">
                 <a class="text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap font-bold" href="/Home/BecomeAGuide">Become a guide</a>
                 
                 <div class="flex items-center gap-4">
-                    <button class="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center">
+                    <a id="notificationLink" href="/Traveler/Notifications" class="relative text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center" aria-label="Notifications">
                         <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
-                    </button>
+                        <span data-notification-count class="hidden absolute -top-3 -right-3 min-w-5 h-5 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full items-center justify-center"></span>
+                    </a>
                     <div id="savedContainer" class="flex items-center justify-center"></div>
                     <div id="userSection" class="ml-2">
                         <!-- Will be populated by JavaScript -->
@@ -296,115 +291,122 @@
             }
         })();
 
-        // Initialize Flatpickr for date ranges globally
+        // Initialize smart local fuzzy search
         document.addEventListener('DOMContentLoaded', function() {
-            flatpickr(".date-picker", {
-                mode: "range",
-                dateFormat: "M j",
-                minDate: "today"
-            });
+            // City alias map: canonical DB value → all search aliases
+            const CITY_DATA = [
+                { value: 'Hanoi',     label: 'Hanoi',     aliases: ['hanoi','ha noi','hà nội','ha nội','hn'] },
+                { value: 'Danang',    label: 'Da Nang',   aliases: ['danang','da nang','đà nẵng','da nẵng','đà nang','dn'] },
+                { value: 'Hoi An',    label: 'Hoi An',    aliases: ['hoian','hoi an','hội an','hoi-an'] },
+                { value: 'Ho Chi Minh', label: 'Ho Chi Minh City', aliases: ['hcm','ho chi minh','hcmc','saigon','sài gòn','sai gon','sg'] },
+                { value: 'Sapa',      label: 'Sapa',      aliases: ['sapa','sa pa','sả pa'] },
+                { value: 'Nha Trang', label: 'Nha Trang', aliases: ['nhatrang','nha trang','nt'] },
+                { value: 'Da Lat',    label: 'Da Lat',    aliases: ['dalat','da lat','đà lạt','da lạt'] },
+                { value: 'Hue',       label: 'Hue',       aliases: ['hue','huế','thua thien','thừa thiên'] },
+                { value: 'Phu Quoc',  label: 'Phu Quoc',  aliases: ['phuquoc','phu quoc','phú quốc'] },
+                { value: 'Ha Long',   label: 'Ha Long Bay', aliases: ['halong','ha long','hạ long','vịnh hạ long'] },
+            ];
 
-            // Nominatim Autocomplete Logic
+            const TOUR_KEYWORDS = [
+                { label: '🍜 Street Food Tours',   value: 'street food' },
+                { label: '📸 Photography Tours',   value: 'photography' },
+                { label: '🏯 Culture & History',   value: 'culture' },
+                { label: '🌿 Adventure & Trekking', value: 'adventure' },
+                { label: '🛵 Motorbike Tours',      value: 'motorbike' },
+            ];
+
             const destInput = document.getElementById('destination-input');
             const dropdown = document.getElementById('autocomplete-dropdown');
-            let timeoutId;
+
+            function normalize(str) {
+                return str.toLowerCase().trim()
+                    .replace(/[áàảãạăắặẳẵặâấầẩẫậ]/g, 'a')
+                    .replace(/[éèẻẽẹêếềểễệ]/g, 'e')
+                    .replace(/[íìỉĩị]/g, 'i')
+                    .replace(/[óòỏõọôốồổỗộơớờởỡợ]/g, 'o')
+                    .replace(/[úùủũụưứừửữự]/g, 'u')
+                    .replace(/[ýỳỷỹỵ]/g, 'y')
+                    .replace(/[đ]/g, 'd');
+            }
+
+            function renderDropdown(query) {
+                const norm = normalize(query);
+                dropdown.innerHTML = '';
+
+                if (norm.length < 1) {
+                    dropdown.classList.add('hidden');
+                    return;
+                }
+
+                let cityResults = CITY_DATA.filter(c =>
+                    c.aliases.some(a => normalize(a).includes(norm)) ||
+                    normalize(c.label).includes(norm)
+                ).slice(0, 5);
+
+                let tourResults = TOUR_KEYWORDS.filter(t =>
+                    normalize(t.value).includes(norm) || normalize(t.label).includes(norm)
+                ).slice(0, 3);
+
+                if (cityResults.length === 0 && tourResults.length === 0) {
+                    // Generic suggestion
+                    cityResults = CITY_DATA.slice(0, 4);
+                }
+
+                if (cityResults.length > 0) {
+                    const header = document.createElement('div');
+                    header.className = 'px-4 py-2 text-xs font-bold text-on-surface-variant uppercase tracking-wider bg-surface-variant/50';
+                    header.textContent = '📍 Destinations';
+                    dropdown.appendChild(header);
+
+                    cityResults.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'px-4 py-3 hover:bg-primary-container/40 cursor-pointer text-sm text-on-surface flex items-center gap-3 transition-colors';
+                        div.innerHTML = `<span class="material-symbols-outlined text-primary text-sm shrink-0">location_on</span><div><span class="font-bold">${item.label}</span><span class="text-xs text-on-surface-variant ml-1">Vietnam</span></div>`;
+                        div.addEventListener('click', () => {
+                            destInput.value = item.value;
+                            dropdown.classList.add('hidden');
+                            destInput.closest('form').submit();
+                        });
+                        dropdown.appendChild(div);
+                    });
+                }
+
+                if (tourResults.length > 0) {
+                    const header2 = document.createElement('div');
+                    header2.className = 'px-4 py-2 text-xs font-bold text-on-surface-variant uppercase tracking-wider bg-surface-variant/50 border-t border-outline-variant/20';
+                    header2.textContent = '🎯 Experiences';
+                    dropdown.appendChild(header2);
+
+                    tourResults.forEach(item => {
+                        const div = document.createElement('div');
+                        div.className = 'px-4 py-3 hover:bg-primary-container/40 cursor-pointer text-sm text-on-surface flex items-center gap-3 transition-colors';
+                        div.innerHTML = `<span class="material-symbols-outlined text-on-surface-variant text-sm shrink-0">explore</span><span class="font-medium">${item.label}</span>`;
+                        div.addEventListener('click', () => {
+                            destInput.value = item.value;
+                            dropdown.classList.add('hidden');
+                            destInput.closest('form').submit();
+                        });
+                        dropdown.appendChild(div);
+                    });
+                }
+
+                dropdown.classList.remove('hidden');
+            }
 
             if (destInput && dropdown) {
                 destInput.addEventListener('input', function() {
-                    clearTimeout(timeoutId);
-                    const query = this.value.trim();
-                    
-                    if (query.length < 2) {
-                        dropdown.classList.add('hidden');
-                        return;
-                    }
-
-                    timeoutId = setTimeout(() => {
-                        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&countrycodes=vn&addressdetails=1&limit=5&accept-language=en`)
-                            .then(res => res.json())
-                            .then(data => {
-                                dropdown.innerHTML = '';
-                                
-                                // Default popular destinations in VN to pad the results
-                                const defaultDests = [
-                                    { name: "Hanoi", display_name: "Hanoi, Vietnam" },
-                                    { name: "Da Nang", display_name: "Da Nang, Vietnam" },
-                                    { name: "Hoi An", display_name: "Hoi An, Quang Nam, Vietnam" },
-                                    { name: "Da Lat", display_name: "Da Lat, Lam Dong, Vietnam" },
-                                    { name: "Phu Quoc", display_name: "Phu Quoc, Kien Giang, Vietnam" },
-                                    { name: "Sapa", display_name: "Sapa, Lao Cai, Vietnam" },
-                                    { name: "Nha Trang", display_name: "Nha Trang, Khanh Hoa, Vietnam" },
-                                    { name: "Ha Long", display_name: "Ha Long Bay, Quang Ninh, Vietnam" }
-                                ];
-
-                                let results = [];
-                                if (data && data.length > 0) {
-                                    results = data.map(item => ({
-                                        name: item.address?.city || item.address?.town || item.address?.state || item.name,
-                                        display_name: item.display_name
-                                    }));
-                                }
-                                
-                                // Pad with defaults if less than 5
-                                if (results.length < 5) {
-                                    // Filter out defaults that might already match the user's query or existing results
-                                    const availableDefaults = defaultDests.filter(d => 
-                                        d.name.toLowerCase().includes(query.toLowerCase()) &&
-                                        !results.some(r => r.name.toLowerCase() === d.name.toLowerCase())
-                                    );
-                                    
-                                    // If we still need more, just add random defaults to ensure exactly 5
-                                    let i = 0;
-                                    while (results.length < 5 && i < availableDefaults.length) {
-                                        results.push(availableDefaults[i]);
-                                        i++;
-                                    }
-                                    
-                                    // If still less than 5, force fill from remaining defaults
-                                    let j = 0;
-                                    while (results.length < 5 && j < defaultDests.length) {
-                                        if (!results.some(r => r.name === defaultDests[j].name)) {
-                                            results.push(defaultDests[j]);
-                                        }
-                                        j++;
-                                    }
-                                }
-
-                                // Slice exactly 5
-                                results.slice(0, 5).forEach(item => {
-                                    const div = document.createElement('div');
-                                    div.className = 'px-4 py-3 hover:bg-surface-variant cursor-pointer text-sm text-on-surface border-b border-outline-variant/10 last:border-0 flex items-start gap-2';
-                                    
-                                    div.innerHTML = `
-                                        <span class="material-symbols-outlined text-primary text-sm mt-0.5 shrink-0">location_on</span> 
-                                        <div class="flex flex-col">
-                                            <span class="font-bold">${item.name}</span>
-                                            <span class="text-xs text-on-surface-variant truncate w-48">${item.display_name}</span>
-                                        </div>
-                                    `;
-                                    div.addEventListener('click', () => {
-                                        destInput.value = item.name;
-                                        dropdown.classList.add('hidden');
-                                        // Auto-submit the form for a better UX
-                                        destInput.closest('form').submit();
-                                    });
-                                    dropdown.appendChild(div);
-                                });
-                                
-                                dropdown.classList.remove('hidden');
-                            })
-                            .catch(err => {
-                                console.error('Nominatim error:', err);
-                                dropdown.classList.add('hidden');
-                            });
-                    }, 400); // debounce
+                    renderDropdown(this.value.trim());
                 });
-
-                // Close dropdown when clicking outside
+                destInput.addEventListener('focus', function() {
+                    if (this.value.trim().length > 0) renderDropdown(this.value.trim());
+                });
                 document.addEventListener('click', function(e) {
                     if (!destInput.contains(e.target) && !dropdown.contains(e.target)) {
                         dropdown.classList.add('hidden');
                     }
+                });
+                destInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') { dropdown.classList.add('hidden'); }
                 });
             }
         });

@@ -118,7 +118,7 @@ namespace TripMate_WebAPI.Services
         {
             try
             {
-                var url = $"{_supabaseUrl}/rest/v1/bookings?select=status,total_amount,platform_fee,guide_earnings,escrow_released";
+                var url = $"{_supabaseUrl}/rest/v1/bookings?select=status,total_amount,platform_fee,guide_earnings";
                 var request = BuildAdminRequest(HttpMethod.Get, url);
                 var response = await _http.SendAsync(request);
                 var content = await response.Content.ReadAsStringAsync();
@@ -144,12 +144,12 @@ namespace TripMate_WebAPI.Services
                         platformRevenue += b.PlatformFee;
                     }
 
-                    if (b.Status == 1 && !b.EscrowReleased) // Confirmed & Escrow held
+                    if (b.Status == 1) // Confirmed & Escrow held
                     {
                         escrowHeld += b.TotalAmount;
                     }
 
-                    if (b.Status == 2 && !b.EscrowReleased) // Completed but not yet released (pending disbursement to guide)
+                    if (b.Status == 2) // Completed (pending disbursement to guide)
                     {
                         pendingDisbursement += b.GuideEarnings;
                     }
@@ -173,10 +173,14 @@ namespace TripMate_WebAPI.Services
         // Bulk Release Escrow
         public async Task<bool> ReleaseEscrowBulkAsync(List<string> bookingIds)
         {
+            string? activeBookingId = null;
+            string? activeGuideUserId = null;
             try
             {
                 foreach (var id in bookingIds)
                 {
+                    activeBookingId = id;
+                    activeGuideUserId = null;
                     // 1. Get booking info
                     var url = $"{_supabaseUrl}/rest/v1/bookings?id=eq.{id}&select=*";
                     var request = BuildAdminRequest(HttpMethod.Get, url);
@@ -186,11 +190,11 @@ namespace TripMate_WebAPI.Services
 
                     var rows = JsonSerializer.Deserialize<List<BookingKpiRow>>(content, _json);
                     var b = rows?.FirstOrDefault();
-                    if (b == null || b.EscrowReleased) continue;
+                    if (b == null) continue;
 
-                    // 2. Update booking: escrow_released = true, status = 2 (Completed) if it was Confirmed
+                    // 2. Update booking: status = 2 (Completed) if it was Confirmed
                     var newStatus = b.Status == 1 ? 2 : b.Status;
-                    var updates = new { escrow_released = true, status = newStatus, updated_at = DateTime.UtcNow };
+                    var updates = new { status = newStatus, updated_at = DateTime.UtcNow };
                     var patchReq = BuildAdminRequest(HttpMethod.Patch, $"{_supabaseUrl}/rest/v1/bookings?id=eq.{id}");
                     patchReq.Content = new StringContent(JsonSerializer.Serialize(updates), Encoding.UTF8, "application/json");
                     var patchRes = await _http.SendAsync(patchReq);
@@ -211,13 +215,8 @@ namespace TripMate_WebAPI.Services
                     await _http.SendAsync(feeReq);
 
                     // B) guide earnings entry (EARNING)
-                    // Get guide user_id
-                    var guideUserUrl = $"{_supabaseUrl}/rest/v1/guide_profiles?id=eq.{b.GuideProfileId}&select=user_id";
-                    var guideUserReq = BuildAdminRequest(HttpMethod.Get, guideUserUrl);
-                    var guideUserRes = await _http.SendAsync(guideUserReq);
-                    var guideUserContent = await guideUserRes.Content.ReadAsStringAsync();
-                    using var guideDoc = JsonDocument.Parse(guideUserContent);
-                    var guideUserId = guideDoc.RootElement.EnumerateArray().FirstOrDefault().GetProperty("user_id").GetString();
+                    var guideUserId = await GetGuideUserIdAsync(b.GuideProfileId);
+                    activeGuideUserId = guideUserId;
 
                     if (!string.IsNullOrEmpty(guideUserId))
                     {
@@ -233,8 +232,44 @@ namespace TripMate_WebAPI.Services
                         earnReq.Content = new StringContent(JsonSerializer.Serialize(earningLedger), Encoding.UTF8, "application/json");
                         await _http.SendAsync(earnReq);
 
-                        // Trigger notifications
-                        await _notif.SendAsync(guideUserId, "escrow_released", "Your escrow funds have been released!", $"The amount of {b.GuideEarnings:N0}₫ has been paid.", new { bookingId = id });
+                        await _notif.SendAsync(
+                            guideUserId,
+                            NotificationTypes.PayoutReleased,
+                            "Payout released",
+                            $"{b.GuideEarnings:N0}₫ from booking {id} has been released.",
+                            new { bookingId = id, amount = b.GuideEarnings },
+                            "/Guide/Earnings",
+                            $"payout-released:{id}",
+                            sendEmail: true);
+
+                        await _notif.SendAsync(
+                            guideUserId,
+                            NotificationTypes.BookingCompleted,
+                            "Booking completed",
+                            $"Booking {id} is now complete.",
+                            new { bookingId = id },
+                            "/Guide/Bookings",
+                            $"booking-completed:{id}:guide");
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(b.TravelerId))
+                    {
+                        await _notif.SendAsync(
+                            b.TravelerId,
+                            NotificationTypes.BookingCompleted,
+                            "Trip completed",
+                            "Your trip is complete. We hope you had a wonderful experience.",
+                            new { bookingId = id },
+                            $"/Traveler/BookingDetails/{id}",
+                            $"booking-completed:{id}:traveler");
+                        await _notif.SendAsync(
+                            b.TravelerId,
+                            NotificationTypes.ReviewRequested,
+                            "How was your trip?",
+                            "Share a review to help your guide and other travelers.",
+                            new { bookingId = id },
+                            $"/Traveler/Review/{id}",
+                            $"review-request:{id}");
                     }
                 }
                 return true;
@@ -242,6 +277,26 @@ namespace TripMate_WebAPI.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error releasing escrow bulk");
+                if (!string.IsNullOrWhiteSpace(activeGuideUserId))
+                {
+                    await _notif.SendAsync(
+                        activeGuideUserId,
+                        NotificationTypes.PayoutFailed,
+                        "Payout needs attention",
+                        $"We could not release the payout for booking {activeBookingId}. Support has been notified.",
+                        new { bookingId = activeBookingId },
+                        "/Guide/Support",
+                        $"payout-failed:{activeBookingId}",
+                        sendEmail: true);
+                }
+                await _notif.SendToRoleAsync(
+                    "admin",
+                    NotificationTypes.PayoutFailed,
+                    "Payout release failed",
+                    $"Escrow release failed for booking {activeBookingId}.",
+                    new { bookingId = activeBookingId },
+                    "/Admin/Escrow",
+                    $"payout-failed:{activeBookingId}:admin");
                 return false;
             }
         }
@@ -286,6 +341,13 @@ namespace TripMate_WebAPI.Services
         {
             try
             {
+                var bookingRequest = BuildAdminRequest(HttpMethod.Get, $"{_supabaseUrl}/rest/v1/bookings?id=eq.{bookingId}&select=*");
+                var bookingResponse = await _http.SendAsync(bookingRequest);
+                var bookingContent = await bookingResponse.Content.ReadAsStringAsync();
+                EnsureSuccess(bookingResponse, bookingContent);
+                var booking = JsonSerializer.Deserialize<List<BookingKpiRow>>(bookingContent, _json)?.FirstOrDefault();
+                if (booking is null) return false;
+
                 var status = approve ? 3 : 1; // 3 = Cancelled, 1 = Restored back to Confirmed
                 var updates = approve 
                     ? (object)new { status = status, updated_at = DateTime.UtcNow }
@@ -297,10 +359,44 @@ namespace TripMate_WebAPI.Services
                 var patchRes = await _http.SendAsync(patchReq);
                 EnsureSuccess(patchRes, await patchRes.Content.ReadAsStringAsync());
 
-                // Trigger refund ledger entries if approved and escrow was already released or held
+                var guideUserId = await GetGuideUserIdAsync(booking.GuideProfileId);
                 if (approve)
                 {
-                    // A refund ledger record can be logged
+                    if (!string.IsNullOrWhiteSpace(booking.TravelerId))
+                    {
+                        await _notif.SendAsync(
+                            booking.TravelerId,
+                            NotificationTypes.RefundProcessed,
+                            "Cancellation and refund approved",
+                            $"The cancellation for booking {bookingId} was approved and the refund was recorded.",
+                            new { bookingId, amount = booking.TotalAmount },
+                            $"/Traveler/BookingDetails/{bookingId}",
+                            $"refund-processed:{bookingId}",
+                            sendEmail: true);
+                    }
+                    if (!string.IsNullOrWhiteSpace(guideUserId))
+                    {
+                        await _notif.SendAsync(
+                            guideUserId,
+                            NotificationTypes.BookingCancelled,
+                            "Cancellation approved",
+                            $"Booking {bookingId} has been cancelled by the platform.",
+                            new { bookingId },
+                            "/Guide/Bookings",
+                            $"booking-cancelled:{bookingId}:admin-approved",
+                            sendEmail: true);
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(booking.TravelerId))
+                {
+                    await _notif.SendAsync(
+                        booking.TravelerId,
+                        NotificationTypes.BookingConfirmed,
+                        "Cancellation request declined",
+                        $"Booking {bookingId} remains confirmed.",
+                        new { bookingId },
+                        $"/Traveler/BookingDetails/{bookingId}",
+                        $"cancellation-declined:{bookingId}");
                 }
 
                 return true;
@@ -310,6 +406,21 @@ namespace TripMate_WebAPI.Services
                 _logger.LogError(ex, "Error resolving cancellation request");
                 return false;
             }
+        }
+
+        private async Task<string?> GetGuideUserIdAsync(string? guideProfileId)
+        {
+            if (string.IsNullOrWhiteSpace(guideProfileId)) return null;
+            var url = $"{_supabaseUrl}/rest/v1/guide_profiles?id=eq.{guideProfileId}&select=user_id&limit=1";
+            var request = BuildAdminRequest(HttpMethod.Get, url);
+            var response = await _http.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+            EnsureSuccess(response, content);
+            using var document = JsonDocument.Parse(content);
+            var row = document.RootElement.EnumerateArray().FirstOrDefault();
+            return row.ValueKind == JsonValueKind.Object && row.TryGetProperty("user_id", out var userId)
+                ? userId.GetString()
+                : null;
         }
 
         // Direct SQL/Supabase role update
@@ -640,7 +751,6 @@ namespace TripMate_WebAPI.Services
         [JsonPropertyName("total_amount")] public decimal TotalAmount { get; set; }
         [JsonPropertyName("platform_fee")] public decimal PlatformFee { get; set; }
         [JsonPropertyName("guide_earnings")] public decimal GuideEarnings { get; set; }
-        [JsonPropertyName("escrow_released")] public bool EscrowReleased { get; set; }
     }
 
     public class AdminReviewRow
@@ -691,8 +801,6 @@ namespace TripMate_WebAPI.Services
         [JsonPropertyName("platform_fee")] public decimal PlatformFee { get; set; }
         [JsonPropertyName("guide_earnings")] public decimal GuideEarnings { get; set; }
         [JsonPropertyName("status")] public int Status { get; set; }
-        [JsonPropertyName("escrow_released")] public bool EscrowReleased { get; set; }
-        [JsonPropertyName("cancel_reason")] public string? CancelReason { get; set; }
         [JsonPropertyName("created_at")] public DateTime CreatedAt { get; set; }
         [JsonPropertyName("profiles")] public ProfileData? Traveler { get; set; }
         [JsonPropertyName("experience_packages")] public BookingPackageJoined? Package { get; set; }
