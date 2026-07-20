@@ -1,82 +1,16 @@
-@using TripMate_WebAPI.DTOs.Tour.Responses
 @{
     ViewData["Title"] = "Quản lý Gói Tour";
     ViewData["ActivePage"] = "MyTours";
     Layout = "_GuideLayout";
-    
-    var tours = ViewBag.Tours as IEnumerable<MyTourDashboardDto>;
-    var activeCount = tours?.Count(t => t.IsActive) ?? 0;
 }
 
-<script>
-    function myToursApp() {
-        return {
-            filter: 'all',
-            searchQuery: '',
-            openDropdown: null,
-            
-            async toggleStatus(tourId) {
-                this.openDropdown = null;
-                if(!confirm("Bạn có chắc muốn thay đổi trạng thái gói tour này?")) return;
-                
-                try {
-                    const res = await fetch(`/ToggleTourStatus/${tourId}`, { method: 'PATCH' });
-                    const result = await res.json();
-                    if (result.success) {
-                        if (window.Turbo) Turbo.visit(window.location.href); else window.location.reload();
-                    } else {
-                        alert(result.message);
-                    }
-                } catch(e) {
-                    alert("Lỗi hệ thống");
-                }
-            },
-            
-            async deleteTour(tourId) {
-                this.openDropdown = null;
-                if(!confirm("Bạn có chắc muốn XÓA VĨNH VIỄN gói tour này?")) return;
-                
-                try {
-                    const res = await fetch(`/DeleteTour/${tourId}`, { method: 'DELETE' });
-                    const result = await res.json();
-                    if (result.success) {
-                        if (window.Turbo) Turbo.visit(window.location.href); else window.location.reload();
-                    } else {
-                        alert(result.message);
-                    }
-                } catch(e) {
-                    alert("Lỗi hệ thống");
-                }
-            },
-            
-            async duplicateTour(tourId) {
-                this.openDropdown = null;
-                if(!confirm("Bạn muốn nhân bản gói tour này? Bản sao sẽ ở trạng thái Ẩn.")) return;
-                
-                try {
-                    const res = await fetch(`/DuplicateTour/${tourId}`, { method: 'POST' });
-                    const result = await res.json();
-                    if (result.success) {
-                        if (window.Turbo) Turbo.visit(window.location.href); else window.location.reload();
-                    } else {
-                        alert(result.message);
-                    }
-                } catch(e) {
-                    alert("Lỗi hệ thống");
-                }
-            }
-        };
-    }
-</script>
-
-<div x-data="myToursApp()" @@click.outside="openDropdown = null">
+<div x-data="myToursComponent()">
     <!-- Header Area -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
             <div class="flex items-center gap-3 mb-1">
                 <h2 class="text-3xl font-bold text-gray-900">My Tours</h2>
-                <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-bold border border-blue-100">
-                    @activeCount/10 gói đang dùng
+                <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-bold border border-blue-100" x-text="`${activeCount}/${tours.length} gói đang hoạt động`">
                 </span>
             </div>
             <p class="text-gray-500 text-sm">Quản lý và tùy chỉnh các trải nghiệm bạn cung cấp.</p>
@@ -87,136 +21,200 @@
     </div>
 
     <!-- Filters Bar -->
-    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col lg:flex-row gap-4 mb-8">
+    <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 mb-8">
         <div class="relative flex-grow">
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
             <input type="text" x-model="searchQuery" placeholder="Tìm kiếm theo tên gói..." 
                    class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
         </div>
-        <div class="flex bg-gray-50 p-1 rounded-xl border border-gray-200 overflow-x-auto hide-scrollbar">
-            <button @@click="filter = 'all'" :class="{'bg-white shadow-sm font-bold text-gray-900': filter === 'all', 'text-gray-500 font-medium hover:text-gray-900': filter !== 'all'}" class="px-6 py-2 rounded-lg text-sm transition-all whitespace-nowrap">
+        <div class="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
+            <button @@click="filter = 'all'" :class="{'bg-white shadow-sm font-bold text-gray-900': filter === 'all', 'text-gray-500 font-medium': filter !== 'all'}" class="px-6 py-2 rounded-lg text-sm transition-all">
                 Tất cả
             </button>
-            <button @@click="filter = 'active'" :class="{'bg-white shadow-sm font-bold text-gray-900': filter === 'active', 'text-gray-500 font-medium hover:text-gray-900': filter !== 'active'}" class="px-6 py-2 rounded-lg text-sm transition-all whitespace-nowrap">
+            <button @@click="filter = 'active'" :class="{'bg-white shadow-sm font-bold text-gray-900': filter === 'active', 'text-gray-500 font-medium': filter !== 'active'}" class="px-6 py-2 rounded-lg text-sm transition-all">
                 Đang hoạt động
             </button>
-            <button @@click="filter = 'hidden'" :class="{'bg-white shadow-sm font-bold text-gray-900': filter === 'hidden', 'text-gray-500 font-medium hover:text-gray-900': filter !== 'hidden'}" class="px-6 py-2 rounded-lg text-sm transition-all whitespace-nowrap">
+            <button @@click="filter = 'hidden'" :class="{'bg-white shadow-sm font-bold text-gray-900': filter === 'hidden', 'text-gray-500 font-medium': filter !== 'hidden'}" class="px-6 py-2 rounded-lg text-sm transition-all">
                 Đã ẩn
             </button>
         </div>
     </div>
 
-    <!-- Tour Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        @if (tours != null)
-        {
-            foreach (var tour in tours)
-            {
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 transition-all hover:shadow-lg relative flex flex-col group"
-                     x-show="(filter === 'all' || (filter === 'active' && @(tour.IsActive ? "true" : "false")) || (filter === 'hidden' && @(!tour.IsActive ? "true" : "false"))) && ('@(tour.Name)'.toLowerCase().includes(searchQuery.toLowerCase()))"
-                     :class="{'opacity-60 grayscale-[30%]': !@(tour.IsActive ? "true" : "false")}">
-                    
-                    <!-- Image Header -->
-                    <div class="h-48 w-full relative overflow-hidden rounded-t-2xl">
-                        <img src="@tour.ImageUrl" alt="@tour.Name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                        <!-- Gradient Overlay -->
-                        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20"></div>
-                        
-                        <!-- Status Badge -->
-                        <div class="absolute top-4 left-4">
-                            @if (tour.IsActive)
-                            {
-                                <span class="flex items-center gap-1.5 bg-white/90 backdrop-blur-sm text-green-700 px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div> Hoạt động
-                                </span>
-                            }
-                            else
-                            {
-                                <span class="flex items-center gap-1.5 bg-gray-900/80 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm">
-                                    <span class="material-symbols-outlined text-[14px]">visibility_off</span> Đã ẩn
-                                </span>
-                            }
-                        </div>
+    <!-- Tour List -->
+    <div class="space-y-6">
+        <template x-for="tour in filteredTours" :key="tour.id">
+            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 transition-all hover:shadow-md relative overflow-hidden">
+                
+                <div x-show="!tour.isActive" class="absolute inset-0 bg-white/40 backdrop-blur-[1px] z-10 pointer-events-none"></div>
 
-                        <!-- Rating & Bookings Badge -->
-                        <div class="absolute bottom-4 left-4 flex gap-2">
-                            <span class="flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold text-gray-900 shadow-sm">
-                                <span class="material-symbols-outlined text-[14px] text-amber-500" style="font-variation-settings: 'FILL' 1;">star</span>
-                                @tour.Rating
-                            </span>
-                            <span class="flex items-center gap-1 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold text-gray-900 shadow-sm">
-                                <span class="material-symbols-outlined text-[14px] text-blue-500">book_online</span>
-                                @tour.Bookings lượt
-                            </span>
+                <div class="flex flex-col md:flex-row justify-between gap-6 relative z-20">
+                    <div class="flex-grow">
+                        <div class="flex items-center gap-3 mb-2">
+                            <h3 class="text-xl font-bold text-gray-900" x-text="tour.title"></h3>
+                            <template x-if="tour.isActive">
+                                <span class="flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-0.5 rounded-md text-xs font-bold border border-green-200">
+                                    <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div> Hoạt động
+                                </span>
+                            </template>
+                            <template x-if="!tour.isActive">
+                                <span class="flex items-center gap-1 bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-md text-xs font-bold border border-gray-200">
+                                    Đã ẩn
+                                </span>
+                            </template>
+                        </div>
+                        
+                        <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-600 mb-4">
+                            <div class="flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[18px] text-gray-400">schedule</span>
+                                <span x-text="`${tour.durationHours} giờ`"></span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[18px] text-gray-400">group</span>
+                                <span x-text="`Tối đa ${tour.maxGroupSize} người`"></span>
+                            </div>
+                            <div class="flex items-center gap-1.5 font-bold text-primary">
+                                <span class="material-symbols-outlined text-[18px]">payments</span>
+                                <span x-text="formatCurrency(tour.pricePerSession)"></span>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <template x-for="tag in tour.tags" :key="tag">
+                                <span class="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-xs font-medium border border-gray-200" x-text="`#${tag}`">
+                                </span>
+                            </template>
                         </div>
                     </div>
 
-                    <!-- Content Body -->
-                    <div class="p-5 flex-grow flex flex-col">
-                        <h3 class="text-lg font-bold text-gray-900 mb-2 line-clamp-2" title="@tour.Name">@tour.Name</h3>
-                        
-                        <div class="flex items-center gap-4 text-sm text-gray-500 mb-4">
-                            <div class="flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[16px]">schedule</span>
-                                <span>@tour.Duration giờ</span>
-                            </div>
-                            <div class="flex items-center gap-1">
-                                <span class="material-symbols-outlined text-[16px]">group</span>
-                                <span>Tối đa @tour.MaxGuests</span>
-                            </div>
-                        </div>
-                        
-                        <div class="flex flex-wrap gap-1.5 mb-auto pb-4">
-                            @foreach (var tag in tour.Tags)
-                            {
-                                <span class="bg-gray-50 text-gray-600 px-2 py-1 rounded-md text-[10px] uppercase tracking-wider font-bold border border-gray-100">
-                                    #@tag
-                                </span>
-                            }
-                        </div>
-                        
-                        <!-- Divider -->
-                        <hr class="border-gray-100 mb-4 mt-2">
-                        
-                        <!-- Footer Action Area -->
-                        <div class="flex items-center justify-between">
-                            <div class="font-bold text-primary text-lg">
-                                ₫@tour.Price.ToString("N0") <span class="text-xs font-normal text-gray-400">/khách</span>
-                            </div>
-                            
-                            <!-- Actions -->
-                            <div class="flex items-center gap-2 relative">
-                                <a href="/Guide/CreateTour?id=@tour.Id" class="w-9 h-9 rounded-full bg-orange-50 text-primary flex items-center justify-center hover:bg-primary hover:text-white transition-colors" title="Chỉnh sửa">
-                                    <span class="material-symbols-outlined text-[18px]">edit</span>
-                                </a>
-                                
-                                <button @@click.stop="openDropdown === '@tour.Id' ? openDropdown = null : openDropdown = '@tour.Id'" class="w-9 h-9 rounded-full bg-gray-50 text-gray-600 flex items-center justify-center hover:bg-gray-200 transition-colors" title="Thêm hành động">
-                                    <span class="material-symbols-outlined text-[20px]">more_vert</span>
-                                </button>
-                                
-                                <!-- Dropdown Menu -->
-                                <div x-show="openDropdown === '@tour.Id'" 
-                                     x-transition.opacity.duration.200ms
-                                     style="display: none;"
-                                     class="absolute right-0 bottom-12 w-48 bg-white rounded-xl shadow-xl border border-gray-100 z-30 overflow-hidden">
-                                    <button @@click="toggleStatus('@tour.Id')" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                        <span class="material-symbols-outlined text-[18px]">visibility</span>
-                                        @(tour.IsActive ? "Ẩn gói tour này" : "Hiện gói tour này")
-                                    </button>
-                                    <button @@click="duplicateTour('@tour.Id')" class="w-full text-left px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 flex items-center gap-2">
-                                        <span class="material-symbols-outlined text-[18px]">content_copy</span>
-                                        Nhân bản (Duplicate)
-                                    </button>
-                                    <div class="border-t border-gray-100 my-1"></div>
-                                    <button @@click="deleteTour('@tour.Id')" class="w-full text-left px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-2">
-                                        <span class="material-symbols-outlined text-[18px]">delete</span>
-                                        Xóa gói tour
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="flex flex-row md:flex-col justify-end gap-3 min-w-[140px]">
+                        <a :href="`/Guide/CreateTour?id=${tour.id}`" class="flex-1 md:flex-none text-center bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-xl font-medium transition-colors text-sm">
+                            Chỉnh sửa
+                        </a>
+                        <button @@click="toggleTourActive(tour)" class="flex-1 md:flex-none text-center bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-xl font-medium transition-colors text-sm" x-text="tour.isActive ? 'Ẩn gói' : 'Hiện gói'">
+                        </button>
+                        <button @@click="deleteTour(tour)" class="flex-1 md:flex-none text-center bg-white border border-red-200 text-red-600 hover:bg-red-50 px-4 py-2 rounded-xl font-medium transition-colors text-sm">
+                            Xóa
+                        </button>
                     </div>
                 </div>
+            </div>
+        </template>
+        
+        <div x-show="filteredTours.length === 0" class="bg-white rounded-2xl p-16 border border-gray-100 text-center text-gray-500 shadow-sm" x-cloak>
+            <span class="material-symbols-outlined text-5xl mb-2 text-gray-300">explore_off</span>
+            <p class="text-sm">Không tìm thấy gói trải nghiệm nào.</p>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function myToursComponent() {
+            return {
+                tours: [],
+                searchQuery: '',
+                filter: 'all',
+                
+                async init() {
+                    const token = localStorage.getItem('accessToken');
+                    if (!token) {
+                        window.location.href = '/Auth/Login';
+                        return;
+                    }
+                    await this.loadTours();
+                },
+
+                async loadTours() {
+                    try {
+                        const res = await fetch('/api/tours/my', {
+                            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+                        });
+                        if (res.ok) {
+                            this.tours = await res.json();
+                        } else {
+                            showToast('error', 'Lỗi khi tải danh sách tour.');
+                        }
+                    } catch (err) {
+                        console.error('Error loading tours:', err);
+                        showToast('error', 'Không thể kết nối đến máy chủ.');
+                    }
+                },
+
+                get activeCount() {
+                    return this.tours.filter(t => t.isActive).length;
+                },
+
+                get filteredTours() {
+                    return this.tours.filter(t => {
+                        const title = (t.title || '').toLowerCase();
+                        const search = this.searchQuery.toLowerCase();
+                        const matchesSearch = title.includes(search);
+                        const matchesFilter = this.filter === 'all' ||
+                                              (this.filter === 'active' && t.isActive) ||
+                                              (this.filter === 'hidden' && !t.isActive);
+                        return matchesSearch && matchesFilter;
+                    });
+                },
+
+                formatCurrency(val) {
+                    if (!val) return '0 ₫';
+                    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
+                },
+
+                async toggleTourActive(tour) {
+                    const nextState = !tour.isActive;
+                    const actionText = nextState ? 'hiện' : 'ẩn';
+                    if (!confirm(`Bạn có chắc muốn ${actionText} gói trải nghiệm này không?`)) return;
+
+                    try {
+                        const res = await fetch(`/api/tours/${tour.id}`, {
+                            method: 'PATCH',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${localStorage.getItem('accessToken')}` 
+                            },
+                            body: JSON.stringify({ isActive: nextState })
+                        });
+                        if (res.ok) {
+                            tour.isActive = nextState;
+                            showToast('success', `Đã ${actionText} gói trải nghiệm thành công!`);
+                        } else {
+                            const err = await res.json();
+                            showToast('error', err.message || 'Lỗi khi cập nhật trạng thái.');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        showToast('error', 'Không thể kết nối đến máy chủ.');
+                    }
+                },
+
+                async deleteTour(tour) {
+                    if (!confirm('Bạn có chắc chắn muốn xóa gói trải nghiệm này? Hành động này không thể hoàn tác.')) return;
+
+                    try {
+                        const res = await fetch(`/api/tours/${tour.id}`, {
+                            method: 'DELETE',
+                            headers: { 
+                                'Authorization': `Bearer ${localStorage.getItem('accessToken')}` 
+                            }
+                        });
+                        if (res.status === 204) {
+                            this.tours = this.tours.filter(t => t.id !== tour.id);
+                            showToast('success', 'Đã xóa gói trải nghiệm thành công!');
+                        } else if (res.ok) {
+                            const data = await res.json();
+                            showToast('success', data.message || 'Yêu cầu xóa đã được xử lý.');
+                            await this.loadTours(); // Reload list to see changes (like soft-delete archives)
+                        } else {
+                            const err = await res.json();
+                            showToast('error', err.message || 'Lỗi khi xóa gói trải nghiệm.');
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        showToast('error', 'Không thể kết nối đến máy chủ.');
+                    }
+                }
             }
         }
-    </div>
+    </script>
+}

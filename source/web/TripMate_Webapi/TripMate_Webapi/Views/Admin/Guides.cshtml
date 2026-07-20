@@ -18,7 +18,7 @@
             const role = localStorage.getItem('userRole');
             const email = localStorage.getItem('userEmail');
             
-            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com')) {
+            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com' && email !== 'admin2@tripmate.com')) {
                 window.location.href = '/Auth/Login';
             }
         })();
@@ -63,6 +63,8 @@
                 search: '',
                 statusFilter: '',
                 verifyFilter: '',
+                cityFilter: '',
+                langFilter: '',
                 selectedGuide: null,
                 showBioModal: false,
                 
@@ -81,7 +83,16 @@
                                               (this.verifyFilter === 'verified' && g.is_verified) || 
                                               (this.verifyFilter === 'unverified' && !g.is_verified);
                         
-                        return matchesSearch && matchesStatus && matchesVerify;
+                        const matchesCity = this.cityFilter === '' || 
+                                            (g.city_area && g.city_area.toLowerCase().replace(/\s+/g, '') === this.cityFilter.toLowerCase().replace(/\s+/g, ''));
+                        const matchesLang = this.langFilter === '' || 
+                                            (g.languages && (
+                                                Array.isArray(g.languages) 
+                                                ? g.languages.some(l => l.toLowerCase().replace(/\s+/g, '') === this.langFilter.toLowerCase().replace(/\s+/g, ''))
+                                                : g.languages.toLowerCase().replace(/\s+/g, '').includes(this.langFilter.toLowerCase().replace(/\s+/g, ''))
+                                            ));
+                        
+                        return matchesSearch && matchesStatus && matchesVerify && matchesCity && matchesLang;
                     });
                 },
 
@@ -175,8 +186,16 @@
                 <span>Content & Disputes</span>
             </a>
             <a id="nav-guides" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Guides">
-                <span class="material-symbols-outlined">group</span>
+                <span class="material-symbols-outlined">assignment_ind</span>
                 <span>Guides</span>
+            </a>
+            <a id="nav-users" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Users">
+                <span class="material-symbols-outlined">group</span>
+                <span>Users</span>
+            </a>
+            <a id="nav-bookings" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Bookings">
+                <span class="material-symbols-outlined">explore</span>
+                <span>Bookings</span>
             </a>
             <a id="nav-analytics" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Analytics">
                 <span class="material-symbols-outlined">insights</span>
@@ -217,6 +236,27 @@
             </div>
             
             <div class="flex flex-wrap gap-3">
+                <select x-model="cityFilter" class="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary text-sm outline-none transition-all">
+                    <option value="">-- All Areas --</option>
+                    <option value="Hoi An">Hội An</option>
+                    <option value="Danang">Đà Nẵng</option>
+                    <option value="Hue">Huế</option>
+                    <option value="Hanoi">Hà Nội</option>
+                    <option value="Ho Chi Minh City">TP.HCM</option>
+                    <option value="Ha Giang">Hà Giang</option>
+                    <option value="Ha Long Bay">Vịnh Hạ Long</option>
+                </select>
+
+                <select x-model="langFilter" class="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary text-sm outline-none transition-all">
+                    <option value="">-- All Languages --</option>
+                    <option value="Vietnamese">Tiếng Việt</option>
+                    <option value="English">Tiếng Anh</option>
+                    <option value="Korean">Tiếng Hàn</option>
+                    <option value="Japanese">Tiếng Nhật</option>
+                    <option value="French">Tiếng Pháp</option>
+                    <option value="Chinese">Tiếng Trung</option>
+                </select>
+
                 <select x-model="statusFilter" class="px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary text-sm outline-none transition-all">
                     <option value="">-- Account Status --</option>
                     <option value="active">Active</option>
@@ -300,6 +340,9 @@
                                     <span class="material-symbols-outlined text-xs">verified</span>
                                     <span x-text="g.is_verified ? 'Verified' : 'Unverified'"></span>
                                 </button>
+                                <template x-if="g.is_verified && g.verified_at">
+                                    <p class="text-[10px] text-gray-400 mt-1" x-text="'Approved: ' + new Date(g.verified_at).toLocaleDateString('en-US')"></p>
+                                </template>
                             </td>
 
                             <!-- Status Badge -->
@@ -433,6 +476,10 @@
                 activeEl = document.getElementById("nav-moderation");
             } else if (path.includes("/Admin/Guides")) {
                 activeEl = document.getElementById("nav-guides");
+            } else if (path.includes("/Admin/Users")) {
+                activeEl = document.getElementById("nav-users");
+            } else if (path.includes("/Admin/Bookings")) {
+                activeEl = document.getElementById("nav-bookings");
             } else if (path.includes("/Admin/Analytics")) {
                 activeEl = document.getElementById("nav-analytics");
             }

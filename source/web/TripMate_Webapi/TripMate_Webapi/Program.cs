@@ -105,6 +105,10 @@ builder.Services.AddScoped<GuideApprovalService>();
 builder.Services.AddHttpClient<AdminService>();
 builder.Services.AddScoped<AdminService>();
 
+// ── Problem Report Service ────────────────────────────────────────────────────
+builder.Services.AddHttpClient<ProblemReportService>();
+builder.Services.AddScoped<ProblemReportService>();
+
 // ── PayOS Service ─────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IPayOSService, PayOSService>();
 

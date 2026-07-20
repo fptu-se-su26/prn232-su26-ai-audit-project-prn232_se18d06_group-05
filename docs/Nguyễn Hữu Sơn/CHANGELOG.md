@@ -19,10 +19,10 @@ Nguyên tắc ghi changelog:
 
 | Thông tin | Nội dung |
 |---|---|
-| Môn học | dotnet .Prn232 |
+| Môn học | PRN2332 |
 | Mã môn học | PRN2332 |
-| Lớp | se18d06 |
-| Học kỳ | 8 |
+| Lớp | SE18D06 |
+| Học kỳ | Summer 2026 |
 | Tên bài tập / Project | TripMate - Tour Guide Booking Platform |
 | Tên sinh viên / Nhóm | Nguyễn Hữu Sơn – Nhóm 5 |
 | MSSV / Danh sách MSSV | DE180845 |

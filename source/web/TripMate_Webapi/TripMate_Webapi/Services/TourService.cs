@@ -70,6 +70,25 @@ public class TourService
         return results.Where(r => r.Id != "00000000-0000-0000-0000-000000000000").ToList();
     }
 
+    // ── GET guide profile ID by user ID ───────────────────────────────────────
+
+    public async Task<string?> GetGuideProfileIdByUserIdAsync(string userId, string userToken)
+    {
+        var query = $"{_supabaseUrl}/rest/v1/guide_profiles?user_id=eq.{userId}&select=id";
+        var request = BuildRequest(HttpMethod.Get, query, userToken);
+        var response = await _http.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+        EnsureSuccess(response, content);
+
+        using var doc = JsonDocument.Parse(content);
+        var first = doc.RootElement.EnumerateArray().FirstOrDefault();
+        if (first.ValueKind == JsonValueKind.Object && first.TryGetProperty("id", out var idProp))
+        {
+            return idProp.GetString();
+        }
+        return null;
+    }
+
     // ── POST create package ───────────────────────────────────────────────────
 
     public async Task<ExperiencePackageRow> CreateTourAsync(

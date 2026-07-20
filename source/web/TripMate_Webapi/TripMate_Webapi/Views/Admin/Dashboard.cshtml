@@ -17,7 +17,7 @@
             const role = localStorage.getItem('userRole');
             const email = localStorage.getItem('userEmail');
             
-            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com')) {
+            if (!token || (role !== 'admin' && email !== 'admin@tripmate.com' && email !== 'admin2@tripmate.com')) {
                 window.location.href = '/Auth/Login';
             }
         })();
@@ -84,8 +84,16 @@
                 <span>Content & Disputes</span>
             </a>
             <a id="nav-guides" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Guides">
-                <span class="material-symbols-outlined">group</span>
+                <span class="material-symbols-outlined">assignment_ind</span>
                 <span>Guides</span>
+            </a>
+            <a id="nav-users" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Users">
+                <span class="material-symbols-outlined">group</span>
+                <span>Users</span>
+            </a>
+            <a id="nav-bookings" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Bookings">
+                <span class="material-symbols-outlined">explore</span>
+                <span>Bookings</span>
             </a>
             <a id="nav-analytics" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Analytics">
                 <span class="material-symbols-outlined">insights</span>
@@ -193,30 +201,28 @@
                         <span class="bg-orange-100 text-primary px-4 py-1 rounded-full font-medium text-sm">@Model.PendingCount Actions Required</span>
                     </div>
                     <div class="p-0">
-                        @if (Model.PendingTours != null && Model.PendingTours.Any())
+                        @if (Model.PendingApplications != null && Model.PendingApplications.Any())
                         {
-                            @foreach (var tour in Model.PendingTours)
+                            @foreach (var app in Model.PendingApplications)
                             {
                                 <div class="flex items-center px-8 py-6 border-b border-gray-100 hover:bg-gray-50 transition-colors group">
-                                    <div class="w-20 h-14 rounded-lg overflow-hidden flex-shrink-0 bg-gray-200">
-                                        <img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                                             src="@(tour.GuideProfile?.CoverPhotoUrl ?? "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800")" 
-                                             alt="@tour.Title">
+                                    <div class="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 bg-orange-100 flex items-center justify-center text-primary">
+                                        <span class="material-symbols-outlined text-2xl">person</span>
                                     </div>
                                     <div class="ml-6 flex-grow">
-                                        <p class="font-medium text-gray-900">@tour.Title</p>
-                                        <p class="text-sm text-gray-600">@(tour.GuideProfile?.CityArea ?? "Vietnam")</p>
+                                        <p class="font-medium text-gray-900">@app.Full_Name</p>
+                                        <p class="text-sm text-gray-600">@app.Email</p>
                                     </div>
                                     <div class="hidden md:block px-6">
-                                        <p class="text-xs text-gray-600 mb-1">Price</p>
-                                        <p class="font-medium">@tour.PricePerSession.ToString("N0")₫</p>
+                                        <p class="text-xs text-gray-600 mb-1">Specialization</p>
+                                        <p class="font-medium">@(string.IsNullOrEmpty(app.Specialization) ? "Culture, Food" : app.Specialization)</p>
                                     </div>
                                     <div class="flex gap-3">
-                                        <button onclick="window.location.href='/Admin/GuideApprovals'" class="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Reject">
+                                        <button onclick="window.location.href='/Admin/GuideApprovals?id=@app.Id'" class="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors" title="Review Guide">
                                             <span class="material-symbols-outlined">close</span>
                                         </button>
-                                        <button onclick="window.location.href='/Admin/GuideApprovals'" class="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark shadow-md transition-all">
-                                            Approve
+                                        <button onclick="window.location.href='/Admin/GuideApprovals?id=@app.Id'" class="px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark shadow-md transition-all">
+                                            Review
                                         </button>
                                     </div>
                                 </div>
@@ -224,10 +230,10 @@
                         }
                         else
                         {
-                            <div class="text-center py-12 text-gray-600">No pending approvals</div>
+                            <div class="text-center py-12 text-gray-500">No pending approvals</div>
                         }
                     </div>
-                    <div class="p-4 bg-gray-50 text-center">
+                    <div class="p-4 bg-gray-50 text-center border-t border-gray-100">
                         <button onclick="window.location.href='/Admin/GuideApprovals'" class="text-primary font-medium hover:underline transition-all">View All Pending Requests</button>
                     </div>
                 </div>
@@ -281,6 +287,10 @@
                 activeEl = document.getElementById("nav-moderation");
             } else if (path.includes("/Admin/Guides")) {
                 activeEl = document.getElementById("nav-guides");
+            } else if (path.includes("/Admin/Users")) {
+                activeEl = document.getElementById("nav-users");
+            } else if (path.includes("/Admin/Bookings")) {
+                activeEl = document.getElementById("nav-bookings");
             } else if (path.includes("/Admin/Analytics")) {
                 activeEl = document.getElementById("nav-analytics");
             }

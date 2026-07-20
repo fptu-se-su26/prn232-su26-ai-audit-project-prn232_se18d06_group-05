@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 using TripMate_WebAPI.Services;
+using TripMate_Webapi.Entities;
 
 namespace TripMate_WebAPI.Controllers;
 
@@ -11,10 +12,12 @@ namespace TripMate_WebAPI.Controllers;
 public class ToursController : ControllerBase
 {
     private readonly TourService _tourService;
+    private readonly Supabase.Client _supabase;
 
-    public ToursController(TourService tourService)
+    public ToursController(TourService tourService, Supabase.Client supabase)
     {
         _tourService = tourService;
+        _supabase = supabase;
     }
 
     /// <summary>
@@ -28,6 +31,35 @@ public class ToursController : ControllerBase
             var rows = await _tourService.GetToursAsync(search);
             var tours = rows.Select(TourService.MapToDto).ToList();
             return Ok(new { tours, total = tours.Count });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lấy danh sách gói trải nghiệm của chính hướng dẫn viên đang đăng nhập
+    /// </summary>
+    [HttpGet("my")]
+    [Authorize]
+    public async Task<IActionResult> GetMyTours()
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                   ?? User.FindFirst("sub")?.Value;
+
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized(new { message = "Không xác định được người dùng" });
+
+        try
+        {
+            var guideProfileId = await GetGuideProfileIdAsync(userId);
+            if (guideProfileId == null)
+                return BadRequest(new { message = "Bạn chưa có hồ sơ hướng dẫn viên" });
+
+            var rows = await _tourService.GetToursByGuideAsync(guideProfileId);
+            var tours = rows.Select(TourService.MapToDto).ToList();
+            return Ok(tours);
         }
         catch (Exception ex)
         {
@@ -119,6 +151,30 @@ public class ToursController : ControllerBase
     {
         try
         {
+            // 1. Fetch bookings associated with this experience package
+            var bookingsRes = await _supabase.From<BookingEntity>()
+                .Where(b => b.ExperiencePackageId == id)
+                .Get();
+
+            var bookings = bookingsRes.Models;
+
+            // 2. Check for active bookings (Pending=0 or Confirmed=1)
+            var activeBookings = bookings.Where(b => b.Status == 0 || b.Status == 1).ToList();
+            if (activeBookings.Any())
+            {
+                return BadRequest(new { message = "Không thể xóa gói trải nghiệm này vì đang có các lịch hẹn hoặc giao dịch chưa hoàn tất với du khách." });
+            }
+
+            // 3. If there are historical bookings (Completed=2 or Cancelled=3), we must soft-delete (is_active = false)
+            // to preserve booking history and avoid cascade deleting user records.
+            if (bookings.Any())
+            {
+                var req = new UpdateTourRequest { IsActive = false };
+                await _tourService.UpdateTourAsync(id, req, UserToken!);
+                return Ok(new { message = "Gói trải nghiệm đã được ẩn và đưa vào lưu trữ để bảo toàn lịch sử giao dịch." });
+            }
+
+            // 4. If no bookings at all, safe to perform hard delete
             await _tourService.DeleteTourAsync(id, UserToken!);
             return NoContent();
         }
@@ -131,12 +187,10 @@ public class ToursController : ControllerBase
     // Helper: lookup guide_profile_id from auth user_id
     private async Task<string?> GetGuideProfileIdAsync(string userId)
     {
-        // This could be moved to a dedicated GuideProfileService
         try
         {
-            var rows = await _tourService.GetToursByGuideAsync(""); // We need a direct lookup
-            // For now, we use a simple approach - the TourService can be extended
-            return null; // Will be resolved after full integration
+            if (string.IsNullOrEmpty(UserToken)) return null;
+            return await _tourService.GetGuideProfileIdByUserIdAsync(userId, UserToken);
         }
         catch
         {
