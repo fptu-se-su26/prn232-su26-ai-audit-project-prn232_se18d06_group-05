@@ -133,6 +133,8 @@ namespace TripMate_WebAPI.Services
             vm.UpcomingSchedule = bookings
                 .Where(b => b.Status == 1 && b.BookingDate.Date.Add(b.StartTime.TimeOfDay) >= now)
                 .OrderBy(b => b.BookingDate.Date.Add(b.StartTime.TimeOfDay))
+                .Where(b => b.Status == 1 && b.BookingDate.Date >= now.Date)
+                .OrderBy(b => b.BookingDate).ThenBy(b => b.StartTime)
                 .Take(3)
                 .Select(b => new UpcomingTourItem
                 {

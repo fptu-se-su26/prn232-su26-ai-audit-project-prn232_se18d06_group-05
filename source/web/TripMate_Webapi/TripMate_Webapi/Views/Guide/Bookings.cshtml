@@ -19,13 +19,16 @@
             <p class="text-gray-500 text-sm">Quản lý lịch đặt tour và phản hồi yêu cầu của du khách.</p>
         </div>
         <div class="flex items-center gap-3">
-            <button class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
-                <span class="material-symbols-outlined text-[18px]">calendar_today</span>
-                Chọn ngày
-            </button>
-            <button class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2">
-                <span class="material-symbols-outlined text-[18px]">sort</span>
-                Mới nhất
+            <!-- Date Filter -->
+            <div class="relative">
+                <input type="date" x-model="filterDate" class="bg-white border border-gray-200 text-gray-700 pl-10 pr-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary h-[38px]">
+                <span class="material-symbols-outlined text-[18px] text-gray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">calendar_today</span>
+            </div>
+            
+            <!-- Sort Button -->
+            <button @@click="toggleSort()" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2 h-[38px]">
+                <span class="material-symbols-outlined text-[18px]" :class="sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'">sort</span>
+                <span x-text="sortOrder === 'desc' ? 'Mới nhất' : 'Cũ nhất'"></span>
             </button>
         </div>
     </div>
@@ -111,7 +114,7 @@
         <template x-if="filteredBookings.length === 0">
             <div class="bg-white rounded-2xl p-16 shadow-sm border border-gray-100 text-center flex flex-col items-center justify-center">
                 <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-5 text-gray-400">
-                    <span class="material-symbols-outlined text-[40px]" x-text="currentTab === 'Pending' ? 'schedule' : (currentTab === 'Confirmed' ? 'check_circle' : (currentTab === 'Completed' ? 'done_all' : (currentTab === 'Cancelled' ? 'cancel' : 'inbox')))"></span>
+                    <span class="material-symbols-outlined text-[40px]" x-text="currentTab === 'Pending' ? 'schedule' : (currentTab === 'Confirmed' ? 'check_circle' : (currentTab === 'Completed' ? 'done_all' : (currentTab === 'Cancelled' ? 'cancel' : (currentTab === 'Expired' ? 'timer_off' : 'inbox'))))"></span>
                 </div>
                 <h3 class="text-xl font-bold text-gray-900 mb-2" x-text="currentTab === 'all' ? 'Chưa có booking nào' : 'Không tìm thấy booking phù hợp'"></h3>
                 <p class="text-gray-500 max-w-md mx-auto mb-6" x-text="currentTab === 'all' ? 'Hồ sơ của bạn đang hoạt động — hãy chờ khách tìm đến! Bạn có thể xem lại lịch trình của mình trong lúc chờ đợi.' : 'Không có booking nào ở trạng thái này hoặc khớp với từ khóa tìm kiếm.'"></p>
@@ -128,7 +131,8 @@
 
         <template x-for="b in filteredBookings" :key="b.Id">
             <!-- Booking Card -->
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md hover:border-primary/30 transition-all relative">
+            <div class="rounded-2xl shadow-sm border overflow-hidden transition-all relative"
+                 :class="b.Status === 'Expired' ? 'border-gray-200 bg-gray-50/70' : 'border-gray-100 bg-white hover:border-primary/30 hover:shadow-md'">
                 <!-- Header -->
                 <div class="px-5 py-3 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
                     <div class="flex items-center gap-3">
@@ -146,6 +150,9 @@
                         </span>
                         <span x-show="b.Status === 'Cancelled'" class="flex items-center gap-1 bg-red-50 text-red-700 px-2.5 py-1 rounded-md text-[11px] font-bold border border-red-100 uppercase tracking-wide">
                             <span class="material-symbols-outlined text-[14px]">cancel</span> Đã hủy
+                        </span>
+                        <span x-show="b.Status === 'Expired'" class="flex items-center gap-1 bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-[11px] font-bold border border-gray-200 uppercase tracking-wide">
+                            <span class="material-symbols-outlined text-[14px]">timer_off</span> Đã hết hạn
                         </span>
                     </div>
 
@@ -214,8 +221,8 @@
                         <!-- Right: Financial & Actions -->
                         <div class="lg:w-[300px] flex-shrink-0 flex flex-col justify-center items-end border-t lg:border-t-0 lg:border-l border-gray-100 pt-4 lg:pt-0 lg:pl-5">
                             <div class="text-right w-full mb-4">
-                                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1">Bạn sẽ nhận</p>
-                                <p class="text-2xl font-black text-green-600" x-text="formatCurrency(b.NetEarnings)"></p>
+                                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1" x-text="b.Status === 'Expired' ? 'Giá trị booking' : 'Bạn sẽ nhận'"></p>
+                                <p class="text-2xl font-black" :class="b.Status === 'Expired' ? 'text-gray-500' : 'text-green-600'" x-text="formatCurrency(b.NetEarnings)"></p>
                                 <p class="text-[11px] text-gray-500 mt-1">Tổng tour: <span class="font-medium" x-text="formatCurrency(b.TotalAmount)"></span></p>
                             </div>
                             
@@ -242,6 +249,14 @@
                                     <a href="/Guide/Messages" class="flex-grow bg-blue-50 border border-blue-100 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-xl text-sm font-bold transition-colors text-center flex items-center justify-center gap-1 whitespace-nowrap">
                                         <span class="material-symbols-outlined text-[16px]">chat</span> Nhắn tin
                                     </a>
+                                </template>
+
+                                <!-- Expired State -->
+                                <template x-if="b.Status === 'Expired'">
+                                    <div class="flex flex-grow items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm font-bold text-gray-500">
+                                        <span class="material-symbols-outlined text-[16px]">lock_clock</span>
+                                        Đã quá hạn phản hồi
+                                    </div>
                                 </template>
                             </div>
                         </div>
@@ -318,6 +333,15 @@
                                         <span x-show="b.Status === 'Confirmed'" class="bg-green-100 text-green-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-green-200">Đã xác nhận</span>
                                         <span x-show="b.Status === 'Completed'" class="bg-gray-100 text-gray-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-gray-200">Hoàn thành</span>
                                         <span x-show="b.Status === 'Cancelled'" class="bg-red-100 text-red-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-red-200">Đã hủy</span>
+                                        <span x-show="b.Status === 'Expired'" class="bg-gray-100 text-gray-600 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-gray-200">Đã hết hạn</span>
+                                    </div>
+
+                                    <div x-show="b.Status === 'Expired'" class="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
+                                        <span class="material-symbols-outlined text-gray-500">timer_off</span>
+                                        <div>
+                                            <p class="font-bold text-gray-800">Booking không còn chờ xử lý</p>
+                                            <p class="mt-0.5 text-xs leading-relaxed">Thời hạn phản hồi 24 giờ đã kết thúc. Bạn không thể chấp nhận hoặc từ chối booking này.</p>
+                                        </div>
                                     </div>
 
                                     <!-- THÔNG TIN KHÁCH -->
@@ -391,9 +415,10 @@
                                                     <span class="text-xl font-black text-green-600" x-text="formatCurrency(b.NetEarnings)"></span>
                                                 </div>
                                             </div>
-                                            <div class="mt-4 pt-4 border-t border-gray-100 flex items-center gap-2 text-sm text-green-700 bg-green-50 p-3 rounded-lg font-medium border border-green-100">
-                                                <span class="material-symbols-outlined text-[20px]">verified_user</span>
-                                                <span>Đã thanh toán (Tạm giữ chờ tour xong)</span>
+                                            <div class="mt-4 pt-4 border-t flex items-center gap-2 text-sm p-3 rounded-lg font-medium"
+                                                 :class="b.Status === 'Expired' ? 'border-gray-200 bg-gray-50 text-gray-600' : 'border-green-100 bg-green-50 text-green-700'">
+                                                <span class="material-symbols-outlined text-[20px]" x-text="b.Status === 'Expired' ? 'hourglass_disabled' : 'verified_user'"></span>
+                                                <span x-text="b.Status === 'Expired' ? 'Booking hết hạn — không thể ghi nhận doanh thu' : 'Đã thanh toán (Tạm giữ chờ tour xong)'"></span>
                                             </div>
                                         </div>
                                     </div>
@@ -413,11 +438,12 @@
                                             </div>
                                             
                                             <div class="relative">
-                                                <div class="absolute -left-[31px] w-7 h-7 rounded-full flex items-center justify-center ring-4 ring-white" :class="b.Status === 'Pending' ? 'bg-amber-100 text-amber-600' : (b.Status === 'Cancelled' ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600')">
-                                                    <span class="material-symbols-outlined text-[14px]" x-text="b.Status === 'Pending' ? 'schedule' : (b.Status === 'Cancelled' ? 'close' : 'done_all')"></span>
+                                                <div class="absolute -left-[31px] w-7 h-7 rounded-full flex items-center justify-center ring-4 ring-white" :class="b.Status === 'Pending' ? 'bg-amber-100 text-amber-600' : (b.Status === 'Cancelled' ? 'bg-red-100 text-red-600' : (b.Status === 'Expired' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-600'))">
+                                                    <span class="material-symbols-outlined text-[14px]" x-text="b.Status === 'Pending' ? 'schedule' : (b.Status === 'Cancelled' ? 'close' : (b.Status === 'Expired' ? 'timer_off' : 'done_all'))"></span>
                                                 </div>
-                                                <p class="text-sm font-bold" :class="b.Status === 'Pending' ? 'text-amber-700' : (b.Status === 'Cancelled' ? 'text-red-700' : 'text-gray-900')" x-text="b.Status === 'Pending' ? 'Đang chờ bạn duyệt' : (b.Status === 'Cancelled' ? 'Đã từ chối' : 'Bạn đã xác nhận')"></p>
-                                                <p class="text-xs text-gray-500" x-show="b.Status !== 'Pending'">13/06/2026 11:00</p>
+                                                <p class="text-sm font-bold" :class="b.Status === 'Pending' ? 'text-amber-700' : (b.Status === 'Cancelled' ? 'text-red-700' : (b.Status === 'Expired' ? 'text-gray-600' : 'text-gray-900'))" x-text="b.Status === 'Pending' ? 'Đang chờ bạn duyệt' : (b.Status === 'Cancelled' ? 'Đã từ chối' : (b.Status === 'Expired' ? 'Đã hết hạn phản hồi' : 'Bạn đã xác nhận'))"></p>
+                                                <p class="text-xs text-gray-500" x-show="b.Status === 'Expired'">Thời hạn xử lý 24 giờ đã kết thúc.</p>
+                                                <p class="text-xs text-gray-500" x-show="b.Status !== 'Pending' && b.Status !== 'Expired'">13/06/2026 11:00</p>
                                                 <div x-show="b.Status === 'Pending'" class="mt-2 text-xs font-bold text-white bg-amber-500 inline-block px-2 py-1 rounded-md" x-text="formatCountdown(b.SecondsRemaining)"></div>
                                             </div>
 
@@ -463,8 +489,15 @@
                 bookings: window.initialBookings || [],
                 currentTab: 'all',
                 searchQuery: '',
+                filterDate: '',
+                sortOrder: 'desc',
                 isDetailOpen: false,
                 selectedBooking: null,
+                countdownTimer: null,
+
+                toggleSort() {
+                    this.sortOrder = this.sortOrder === 'desc' ? 'asc' : 'desc';
+                },
 
                 get tabs() {
                     return [
@@ -472,6 +505,7 @@
                         { id: 'Pending', label: 'Chờ duyệt', count: this.bookings.filter(b => b.Status === 'Pending').length },
                         { id: 'Confirmed', label: 'Đã xác nhận', count: this.bookings.filter(b => b.Status === 'Confirmed').length },
                         { id: 'Completed', label: 'Hoàn thành', count: this.bookings.filter(b => b.Status === 'Completed').length },
+                        { id: 'Expired', label: 'Hết hạn', count: this.bookings.filter(b => b.Status === 'Expired').length },
                         { id: 'Cancelled', label: 'Đã hủy', count: this.bookings.filter(b => b.Status === 'Cancelled').length }
                     ];
                 },
@@ -487,31 +521,83 @@
                 },
 
                 get filteredBookings() {
-                    return this.bookings.filter(b => {
+                    let result = this.bookings.filter(b => {
                         // Filter by tab
                         if (this.currentTab !== 'all' && b.Status !== this.currentTab) return false;
                         
                         // Filter by search
                         if (this.searchQuery) {
                             const q = this.searchQuery.toLowerCase();
-                            return b.TravelerName.toLowerCase().includes(q) || 
-                                   b.Id.toLowerCase().includes(q) || 
-                                   b.TourName.toLowerCase().includes(q);
+                            if (!(b.TravelerName.toLowerCase().includes(q) || 
+                                  b.Id.toLowerCase().includes(q) || 
+                                  b.TourName.toLowerCase().includes(q))) {
+                                return false;
+                            }
+                        }
+
+                        // Filter by Date
+                        if (this.filterDate) {
+                            // Convert this.filterDate (YYYY-MM-DD) to DD/MM/YYYY to match b.Date
+                            const [yyyy, mm, dd] = this.filterDate.split('-');
+                            const formattedFilterDate = `${dd}/${mm}/${yyyy}`;
+                            if (b.Date !== formattedFilterDate) return false;
                         }
                         
                         return true;
                     });
+
+                    // Sort by CreatedAt
+                    result.sort((a, b) => {
+                        const dateA = new Date(a.CreatedAt).getTime();
+                        const dateB = new Date(b.CreatedAt).getTime();
+                        return this.sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+                    });
+
+                    return result;
                 },
 
                 init() {
-                    // Start countdown for pending bookings
-                    setInterval(() => {
+                    // Normalize stale pending records immediately, then keep the UI in sync
+                    // when an active response window reaches zero while the page is open.
+                    this.bookings.forEach(b => {
+                        if (b.Status === 'Pending' && Number(b.SecondsRemaining) <= 0) {
+                            this.markBookingExpired(b);
+                        }
+                    });
+                    this.updateSidebarBadge();
+
+                    this.countdownTimer = setInterval(() => {
+                        let pendingCountChanged = false;
                         this.bookings.forEach(b => {
-                            if (b.Status === 'Pending' && b.SecondsRemaining > 0) {
-                                b.SecondsRemaining--;
+                            if (b.Status === 'Pending') {
+                                b.SecondsRemaining = Math.max(0, Number(b.SecondsRemaining) - 1);
+                                if (b.SecondsRemaining === 0) {
+                                    this.markBookingExpired(b);
+                                    pendingCountChanged = true;
+                                }
                             }
                         });
+
+                        if (pendingCountChanged) this.updateSidebarBadge();
                     }, 1000);
+                },
+
+                destroy() {
+                    if (this.countdownTimer) clearInterval(this.countdownTimer);
+                },
+
+                markBookingExpired(booking) {
+                    if (!booking) return;
+                    booking.Status = 'Expired';
+                    booking.SecondsRemaining = 0;
+                    if (this.selectedBooking && this.selectedBooking.Id === booking.Id) {
+                        this.selectedBooking.Status = 'Expired';
+                        this.selectedBooking.SecondsRemaining = 0;
+                    }
+                },
+
+                isBookingActionable(booking) {
+                    return booking && booking.Status === 'Pending' && Number(booking.SecondsRemaining) > 0;
                 },
 
                 formatCountdown(seconds) {
@@ -556,6 +642,13 @@
 
                 async acceptBooking(id) {
                     const booking = this.bookings.find(b => b.Id === id);
+                    if (!this.isBookingActionable(booking)) {
+                        this.markBookingExpired(booking);
+                        this.updateSidebarBadge();
+                        showToast('warning', 'Booking đã hết thời hạn phản hồi 24 giờ.');
+                        return;
+                    }
+
                     if (booking) {
                         try {
                             const response = await fetch(`/Guide/AcceptBooking/${id}`, {
@@ -573,6 +666,10 @@
                                     this.selectedBooking.Status = 'Confirmed';
                                 }
                             } else {
+                                if ((result.message || '').toLowerCase().includes('hết hạn')) {
+                                    this.markBookingExpired(booking);
+                                    this.updateSidebarBadge();
+                                }
                                 showToast('error', result.message || 'Có lỗi xảy ra');
                             }
                         } catch (error) {
@@ -582,8 +679,15 @@
                 },
 
                 async rejectBooking(id) {
+                    const booking = this.bookings.find(b => b.Id === id);
+                    if (!this.isBookingActionable(booking)) {
+                        this.markBookingExpired(booking);
+                        this.updateSidebarBadge();
+                        showToast('warning', 'Booking đã hết thời hạn phản hồi 24 giờ.');
+                        return;
+                    }
+
                     if (confirm('Bạn có chắc chắn muốn từ chối booking này? Tiền sẽ được hoàn lại cho khách.')) {
-                        const booking = this.bookings.find(b => b.Id === id);
                         if (booking) {
                             try {
                                 const response = await fetch(`/Guide/RejectBooking/${id}`, {
@@ -601,6 +705,10 @@
                                         this.selectedBooking.Status = 'Cancelled';
                                     }
                                 } else {
+                                    if ((result.message || '').toLowerCase().includes('hết hạn')) {
+                                        this.markBookingExpired(booking);
+                                        this.updateSidebarBadge();
+                                    }
                                     showToast('error', result.message || 'Có lỗi xảy ra');
                                 }
                             } catch (error) {

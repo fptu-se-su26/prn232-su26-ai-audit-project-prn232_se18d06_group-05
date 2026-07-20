@@ -6,6 +6,10 @@
     <title>@ViewData["Title"] - TripMate</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+    <script src="/notifications.js"></script>
+    <script src="/chat-realtime.js"></script>
+    <script src="/message-badge.js"></script>
     
     <!-- SweetAlert2 -->
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.3/dist/sweetalert2.min.css" rel="stylesheet">
@@ -64,6 +68,8 @@
         ::-webkit-scrollbar-thumb:hover { background: #ff7a00; }
     </style>
 </head>
+@* in Views/Shared/_Layout.cshtml, before </body> *@
+@RenderSection("Scripts", required: false)
 <body class="bg-background text-on-background page-enter" data-requires-auth="@(ViewBag.RequiresAuth == true ? "true" : "false")">
     <!-- TopNavBar -->
     <header class="sticky top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm border-b border-outline-variant/30">
@@ -146,6 +152,10 @@
                             </div>
                         </div>
                     </div>
+                    <a id="notificationLink" href="/Traveler/Notifications" class="relative text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center" aria-label="Notifications">
+                        <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
+                        <span data-notification-count class="hidden absolute -top-3 -right-3 min-w-5 h-5 px-1 bg-red-500 text-white text-[10px] font-bold rounded-full items-center justify-center"></span>
+                    </a>
                     <div id="savedContainer" class="flex items-center justify-center"></div>
                     <div id="userSection" class="ml-2">
                         <!-- Will be populated by JavaScript -->

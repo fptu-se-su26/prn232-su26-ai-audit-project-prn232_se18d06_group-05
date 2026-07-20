@@ -10,6 +10,7 @@ namespace TripMate_WebAPI.Services
         Task SendGuideApprovalEmailAsync(string toEmail, string fullName, bool isApproved, string adminMessage, string verificationLink);
         Task SendAdminNotificationEmailAsync(string adminEmail, string adminName, string guideName, string guideEmail);
         Task SendPasswordResetEmailAsync(string toEmail, string resetLink);
+        Task SendNotificationEmailAsync(string toEmail, string fullName, string title, string message, string? actionUrl = null);
     }
 
     public class EmailService : IEmailService
@@ -298,6 +299,81 @@ namespace TripMate_WebAPI.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error sending password reset email to {Email}", toEmail);
+            }
+        }
+
+        public async Task SendNotificationEmailAsync(
+            string toEmail,
+            string fullName,
+            string title,
+            string message,
+            string? actionUrl = null)
+        {
+            try
+            {
+                var smtpHost = _config["EmailSettings:SmtpHost"] ?? "smtp.gmail.com";
+                var smtpPort = int.Parse(_config["EmailSettings:SmtpPort"] ?? "587");
+                var smtpUser = _config["EmailSettings:SmtpUser"];
+                var smtpPass = _config["EmailSettings:SmtpPass"];
+                if (string.IsNullOrWhiteSpace(smtpUser) || string.IsNullOrWhiteSpace(smtpPass))
+                {
+                    _logger.LogWarning("Skipped notification email because EmailSettings are incomplete");
+                    return;
+                }
+
+                var safeName = System.Net.WebUtility.HtmlEncode(fullName);
+                var safeTitle = System.Net.WebUtility.HtmlEncode(title);
+                var safeMessage = System.Net.WebUtility.HtmlEncode(message);
+                string? resolvedActionUrl = null;
+                if (Uri.TryCreate(actionUrl, UriKind.Absolute, out var absoluteAction))
+                {
+                    resolvedActionUrl = absoluteAction.ToString();
+                }
+                else if (!string.IsNullOrWhiteSpace(actionUrl))
+                {
+                    var configuredBase = _config["App:BaseUrl"];
+                    if (Uri.TryCreate(configuredBase, UriKind.Absolute, out var baseUri))
+                    {
+                        var origin = new Uri(baseUri.GetLeftPart(UriPartial.Authority));
+                        resolvedActionUrl = new Uri(origin, actionUrl).ToString();
+                    }
+                }
+                var safeActionUrl = resolvedActionUrl is null
+                    ? null
+                    : System.Net.WebUtility.HtmlEncode(resolvedActionUrl);
+                var action = safeActionUrl is null
+                    ? string.Empty
+                    : $"<p style='margin:24px 0 0'><a href='{safeActionUrl}' style='display:inline-block;background:#FF6B35;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;font-weight:700'>Open in TripMate</a></p>";
+
+                var email = new MimeMessage();
+                email.From.Add(new MailboxAddress("TripMate", smtpUser));
+                email.To.Add(new MailboxAddress(safeName, toEmail));
+                email.Subject = $"[TripMate] {title}";
+                email.Body = new TextPart(TextFormat.Html)
+                {
+                    Text = $"""
+                        <div style='font-family:Arial,sans-serif;max-width:600px;margin:0 auto;border:1px solid #eee;border-radius:16px;overflow:hidden'>
+                          <div style='background:#FF6B35;color:#fff;padding:24px'><h1 style='margin:0;font-size:22px'>TripMate</h1></div>
+                          <div style='padding:28px'>
+                            <p style='color:#555'>Hello {safeName},</p>
+                            <h2 style='color:#222'>{safeTitle}</h2>
+                            <p style='color:#555;line-height:1.6'>{safeMessage}</p>
+                            {action}
+                          </div>
+                        </div>
+                        """
+                };
+
+                using var smtp = new SmtpClient();
+                await smtp.ConnectAsync(smtpHost, smtpPort, SecureSocketOptions.StartTls);
+                await smtp.AuthenticateAsync(smtpUser, smtpPass);
+                await smtp.SendAsync(email);
+                await smtp.DisconnectAsync(true);
+                _logger.LogInformation("Notification email sent to {Email} for {Title}", toEmail, title);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending notification email to {Email}", toEmail);
             }
         }
     }

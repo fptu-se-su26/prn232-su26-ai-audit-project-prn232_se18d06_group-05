@@ -1,160 +1,1125 @@
 @{
-    ViewData["Title"] = "Trip Requests Board";
+    ViewData["Title"] = "Trip Requests & Offers";
+    ViewData["ActivePage"] = "TripRequests";
+    // Do not restore Alpine-rendered x-for nodes from a Turbo snapshot. Those
+    // clones no longer own the original iteration scope (tab/request/offer).
+    ViewData["TurboVisitControl"] = "reload";
+    ViewData["TurboCacheControl"] = "no-cache";
+    Layout = "_GuideLayout";
 }
 
-<div class="bg-surface min-h-screen py-10">
-    <div class="max-w-[1440px] mx-auto px-6">
-        <!-- Header -->
-        <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-            <div>
-                <h1 class="text-3xl font-extrabold text-on-surface">Trip Requests Board</h1>
-                <p class="text-on-surface-variant mt-2">Find travelers looking for guides and send them a custom offer.</p>
-            </div>
-            
-            <div class="flex items-center gap-3">
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">search</span>
-                    <input type="text" placeholder="Search by destination..." class="pl-10 pr-4 py-2 bg-white border border-outline-variant/50 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary w-64">
+<div class="min-h-screen bg-gray-50" x-data="tripRequestsBoard()" x-init="initData()" data-turbo-temporary>
+    <div class="mx-auto max-w-[1440px]">
+        <!-- Marketplace header and controls -->
+        <section class="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm" aria-labelledby="trip-requests-title">
+            <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-red-500 shadow-sm">
+                            <span class="material-symbols-outlined text-xl text-white" aria-hidden="true" x-text="viewMode === 'requests' ? 'travel_explore' : 'outbox'"></span>
+                        </div>
+                        <div class="min-w-0">
+                            <h1 id="trip-requests-title" class="truncate text-2xl font-bold tracking-tight text-gray-900" x-text="viewMode === 'requests' ? 'Trip Requests Board' : 'My Offers'">Trip Requests Board</h1>
+                            <p class="mt-0.5 text-sm text-gray-500" x-text="viewMode === 'requests' ? 'Browse traveler plans and send a tailored offer.' : 'Track every proposal you have sent to travelers.'"></p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 inline-flex rounded-xl bg-gray-100 p-1" role="tablist" aria-label="Trip request workspace">
+                        <button type="button"
+                                role="tab"
+                                @@click="setViewMode('requests')"
+                                :aria-selected="viewMode === 'requests'"
+                                :class="viewMode === 'requests' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'"
+                                class="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-all">
+                            <span class="material-symbols-outlined text-lg" aria-hidden="true">explore</span>
+                            Browse Requests
+                        </button>
+                        <button type="button"
+                                role="tab"
+                                @@click="setViewMode('offers')"
+                                :aria-selected="viewMode === 'offers'"
+                                :class="viewMode === 'offers' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'"
+                                class="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-semibold transition-all">
+                            <span class="material-symbols-outlined text-lg" aria-hidden="true">outgoing_mail</span>
+                            My Offers
+                            <span class="rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-bold text-orange-700" x-text="offers.length">0</span>
+                        </button>
+                    </div>
                 </div>
-                <button class="p-2 bg-white border border-outline-variant/50 rounded-lg text-on-surface-variant hover:text-primary transition-colors">
-                    <span class="material-symbols-outlined">filter_list</span>
-                </button>
+
+                <!-- Context-aware quick stats -->
+                <div class="grid w-full grid-cols-3 gap-2 lg:w-auto" aria-live="polite">
+                    <div class="min-w-0 rounded-xl border border-orange-100 bg-orange-50/70 px-3 py-2.5 text-center lg:min-w-[112px]">
+                        <p class="truncate text-[11px] font-semibold uppercase tracking-wide text-orange-700" x-text="viewMode === 'requests' ? 'Open requests' : 'Total offers'"></p>
+                        <p class="mt-0.5 text-lg font-bold text-orange-600">
+                            <span x-show="viewMode === 'requests' ? isLoading : isOffersLoading" class="inline-block h-5 w-6 animate-pulse rounded bg-orange-200"></span>
+                            <span x-show="viewMode === 'requests' ? !isLoading : !isOffersLoading" x-text="viewMode === 'requests' ? requests.length : offers.length">0</span>
+                        </p>
+                    </div>
+                    <div class="min-w-0 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-center lg:min-w-[112px]">
+                        <p class="truncate text-[11px] font-semibold uppercase tracking-wide text-gray-500" x-text="viewMode === 'requests' ? 'Offers / week' : 'Pending'"></p>
+                        <p class="mt-0.5 text-lg font-bold text-gray-900">
+                            <span x-show="viewMode === 'requests' ? isLoadingStats : isOffersLoading" class="inline-block h-5 w-6 animate-pulse rounded bg-gray-200"></span>
+                            <span x-show="viewMode === 'requests' ? !isLoadingStats : !isOffersLoading" x-text="viewMode === 'requests' ? stats.offersSentThisWeek : offerCountByStatus('pending')">0</span>
+                        </p>
+                    </div>
+                    <div class="min-w-0 rounded-xl border border-emerald-100 bg-emerald-50/70 px-3 py-2.5 text-center lg:min-w-[112px]">
+                        <p class="truncate text-[11px] font-semibold uppercase tracking-wide text-emerald-700" x-text="viewMode === 'requests' ? 'Success rate' : 'Accepted'"></p>
+                        <p class="mt-0.5 text-lg font-bold text-emerald-600">
+                            <span x-show="viewMode === 'requests' ? isLoadingStats : isOffersLoading" class="inline-block h-5 w-6 animate-pulse rounded bg-emerald-200"></span>
+                            <span x-show="viewMode === 'requests' ? !isLoadingStats : !isOffersLoading" x-text="viewMode === 'requests' ? (stats.successRate > 0 ? stats.successRate + '%' : '—') : offerCountByStatus('accepted')">—</span>
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Browse request controls -->
+            <div x-show="viewMode === 'requests'">
+                <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+                    <div class="relative flex-1">
+                        <label for="trip-request-search" class="sr-only">Search trip requests by destination, traveler, or notes</label>
+                        <span class="material-symbols-outlined pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400" aria-hidden="true">search</span>
+                        <input id="trip-request-search" type="search" x-model.debounce.200ms="searchQuery" placeholder="Search destination, traveler, or notes..." class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-12 pr-11 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20">
+                        <button type="button" x-show="searchQuery" @@click="searchQuery = ''" class="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700" aria-label="Clear search">
+                            <span class="material-symbols-outlined text-lg" aria-hidden="true">close</span>
+                        </button>
+                    </div>
+                    <div class="relative sm:w-52">
+                        <label for="trip-request-sort" class="sr-only">Sort trip requests</label>
+                        <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-gray-400" aria-hidden="true">sort</span>
+                        <select id="trip-request-sort" x-model="sortBy" class="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-9 text-sm font-medium text-gray-700 outline-none focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20">
+                            <option value="newest">Newest first</option>
+                            <option value="soonest">Starting soon</option>
+                            <option value="highest-budget">Highest budget</option>
+                            <option value="largest-group">Largest group</option>
+                        </select>
+                        <span class="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-lg text-gray-400" aria-hidden="true">expand_more</span>
+                    </div>
+                </div>
+
+                <div class="mt-3 flex flex-col gap-3 border-t border-gray-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter trip requests">
+                        <button type="button" @@click="activeTab = 'all'" :aria-pressed="activeTab === 'all'" :class="requestTabClass('all')" class="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all">
+                            <span>All</span>
+                            <span class="rounded-full px-1.5 py-0.5 text-[10px]" :class="requestTabCountClass('all')" x-text="countByTab('all')">0</span>
+                        </button>
+                        <button type="button" @@click="activeTab = 'new'" :aria-pressed="activeTab === 'new'" :class="requestTabClass('new')" class="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all">
+                            <span class="material-symbols-outlined text-base" aria-hidden="true">new_releases</span>
+                            <span>New</span>
+                            <span class="rounded-full px-1.5 py-0.5 text-[10px]" :class="requestTabCountClass('new')" x-text="countByTab('new')">0</span>
+                        </button>
+                        <button type="button" @@click="activeTab = 'not-offered'" :aria-pressed="activeTab === 'not-offered'" :class="requestTabClass('not-offered')" class="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all">
+                            <span class="material-symbols-outlined text-base" aria-hidden="true">mark_email_unread</span>
+                            <span>Not offered</span>
+                            <span class="rounded-full px-1.5 py-0.5 text-[10px]" :class="requestTabCountClass('not-offered')" x-text="countByTab('not-offered')">0</span>
+                        </button>
+                        <button type="button" @@click="activeTab = 'starting-soon'" :aria-pressed="activeTab === 'starting-soon'" :class="requestTabClass('starting-soon')" class="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all">
+                            <span class="material-symbols-outlined text-base" aria-hidden="true">event_upcoming</span>
+                            <span>Starting soon</span>
+                            <span class="rounded-full px-1.5 py-0.5 text-[10px]" :class="requestTabCountClass('starting-soon')" x-text="countByTab('starting-soon')">0</span>
+                        </button>
+                    </div>
+                    <p class="whitespace-nowrap text-xs font-medium text-gray-500" aria-live="polite"><span class="font-bold text-gray-800" x-text="filteredRequests().length">0</span> results</p>
+                </div>
+            </div>
+
+            <!-- My Offers controls -->
+            <div x-show="viewMode === 'offers'">
+                <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+                    <div class="relative flex-1">
+                        <label for="offer-search" class="sr-only">Search sent offers</label>
+                        <span class="material-symbols-outlined pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-gray-400" aria-hidden="true">search</span>
+                        <input id="offer-search" type="search" x-model.debounce.200ms="offerSearchQuery" placeholder="Search traveler, destination, or pitch..." class="w-full rounded-xl border border-gray-200 bg-gray-50 py-3 pl-12 pr-11 text-sm text-gray-900 outline-none placeholder:text-gray-400 focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20">
+                        <button type="button" x-show="offerSearchQuery" @@click="offerSearchQuery = ''" class="absolute right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-200 hover:text-gray-700" aria-label="Clear offer search"><span class="material-symbols-outlined text-lg">close</span></button>
+                    </div>
+                    <div class="relative sm:w-52">
+                        <label for="offer-sort" class="sr-only">Sort sent offers</label>
+                        <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-lg text-gray-400">sort</span>
+                        <select id="offer-sort" x-model="offerSortBy" class="w-full appearance-none rounded-xl border border-gray-200 bg-gray-50 py-3 pl-10 pr-9 text-sm font-medium text-gray-700 outline-none focus:border-orange-400 focus:bg-white focus:ring-2 focus:ring-orange-500/20">
+                            <option value="newest">Recently sent</option>
+                            <option value="oldest">Oldest first</option>
+                            <option value="highest-price">Highest price</option>
+                            <option value="soonest">Trip starting soon</option>
+                        </select>
+                        <span class="material-symbols-outlined pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-lg text-gray-400">expand_more</span>
+                    </div>
+                </div>
+
+                <div class="mt-3 flex flex-col gap-3 border-t border-gray-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="flex gap-2 overflow-x-auto pb-1" role="group" aria-label="Filter sent offers">
+                        <button type="button" @@click="offerStatusFilter = 'all'" :aria-pressed="offerStatusFilter === 'all'" :class="offerTabClass('all')" class="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all">
+                            <span>All</span><span class="rounded-full px-1.5 py-0.5 text-[10px]" :class="offerTabCountClass('all')" x-text="offerCountByStatus('all')">0</span>
+                        </button>
+                        <button type="button" @@click="offerStatusFilter = 'pending'" :aria-pressed="offerStatusFilter === 'pending'" :class="offerTabClass('pending')" class="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all">
+                            <span>Pending</span><span class="rounded-full px-1.5 py-0.5 text-[10px]" :class="offerTabCountClass('pending')" x-text="offerCountByStatus('pending')">0</span>
+                        </button>
+                        <button type="button" @@click="offerStatusFilter = 'accepted'" :aria-pressed="offerStatusFilter === 'accepted'" :class="offerTabClass('accepted')" class="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all">
+                            <span>Accepted</span><span class="rounded-full px-1.5 py-0.5 text-[10px]" :class="offerTabCountClass('accepted')" x-text="offerCountByStatus('accepted')">0</span>
+                        </button>
+                        <button type="button" @@click="offerStatusFilter = 'rejected'" :aria-pressed="offerStatusFilter === 'rejected'" :class="offerTabClass('rejected')" class="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all">
+                            <span>Rejected</span><span class="rounded-full px-1.5 py-0.5 text-[10px]" :class="offerTabCountClass('rejected')" x-text="offerCountByStatus('rejected')">0</span>
+                        </button>
+                        <button type="button" @@click="offerStatusFilter = 'expired'" :aria-pressed="offerStatusFilter === 'expired'" :class="offerTabClass('expired')" class="inline-flex items-center gap-2 whitespace-nowrap rounded-full border px-4 py-2 text-sm font-semibold transition-all">
+                            <span>Expired</span><span class="rounded-full px-1.5 py-0.5 text-[10px]" :class="offerTabCountClass('expired')" x-text="offerCountByStatus('expired')">0</span>
+                        </button>
+                    </div>
+                    <p class="whitespace-nowrap text-xs font-medium text-gray-500" aria-live="polite"><span class="font-bold text-gray-800" x-text="filteredOffers().length">0</span> offers</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content with Sidebar Layout -->
+        <div x-show="viewMode === 'requests'" class="flex gap-6">
+            <!-- Left Column: Request Grid -->
+            <div class="flex-1">
+                <!-- Loading State -->
+                <template x-if="isLoading">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <template x-for="i in 8">
+                            <div class="bg-white rounded-xl border border-gray-100 p-4 animate-pulse">
+                                <div class="h-4 bg-gray-200 rounded mb-3 w-24"></div>
+                                <div class="h-20 bg-gray-100 rounded mb-3"></div>
+                                <div class="h-10 bg-gray-200 rounded"></div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- Empty State -->
+                <template x-if="!isLoading && filteredRequests().length === 0">
+                    <div class="bg-white rounded-2xl p-16 text-center border border-gray-200">
+                        <span class="material-symbols-outlined text-5xl text-gray-300 mx-auto block mb-4">search_off</span>
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">No requests found</h3>
+                        <p class="text-gray-500">Try adjusting your filters or check back later</p>
+                    </div>
+                </template>
+
+                <!-- Request Cards Grid (3 Columns on Desktop) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" x-show="!isLoading && filteredRequests().length > 0">
+                    <template x-for="requestItem in filteredRequests()" :key="requestItem.id">
+                        <div x-data="{ request: normalizeRequest(typeof requestItem === 'undefined' ? null : requestItem) }" class="bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-orange-300 hover:shadow-md transition-all duration-200 flex flex-col">
+
+                            <!-- Card Header -->
+                            <div class="px-4 pt-3 pb-2 border-b border-gray-100">
+                                <div class="flex items-start justify-between gap-2 mb-2">
+                                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                                        <template x-if="request.travelerAvatar && request.travelerAvatar !== ''">
+                                            <img :src="request.travelerAvatar" alt="Avatar" class="w-7 h-7 rounded-full object-cover flex-shrink-0" onerror="this.src='/images/AVATAR.png'">
+                                        </template>
+                                        <template x-if="!request.travelerAvatar || request.travelerAvatar === ''">
+                                            <div class="w-7 h-7 bg-gradient-to-br from-orange-400 to-orange-500 text-white rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0" x-text="request.travelerName.charAt(0)"></div>
+                                        </template>
+                                        <span class="text-xs font-semibold text-gray-700 truncate" x-text="request.travelerName" :title="request.travelerName"></span>
+                                    </div>
+                                    <span x-show="isNew(request.postedAt)" class="bg-green-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full flex-shrink-0">NEW</span>
+                                </div>
+                                <p class="text-[10px] text-gray-400" x-text="formatTimeAgo(request.postedAt)"></p>
+                            </div>
+
+                            <!-- Card Body -->
+                            <div class="px-4 py-3 flex-1">
+                                <!-- Destination -->
+                                <h2 class="font-bold text-gray-900 text-sm leading-snug mb-2" x-text="request.destination || 'Unknown Destination'" :title="request.destination"></h2>
+
+                                <!-- Meta Tags -->
+                                <div class="flex flex-wrap gap-1.5 mb-2">
+                                    <span class="flex items-center gap-0.5 text-[9px] text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-lg font-medium whitespace-nowrap">
+                                        <span class="material-symbols-outlined text-[10px]">calendar_month</span>
+                                        <span x-text="formatDate(request.startDate)"></span>
+                                    </span>
+                                    <span class="flex items-center gap-0.5 text-[9px] text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-lg font-medium">
+                                        <span class="material-symbols-outlined text-[10px]">group</span>
+                                        <span x-text="request.groupSize"></span>
+                                    </span>
+                                    <template x-if="request.budget">
+                                        <span class="flex items-center gap-0.5 text-[9px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-lg font-medium whitespace-nowrap">
+                                            <span class="material-symbols-outlined text-[10px]">payments</span>
+                                            <span x-text="request.budget.length > 8 ? request.budget.substring(0, 8) + '...' : request.budget" :title="request.budget"></span>
+                                        </span>
+                                    </template>
+                                </div>
+
+                                <!-- Notes -->
+                                <p class="text-xs text-gray-500 leading-tight line-clamp-2" x-text="request.notes || 'No notes'" :title="request.notes"></p>
+                            </div>
+
+                            <!-- Card Footer -->
+                            <div class="px-4 pb-3 pt-3 border-t border-gray-100">
+                                <template x-if="!request.hasSentOffer">
+                                    <button @@click="openOfferModal(request)" class="w-full flex items-center justify-center gap-1.5 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white text-xs font-bold py-2.5 rounded-lg transition-all shadow-sm hover:shadow-md active:scale-95">
+                                        <span class="material-symbols-outlined text-[14px]">send</span> Offer
+                                    </button>
+                                </template>
+                                <template x-if="request.hasSentOffer">
+                                    <div class="w-full flex items-center justify-center gap-1.5 bg-green-50 text-green-700 text-xs font-bold py-2.5 rounded-lg border border-green-200">
+                                        <span class="material-symbols-outlined text-[14px]">check_circle</span> Sent
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <!-- Right Column: Sticky Tips Sidebar (Hidden on Mobile/Tablet) -->
+            <div class="hidden lg:block w-64 flex-shrink-0">
+                <div class="sticky top-8 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+                    <!-- Header -->
+                    <div class="px-5 py-4 bg-gradient-to-r from-orange-50 to-red-50 border-b border-gray-100 flex items-center gap-3">
+                        <span class="material-symbols-outlined text-orange-600 text-xl">lightbulb</span>
+                        <h3 class="font-bold text-gray-900 text-sm">Pro Tips</h3>
+                    </div>
+                    
+                    <!-- Tips Content -->
+                    <div class="px-5 py-4 space-y-3.5">
+                        <!-- Tip 1 -->
+                        <div class="flex gap-3">
+                            <span class="material-symbols-outlined text-orange-500 flex-shrink-0 text-base mt-0.5">check_circle</span>
+                            <p class="text-xs text-gray-700 leading-relaxed">Read traveler notes carefully and personalize your offer.</p>
+                        </div>
+
+                        <!-- Tip 2 -->
+                        <div class="flex gap-3">
+                            <span class="material-symbols-outlined text-orange-500 flex-shrink-0 text-base mt-0.5">check_circle</span>
+                            <p class="text-xs text-gray-700 leading-relaxed">Include a clear itinerary and transparent pricing.</p>
+                        </div>
+
+                        <!-- Tip 3 -->
+                        <div class="flex gap-3">
+                            <span class="material-symbols-outlined text-orange-500 flex-shrink-0 text-base mt-0.5">check_circle</span>
+                            <p class="text-xs text-gray-700 leading-relaxed">Respond quickly - travelers pick from first 3 good offers.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Footer Divider -->
+                    <div class="px-5 py-3 border-t border-gray-100 bg-gray-50">
+                        <p class="text-[11px] text-gray-500 font-medium">💡 Your response time matters!</p>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- Requests List -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- Request Card 1 -->
-                <div class="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant/30 hover:border-primary/50 transition-colors">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-orange-100 text-primary rounded-full flex items-center justify-center font-bold text-lg">M</div>
-                            <div>
-                                <h3 class="font-bold text-on-surface">Michael D.</h3>
-                                <p class="text-xs text-on-surface-variant">Posted 2 hours ago</p>
+        <!-- My Offers workspace -->
+        <section x-show="viewMode === 'offers'" aria-label="My sent offers">
+            <div x-show="isOffersLoading" class="space-y-4">
+                <template x-for="i in 3" :key="i">
+                    <div class="animate-pulse rounded-2xl border border-gray-200 bg-white p-5">
+                        <div class="mb-4 flex justify-between"><div class="h-5 w-28 rounded bg-gray-200"></div><div class="h-5 w-20 rounded bg-gray-100"></div></div>
+                        <div class="grid gap-4 md:grid-cols-[1fr_180px]"><div><div class="mb-3 h-6 w-52 rounded bg-gray-200"></div><div class="h-16 rounded-xl bg-gray-100"></div></div><div class="h-24 rounded-xl bg-gray-100"></div></div>
+                    </div>
+                </template>
+            </div>
+
+            <div x-show="!isOffersLoading && filteredOffers().length === 0" class="rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center shadow-sm">
+                <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-50 text-orange-500"><span class="material-symbols-outlined text-3xl">outbox</span></div>
+                <h2 class="mt-4 text-xl font-bold text-gray-900" x-text="offers.length === 0 ? 'No offers sent yet' : 'No matching offers'"></h2>
+                <p class="mx-auto mt-2 max-w-md text-sm text-gray-500" x-text="offers.length === 0 ? 'Browse traveler requests and send a personalized proposal to start building your pipeline.' : 'Try another status, keyword, or sorting option.'"></p>
+                <button x-show="offers.length === 0" type="button" @@click="setViewMode('requests')" class="mt-5 inline-flex items-center gap-2 rounded-xl bg-orange-500 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-orange-600">
+                    <span class="material-symbols-outlined text-lg">travel_explore</span> Browse Requests
+                </button>
+            </div>
+
+            <div x-show="!isOffersLoading && filteredOffers().length > 0" class="space-y-4">
+                <template x-for="offerItem in filteredOffers()" :key="offerItem.id">
+                    <article x-data="{ offer: normalizeOffer(typeof offerItem === 'undefined' ? null : offerItem) }" class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all hover:border-orange-200 hover:shadow-md">
+                        <div class="flex flex-col gap-3 border-b border-gray-100 bg-gray-50/70 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex min-w-0 items-center gap-3">
+                                <span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide" :class="offerStatusClass(offer.status)">
+                                    <span class="material-symbols-outlined text-sm" x-text="offerStatusIcon(offer.status)"></span>
+                                    <span x-text="offerStatusLabel(offer.status)"></span>
+                                </span>
+                                <span class="truncate font-mono text-xs text-gray-400" x-text="'#' + shortId(offer.id)"></span>
+                            </div>
+                            <p class="flex items-center gap-1 text-xs font-medium text-gray-500"><span class="material-symbols-outlined text-sm">schedule</span> Sent <span x-text="formatTimeAgo(offer.sentAt)"></span></p>
+                        </div>
+
+                        <div class="grid gap-5 p-5 lg:grid-cols-[1fr_220px]">
+                            <div class="min-w-0">
+                                <div class="flex items-start gap-3">
+                                    <img :src="offer.travelerAvatar || '/images/AVATAR.png'" :alt="offer.travelerName + ' avatar'" onerror="this.src='/images/AVATAR.png'" class="h-11 w-11 flex-shrink-0 rounded-xl object-cover ring-1 ring-gray-200">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xs font-semibold text-gray-500">Offer to <span class="font-bold text-gray-800" x-text="offer.travelerName"></span></p>
+                                        <h2 class="mt-0.5 truncate text-lg font-bold text-gray-900" x-text="offer.destination" :title="offer.destination"></h2>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 flex flex-wrap gap-2 text-xs font-medium text-gray-600">
+                                    <span class="inline-flex items-center gap-1.5 rounded-lg bg-violet-50 px-2.5 py-1.5 text-violet-700"><span class="material-symbols-outlined text-base">calendar_month</span><span x-text="formatDateRange(offer.startDate, offer.endDate)"></span></span>
+                                    <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-1.5 text-emerald-700"><span class="material-symbols-outlined text-base">group</span><span x-text="offer.groupSize + (offer.groupSize === 1 ? ' traveler' : ' travelers')"></span></span>
+                                    <span class="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 capitalize text-amber-700"><span class="material-symbols-outlined text-base">payments</span><span x-text="offer.budget || 'Flexible budget'"></span></span>
+                                </div>
+
+                                <div class="mt-4 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                                    <p class="mb-1 text-[11px] font-bold uppercase tracking-wide text-gray-400">Your pitch</p>
+                                    <p class="line-clamp-2 text-sm leading-relaxed text-gray-600" x-text="offer.message"></p>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-col justify-between border-t border-gray-100 pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+                                <div class="lg:text-right">
+                                    <p class="text-[11px] font-bold uppercase tracking-wide text-gray-400">Proposed total</p>
+                                    <p class="mt-1 text-2xl font-black text-orange-600" x-text="formatCurrency(offer.proposedPrice)"></p>
+                                    <p class="mt-1 text-xs text-gray-400">Entire trip duration</p>
+                                </div>
+                                <button type="button" @@click="openOfferDetail(offer)" class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700">
+                                    <span class="material-symbols-outlined text-lg">visibility</span> View details
+                                </button>
                             </div>
                         </div>
-                        <span class="bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">New</span>
+                    </article>
+                </template>
+            </div>
+        </section>
+    </div>
+
+    <!-- Send Offer Modal -->
+    <div x-show="isModalOpen"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-3 backdrop-blur-sm sm:p-6"
+         style="display: none;"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @@click.self="if (!isSubmitting) closeOfferModal()"
+         @@keydown.escape.window="if (isModalOpen && !isSubmitting) closeOfferModal()">
+
+        <div role="dialog"
+             aria-modal="true"
+             aria-labelledby="offer-modal-title"
+             aria-describedby="offer-modal-description"
+             class="flex max-h-[92vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="translate-y-3 scale-95 opacity-0"
+             x-transition:enter-end="translate-y-0 scale-100 opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="translate-y-0 scale-100 opacity-100"
+             x-transition:leave-end="translate-y-3 scale-95 opacity-0">
+
+            <!-- Modal Header -->
+            <div class="flex items-start justify-between gap-4 bg-gradient-to-r from-orange-500 to-orange-600 px-5 py-4 sm:px-6 sm:py-5">
+                <div class="flex min-w-0 items-center gap-3">
+                    <div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white/15 text-white ring-1 ring-white/20">
+                        <span class="material-symbols-outlined" aria-hidden="true">outgoing_mail</span>
                     </div>
-                    
-                    <h2 class="text-xl font-bold text-on-surface mb-3">3 Days in Ha Long Bay</h2>
-                    
-                    <div class="flex flex-wrap gap-3 mb-4">
-                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
-                            <span class="material-symbols-outlined text-[16px]">location_on</span> Ha Long Bay
-                        </div>
-                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
-                            <span class="material-symbols-outlined text-[16px]">calendar_month</span> Oct 12 - Oct 15
-                        </div>
-                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
-                            <span class="material-symbols-outlined text-[16px]">group</span> 2 People
-                        </div>
-                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
-                            <span class="material-symbols-outlined text-[16px]">payments</span> 1M - 2M VND/day
-                        </div>
+                    <div class="min-w-0">
+                        <h3 id="offer-modal-title" class="text-lg font-bold text-white sm:text-xl">Send Custom Offer</h3>
+                        <p id="offer-modal-description" class="mt-0.5 text-xs text-orange-50 sm:text-sm">Stand out with a clear plan and transparent price.</p>
                     </div>
-                    
-                    <div class="bg-surface-variant/30 p-4 rounded-xl border-l-4 border-primary mb-6">
-                        <p class="text-on-surface-variant text-sm">"I love trying local street food, hate crowded tourist spots, and want to learn about the history. I need an English-speaking guide who can arrange private transport."</p>
+                </div>
+                <button type="button"
+                        @@click="closeOfferModal()"
+                        class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-white/80 transition-colors hover:bg-white/15 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                        :disabled="isSubmitting"
+                        aria-label="Close offer form">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+            </div>
+
+            <form class="flex min-h-0 flex-1 flex-col" x-on:submit.prevent="submitOffer()" data-turbo="false" novalidate>
+                <!-- Modal Body -->
+                <div class="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+                    <!-- Request Context -->
+                    <section class="rounded-xl border border-orange-200 bg-orange-50/80 p-4" aria-label="Selected trip request">
+                        <div class="flex items-start gap-3">
+                            <template x-if="selectedRequest && selectedRequest.travelerAvatar">
+                                <img :src="selectedRequest ? selectedRequest.travelerAvatar : '/images/AVATAR.png'"
+                                     :alt="selectedRequest ? (selectedRequest.travelerName || 'Traveler') + ' avatar' : 'Traveler avatar'"
+                                     class="h-11 w-11 flex-shrink-0 rounded-xl object-cover ring-2 ring-white"
+                                     onerror="this.src='/images/AVATAR.png'">
+                            </template>
+                            <template x-if="!selectedRequest || !selectedRequest.travelerAvatar">
+                                <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white text-lg font-bold text-orange-600 ring-1 ring-orange-100"
+                                     x-text="selectedRequest && selectedRequest.travelerName ? selectedRequest.travelerName.charAt(0).toUpperCase() : ''"></div>
+                            </template>
+                            <div class="min-w-0 flex-1">
+                                <p class="text-xs font-semibold uppercase tracking-wide text-orange-700">Offer for</p>
+                                <p class="truncate text-sm font-bold text-gray-900" x-text="selectedRequest ? selectedRequest.travelerName : ''"></p>
+                                <p class="mt-1 flex items-center gap-1 text-xs font-medium text-orange-700">
+                                    <span class="material-symbols-outlined text-sm" aria-hidden="true">location_on</span>
+                                    <span class="truncate" x-text="selectedRequest ? selectedRequest.destination : ''" :title="selectedRequest ? selectedRequest.destination : ''"></span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-3 grid grid-cols-2 gap-2 border-t border-orange-200/70 pt-3 sm:grid-cols-3">
+                            <div class="flex min-w-0 items-center gap-2 rounded-lg bg-white/70 px-2.5 py-2 text-xs text-gray-600">
+                                <span class="material-symbols-outlined text-base text-orange-500" aria-hidden="true">calendar_month</span>
+                                <span class="truncate" x-text="selectedRequest ? formatDate(selectedRequest.startDate) + ' – ' + formatDate(selectedRequest.endDate) : ''"></span>
+                            </div>
+                            <div class="flex items-center gap-2 rounded-lg bg-white/70 px-2.5 py-2 text-xs text-gray-600">
+                                <span class="material-symbols-outlined text-base text-orange-500" aria-hidden="true">group</span>
+                                <span x-text="selectedRequest ? selectedRequest.groupSize + (selectedRequest.groupSize === 1 ? ' traveler' : ' travelers') : ''"></span>
+                            </div>
+                            <div class="col-span-2 flex items-center gap-2 rounded-lg bg-white/70 px-2.5 py-2 text-xs text-gray-600 sm:col-span-1">
+                                <span class="material-symbols-outlined text-base text-orange-500" aria-hidden="true">payments</span>
+                                <span class="truncate capitalize" x-text="selectedRequest && selectedRequest.budget ? selectedRequest.budget + ' budget' : 'Budget not specified'"></span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Pitch / Itinerary -->
+                    <div>
+                        <div class="mb-2 flex items-end justify-between gap-3">
+                            <label for="offer-message" class="text-sm font-bold text-gray-900">
+                                Your pitch & itinerary <span class="text-orange-500" aria-hidden="true">*</span>
+                            </label>
+                            <span class="text-xs font-medium"
+                                  :class="offerForm.message.length >= 900 ? 'text-orange-600' : 'text-gray-400'"
+                                  x-text="offerForm.message.length + '/1000'">0/1000</span>
+                        </div>
+                        <textarea id="offer-message"
+                                  x-ref="offerMessage"
+                                  x-model="offerForm.message"
+                                  @@input="offerErrors.message = ''"
+                                  rows="6"
+                                  maxlength="1000"
+                                  required
+                                  aria-describedby="offer-message-help offer-message-error"
+                                  :aria-invalid="offerErrors.message ? 'true' : 'false'"
+                                  :class="offerErrors.message ? 'border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 bg-gray-50 focus:border-orange-400 focus:bg-white focus:ring-orange-500/20'"
+                                  class="w-full resize-none rounded-xl border px-4 py-3 text-sm leading-relaxed text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:ring-2"
+                                  placeholder="Introduce yourself, suggest a simple itinerary, and explain what makes your local experience special..."></textarea>
+                        <div class="mt-2 flex items-start justify-between gap-3">
+                            <p id="offer-message-help" class="flex items-start gap-1.5 text-xs text-gray-500">
+                                <span class="material-symbols-outlined mt-px text-sm text-orange-500" aria-hidden="true">tips_and_updates</span>
+                                <span>Mention availability, activities, inclusions, and any special highlights.</span>
+                            </p>
+                        </div>
+                        <p id="offer-message-error" x-show="offerErrors.message" x-text="offerErrors.message" class="mt-2 flex items-center gap-1 text-xs font-medium text-red-600" role="alert"></p>
                     </div>
-                    
-                    <div class="flex gap-4">
-                        <button class="bg-primary hover:bg-primary/90 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[18px]">send</span> Send Offer
-                        </button>
-                        <button class="bg-surface-variant hover:bg-outline-variant/30 text-on-surface font-bold py-2 px-6 rounded-lg transition-colors">
-                            Message
-                        </button>
+
+                    <!-- Price -->
+                    <div>
+                        <div class="mb-2 flex items-end justify-between gap-3">
+                            <label for="offer-price" class="text-sm font-bold text-gray-900">
+                                Proposed total price <span class="text-orange-500" aria-hidden="true">*</span>
+                            </label>
+                            <span class="text-xs font-medium text-gray-400">VND</span>
+                        </div>
+                        <div class="relative">
+                            <span class="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-gray-500" aria-hidden="true">₫</span>
+                            <input id="offer-price"
+                                   type="text"
+                                   inputmode="numeric"
+                                   autocomplete="off"
+                                   x-model="offerForm.displayPrice"
+                                   @@input="formatPriceInput"
+                                   required
+                                   aria-describedby="offer-price-help offer-price-error"
+                                   :aria-invalid="offerErrors.price ? 'true' : 'false'"
+                                   :class="offerErrors.price ? 'border-red-400 bg-red-50/40 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-300 bg-gray-50 focus:border-orange-400 focus:bg-white focus:ring-orange-500/20'"
+                                   class="w-full rounded-xl border py-3 pl-10 pr-24 text-base font-bold text-gray-900 outline-none transition-all placeholder:font-normal placeholder:text-gray-400 focus:ring-2"
+                                   placeholder="2.500.000">
+                            <span class="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">VND</span>
+                        </div>
+                        <div id="offer-price-help" class="mt-2 flex items-start justify-between gap-3 text-xs">
+                            <p class="flex items-center gap-1 text-gray-500">
+                                <span class="material-symbols-outlined text-sm" aria-hidden="true">info</span>
+                                Total amount for the entire trip.
+                            </p>
+                            <p x-show="offerForm.rawPrice" class="whitespace-nowrap font-semibold text-orange-600" x-text="formatCurrency(offerForm.rawPrice)"></p>
+                        </div>
+                        <p id="offer-price-error" x-show="offerErrors.price" x-text="offerErrors.price" class="mt-2 text-xs font-medium text-red-600" role="alert"></p>
                     </div>
                 </div>
 
-                <!-- Request Card 2 -->
-                <div class="bg-white rounded-2xl p-6 shadow-sm border border-outline-variant/30 hover:border-primary/50 transition-colors">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-bold text-lg">S</div>
-                            <div>
-                                <h3 class="font-bold text-on-surface">Sarah Connor</h3>
-                                <p class="text-xs text-on-surface-variant">Posted 1 day ago</p>
-                            </div>
+                <!-- Modal Footer -->
+                <div class="border-t border-gray-200 bg-gray-50 px-5 py-4 sm:px-6">
+                    <p class="mb-3 flex items-center gap-1.5 text-xs text-gray-500 sm:hidden">
+                        <span class="material-symbols-outlined text-sm" aria-hidden="true">verified_user</span>
+                        Review your pitch and price before sending.
+                    </p>
+                    <div class="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <p class="hidden items-center gap-1.5 text-xs text-gray-500 sm:flex">
+                            <span class="material-symbols-outlined text-sm" aria-hidden="true">verified_user</span>
+                            Review your pitch and price before sending.
+                        </p>
+                        <div class="flex gap-3 sm:flex-shrink-0">
+                            <button type="button"
+                                    @@click="closeOfferModal()"
+                                    class="flex-1 rounded-xl px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 sm:flex-none"
+                                    :disabled="isSubmitting">
+                                Cancel
+                            </button>
+                            <button type="submit"
+                                    class="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-all hover:from-orange-600 hover:to-orange-700 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-500 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none"
+                                    :disabled="isSubmitting">
+                                <span class="material-symbols-outlined text-base" :class="isSubmitting ? 'animate-spin' : ''" aria-hidden="true" x-text="isSubmitting ? 'progress_activity' : 'send'"></span>
+                                <span x-text="isSubmitting ? 'Sending...' : 'Send Offer'">Send Offer</span>
+                            </button>
                         </div>
                     </div>
-                    
-                    <h2 class="text-xl font-bold text-on-surface mb-3">Sapa Trekking Adventure</h2>
-                    
-                    <div class="flex flex-wrap gap-3 mb-4">
-                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
-                            <span class="material-symbols-outlined text-[16px]">location_on</span> Sapa
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sent Offer Detail Modal -->
+    <div x-show="isOfferDetailOpen"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-3 backdrop-blur-sm sm:p-6"
+         style="display: none;"
+         x-transition:enter="transition ease-out duration-300"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="transition ease-in duration-200"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         @@click.self="closeOfferDetail()"
+         @@keydown.escape.window="if (isOfferDetailOpen) closeOfferDetail()">
+        <div role="dialog"
+             aria-modal="true"
+             aria-labelledby="offer-detail-title"
+             class="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="translate-y-3 scale-95 opacity-0"
+             x-transition:enter-end="translate-y-0 scale-100 opacity-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="translate-y-0 scale-100 opacity-100"
+             x-transition:leave-end="translate-y-3 scale-95 opacity-0">
+            <div class="flex items-start justify-between gap-4 border-b border-gray-100 bg-gradient-to-r from-gray-900 to-gray-800 px-5 py-4 sm:px-6 sm:py-5">
+                <div class="min-w-0">
+                    <div class="mb-2 flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
+                              :class="offerStatusClass(selectedOffer ? selectedOffer.status : '')">
+                            <span class="material-symbols-outlined text-sm" x-text="offerStatusIcon(selectedOffer ? selectedOffer.status : '')"></span>
+                            <span x-text="offerStatusLabel(selectedOffer ? selectedOffer.status : '')"></span>
+                        </span>
+                        <span class="font-mono text-xs text-gray-400" x-text="selectedOffer ? '#' + shortId(selectedOffer.id) : ''"></span>
+                    </div>
+                    <h3 id="offer-detail-title" class="truncate text-lg font-bold text-white sm:text-xl" x-text="selectedOffer ? selectedOffer.destination : 'Offer details'">Offer details</h3>
+                    <p class="mt-1 flex items-center gap-1 text-xs text-gray-300">
+                        <span class="material-symbols-outlined text-sm">schedule</span>
+                        <span x-text="selectedOffer ? 'Sent ' + formatDateTime(selectedOffer.sentAt) : ''"></span>
+                    </p>
+                </div>
+                <button type="button" @@click="closeOfferDetail()" class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white" aria-label="Close offer details">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+                <section class="rounded-xl border border-orange-100 bg-orange-50/70 p-4" aria-label="Traveler request summary">
+                    <div class="flex items-center gap-3">
+                        <img :src="selectedOffer && selectedOffer.travelerAvatar ? selectedOffer.travelerAvatar : '/images/AVATAR.png'"
+                             :alt="selectedOffer ? selectedOffer.travelerName + ' avatar' : 'Traveler avatar'"
+                             onerror="this.src='/images/AVATAR.png'"
+                             class="h-11 w-11 flex-shrink-0 rounded-xl object-cover ring-2 ring-white">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-semibold uppercase tracking-wide text-orange-700">Offer sent to</p>
+                            <p class="truncate text-sm font-bold text-gray-900" x-text="selectedOffer ? selectedOffer.travelerName : ''"></p>
                         </div>
-                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
-                            <span class="material-symbols-outlined text-[16px]">calendar_month</span> Nov 1 - Nov 3
-                        </div>
-                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
-                            <span class="material-symbols-outlined text-[16px]">group</span> 4 People
-                        </div>
-                        <div class="flex items-center gap-1 bg-surface py-1 px-3 rounded-full text-sm text-on-surface-variant border border-outline-variant/20">
-                            <span class="material-symbols-outlined text-[16px]">payments</span> 2M - 5M VND/day
+                        <div class="text-right">
+                            <p class="text-[11px] font-bold uppercase tracking-wide text-gray-400">Proposed total</p>
+                            <p class="mt-0.5 text-xl font-black text-orange-600" x-text="selectedOffer ? formatCurrency(selectedOffer.proposedPrice) : ''"></p>
                         </div>
                     </div>
-                    
-                    <div class="bg-surface-variant/30 p-4 rounded-xl border-l-4 border-primary mb-6">
-                        <p class="text-on-surface-variant text-sm">"Looking for a physically demanding trek through authentic villages. We want a homestay experience, not hotels. Must know the local ethnic culture deeply."</p>
+                    <div class="mt-4 grid gap-2 border-t border-orange-100 pt-4 text-xs font-medium sm:grid-cols-3">
+                        <div class="flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2 text-violet-700"><span class="material-symbols-outlined text-base">calendar_month</span><span x-text="selectedOffer ? formatDateRange(selectedOffer.startDate, selectedOffer.endDate) : ''"></span></div>
+                        <div class="flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2 text-emerald-700"><span class="material-symbols-outlined text-base">group</span><span x-text="selectedOffer ? selectedOffer.groupSize + (selectedOffer.groupSize === 1 ? ' traveler' : ' travelers') : ''"></span></div>
+                        <div class="flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2 capitalize text-amber-700"><span class="material-symbols-outlined text-base">payments</span><span x-text="selectedOffer && selectedOffer.budget ? selectedOffer.budget : 'Flexible budget'"></span></div>
                     </div>
-                    
-                    <div class="flex gap-4">
-                        <button class="bg-primary hover:bg-primary/90 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[18px]">send</span> Send Offer
-                        </button>
-                        <button class="bg-surface-variant hover:bg-outline-variant/30 text-on-surface font-bold py-2 px-6 rounded-lg transition-colors">
-                            Message
-                        </button>
-                    </div>
+                </section>
+
+                <section>
+                    <h4 class="flex items-center gap-2 text-sm font-bold text-gray-900"><span class="material-symbols-outlined text-lg text-orange-500">campaign</span>Your pitch & itinerary</h4>
+                    <p class="mt-2 whitespace-pre-line rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm leading-relaxed text-gray-700" x-text="selectedOffer ? selectedOffer.message : ''"></p>
+                </section>
+
+                <section>
+                    <h4 class="flex items-center gap-2 text-sm font-bold text-gray-900"><span class="material-symbols-outlined text-lg text-orange-500">format_quote</span>Traveler request notes</h4>
+                    <p class="mt-2 whitespace-pre-line rounded-xl border border-amber-100 bg-amber-50/60 px-4 py-3 text-sm italic leading-relaxed text-gray-700" x-text="selectedOffer && selectedOffer.requestNotes ? selectedOffer.requestNotes : 'The traveler did not add any special notes.'"></p>
+                </section>
+
+                <div class="flex items-start gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-relaxed text-blue-800">
+                    <span class="material-symbols-outlined mt-px text-base">info</span>
+                    <p x-text="offerStatusHint(selectedOffer ? selectedOffer.status : '')"></p>
                 </div>
             </div>
 
-            <!-- Stats / Info Panel -->
-            <div class="space-y-6">
-                <!-- How to get selected -->
-                <div class="bg-primary-container p-6 rounded-2xl">
-                    <h3 class="font-bold text-on-primary-container text-lg mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined">lightbulb</span> Tips to win offers
-                    </h3>
-                    <ul class="space-y-3 text-sm text-on-surface-variant">
-                        <li class="flex items-start gap-2">
-                            <span class="material-symbols-outlined text-primary text-[18px] mt-0.5">check_circle</span>
-                            <span>Read the traveler's notes carefully and personalize your offer.</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <span class="material-symbols-outlined text-primary text-[18px] mt-0.5">check_circle</span>
-                            <span>Include a clear, itemized itinerary and transparent pricing.</span>
-                        </li>
-                        <li class="flex items-start gap-2">
-                            <span class="material-symbols-outlined text-primary text-[18px] mt-0.5">check_circle</span>
-                            <span>Respond quickly. Travelers usually pick the first 3 good offers.</span>
-                        </li>
-                    </ul>
-                </div>
-                
-                <!-- My Stats -->
-                <div class="bg-white p-6 rounded-2xl border border-outline-variant/30 shadow-sm">
-                    <h3 class="font-bold text-on-surface text-lg mb-4">My Request Stats</h3>
-                    <div class="space-y-4">
-                        <div class="flex justify-between items-center">
-                            <span class="text-on-surface-variant text-sm">Offers Sent (This week)</span>
-                            <span class="font-bold text-on-surface">12</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <span class="text-on-surface-variant text-sm">Accepted Offers</span>
-                            <span class="font-bold text-green-600">3</span>
-                        </div>
-                        <div class="w-full bg-surface-variant rounded-full h-2">
-                            <div class="bg-green-500 h-2 rounded-full" style="width: 25%"></div>
-                        </div>
-                        <p class="text-xs text-on-surface-variant text-right">25% Success Rate</p>
-                    </div>
-                </div>
+            <div class="flex justify-end border-t border-gray-200 bg-gray-50 px-5 py-4 sm:px-6">
+                <button type="button" @@click="closeOfferDetail()" class="rounded-xl border border-gray-200 bg-white px-5 py-2.5 text-sm font-bold text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">Close</button>
             </div>
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        // A global factory works on first load and after Turbo replaces the page body.
+        window.tripRequestsBoard = function () {
+            return {
+                viewMode: 'requests',
+                requests: [],
+                offers: [],
+                stats: { offersSentThisWeek: 0, acceptedOffers: 0, successRate: 0 },
+                searchQuery: '',
+                sortBy: 'newest',
+                isLoading: true,
+                isLoadingStats: true,
+                activeTab: 'all',
+                offerSearchQuery: '',
+                offerSortBy: 'newest',
+                offerStatusFilter: 'all',
+                isOffersLoading: true,
+                isModalOpen: false,
+                selectedRequest: null,
+                isOfferDetailOpen: false,
+                selectedOffer: null,
+                isSubmitting: false,
+                offerForm: {
+                    message: '',
+                    rawPrice: null,
+                    displayPrice: ''
+                },
+                offerErrors: {
+                    message: '',
+                    price: ''
+                },
+
+                initData() {
+                    this.fetchRequests();
+                    this.fetchStats();
+                    this.fetchOffers();
+                },
+
+                setViewMode(mode) {
+                    this.viewMode = mode === 'offers' ? 'offers' : 'requests';
+                },
+
+                async fetchRequests() {
+                    this.isLoading = true;
+                    try {
+                        const response = await fetch('/Guide/GetTripRequestsData');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.requests = Array.isArray(data)
+                                ? data.filter(request => request && request.id).map(request => this.normalizeRequest(request))
+                                : [];
+                        } else {
+                            showToast('error', 'Failed to load requests');
+                        }
+                    } catch (err) {
+                        console.error('Error fetching requests:', err);
+                        showToast('error', 'Error loading requests');
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+
+                async fetchStats() {
+                    this.isLoadingStats = true;
+                    try {
+                        const response = await fetch('/Guide/GetOfferStats');
+                        if (response.ok) {
+                            this.stats = await response.json();
+                        }
+                    } catch (err) {
+                        console.error('Error fetching stats:', err);
+                    } finally {
+                        this.isLoadingStats = false;
+                    }
+                },
+
+                async fetchOffers() {
+                    this.isOffersLoading = true;
+                    try {
+                        const response = await fetch('/Guide/GetMyOffersData');
+                        if (response.ok) {
+                            const data = await response.json();
+                            this.offers = Array.isArray(data)
+                                ? data.filter(offer => offer && offer.id).map(offer => this.normalizeOffer(offer))
+                                : [];
+                        } else {
+                            showToast('error', 'Failed to load your offers');
+                        }
+                    } catch (err) {
+                        console.error('Error fetching guide offers:', err);
+                        showToast('error', 'Error loading your offers');
+                    } finally {
+                        this.isOffersLoading = false;
+                    }
+                },
+
+                filteredRequests() {
+                    let filtered = [...this.requests];
+
+                    // Apply business-focused filters.
+                    if (this.activeTab === 'new') {
+                        filtered = filtered.filter(req => this.isNew(req.postedAt));
+                    } else if (this.activeTab === 'not-offered') {
+                        filtered = filtered.filter(req => !req.hasSentOffer);
+                    } else if (this.activeTab === 'starting-soon') {
+                        filtered = filtered.filter(req => this.isStartingSoon(req.startDate));
+                    }
+
+                    // Apply a safe, case-insensitive search across visible request fields.
+                    const query = this.searchQuery.trim().toLowerCase();
+                    if (query) {
+                        filtered = filtered.filter(req =>
+                            String(req.destination ?? '').toLowerCase().includes(query) ||
+                            String(req.notes ?? '').toLowerCase().includes(query) ||
+                            String(req.travelerName ?? '').toLowerCase().includes(query)
+                        );
+                    }
+
+                    // Apply client-side sorting without mutating the API response.
+                    filtered.sort((a, b) => {
+                        if (this.sortBy === 'soonest') {
+                            return this.dateValue(a.startDate, Number.MAX_SAFE_INTEGER) - this.dateValue(b.startDate, Number.MAX_SAFE_INTEGER);
+                        }
+                        if (this.sortBy === 'highest-budget') {
+                            return this.budgetRank(b.budget) - this.budgetRank(a.budget);
+                        }
+                        if (this.sortBy === 'largest-group') {
+                            return Number(b.groupSize ?? 0) - Number(a.groupSize ?? 0);
+                        }
+                        return this.dateValue(b.postedAt, 0) - this.dateValue(a.postedAt, 0);
+                    });
+
+                    return filtered;
+                },
+
+                filteredOffers() {
+                    let filtered = [...this.offers];
+                    if (this.offerStatusFilter !== 'all') {
+                        filtered = filtered.filter(offer => this.normalizedOfferStatus(offer.status) === this.offerStatusFilter);
+                    }
+
+                    const query = this.offerSearchQuery.trim().toLowerCase();
+                    if (query) {
+                        filtered = filtered.filter(offer =>
+                            String(offer.travelerName ?? '').toLowerCase().includes(query) ||
+                            String(offer.destination ?? '').toLowerCase().includes(query) ||
+                            String(offer.message ?? '').toLowerCase().includes(query) ||
+                            String(offer.requestNotes ?? '').toLowerCase().includes(query)
+                        );
+                    }
+
+                    filtered.sort((a, b) => {
+                        if (this.offerSortBy === 'oldest') {
+                            return this.dateValue(a.sentAt, Number.MAX_SAFE_INTEGER) - this.dateValue(b.sentAt, Number.MAX_SAFE_INTEGER);
+                        }
+                        if (this.offerSortBy === 'highest-price') {
+                            return Number(b.proposedPrice ?? 0) - Number(a.proposedPrice ?? 0);
+                        }
+                        if (this.offerSortBy === 'soonest') {
+                            return this.dateValue(a.startDate, Number.MAX_SAFE_INTEGER) - this.dateValue(b.startDate, Number.MAX_SAFE_INTEGER);
+                        }
+                        return this.dateValue(b.sentAt, 0) - this.dateValue(a.sentAt, 0);
+                    });
+
+                    return filtered;
+                },
+
+                countByTab(tab) {
+                    if (tab === 'new') return this.requests.filter(req => this.isNew(req.postedAt)).length;
+                    if (tab === 'not-offered') return this.requests.filter(req => !req.hasSentOffer).length;
+                    if (tab === 'starting-soon') return this.requests.filter(req => this.isStartingSoon(req.startDate)).length;
+                    return this.requests.length;
+                },
+
+                offerCountByStatus(status) {
+                    if (status === 'all') return this.offers.length;
+                    return this.offers.filter(offer => this.normalizedOfferStatus(offer.status) === status).length;
+                },
+
+                requestTabClass(tab) {
+                    return this.activeTab === tab
+                        ? 'border-orange-500 bg-orange-500 text-white shadow-sm'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700';
+                },
+
+                requestTabCountClass(tab) {
+                    return this.activeTab === tab ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500';
+                },
+
+                offerTabClass(status) {
+                    return this.offerStatusFilter === status
+                        ? 'border-orange-500 bg-orange-500 text-white shadow-sm'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700';
+                },
+
+                offerTabCountClass(status) {
+                    return this.offerStatusFilter === status ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500';
+                },
+
+                normalizeRequest(request) {
+                    return {
+                        id: '',
+                        travelerAvatar: '',
+                        travelerName: 'Traveler',
+                        destination: 'Unknown Destination',
+                        postedAt: null,
+                        startDate: null,
+                        endDate: null,
+                        groupSize: 0,
+                        budget: '',
+                        notes: '',
+                        hasSentOffer: false,
+                        ...(request || {})
+                    };
+                },
+
+                normalizeOffer(offer) {
+                    return {
+                        id: '',
+                        status: 'pending',
+                        travelerAvatar: '',
+                        travelerName: 'Traveler',
+                        destination: 'Unknown Destination',
+                        sentAt: null,
+                        startDate: null,
+                        endDate: null,
+                        groupSize: 0,
+                        budget: '',
+                        message: '',
+                        requestNotes: '',
+                        proposedPrice: 0,
+                        ...(offer || {})
+                    };
+                },
+
+                normalizedOfferStatus(status) {
+                    return String(status ?? 'pending').trim().toLowerCase();
+                },
+
+                offerStatusLabel(status) {
+                    const labels = { pending: 'Pending', accepted: 'Accepted', rejected: 'Rejected', expired: 'Expired', withdrawn: 'Withdrawn' };
+                    return labels[this.normalizedOfferStatus(status)] ?? 'Unknown';
+                },
+
+                offerStatusIcon(status) {
+                    const icons = { pending: 'schedule', accepted: 'check_circle', rejected: 'cancel', expired: 'timer_off', withdrawn: 'undo' };
+                    return icons[this.normalizedOfferStatus(status)] ?? 'help';
+                },
+
+                offerStatusClass(status) {
+                    const classes = {
+                        pending: 'border-amber-200 bg-amber-50 text-amber-700',
+                        accepted: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+                        rejected: 'border-red-200 bg-red-50 text-red-700',
+                        expired: 'border-gray-200 bg-gray-100 text-gray-600',
+                        withdrawn: 'border-slate-200 bg-slate-100 text-slate-600'
+                    };
+                    return classes[this.normalizedOfferStatus(status)] ?? 'border-gray-200 bg-gray-50 text-gray-600';
+                },
+
+                offerStatusHint(status) {
+                    const hints = {
+                        pending: 'The traveler has not responded yet. You can monitor the result here.',
+                        accepted: 'The traveler accepted this proposal. Continue the trip workflow from your bookings area.',
+                        rejected: 'The traveler chose not to proceed with this proposal. The offer remains here for your records.',
+                        expired: 'This proposal is no longer actionable because the request closed or its trip date has passed.',
+                        withdrawn: 'This proposal has been withdrawn and is kept here for your records.'
+                    };
+                    return hints[this.normalizedOfferStatus(status)] ?? 'This offer is kept here for your records.';
+                },
+
+                isStartingSoon(dateStr) {
+                    if (!dateStr) return false;
+                    const start = new Date(dateStr);
+                    if (Number.isNaN(start.getTime())) return false;
+
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    start.setHours(0, 0, 0, 0);
+
+                    const fourteenDaysFromNow = new Date(today);
+                    fourteenDaysFromNow.setDate(today.getDate() + 14);
+                    return start >= today && start <= fourteenDaysFromNow;
+                },
+
+                dateValue(dateStr, fallback) {
+                    const value = new Date(dateStr).getTime();
+                    return Number.isNaN(value) ? fallback : value;
+                },
+
+                budgetRank(budget) {
+                    const ranks = { economy: 1, standard: 2, premium: 3, luxury: 4 };
+                    return ranks[String(budget ?? '').toLowerCase()] ?? 0;
+                },
+
+                formatPriceInput(e) {
+                    // Remove non-digits
+                    let raw = e.target.value.replace(/\D/g, '');
+                    if (raw) {
+                        this.offerForm.rawPrice = parseInt(raw, 10);
+                        this.offerForm.displayPrice = new Intl.NumberFormat('vi-VN').format(this.offerForm.rawPrice);
+                        this.offerErrors.price = '';
+                    } else {
+                        this.offerForm.rawPrice = null;
+                        this.offerForm.displayPrice = '';
+                    }
+                },
+
+                formatCurrency(value) {
+                    if (value === null || value === undefined || value === '') return '';
+                    return new Intl.NumberFormat('vi-VN', {
+                        style: 'currency',
+                        currency: 'VND',
+                        maximumFractionDigits: 0
+                    }).format(value);
+                },
+
+                resetOfferForm() {
+                    this.offerForm = { message: '', rawPrice: null, displayPrice: '' };
+                    this.offerErrors = { message: '', price: '' };
+                },
+
+                validateOfferForm() {
+                    const message = this.offerForm.message.trim();
+                    this.offerErrors.message = message ? '' : 'Please add a short pitch and suggested itinerary.';
+                    this.offerErrors.price = this.offerForm.rawPrice > 0 ? '' : 'Please enter a valid total price greater than 0.';
+                    return !this.offerErrors.message && !this.offerErrors.price;
+                },
+
+                openOfferModal(request) {
+                    this.selectedRequest = request;
+                    this.resetOfferForm();
+                    this.isModalOpen = true;
+                    document.body.style.overflow = 'hidden';
+                    this.$nextTick(() => this.$refs.offerMessage?.focus());
+                },
+
+                closeOfferModal() {
+                    this.isModalOpen = false;
+                    setTimeout(() => {
+                        this.selectedRequest = null;
+                        this.resetOfferForm();
+                    }, 300);
+                    document.body.style.overflow = '';
+                },
+
+                openOfferDetail(offer) {
+                    this.selectedOffer = offer;
+                    this.isOfferDetailOpen = true;
+                    document.body.style.overflow = 'hidden';
+                },
+
+                closeOfferDetail() {
+                    this.isOfferDetailOpen = false;
+                    setTimeout(() => { this.selectedOffer = null; }, 250);
+                    document.body.style.overflow = '';
+                },
+
+                async submitOffer() {
+                    if (!this.selectedRequest || !this.validateOfferForm()) {
+                        return;
+                    }
+
+                    this.isSubmitting = true;
+                    try {
+                        const response = await fetch('/Guide/SendTripOffer', {
+                            method: 'POST',
+                            credentials: 'same-origin',
+                            headers: {
+                                'Accept': 'application/json',
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                tripRequestId: this.selectedRequest.id,
+                                message: this.offerForm.message.trim(),
+                                proposedPrice: parseFloat(this.offerForm.rawPrice)
+                            })
+                        });
+
+                        const contentType = response.headers.get('content-type') ?? '';
+                        const result = contentType.includes('application/json')
+                            ? await response.json()
+                            : {};
+
+                        if (!response.ok || result.success !== true || !result.offerId) {
+                            const fallbackMessage = `Unable to send offer (HTTP ${response.status}).`;
+                            const traceSuffix = result.traceId ? ` (Trace: ${result.traceId})` : '';
+                            throw new Error((result.message || fallbackMessage) + traceSuffix);
+                        }
+
+                        if (result.success === true) {
+                            // Update local state
+                            const index = this.requests.findIndex(r => r.id === this.selectedRequest.id);
+                            if (index !== -1) {
+                                this.requests[index].hasSentOffer = true;
+                            }
+                            // Refresh all guide-side offer summaries.
+                            this.fetchStats();
+                            this.fetchOffers();
+
+                            // Close modal
+                            this.closeOfferModal();
+
+                            // Use the shared Guide layout toast only after persistence succeeds.
+                            showToast(
+                                'success',
+                                'Offer của bạn đã được lưu và gửi tới traveler.',
+                                'Gửi offer thành công',
+                                4500
+                            );
+                        }
+                    } catch (err) {
+                        console.error('Error sending offer:', err);
+                        const errorMessage = err instanceof Error && err.message
+                            ? err.message
+                            : 'Đã xảy ra lỗi. Vui lòng thử lại.';
+                        showToast('error', errorMessage, 'Không thể gửi offer');
+                    } finally {
+                        this.isSubmitting = false;
+                    }
+                },
+
+                formatDate(dateStr) {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    if (Number.isNaN(date.getTime())) return '';
+                    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' });
+                },
+
+                formatDateRange(startDate, endDate) {
+                    const start = this.formatDate(startDate);
+                    const end = this.formatDate(endDate);
+                    if (!end || start === end) return start;
+                    return `${start} - ${end}`;
+                },
+
+                formatDateTime(dateStr) {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    if (Number.isNaN(date.getTime())) return '';
+                    return date.toLocaleString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+                },
+
+                shortId(value) {
+                    const id = String(value ?? '');
+                    return id ? id.slice(0, 8) : 'N/A';
+                },
+
+                formatTimeAgo(dateStr) {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    if (Number.isNaN(date.getTime())) return '';
+                    const now = new Date();
+                    const diffMs = now - date;
+                    const diffMins = Math.max(0, Math.floor(diffMs / 60000));
+
+                    if (diffMins < 60) return `${diffMins}m ago`;
+                    const diffHours = Math.floor(diffMins / 60);
+                    if (diffHours < 24) return `${diffHours}h ago`;
+                    const diffDays = Math.floor(diffHours / 24);
+                    return `${diffDays}d ago`;
+                },
+
+                isNew(dateStr) {
+                    if (!dateStr) return false;
+                    const date = new Date(dateStr);
+                    if (Number.isNaN(date.getTime())) return false;
+                    const now = new Date();
+                    const diffMs = now - date;
+                    return diffMs >= 0 && diffMs < (24 * 60 * 60 * 1000);
+                }
+            };
+        };
+    </script>
+}

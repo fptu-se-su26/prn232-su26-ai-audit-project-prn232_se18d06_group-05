@@ -22,6 +22,30 @@ namespace TripMate_WebAPI.Services
             _cloudinary.Api.Secure = true;
         }
 
+        public async Task<string?> UploadFileAsync(IFormFile file, string folder = "tripmate_chat")
+        {
+            if (file == null || file.Length == 0) return null;
+
+            using var stream = file.OpenReadStream();
+            var uploadParams = new RawUploadParams
+            {
+                File = new FileDescription(file.FileName, stream),
+                Folder = folder,
+                UseFilename = true,
+                UniqueFilename = true,
+                Overwrite = false
+            };
+
+            var uploadResult = await _cloudinary.UploadAsync(uploadParams);
+
+            if (uploadResult.Error != null)
+            {
+                throw new System.Exception(uploadResult.Error.Message);
+            }
+
+            return uploadResult.SecureUrl.ToString();
+        }
+
         public async Task<string?> UploadImageAsync(IFormFile file, string folder = "tripmate_tours")
         {
             if (file == null || file.Length == 0) return null;
