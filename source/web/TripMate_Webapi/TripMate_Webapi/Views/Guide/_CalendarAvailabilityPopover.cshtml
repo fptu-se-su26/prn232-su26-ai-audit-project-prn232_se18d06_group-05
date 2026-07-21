@@ -1,0 +1,70 @@
+<div x-show="availabilityEditorOpen"
+     @@keydown.escape.window="closeAvailabilityEditor()"
+     class="fixed inset-0 z-[70] flex items-end justify-center sm:items-center sm:p-4"
+     style="display: none;"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="availability-editor-title">
+    <div x-show="availabilityEditorOpen"
+         x-transition.opacity
+         class="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px]"
+         @@click="closeAvailabilityEditor()"></div>
+
+    <section x-show="availabilityEditorOpen"
+             x-transition:enter="transform transition ease-out duration-250"
+             x-transition:enter-start="translate-y-full opacity-0 sm:translate-y-3"
+             x-transition:enter-end="translate-y-0 opacity-100"
+             x-transition:leave="transform transition ease-in duration-150"
+             x-transition:leave-start="translate-y-0 opacity-100"
+             x-transition:leave-end="translate-y-full opacity-0 sm:translate-y-3"
+             class="relative w-full rounded-t-3xl bg-white shadow-2xl sm:max-w-md sm:rounded-2xl">
+        <div class="mx-auto mt-2 h-1 w-10 rounded-full bg-gray-200 sm:hidden"></div>
+        <header class="flex items-start justify-between border-b border-gray-100 px-5 py-4">
+            <div>
+                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-primary">Availability</p>
+                <h2 id="availability-editor-title" class="mt-1 text-lg font-bold text-gray-900"
+                    x-text="blockedDates.includes(availabilityDate) ? 'Manage unavailable date' : 'Mark date as unavailable'"></h2>
+                <p class="mt-0.5 text-sm text-gray-500" x-text="formatLongDate(availabilityDate)"></p>
+            </div>
+            <button type="button" @@click="closeAvailabilityEditor()"
+                    class="rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                    aria-label="Close availability editor">
+                <span class="material-symbols-outlined block">close</span>
+            </button>
+        </header>
+
+        <div class="space-y-4 p-5">
+            <div class="rounded-xl border border-blue-100 bg-blue-50 p-3 text-xs leading-relaxed text-blue-700">
+                Travelers will not be able to request a trip on this date. Existing tours are always protected from availability changes.
+            </div>
+
+            <div>
+                <div class="mb-1.5 flex items-center justify-between gap-3">
+                    <label for="availability-reason" class="text-sm font-bold text-gray-800">Reason <span class="font-normal text-gray-400">(optional)</span></label>
+                    <span class="text-xs tabular-nums text-gray-400" x-text="`${availabilityReason.length}/160`"></span>
+                </div>
+                <textarea id="availability-reason"
+                          data-availability-reason
+                          x-model="availabilityReason"
+                          maxlength="160"
+                          rows="3"
+                          placeholder="e.g. Personal day, unavailable in the afternoon"
+                          class="w-full resize-none rounded-xl border border-gray-200 px-3.5 py-3 text-sm text-gray-800 outline-none transition focus:border-primary focus:ring-2 focus:ring-orange-100"></textarea>
+                <p class="mt-1.5 text-xs text-gray-400">This note is private and only visible to you.</p>
+            </div>
+        </div>
+
+        <footer class="flex flex-col-reverse gap-2 border-t border-gray-100 bg-gray-50/70 p-4 sm:flex-row sm:justify-end sm:rounded-b-2xl">
+            <button x-show="blockedDates.includes(availabilityDate)"
+                    type="button"
+                    @@click="makeDateAvailable()"
+                    class="rounded-xl border border-red-200 bg-white px-4 py-2.5 text-sm font-bold text-red-600 hover:bg-red-50">
+                Make available
+            </button>
+            <button type="button"
+                    @@click="saveAvailabilityEditor()"
+                    class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-primary-dark"
+                    x-text="blockedDates.includes(availabilityDate) ? 'Save reason' : 'Mark unavailable'"></button>
+        </footer>
+    </section>
+</div>

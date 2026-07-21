@@ -566,6 +566,13 @@
                     });
                     this.updateSidebarBadge();
 
+                    const requestedBookingId = new URLSearchParams(window.location.search).get('bookingId');
+                    if (requestedBookingId) {
+                        const requestedBooking = this.bookings.find(booking =>
+                            String(booking.Id) === String(requestedBookingId));
+                        if (requestedBooking) this.openDetail(requestedBooking);
+                    }
+
                     this.countdownTimer = setInterval(() => {
                         let pendingCountChanged = false;
                         this.bookings.forEach(b => {

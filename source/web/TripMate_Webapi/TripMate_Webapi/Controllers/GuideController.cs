@@ -245,9 +245,16 @@ namespace TripMate_Webapi.Controllers
         {
             var guideProfileId = await GetCurrentGuideProfileIdAsync();
             if (guideProfileId == null) return Unauthorized();
-            
-            var data = await _calendarService.GetCalendarDataAsync(guideProfileId, start, end);
-            return Json(data);
+
+            try
+            {
+                var data = await _calendarService.GetCalendarDataAsync(guideProfileId, start, end);
+                return Json(data);
+            }
+            catch (ArgumentException exception)
+            {
+                return BadRequest(new { message = exception.Message });
+            }
         }
 
         // POST: /Guide/SaveBlockedDates
@@ -257,8 +264,15 @@ namespace TripMate_Webapi.Controllers
             var guideProfileId = await GetCurrentGuideProfileIdAsync();
             if (guideProfileId == null) return Unauthorized();
             
-            await _calendarService.SaveBlockedDatesAsync(guideProfileId, req);
-            return Ok(new { message = "Updated successfully." });
+            try
+            {
+                var result = await _calendarService.SaveBlockedDatesAsync(guideProfileId, req);
+                return Ok(result);
+            }
+            catch (ArgumentException exception)
+            {
+                return BadRequest(new { message = exception.Message });
+            }
         }
 
         // Helper method to get the guide profile ID of the currently logged-in user

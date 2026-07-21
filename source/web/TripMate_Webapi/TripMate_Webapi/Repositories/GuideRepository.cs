@@ -71,17 +71,23 @@ namespace TripMate_Webapi.Repositories
             var response = await _supabase.From<GuideAvailabilityEntity>()
                 .Filter("guide_profile_id", Postgrest.Constants.Operator.Equals, guideProfileId)
                 .Filter("unavailable_date", Postgrest.Constants.Operator.GreaterThanOrEqual, start)
-                .Filter("unavailable_date", Postgrest.Constants.Operator.LessThanOrEqual, end)
+                .Filter("unavailable_date", Postgrest.Constants.Operator.LessThan, end)
                 .Get();
             return response.Models;
         }
 
-        public async Task DeleteBlockedDatesInRangeAsync(string guideProfileId, string start, string end)
+        public async Task DeleteBlockedDatesAsync(
+            string guideProfileId,
+            IReadOnlyCollection<string> dates)
         {
+            if (dates.Count == 0) return;
+
             await _supabase.From<GuideAvailabilityEntity>()
                 .Filter("guide_profile_id", Postgrest.Constants.Operator.Equals, guideProfileId)
-                .Filter("unavailable_date", Postgrest.Constants.Operator.GreaterThanOrEqual, start)
-                .Filter("unavailable_date", Postgrest.Constants.Operator.LessThanOrEqual, end)
+                .Filter(
+                    "unavailable_date",
+                    Postgrest.Constants.Operator.In,
+                    dates.Cast<object>().ToList())
                 .Delete();
         }
 
