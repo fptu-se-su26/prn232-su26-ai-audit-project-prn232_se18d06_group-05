@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Quản lý Lịch";
+    ViewData["Title"] = "Calendar Management";
     ViewData["ActivePage"] = "Calendar";
     Layout = "_GuideLayout";
 }
@@ -23,22 +23,23 @@
     .fc-day-future:not(.fc-blocked-day):not(.fc-booked-day) { cursor: pointer; transition: background-color 0.2s; }
     .fc-day-future:not(.fc-blocked-day):not(.fc-booked-day):hover { background-color: #f1f5f9 !important; }
 
-    /* Event Chips Minimalist */
-    .booking-label { background: linear-gradient(to right, #3b82f6, #2563eb); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; box-shadow: 0 2px 4px rgba(37,99,235,0.2); }
-    .booking-label-past { background: #94a3b8; box-shadow: none; }
-    .blocked-label { background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; text-align: center; }
-    .blocked-label-past { background: #e2e8f0; color: #64748b; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; text-align: center; }
+    /* Compact booking chips */
+    .booking-chip { width: 100%; border: 1px solid transparent; border-radius: 8px; padding: 5px 7px; text-align: left; transition: transform .15s ease, box-shadow .15s ease; }
+    .booking-chip:hover, .booking-chip:focus-visible { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(15, 23, 42, .12); outline: none; }
+    .booking-chip-confirmed { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .booking-chip-pending { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
+    .booking-chip-completed { background: #f1f5f9; border-color: #e2e8f0; color: #64748b; }
+    .booking-more-chip { width: 100%; border-radius: 7px; padding: 3px 6px; background: #f8fafc; color: #475569; font-size: 10px; font-weight: 700; text-align: center; }
     .fc-available-day { cursor: pointer; transition: all 0.2s; }
     .fc-available-day:hover { background-color: #f3f4f6 !important; }
     
     .fc-scrollgrid { border-color: #f3f4f6 !important; border-radius: 12px; overflow: hidden; }
-    .fc-daygrid-day-frame { padding: 0 !important; min-height: 100px !important; position: relative !important; }
+    .fc-daygrid-day-frame { padding: 0 !important; min-height: 118px !important; position: relative !important; }
     .fc-daygrid-day-top { display: flex !important; flex-direction: column !important; height: 100% !important; opacity: 1 !important; z-index: 2; }
     .fc-daygrid-day-events { display: none !important; }
     
-    /* Custom booking label */
-    .booking-label { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 6px 8px; border-radius: 8px; font-size: 0.75rem; margin-top: 4px; display: flex; flex-direction: column; gap: 4px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); }
-    .blocked-label { background: #fca5a5; color: #991b1b; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; margin-top: 4px; font-weight: 600; text-align: center; }
+    .blocked-label { width: 100%; background: #f1f5f9; border: 1px dashed #cbd5e1; color: #64748b; padding: 5px 8px; border-radius: 7px; font-size: 0.75rem; margin-top: 4px; font-weight: 600; text-align: center; }
+    .blocked-label:hover, .blocked-label:focus-visible { border-color: #94a3b8; background: #e2e8f0; color: #475569; outline: none; }
 </style>
 
 <script>
@@ -47,33 +48,55 @@
             activeTab: 'stats', // 'stats' or 'upcoming'
             calendar: null,
             currentMonth: new Date().getMonth() + 1,
-            daysInMonth: 30, // Tạm thời
+            currentYear: new Date().getFullYear(),
+            daysInMonth: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate(),
             
             // Mock data from server -> REMOVED, now fetched dynamically
             originalBlockedDates: [],
-            bookings: {},
+            originalBlockedDateDetails: {},
+            bookingsByDate: {},
+            blockedDateDetails: {},
             
             // Current state
             blockedDates: [],
             hasChanges: false,
             isSaving: false,
             isFetching: true, // Track API loading state for skeleton
+            loadError: null,
+            calendarDisplayMode: window.matchMedia('(max-width: 767px)').matches ? 'agenda' : 'month',
+            availabilityEditorOpen: false,
+            availabilityDate: null,
+            availabilityReason: '',
             
             // Navigation guard state
             showLeaveModal: false,
             pendingNavigationUrl: null,
+            selectedDate: null,
+            selectedDayBookings: [],
+            selectedBooking: null,
+            isDetailsOpen: false,
+            _linkClickHandler: null,
+            _beforeUnloadHandler: null,
+            _turboBeforeCacheHandler: null,
+            _fetchAbortController: null,
+            _lastFocusedElement: null,
+            _availabilityResetTimer: null,
 
             initCalendar(attempt = 0) {
                 if (typeof FullCalendar === 'undefined') {
-                    if (attempt >= 20) { console.warn('FullCalendar failed to load.'); return; }
+                    if (attempt >= 20) {
+                        this.isFetching = false;
+                        this.loadError = 'The calendar could not be initialized. Please check your connection and try again.';
+                        return;
+                    }
                     setTimeout(() => this.initCalendar(attempt + 1), 50);
                     return;
                 }
 
                 this.blockedDates = [...this.originalBlockedDates];
                 
-                // Intercept all <a> link clicks to show custom modal if there are unsaved changes
-                document.addEventListener('click', (e) => {
+                // Keep named handlers so Turbo/Alpine can clean them up when this page leaves the DOM.
+                this._linkClickHandler = (e) => {
                     if (!this.hasChanges) return;
                     const link = e.target.closest('a[href]');
                     if (!link) return;
@@ -84,28 +107,49 @@
                     e.stopPropagation();
                     this.pendingNavigationUrl = href;
                     this.showLeaveModal = true;
-                });
+                };
+                document.addEventListener('click', this._linkClickHandler);
                 
                 // Also handle browser back/forward & tab close
-                window.addEventListener('beforeunload', (e) => {
+                this._beforeUnloadHandler = (e) => {
                     if (this.hasChanges) {
                         e.preventDefault();
                         e.returnValue = '';
                     }
-                });
+                };
+                window.addEventListener('beforeunload', this._beforeUnloadHandler);
+                this._turboBeforeCacheHandler = () => this.destroy();
+                document.addEventListener('turbo:before-cache', this._turboBeforeCacheHandler, { once: true });
                 
                 const calendarEl = document.getElementById('calendar');
                 
                 this.calendar = new FullCalendar.Calendar(calendarEl, {
                     initialView: 'dayGridMonth',
-                    locale: 'vi',
+                    locale: 'en',
+                    customButtons: {
+                        previousMonth: {
+                            text: '‹',
+                            hint: 'Previous month',
+                            click: () => this.navigateCalendar('prev')
+                        },
+                        nextMonth: {
+                            text: '›',
+                            hint: 'Next month',
+                            click: () => this.navigateCalendar('next')
+                        },
+                        todaySafe: {
+                            text: 'Today',
+                            hint: 'Go to current month',
+                            click: () => this.navigateCalendar('today')
+                        }
+                    },
                     headerToolbar: {
-                        left: 'prev,next today',
+                        left: 'previousMonth,nextMonth todaySafe',
                         center: 'title',
                         right: '' 
                     },
                     buttonText: {
-                        today: 'Hôm nay',
+                        today: 'Today',
                     },
                     firstDay: 1, // Start on Monday
                     height: 'auto', // Removes internal scrollbar completely
@@ -118,31 +162,56 @@
                             const startStr = fetchInfo.startStr.split('T')[0];
                             const endStr = fetchInfo.endStr.split('T')[0];
                             
-                            const res = await fetch(`/Guide/GetCalendarData?start=${startStr}&end=${endStr}`);
-                            if (!res.ok) throw new Error('Network response was not ok');
-                            
+                            this._fetchAbortController?.abort();
+                            this._fetchAbortController = new AbortController();
+                            const res = await fetch(`/Guide/GetCalendarData?start=${startStr}&end=${endStr}`, {
+                                signal: this._fetchAbortController.signal
+                            });
                             const data = await res.json();
+                            if (!res.ok) throw new Error(data.message || 'Failed to load calendar data.');
                             
+                            this.loadError = null;
                             // Update Alpine state
                             this.originalBlockedDates = data.blockedDates.map(d => d.date);
                             this.blockedDates = [...this.originalBlockedDates];
+                            this.originalBlockedDateDetails = Object.fromEntries(
+                                data.blockedDates.map(d => [d.date, { ...d }])
+                            );
+                            this.blockedDateDetails = this.cloneBlockedDetails(this.originalBlockedDateDetails);
                             
-                            this.bookings = {};
+                            this.bookingsByDate = {};
                             data.bookings.forEach(b => {
-                                this.bookings[b.bookingDate] = {
+                                const booking = {
+                                    id: b.bookingId,
+                                    date: b.bookingDate,
+                                    startTime: b.startTime,
+                                    endTime: b.endTime,
+                                    travelerId: b.travelerId,
                                     guest: b.guestName,
-                                    pax: b.guestCount,
+                                    travelerAvatarUrl: b.travelerAvatarUrl,
+                                    guestCount: b.guestCount,
                                     revenue: b.guideEarnings,
                                     title: b.packageTitle,
+                                    packageId: b.packageId,
+                                    coverImageUrl: b.coverImageUrl,
+                                    meetingPoint: b.meetingPoint,
+                                    travelerNotes: b.travelerNotes,
                                     status: b.status
                                 };
+                                this.bookingsByDate[b.bookingDate] ||= [];
+                                this.bookingsByDate[b.bookingDate].push(booking);
                             });
+                            Object.values(this.bookingsByDate).forEach(items =>
+                                items.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''))
+                            );
                             
                             // Let FullCalendar know we're done
                             successCallback([]);
                         } catch (error) {
+                            if (error.name === 'AbortError') return;
                             console.error('Error fetching calendar data:', error);
-                            showToast('error', 'Lỗi tải dữ liệu lịch');
+                            this.loadError = error.message || 'Failed to load calendar data.';
+                            showToast('error', error.message || 'Failed to load calendar data.');
                             failureCallback(error);
                         }
                     },
@@ -150,68 +219,13 @@
                     // Triggered when fetch starts/stops
                     loading: (isLoading) => {
                         this.isFetching = isLoading;
-                        // Force a re-render so dayCellContent can switch between Skeletons and Real Data
-                        setTimeout(() => {
-                            this.calendar.render();
-                        }, 10);
+                        if (!isLoading) {
+                            requestAnimationFrame(() => this.calendar?.render());
+                        }
                     },
                     
                     // Custom rendering for days
-                    dayCellContent: (info) => {
-                        const date = info.date;
-                        const dateStr = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
-                        
-                        // 1. SKELETON LOADING STATE
-                        if (this.isFetching) {
-                            return { 
-                                html: `
-                                    <div class="flex flex-col h-full w-full min-h-[80px] p-1 animate-pulse">
-                                        <div class="h-4 w-5 bg-gray-200 rounded self-end mb-auto mt-1 mr-1"></div>
-                                        <div class="h-6 w-full bg-gray-100 rounded mt-2"></div>
-                                    </div>
-                                ` 
-                            };
-                        }
-
-                        // 2. REAL DATA STATE
-                        let html = `
-                            <div class="flex flex-col h-full w-full min-h-[80px]">
-                                <div class="text-right text-gray-700 font-medium text-sm p-1.5 flex justify-end">`;
-                                
-                        if (info.isToday) {
-                            html += `<div style="width:28px;height:28px;border-radius:50%;background:#FF6B35;color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:800;box-shadow:0 3px 10px rgba(255,107,53,0.4);">${info.date.getDate()}</div>`;
-                        } else {
-                            html += `${info.date.getDate()}`;
-                        }
-                        
-                        html += `</div>
-                                <div class="flex-1 flex flex-col justify-end p-1 gap-1">`;
-                        
-                        const isPast = date < new Date().setHours(0,0,0,0);
-                        
-                        if (this.bookings[dateStr]) {
-                            const b = this.bookings[dateStr];
-                            const labelClass = isPast ? 'booking-label booking-label-past' : 'booking-label';
-                            html += `
-                                    <div class="${labelClass} w-full m-0">
-                                        <div class="truncate font-bold">${b.guest}</div>
-                                        <div class="flex items-center justify-between opacity-90 text-[10px]">
-                                            <span>👤 ${b.pax}</span>
-                                            <span class="bg-white/20 px-1 rounded">Tour</span>
-                                        </div>
-                                    </div>
-                            `;
-                        } else if (this.blockedDates.includes(dateStr)) {
-                            const blockedClass = isPast ? 'blocked-label blocked-label-past' : 'blocked-label';
-                            html += `<div class="${blockedClass} w-full m-0 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[12px]">block</span> Đã chặn</div>`;
-                        }
-                        
-                        html += `
-                                </div>
-                            </div>
-                        `;
-                        return { html: html };
-                    },
+                    dayCellContent: (info) => this.renderDayCell(info),
                     
                     dayCellDidMount: (info) => {
                         const date = info.date;
@@ -220,22 +234,25 @@
                         
                         cell.classList.remove('fc-blocked-day', 'fc-booked-day', 'fc-available-day');
                         
-                        if (this.isFetching) {
-                            // Don't add hover effects or titles while loading
-                            return;
-                        }
+                        cell.removeAttribute('title');
+                        cell.removeAttribute('tabindex');
+                        cell.removeAttribute('role');
 
-                        if (this.bookings[dateStr]) {
+                        if (this.isFetching) return;
+
+                        const dayBookings = this.bookingsByDate[dateStr] || [];
+                        if (dayBookings.length > 0) {
                             cell.classList.add('fc-booked-day');
-                            cell.title = `Booking: ${this.bookings[dateStr].title}\nKhách: ${this.bookings[dateStr].guest}\nSố người: ${this.bookings[dateStr].pax}`;
+                            cell.setAttribute('aria-label', `${this.formatLongDate(dateStr)}. ${dayBookings.length} ${dayBookings.length === 1 ? 'booking' : 'bookings'}.`);
                         } else if (this.blockedDates.includes(dateStr)) {
                             cell.classList.add('fc-blocked-day');
-                            cell.title = "Đã chặn";
+                            this.makeAvailabilityCellAccessible(cell, dateStr, 'Unavailable. Press Enter to manage availability.');
                         } else if (date < new Date().setHours(0,0,0,0)) {
                             cell.style.cursor = 'not-allowed';
+                            cell.setAttribute('aria-label', `${this.formatLongDate(dateStr)}. Past date.`);
                         } else {
                             cell.classList.add('fc-available-day');
-                            cell.title = "Ngày trống. Click để chặn.";
+                            this.makeAvailabilityCellAccessible(cell, dateStr, 'Available. Press Enter to mark unavailable.');
                         }
                     },
                     
@@ -243,48 +260,295 @@
                     dateClick: (info) => {
                         const dateStr = info.dateStr;
                         
-                        if (this.bookings[dateStr]) {
-                            showToast('warning', 'Ngày này đã có tour, không thể chặn!');
+                        const dayBookings = this.bookingsByDate[dateStr] || [];
+                        if (dayBookings.length > 0) {
+                            this.openDayDetails(dateStr);
                             return;
                         }
+
+                        if (info.date < new Date().setHours(0, 0, 0, 0)) return;
                         
-                        this.toggleDate(dateStr);
+                        this.openAvailabilityEditor(dateStr, info.jsEvent);
                     },
                     
                     // Handle changing months
                     datesSet: (info) => {
                         const midDate = new Date((info.start.getTime() + info.end.getTime()) / 2);
                         this.currentMonth = midDate.getMonth() + 1;
+                        this.currentYear = midDate.getFullYear();
                         this.daysInMonth = new Date(midDate.getFullYear(), midDate.getMonth() + 1, 0).getDate();
+                        this.closeAvailabilityEditor(false);
                     }
                 });
                 
                 this.calendar.render();
             },
-            
-            toggleDate(dateStr) {
-                const index = this.blockedDates.indexOf(dateStr);
-                if (index > -1) {
-                    this.blockedDates.splice(index, 1);
-                } else {
-                    this.blockedDates.push(dateStr);
+
+            renderDayCell(info) {
+                const dateStr = this.toLocalDateString(info.date);
+                const root = document.createElement('div');
+                root.className = 'flex min-h-[108px] h-full w-full flex-col';
+
+                if (this.isFetching) {
+                    root.classList.add('animate-pulse', 'p-1');
+                    const numberSkeleton = document.createElement('div');
+                    numberSkeleton.className = 'h-4 w-5 self-end rounded bg-gray-200 mt-1 mr-1';
+                    const cardSkeleton = document.createElement('div');
+                    cardSkeleton.className = 'mt-auto h-10 w-full rounded-lg bg-gray-100';
+                    root.append(numberSkeleton, cardSkeleton);
+                    return { domNodes: [root] };
                 }
-                
+
+                const dateHeader = document.createElement('div');
+                dateHeader.className = 'flex justify-end p-1.5 text-sm font-semibold text-gray-700';
+                const dateNumber = document.createElement('span');
+                dateNumber.textContent = info.date.getDate().toString();
+                if (info.isToday) {
+                    dateNumber.className = 'flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-extrabold text-white shadow-[0_3px_10px_rgba(255,107,53,0.35)]';
+                }
+                dateHeader.appendChild(dateNumber);
+                root.appendChild(dateHeader);
+
+                const content = document.createElement('div');
+                content.className = 'mt-auto flex flex-col gap-1 p-1';
+                const dayBookings = this.bookingsByDate[dateStr] || [];
+
+                dayBookings.slice(0, 2).forEach(booking => {
+                    const chip = document.createElement('button');
+                    chip.type = 'button';
+                    chip.className = `booking-chip ${this.bookingChipClass(booking.status)}`;
+                    chip.setAttribute('aria-label', `${booking.startTime || 'Tour'} ${booking.title}, ${this.statusLabel(booking.status)}`);
+                    chip.addEventListener('click', event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        this.openDayDetails(dateStr, booking.id);
+                    });
+
+                    const primary = document.createElement('span');
+                    primary.className = 'flex items-center gap-1 text-[11px] font-bold leading-tight';
+                    const time = document.createElement('span');
+                    time.className = 'shrink-0 tabular-nums';
+                    time.textContent = booking.startTime || 'Tour';
+                    const title = document.createElement('span');
+                    title.className = 'truncate';
+                    title.textContent = booking.title;
+                    primary.append(time, title);
+
+                    const meta = document.createElement('span');
+                    meta.className = 'mt-1 block truncate text-[9px] font-semibold opacity-75';
+                    meta.textContent = `${booking.guestCount} ${booking.guestCount === 1 ? 'guest' : 'guests'} · ${this.statusLabel(booking.status)}`;
+                    chip.append(primary, meta);
+                    content.appendChild(chip);
+                });
+
+                if (dayBookings.length > 2) {
+                    const moreButton = document.createElement('button');
+                    moreButton.type = 'button';
+                    moreButton.className = 'booking-more-chip';
+                    moreButton.textContent = `+${dayBookings.length - 2} more`;
+                    moreButton.addEventListener('click', event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        this.openDayDetails(dateStr);
+                    });
+                    content.appendChild(moreButton);
+                } else if (dayBookings.length === 0 && this.blockedDates.includes(dateStr)) {
+                    const blocked = document.createElement('button');
+                    blocked.type = 'button';
+                    blocked.className = 'blocked-label';
+                    blocked.textContent = 'Blocked';
+                    blocked.setAttribute('aria-label', `${this.formatLongDate(dateStr)} is unavailable. Manage availability.`);
+                    blocked.addEventListener('click', event => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        this.openAvailabilityEditor(dateStr, event);
+                    });
+                    content.appendChild(blocked);
+                }
+
+                root.appendChild(content);
+                return { domNodes: [root] };
+            },
+
+            makeAvailabilityCellAccessible(cell, dateStr, stateLabel) {
+                cell.setAttribute('tabindex', '0');
+                cell.setAttribute('role', 'button');
+                cell.setAttribute('aria-label', `${this.formatLongDate(dateStr)}. ${stateLabel}`);
+                cell.addEventListener('keydown', event => {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    if (event.target.closest('button, a')) return;
+                    event.preventDefault();
+                    this.openAvailabilityEditor(dateStr, event);
+                });
+            },
+
+            bookingChipClass(status) {
+                if (status === 'pending') return 'booking-chip-pending';
+                if (status === 'completed') return 'booking-chip-completed';
+                return 'booking-chip-confirmed';
+            },
+
+            statusLabel(status) {
+                const labels = {
+                    pending: 'Pending',
+                    confirmed: 'Confirmed',
+                    completed: 'Completed'
+                };
+                return labels[status] || 'Booking';
+            },
+
+            statusBadgeClass(status) {
+                if (status === 'pending') return 'border-amber-200 bg-amber-50 text-amber-700';
+                if (status === 'completed') return 'border-slate-200 bg-slate-100 text-slate-600';
+                return 'border-blue-200 bg-blue-50 text-blue-700';
+            },
+
+            openDayDetails(dateStr, bookingId = null) {
+                const bookings = this.bookingsByDate[dateStr] || [];
+                if (bookings.length === 0) return;
+
+                this._lastFocusedElement = document.activeElement;
+                this.closeAvailabilityEditor(false);
+                this.selectedDate = dateStr;
+                this.selectedDayBookings = bookings;
+                this.selectedBooking = bookings.find(booking => booking.id === bookingId) || bookings[0];
+                this.isDetailsOpen = true;
+                document.body.style.overflow = 'hidden';
+                setTimeout(() => document.querySelector('[data-booking-drawer-close]')?.focus(), 0);
+            },
+
+            openBookingDetails(booking) {
+                if (!booking) return;
+                this.openDayDetails(booking.date, booking.id);
+            },
+
+            selectBooking(booking) {
+                this.selectedBooking = booking;
+            },
+
+            closeBookingDetails() {
+                this.isDetailsOpen = false;
+                document.body.style.overflow = '';
+                this._lastFocusedElement?.focus?.();
+                setTimeout(() => {
+                    this.selectedDate = null;
+                    this.selectedDayBookings = [];
+                    this.selectedBooking = null;
+                }, 200);
+            },
+
+            navigateCalendar(action) {
+                if (this.hasChanges) {
+                    const shouldDiscard = confirm('Discard unsaved availability changes and change months?');
+                    if (!shouldDiscard) return;
+                    this.discardChanges();
+                }
+
+                this.closeBookingDetails();
+                if (action === 'prev') this.calendar.prev();
+                if (action === 'next') this.calendar.next();
+                if (action === 'today') this.calendar.today();
+            },
+
+            setCalendarDisplayMode(mode) {
+                this.calendarDisplayMode = mode;
+                if (mode === 'month') {
+                    setTimeout(() => this.calendar?.updateSize(), 0);
+                }
+            },
+
+            retryCalendarData() {
+                this.loadError = null;
+                this.isFetching = true;
+                if (this.calendar) {
+                    this.calendar.refetchEvents();
+                } else {
+                    this.initCalendar();
+                }
+            },
+
+            toLocalDateString(date) {
+                return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+            },
+
+            parseLocalDate(dateStr) {
+                const [year, month, day] = dateStr.split('-').map(Number);
+                return new Date(year, month - 1, day);
+            },
+
+            openAvailabilityEditor(dateStr, event = null) {
+                const dayBookings = this.bookingsByDate[dateStr] || [];
+                if (dayBookings.length > 0) {
+                    this.openDayDetails(dateStr);
+                    return;
+                }
+
+                if (this.parseLocalDate(dateStr) < new Date().setHours(0, 0, 0, 0)) return;
+                clearTimeout(this._availabilityResetTimer);
+                this._lastFocusedElement = event?.currentTarget || document.activeElement;
+                this.availabilityDate = dateStr;
+                this.availabilityReason = this.blockedDateDetails[dateStr]?.reason || '';
+                this.availabilityEditorOpen = true;
+                document.body.style.overflow = 'hidden';
+                setTimeout(() => document.querySelector('[data-availability-reason]')?.focus(), 0);
+            },
+
+            closeAvailabilityEditor(restoreFocus = true) {
+                if (!this.availabilityEditorOpen) return;
+                this.availabilityEditorOpen = false;
+                if (!this.isDetailsOpen) document.body.style.overflow = '';
+                if (restoreFocus) this._lastFocusedElement?.focus?.();
+                this._availabilityResetTimer = setTimeout(() => {
+                    this.availabilityDate = null;
+                    this.availabilityReason = '';
+                }, 150);
+            },
+
+            finishAvailabilityEdit(date) {
+                this.closeAvailabilityEditor(false);
+                this.calendar?.render();
+                setTimeout(() => {
+                    const target = this.calendarDisplayMode === 'agenda'
+                        ? document.querySelector(`[data-agenda-date="${date}"] button:not([style*="display: none"])`)
+                        : document.querySelector(`.fc-daygrid-day[data-date="${date}"]`);
+                    target?.focus?.();
+                }, 0);
+            },
+
+            saveAvailabilityEditor() {
+                if (!this.availabilityDate) return;
+                const date = this.availabilityDate;
+                if (!this.blockedDates.includes(date)) this.blockedDates.push(date);
+                this.blockedDateDetails[date] = {
+                    ...(this.blockedDateDetails[date] || {}),
+                    date,
+                    reason: this.normalizedReason(this.availabilityReason)
+                };
                 this.checkChanges();
-                this.calendar.render(); // Re-render to update dayCellContent
+                this.finishAvailabilityEdit(date);
+            },
+
+            makeDateAvailable() {
+                if (!this.availabilityDate) return;
+                const date = this.availabilityDate;
+                this.blockedDates = this.blockedDates.filter(item => item !== date);
+                delete this.blockedDateDetails[date];
+                this.checkChanges();
+                this.finishAvailabilityEdit(date);
             },
             
             clearAllBlocked() {
-                if (this.blockedDates.length === 0) return;
-                if (confirm('Bạn chắc chắn muốn bỏ chặn tất cả các ngày trong tháng?')) {
-                    this.blockedDates = [];
+                if (this.currentMonthBlockedDates().length === 0) return;
+                if (confirm('Remove all blocked dates in this month?')) {
+                    this.currentMonthBlockedDates().forEach(date => delete this.blockedDateDetails[date]);
+                    this.blockedDates = this.blockedDates.filter(date => !this.isInCurrentMonth(date));
                     this.checkChanges();
                     this.calendar.render(); 
                 }
             },
             
             blockWeekends() {
-                if (confirm('Chặn tất cả Thứ 7 và Chủ Nhật đang hiển thị trên lịch?')) {
+                if (confirm('Block all visible Saturdays and Sundays?')) {
                     const view = this.calendar.view;
                     const start = view.activeStart;
                     const end = view.activeEnd;
@@ -292,9 +556,10 @@
                     let curr = new Date(start);
                     while (curr < end) {
                         if (curr.getDay() === 0 || curr.getDay() === 6) { // 0 = Sun, 6 = Sat
-                            const dateStr = curr.toISOString().split('T')[0];
-                            if (!this.bookings[dateStr] && !this.blockedDates.includes(dateStr)) {
+                            const dateStr = this.toLocalDateString(curr);
+                            if (!(this.bookingsByDate[dateStr] || []).length && !this.blockedDates.includes(dateStr)) {
                                 this.blockedDates.push(dateStr);
+                                this.blockedDateDetails[dateStr] = { date: dateStr, reason: 'Weekend' };
                             }
                         }
                         curr.setDate(curr.getDate() + 1);
@@ -305,15 +570,46 @@
             },
 
             checkChanges() {
-                const sortedCurrent = [...this.blockedDates].sort().join(',');
-                const sortedOriginal = [...this.originalBlockedDates].sort().join(',');
-                this.hasChanges = sortedCurrent !== sortedOriginal;
+                const delta = this.computeAvailabilityDelta();
+                this.hasChanges = delta.addedDates.length > 0 || delta.removedDates.length > 0;
+            },
+
+            normalizedReason(value) {
+                const reason = (value || '').trim();
+                return reason || null;
+            },
+
+            cloneBlockedDetails(details) {
+                return Object.fromEntries(
+                    Object.entries(details || {}).map(([date, detail]) => [date, { ...detail }])
+                );
+            },
+
+            computeAvailabilityDelta() {
+                const original = new Set(this.originalBlockedDates);
+                const current = new Set(this.blockedDates);
+                const addedDates = [];
+
+                current.forEach(date => {
+                    const currentReason = this.normalizedReason(this.blockedDateDetails[date]?.reason);
+                    const originalReason = this.normalizedReason(this.originalBlockedDateDetails[date]?.reason);
+                    if (!original.has(date) || currentReason !== originalReason) {
+                        addedDates.push({ date, reason: currentReason });
+                    }
+                });
+
+                const removedDates = [...original].filter(date => !current.has(date));
+                return {
+                    addedDates: addedDates.sort((a, b) => a.date.localeCompare(b.date)),
+                    removedDates: removedDates.sort()
+                };
             },
             
             discardChanges() {
                 this.blockedDates = [...this.originalBlockedDates];
+                this.blockedDateDetails = this.cloneBlockedDetails(this.originalBlockedDateDetails);
                 this.hasChanges = false;
-                this.calendar.render();
+                this.calendar?.render();
             },
             
             confirmLeave() {
@@ -325,15 +621,15 @@
                 this.showLeaveModal = false;
             },
             
-            saveAndLeave() {
-                this.saveChanges().then(() => {
-                    if (this.pendingNavigationUrl) {
-                        window.location.href = this.pendingNavigationUrl;
-                    }
-                });
+            async saveAndLeave() {
+                const saved = await this.saveChanges();
+                if (saved && this.pendingNavigationUrl) {
+                    window.location.href = this.pendingNavigationUrl;
+                }
             },
             
             async saveChanges() {
+                if (this.isSaving) return false;
                 this.isSaving = true;
                 
                 try {
@@ -341,6 +637,7 @@
                     const startStr = view.activeStart.getFullYear() + '-' + String(view.activeStart.getMonth() + 1).padStart(2, '0') + '-' + String(view.activeStart.getDate()).padStart(2, '0');
                     const endStr = view.activeEnd.getFullYear() + '-' + String(view.activeEnd.getMonth() + 1).padStart(2, '0') + '-' + String(view.activeEnd.getDate()).padStart(2, '0');
                     
+                    const delta = this.computeAvailabilityDelta();
                     const res = await fetch('/Guide/SaveBlockedDates', {
                         method: 'POST',
                         headers: {
@@ -349,35 +646,55 @@
                         body: JSON.stringify({
                             rangeStart: startStr,
                             rangeEnd: endStr,
-                            blockedDates: this.blockedDates
+                            addedDates: delta.addedDates,
+                            removedDates: delta.removedDates
                         })
                     });
                     
-                    if (!res.ok) {
-                        throw new Error('Lỗi cập nhật dữ liệu');
-                    }
-                    
-                    this.originalBlockedDates = [...this.blockedDates];
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.message || 'Failed to update calendar data.');
+
+                    this.originalBlockedDates = result.blockedDates.map(date => date.date);
+                    this.blockedDates = [...this.originalBlockedDates];
+                    this.originalBlockedDateDetails = Object.fromEntries(
+                        result.blockedDates.map(date => [date.date, { ...date }])
+                    );
+                    this.blockedDateDetails = this.cloneBlockedDetails(this.originalBlockedDateDetails);
                     this.hasChanges = false;
-                    showToast('success', 'Đã cập nhật lịch rảnh thành công!');
+                    this.calendar.render();
+
+                    if (result.conflictingDates?.length) {
+                        const count = result.conflictingDates.length;
+                        showToast('warning', `${count} ${count === 1 ? 'date was' : 'dates were'} not blocked because a booking now exists.`);
+                    } else {
+                        showToast('success', 'Availability calendar updated successfully.');
+                    }
+                    return true;
                 } catch (error) {
                     console.error(error);
-                    showToast('error', 'Cập nhật thất bại. Vui lòng thử lại.');
+                    showToast('error', error.message || 'Update failed. Please try again.');
+                    return false;
                 } finally {
                     this.isSaving = false;
                 }
             },
-            
+
             get bookedDatesCount() {
-                return Object.keys(this.bookings).length;
+                return this.currentMonthBookings().length;
             },
-            
+
             getAvailableDays() {
-                return this.daysInMonth - this.blockedDates.length - this.bookedDatesCount;
+                const unavailableDates = new Set([
+                    ...this.currentMonthBlockedDates(),
+                    ...Object.keys(this.bookingsByDate).filter(date => this.isInCurrentMonth(date))
+                ]);
+                return Math.max(0, this.daysInMonth - unavailableDates.size);
             },
-            
+
             getTotalRevenue() {
-                return Object.values(this.bookings).reduce((sum, b) => sum + b.revenue, 0);
+                return this.currentMonthBookings()
+                    .filter(booking => booking.status === 'confirmed' || booking.status === 'completed')
+                    .reduce((sum, booking) => sum + booking.revenue, 0);
             },
             
             formatCurrency(amount) {
@@ -385,24 +702,102 @@
             },
             
             sortedBlockedDates() {
-                return [...this.blockedDates].sort();
+                return this.currentMonthBlockedDates().sort();
             },
-            
+
             formatDate(dateStr) {
-                const d = new Date(dateStr);
-                const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-                return `${days[d.getDay()]}, ${d.getDate()}/${d.getMonth()+1}`;
+                return new Intl.DateTimeFormat('en-US', {
+                    weekday: 'short',
+                    month: 'short',
+                    day: 'numeric'
+                }).format(this.parseLocalDate(dateStr));
             },
-            
+
+            formatLongDate(dateStr) {
+                if (!dateStr) return '';
+                return new Intl.DateTimeFormat('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                }).format(this.parseLocalDate(dateStr));
+            },
+
+            isInCurrentMonth(dateStr) {
+                const date = this.parseLocalDate(dateStr);
+                return date.getFullYear() === this.currentYear && date.getMonth() + 1 === this.currentMonth;
+            },
+
+            currentMonthBlockedDates() {
+                return this.blockedDates.filter(date => this.isInCurrentMonth(date));
+            },
+
+            currentMonthBookings() {
+                return Object.entries(this.bookingsByDate)
+                    .filter(([date]) => this.isInCurrentMonth(date))
+                    .flatMap(([, bookings]) => bookings);
+            },
+
+            currentMonthLabel() {
+                return new Intl.DateTimeFormat('en-US', {
+                    month: 'long',
+                    year: 'numeric'
+                }).format(new Date(this.currentYear, this.currentMonth - 1, 1));
+            },
+
+            isPastDate(dateStr) {
+                return this.parseLocalDate(dateStr) < new Date().setHours(0, 0, 0, 0);
+            },
+
+            agendaDays() {
+                const days = [];
+                for (let day = 1; day <= this.daysInMonth; day++) {
+                    const date = new Date(this.currentYear, this.currentMonth - 1, day);
+                    const dateStr = this.toLocalDateString(date);
+                    days.push({
+                        date: dateStr,
+                        dayNumber: day,
+                        weekday: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date),
+                        bookings: this.bookingsByDate[dateStr] || [],
+                        isBlocked: this.blockedDates.includes(dateStr),
+                        reason: this.blockedDateDetails[dateStr]?.reason || '',
+                        isPast: this.isPastDate(dateStr),
+                        isToday: dateStr === this.toLocalDateString(new Date())
+                    });
+                }
+                return days;
+            },
+
+            get changeCount() {
+                const delta = this.computeAvailabilityDelta();
+                return delta.addedDates.length + delta.removedDates.length;
+            },
+
             getUpcomingBookings() {
                 const today = new Date();
                 const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
                 
-                return Object.keys(this.bookings)
-                    .filter(date => date >= todayStr)
-                    .sort()
-                    .map(date => ({ date: date, ...this.bookings[date] }))
-                    .slice(0, 5);
+                return Object.values(this.bookingsByDate)
+                    .flat()
+                    .filter(booking => booking.date >= todayStr &&
+                        (booking.status === 'pending' || booking.status === 'confirmed'))
+                    .sort((a, b) => `${a.date}T${a.startTime}`.localeCompare(`${b.date}T${b.startTime}`))
+                    .slice(0, 8);
+            },
+
+            destroy() {
+                this._fetchAbortController?.abort();
+                clearTimeout(this._availabilityResetTimer);
+                this.availabilityEditorOpen = false;
+                this.isDetailsOpen = false;
+                if (this._linkClickHandler) document.removeEventListener('click', this._linkClickHandler);
+                if (this._beforeUnloadHandler) window.removeEventListener('beforeunload', this._beforeUnloadHandler);
+                if (this._turboBeforeCacheHandler) document.removeEventListener('turbo:before-cache', this._turboBeforeCacheHandler);
+                if (this.calendar) {
+                    this.calendar.destroy();
+                    this.calendar = null;
+                }
+                document.body.style.overflow = '';
             }
         }
     }
@@ -419,6 +814,8 @@
          x-transition:leave-start="opacity-100 translate-y-0"
          x-transition:leave-end="opacity-0 -translate-y-3"
          class="mb-4"
+         role="status"
+         aria-live="polite"
          style="display:none;">
         <div class="flex items-center gap-3 bg-white border border-amber-200 rounded-xl px-4 py-3 shadow-sm">
             <!-- Pulsing dot indicator -->
@@ -427,30 +824,30 @@
                 <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
             </span>
             <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-gray-800">Bạn có thay đổi chưa được lưu — <span class="font-normal text-gray-500">Hãy lưu trước khi chuyển trang khác.</span></p>
+                <p class="text-sm font-semibold text-gray-800">You have unsaved changes — <span class="font-normal text-gray-500">save them before leaving this page.</span></p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
                 <button @@click="discardChanges()"
                         class="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                    Hủy bỏ
+                    Discard Changes
                 </button>
                 <button @@click="saveChanges()" :disabled="isSaving"
                         class="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 transition-colors shadow-sm flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[14px] animate-spin" x-show="isSaving">autorenew</span>
                     <span class="material-symbols-outlined text-[14px]" x-show="!isSaving">save</span>
-                    <span x-text="isSaving ? 'Đang lưu...' : 'Lưu thay đổi'"></span>
+                    <span x-text="isSaving ? 'Saving...' : 'Save Changes'"></span>
                 </button>
             </div>
         </div>
     </div>
     <!-- KPI Bar -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 mb-4">
         <div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center gap-3 hover:shadow-md transition-shadow">
             <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-500 shrink-0">
                 <span class="material-symbols-outlined text-[20px]">event_available</span>
             </div>
             <div>
-                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Ngày sẵn sàng</p>
+                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Available Days</p>
                 <h3 class="text-xl font-black text-gray-900" x-text="getAvailableDays()"></h3>
             </div>
         </div>
@@ -460,8 +857,8 @@
                 <span class="material-symbols-outlined text-[20px]">event_busy</span>
             </div>
             <div>
-                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Đã chặn</p>
-                <h3 class="text-xl font-black text-gray-900" x-text="blockedDates.length"></h3>
+                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Blocked</p>
+                <h3 class="text-xl font-black text-gray-900" x-text="currentMonthBlockedDates().length"></h3>
             </div>
         </div>
         
@@ -470,7 +867,7 @@
                 <span class="material-symbols-outlined text-[20px]">tour</span>
             </div>
             <div>
-                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Đã có tour</p>
+                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Scheduled Tours</p>
                 <h3 class="text-xl font-black text-gray-900" x-text="bookedDatesCount"></h3>
             </div>
         </div>
@@ -480,7 +877,7 @@
                 <span class="material-symbols-outlined text-[20px]">payments</span>
             </div>
             <div>
-                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Dự kiến thu</p>
+                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Estimated Revenue</p>
                 <h3 class="text-lg font-black text-gray-900" x-text="formatCurrency(getTotalRevenue())"></h3>
             </div>
         </div>
@@ -492,30 +889,130 @@
         <!-- Left: Calendar Area -->
         <div class="xl:col-span-3 flex flex-col gap-4">
             <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex-1">
+                <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-900">Availability &amp; trip schedule</h2>
+                        <p class="text-xs text-gray-500">Review tours and manage when travelers can book you.</p>
+                    </div>
+                    <div class="inline-flex rounded-xl border border-gray-200 bg-gray-50 p-1" role="group" aria-label="Calendar display">
+                        <button type="button"
+                                @@click="setCalendarDisplayMode('month')"
+                                :aria-pressed="calendarDisplayMode === 'month'"
+                                :class="calendarDisplayMode === 'month' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all">
+                            <span class="material-symbols-outlined text-[16px]">calendar_month</span> Month
+                        </button>
+                        <button type="button"
+                                @@click="setCalendarDisplayMode('agenda')"
+                                :aria-pressed="calendarDisplayMode === 'agenda'"
+                                :class="calendarDisplayMode === 'agenda' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'"
+                                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-bold transition-all">
+                            <span class="material-symbols-outlined text-[16px]">view_agenda</span> Agenda
+                        </button>
+                    </div>
+                </div>
+
+                <div x-show="loadError"
+                     role="alert"
+                     class="mb-3 flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 p-4 sm:flex-row sm:items-center">
+                    <span class="material-symbols-outlined text-red-500">cloud_off</span>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-bold text-red-800">Calendar data is unavailable</p>
+                        <p class="text-xs text-red-600" x-text="loadError"></p>
+                    </div>
+                    <button type="button" @@click="retryCalendarData()"
+                            class="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-bold text-red-700 hover:bg-red-100">
+                        Try again
+                    </button>
+                </div>
+
                 <!-- Legend -->
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-3 px-3 py-2 bg-gray-50 rounded-lg border border-gray-100 gap-3">
                     <div class="flex flex-wrap gap-4">
                         <div class="flex items-center gap-2">
                             <div class="w-4 h-4 rounded-md bg-white border border-gray-300"></div>
-                            <span class="text-sm font-medium text-gray-700">Sẵn sàng (Click để chặn)</span>
+                            <span class="text-sm font-medium text-gray-700">Available (select to manage)</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <div class="w-4 h-4 rounded-md bg-red-100 border border-red-200"></div>
-                            <span class="text-sm font-medium text-gray-700">Đã chặn (Click để bỏ chặn)</span>
+                            <div class="w-4 h-4 rounded-md bg-slate-100 border border-dashed border-slate-300"></div>
+                            <span class="text-sm font-medium text-gray-700">Unavailable</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <div class="w-4 h-4 rounded-md bg-blue-50 border border-blue-200"></div>
-                            <span class="text-sm font-medium text-gray-700">Đã có booking</span>
+                            <span class="text-sm font-medium text-gray-700">Booked</span>
                         </div>
                     </div>
                     
                     <button @@click="clearAllBlocked()" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors border border-red-100 shadow-sm flex items-center gap-2 sm:ml-auto w-fit">
-                        <span class="material-symbols-outlined text-[16px]">delete_sweep</span> Bỏ chặn tất cả
+                        <span class="material-symbols-outlined text-[16px]">delete_sweep</span> Clear All Blocked Dates
                     </button>
                 </div>
 
                 <!-- FullCalendar Container -->
-                <div id="calendar" class="flex-1"></div>
+                <div x-show="calendarDisplayMode === 'month'" class="flex-1" style="display: none;">
+                    <div id="calendar"></div>
+                </div>
+
+                <!-- Responsive Agenda View -->
+                <section x-show="calendarDisplayMode === 'agenda'" style="display: none;" aria-label="Monthly agenda">
+                    <div class="mb-3 flex items-center justify-between rounded-xl border border-gray-100 bg-white px-2 py-2">
+                        <div class="flex gap-1">
+                            <button type="button" @@click="navigateCalendar('prev')" aria-label="Previous month" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+                                <span class="material-symbols-outlined block">chevron_left</span>
+                            </button>
+                            <button type="button" @@click="navigateCalendar('next')" aria-label="Next month" class="rounded-lg p-2 text-gray-500 hover:bg-gray-100">
+                                <span class="material-symbols-outlined block">chevron_right</span>
+                            </button>
+                        </div>
+                        <h3 class="text-sm font-extrabold text-gray-900" x-text="currentMonthLabel()"></h3>
+                        <button type="button" @@click="navigateCalendar('today')" class="rounded-lg border border-gray-200 px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-50">Today</button>
+                    </div>
+
+                    <div class="space-y-2">
+                        <template x-for="day in agendaDays()" :key="day.date">
+                            <article :data-agenda-date="day.date"
+                                     class="grid grid-cols-[52px_minmax(0,1fr)] gap-3 rounded-xl border p-3"
+                                     :class="day.isToday ? 'border-orange-200 bg-orange-50/40' : 'border-gray-100 bg-white'">
+                                <div class="text-center">
+                                    <p class="text-[10px] font-bold uppercase tracking-wider" :class="day.isToday ? 'text-primary' : 'text-gray-400'" x-text="day.weekday"></p>
+                                    <p class="mt-1 text-xl font-black" :class="day.isToday ? 'text-primary' : 'text-gray-800'" x-text="day.dayNumber"></p>
+                                </div>
+                                <div class="min-w-0 space-y-2">
+                                    <template x-for="booking in day.bookings" :key="booking.id">
+                                        <button type="button" @@click="openBookingDetails(booking)"
+                                                class="flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors"
+                                                :class="bookingChipClass(booking.status)">
+                                            <span class="shrink-0 text-xs font-black tabular-nums" x-text="booking.startTime || 'TBD'"></span>
+                                            <span class="min-w-0 flex-1">
+                                                <span class="block truncate text-sm font-bold" x-text="booking.title"></span>
+                                                <span class="mt-0.5 block truncate text-[11px] opacity-75" x-text="`${booking.guest} · ${booking.guestCount} ${booking.guestCount === 1 ? 'guest' : 'guests'}`"></span>
+                                            </span>
+                                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                                        </button>
+                                    </template>
+
+                                    <button x-show="day.bookings.length === 0 && day.isBlocked" type="button"
+                                            @@click="openAvailabilityEditor(day.date, $event)"
+                                            class="flex w-full items-center justify-between gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-2.5 text-left text-slate-600 hover:bg-slate-100">
+                                        <span class="min-w-0">
+                                            <span class="block text-xs font-bold">Unavailable</span>
+                                            <span class="block truncate text-[11px] text-slate-500" x-text="day.reason || 'No reason added'"></span>
+                                        </span>
+                                        <span class="text-xs font-bold">Manage</span>
+                                    </button>
+
+                                    <button x-show="day.bookings.length === 0 && !day.isBlocked && !day.isPast" type="button"
+                                            @@click="openAvailabilityEditor(day.date, $event)"
+                                            class="flex w-full items-center justify-between rounded-xl border border-gray-100 px-3 py-2.5 text-left text-xs font-semibold text-gray-500 hover:border-orange-200 hover:bg-orange-50 hover:text-primary">
+                                        <span>Available</span><span>Mark unavailable</span>
+                                    </button>
+
+                                    <p x-show="day.bookings.length === 0 && !day.isBlocked && day.isPast" class="px-3 py-2 text-xs text-gray-400">No scheduled trip</p>
+                                </div>
+                            </article>
+                        </template>
+                    </div>
+                </section>
             </div>
         </div>
 
@@ -527,13 +1024,13 @@
                             :class="activeTab === 'stats' ? 'border-primary text-primary bg-orange-50/50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
                             class="flex-1 py-4 text-sm font-bold border-b-2 transition-all flex flex-col items-center justify-center gap-1">
                         <span class="material-symbols-outlined text-[20px]">event_busy</span>
-                        Ngày đã chặn
+                        Blocked Dates
                     </button>
                     <button @@click="activeTab = 'upcoming'" 
                             :class="activeTab === 'upcoming' ? 'border-primary text-primary bg-orange-50/50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
                             class="flex-1 py-4 text-sm font-bold border-b-2 transition-all flex flex-col items-center justify-center gap-1">
                         <span class="material-symbols-outlined text-[20px]">tour</span>
-                        Tour sắp tới
+                        Upcoming Tours
                     </button>
                 </div>
                 
@@ -541,29 +1038,34 @@
                 <div x-show="activeTab === 'stats'" class="flex-1 flex flex-col overflow-hidden">
                     <div class="p-4 bg-gray-50 border-b border-gray-100">
                         <div class="flex justify-between items-center text-sm">
-                            <span class="text-gray-500 font-medium">Tổng cộng trong tháng</span>
-                            <span class="font-bold text-gray-900 bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm"><span x-text="blockedDates.length"></span> ngày</span>
+                            <span class="text-gray-500 font-medium">Total this month</span>
+                            <span class="font-bold text-gray-900 bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm"><span x-text="currentMonthBlockedDates().length"></span> days</span>
                         </div>
                     </div>
                     <div class="overflow-y-auto p-0 flex-1">
-                        <template x-if="blockedDates.length === 0">
+                        <template x-if="currentMonthBlockedDates().length === 0">
                             <div class="text-center py-12 px-4">
                                 <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
                                     <span class="material-symbols-outlined text-gray-300 text-[32px]">event_available</span>
                                 </div>
-                                <p class="text-gray-500 text-sm">Bạn chưa chặn ngày nào.<br>Click vào lịch để chặn.</p>
+                                <p class="text-gray-500 text-sm">No blocked dates yet.<br>Click a date on the calendar to block it.</p>
                             </div>
                         </template>
                         
                         <ul class="divide-y divide-gray-50">
                             <template x-for="date in sortedBlockedDates()" :key="date">
-                                <li class="p-4 flex justify-between items-center hover:bg-gray-50 group transition-colors cursor-default">
-                                    <div class="flex items-center gap-3">
+                                <li class="p-4 flex justify-between items-center gap-3 hover:bg-gray-50 transition-colors">
+                                    <div class="flex min-w-0 items-center gap-3">
                                         <div class="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.6)]"></div>
-                                        <span class="text-sm font-bold text-gray-700" x-text="formatDate(date)"></span>
+                                        <div class="min-w-0">
+                                            <span class="block text-sm font-bold text-gray-700" x-text="formatDate(date)"></span>
+                                            <span class="block truncate text-[11px] text-gray-400" x-text="blockedDateDetails[date]?.reason || 'No reason added'"></span>
+                                        </div>
                                     </div>
-                                    <button @@click="toggleDate(date)" class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1.5 rounded-md hover:bg-red-50" title="Bỏ chặn">
-                                        <span class="material-symbols-outlined text-[18px] block">close</span>
+                                    <button type="button" @@click="openAvailabilityEditor(date, $event)"
+                                            class="shrink-0 rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs font-bold text-gray-500 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-primary"
+                                            :aria-label="`Manage availability for ${formatLongDate(date)}`">
+                                        Manage
                                     </button>
                                 </li>
                             </template>
@@ -578,24 +1080,32 @@
                             <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
                                 <span class="material-symbols-outlined text-gray-300 text-[32px]">tour</span>
                             </div>
-                            <p class="text-gray-500 text-sm">Chưa có booking nào sắp tới.</p>
+                            <p class="text-gray-500 text-sm">No upcoming bookings.</p>
                         </div>
                     </template>
                     
                     <ul class="divide-y divide-gray-100 p-2 space-y-2">
-                        <template x-for="booking in getUpcomingBookings()" :key="booking.date">
-                            <li class="p-4 rounded-xl hover:bg-blue-50/50 transition-colors border border-transparent hover:border-blue-100 cursor-pointer">
-                                <div class="text-xs font-bold text-primary mb-2 flex items-center gap-1 bg-orange-50 w-fit px-2 py-1 rounded-md">
-                                    <span class="material-symbols-outlined text-[14px]">calendar_today</span>
-                                    <span x-text="formatDate(booking.date)"></span>
+                        <template x-for="booking in getUpcomingBookings()" :key="booking.id">
+                            <li @@click="openBookingDetails(booking)"
+                                @@keydown.enter.prevent="openBookingDetails(booking)"
+                                tabindex="0"
+                                class="cursor-pointer rounded-xl border border-transparent p-4 transition-colors hover:border-blue-100 hover:bg-blue-50/50 focus:border-blue-200 focus:bg-blue-50/50 focus:outline-none">
+                                <div class="mb-2 flex items-center justify-between gap-2">
+                                    <div class="flex w-fit items-center gap-1 rounded-md bg-orange-50 px-2 py-1 text-xs font-bold text-primary">
+                                        <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                                        <span x-text="formatDate(booking.date)"></span>
+                                    </div>
+                                    <span class="rounded-full border px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider"
+                                          :class="statusBadgeClass(booking.status)"
+                                          x-text="statusLabel(booking.status)"></span>
                                 </div>
                                 <h4 class="font-bold text-gray-900 text-sm mb-2" x-text="booking.title"></h4>
-                                <div class="flex items-center gap-4 text-xs text-gray-500 mb-3 bg-gray-50 p-2 rounded-lg">
-                                    <span class="flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[14px]">person</span> <span x-text="booking.guest"></span></span>
-                                    <span class="flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[14px]">group</span> <span x-text="booking.pax + ' pax'"></span></span>
+                                <div class="mb-3 grid grid-cols-2 gap-2 rounded-lg bg-gray-50 p-2 text-xs text-gray-500">
+                                    <span class="flex min-w-0 items-center gap-1 font-medium"><span class="material-symbols-outlined text-[14px]">schedule</span> <span x-text="booking.startTime || 'Time TBD'"></span></span>
+                                    <span class="flex items-center gap-1 font-medium"><span class="material-symbols-outlined text-[14px]">group</span> <span x-text="booking.guestCount + (booking.guestCount === 1 ? ' guest' : ' guests')"></span></span>
                                 </div>
                                 <div class="flex justify-between items-center">
-                                    <span class="text-xs text-gray-400">Doanh thu</span>
+                                    <span class="truncate pr-2 text-xs text-gray-400" x-text="booking.guest"></span>
                                     <span class="text-sm font-bold text-green-600" x-text="formatCurrency(booking.revenue)"></span>
                                 </div>
                             </li>
@@ -607,6 +1117,9 @@
             </div>
         </div>
     </div>
+
+    <partial name="_CalendarAvailabilityPopover" />
+    <partial name="_CalendarBookingDrawer" />
 
     <!-- ====== LEAVE CONFIRMATION MODAL (inside Alpine scope) ====== -->
     <div x-show="showLeaveModal"
@@ -642,16 +1155,16 @@
                     <div class="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-100 flex items-center justify-center mb-3">
                         <span class="material-symbols-outlined text-amber-500 text-[28px]">edit_calendar</span>
                     </div>
-                    <h3 class="font-bold text-gray-900 text-base leading-snug">Lưu thay đổi trước khi rời?</h3>
+                    <h3 class="font-bold text-gray-900 text-base leading-snug">Save changes before leaving?</h3>
                     <p class="text-gray-500 text-sm mt-1">
-                        Bạn có <strong class="text-amber-600 font-bold" x-text="blockedDates.length"></strong> ngày đã chặn chưa được lưu.
+                        You have <strong class="text-amber-600 font-bold" x-text="changeCount"></strong> unsaved availability change(s).
                     </p>
                 </div>
 
                 <!-- Warning note with amber tint to match context -->
                 <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-2.5 mb-5">
                     <span class="material-symbols-outlined text-amber-400 text-[16px] mt-px shrink-0">warning</span>
-                    <p class="text-amber-700 text-xs leading-relaxed">Nếu rời đi không lưu, mọi thay đổi sẽ bị <strong>mất hoàn toàn</strong> và lịch sẽ quay về trạng thái ban đầu.</p>
+                    <p class="text-amber-700 text-xs leading-relaxed">If you leave without saving, all changes will be permanently lost and the calendar will return to its previous state.</p>
                 </div>
 
                 <!--
@@ -663,13 +1176,13 @@
                 <div class="flex gap-2.5">
                     <button @@click="showLeaveModal = false"
                             class="flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
-                        Ở lại trang
+                        Stay on Page
                     </button>
                     <button @@click="saveAndLeave()" :disabled="isSaving"
                             class="flex-[1.4] py-2.5 px-4 rounded-xl font-bold text-sm text-white bg-primary hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-1.5">
                         <span class="material-symbols-outlined text-[15px] animate-spin" x-show="isSaving">autorenew</span>
                         <span class="material-symbols-outlined text-[15px]" x-show="!isSaving">save</span>
-                        <span x-text="isSaving ? 'Đang lưu...' : 'Lưu & Rời đi'"></span>
+                        <span x-text="isSaving ? 'Saving...' : 'Save & Leave'"></span>
                     </button>
                 </div>
 
@@ -677,7 +1190,7 @@
                 <div class="pt-3 mt-3 flex justify-center border-t border-gray-100">
                     <button @@click="confirmLeave()"
                             class="text-xs text-gray-400 hover:text-red-500 transition-colors font-medium underline underline-offset-2 decoration-gray-300 hover:decoration-red-400">
-                        Rời đi mà không lưu thay đổi
+                        Leave Without Saving
                     </button>
                 </div>
             </div>

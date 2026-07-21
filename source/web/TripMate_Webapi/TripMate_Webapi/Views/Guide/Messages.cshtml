@@ -222,14 +222,20 @@
                 _chatReconnectedHandler: null,
 
                 // Called by x-init
-                init() {
+                async init() {
                     this._messageCreatedHandler = event => this.handleRealtimeMessage(event.detail);
                     this._messageUpdatedHandler = event => this.handleRealtimeMessageUpdate(event.detail);
                     this._chatReconnectedHandler = () => this.reloadAfterReconnect();
                     document.addEventListener('tripmate:message-created', this._messageCreatedHandler);
                     document.addEventListener('tripmate:message-updated', this._messageUpdatedHandler);
                     document.addEventListener('tripmate:chat-reconnected', this._chatReconnectedHandler);
-                    this.loadConversations();
+                    await this.loadConversations();
+                    const requestedBookingId = new URLSearchParams(window.location.search).get('bookingId');
+                    if (requestedBookingId) {
+                        const requestedThread = this.threads.find(thread =>
+                            String(thread.BookingId) === String(requestedBookingId));
+                        if (requestedThread) await this.selectThread(requestedThread);
+                    }
                     window.TripMateChat?.start();
                 },
                 destroy() {

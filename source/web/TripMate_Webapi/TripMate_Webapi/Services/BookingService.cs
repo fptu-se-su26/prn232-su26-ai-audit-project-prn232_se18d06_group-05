@@ -61,29 +61,30 @@ public class BookingService
     {
         // 1. Get experience package to calculate price
         var package = await GetExperiencePackageAsync(req.ExperiencePackageId)
-            ?? throw new Exception("Không tìm thấy gói trải nghiệm");
+            ?? throw new Exception("Experience package not found.");
 
         if (!package.IsActive)
-            throw new Exception("Gói trải nghiệm này không còn hoạt động");
+            throw new Exception("This experience package is no longer active.");
 
         if (req.GuestCount < 1)
-            throw new Exception("Số khách phải ít nhất là 1");
+            throw new Exception("The booking must include at least one guest.");
 
         if (req.GuestCount > package.MaxGroupSize)
-            throw new Exception($"Số khách tối đa cho gói này là {package.MaxGroupSize}");
+            throw new Exception($"The maximum group size for this package is {package.MaxGroupSize}.");
 
         // 2. Check guide availability (blacklist check)
         var isUnavailable = await IsGuideUnavailableAsync(
             package.GuideProfileId!, req.BookingDate);
         if (isUnavailable)
-            throw new Exception("Hướng dẫn viên không khả dụng vào ngày này");
+            throw new Exception("The guide is unavailable on this date.");
 
-        // 3. Calculate pricing
-        decimal totalAmount;
-        if (package.PricePerPerson.HasValue && package.PricePerPerson > 0)
-            totalAmount = package.PricePerPerson.Value * req.GuestCount;
-        else
-            totalAmount = package.PricePerSession;
+        // 3. Fixed-tour pricing: base price includes a configured number of guests;
+        // only guests above that threshold pay the additional guest fee.
+        var totalAmount = TourPricingCalculator.CalculateTotal(
+            package.PricePerSession,
+            package.PricePerPerson,
+            package.IncludedGuestCount,
+            req.GuestCount);
 
         var platformFee = Math.Round(totalAmount * PlatformFeeRate, 2);
         var guideEarnings = totalAmount - platformFee;
@@ -115,7 +116,7 @@ public class BookingService
         EnsureSuccess(response, content);
 
         var rows = JsonSerializer.Deserialize<List<BookingRow>>(content, _json);
-        var row = rows?.FirstOrDefault() ?? throw new Exception("Tạo booking thất bại");
+        var row = rows?.FirstOrDefault() ?? throw new Exception("Failed to create the booking.");
 
         var dto = MapToDto(row, package.Title);
 
@@ -180,13 +181,13 @@ public class BookingService
     public async Task CancelBookingAsync(string bookingId, string travelerId)
     {
         var booking = await GetBookingByIdAsync(bookingId)
-            ?? throw new Exception("Không tìm thấy booking");
+            ?? throw new Exception("Booking not found.");
 
         if (booking.TravelerId != travelerId)
-            throw new UnauthorizedAccessException("Bạn không có quyền hủy booking này");
+            throw new UnauthorizedAccessException("You are not authorized to cancel this booking.");
 
         if (booking.Status == "completed")
-            throw new Exception("Không thể hủy booking đã hoàn thành");
+            throw new Exception("A completed booking cannot be cancelled.");
 
         // Update status to 3 (Cancelled)
         var updates = new { status = 3 };
@@ -255,7 +256,7 @@ public class BookingService
                 TravelerName: b.Traveler?.FullName ?? "Unknown Traveler",
                 TravelerAvatar: b.Traveler?.AvatarUrl ?? "/images/AVATAR.png",
                 TravelerRating: b.Traveler?.AverageRating ?? 5.0m,
-                TravelerLocation: b.Traveler?.Location ?? "Việt Nam",
+                TravelerLocation: b.Traveler?.Location ?? "Vietnam",
                 TourName: b.ExperiencePackage?.Title ?? "Unknown Tour",
                 Date: b.BookingDate.ToString("dd/MM/yyyy"),
                 Time: b.StartTime.ToString("HH:mm"),
@@ -278,16 +279,16 @@ public class BookingService
     public async Task UpdateGuideBookingStatusAsync(string bookingId, string guideProfileId, int newStatus)
     {
         var booking = await _repo.GetBookingByIdAsync(bookingId);
-        if (booking == null) throw new Exception("Không tìm thấy booking");
+        if (booking == null) throw new Exception("Booking not found.");
 
         if (booking.GuideProfileId != guideProfileId)
-            throw new UnauthorizedAccessException("Bạn không có quyền cập nhật booking này");
+            throw new UnauthorizedAccessException("You are not authorized to update this booking.");
 
         if (booking.Status != 0)
-            throw new Exception("Chỉ có thể cập nhật trạng thái của booking đang chờ duyệt (Pending)");
+            throw new Exception("Only pending bookings can be updated.");
 
         if (DateTime.UtcNow >= GetGuideResponseDeadlineUtc(booking.CreatedAt))
-            throw new Exception("Booking đã hết hạn phản hồi sau 24 giờ và không thể cập nhật.");
+            throw new Exception("The 24-hour response window has expired and this booking can no longer be updated.");
 
         await _repo.UpdateBookingStatusAsync(bookingId, newStatus);
         

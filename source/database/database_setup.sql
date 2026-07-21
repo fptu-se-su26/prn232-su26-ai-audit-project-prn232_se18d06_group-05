@@ -41,7 +41,9 @@ CREATE TABLE public.profiles (
   phone_number text,
   avatar_url text,
   is_active boolean DEFAULT true,
+  publication_status text NOT NULL DEFAULT 'published',
   created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
@@ -88,13 +90,18 @@ CREATE TABLE public.experience_packages (
   description text NOT NULL,
   duration_hours numeric(4,1) NOT NULL,
   price_per_session numeric(12,2) NOT NULL,
-  price_per_person numeric(12,2),
+  price_per_person numeric(12,2) DEFAULT 0,
+  included_guest_count integer NOT NULL DEFAULT 1,
   max_group_size integer DEFAULT 6,
   included_items text[] DEFAULT '{}'::text[],
   tags text[] DEFAULT '{}'::text[],
   is_active boolean DEFAULT true,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT experience_packages_pkey PRIMARY KEY (id),
+  CONSTRAINT exp_pkg_included_guest_count_check CHECK (included_guest_count >= 1),
+  CONSTRAINT exp_pkg_max_group_size_check CHECK (max_group_size >= included_guest_count),
+  CONSTRAINT exp_pkg_price_check CHECK (price_per_session >= 0 AND COALESCE(price_per_person, 0) >= 0),
+  CONSTRAINT exp_pkg_publication_status_check CHECK (publication_status IN ('draft', 'published', 'hidden')),
   CONSTRAINT exp_pkg_guide_fkey FOREIGN KEY (guide_profile_id) REFERENCES public.guide_profiles(id) ON DELETE CASCADE
 );
 
