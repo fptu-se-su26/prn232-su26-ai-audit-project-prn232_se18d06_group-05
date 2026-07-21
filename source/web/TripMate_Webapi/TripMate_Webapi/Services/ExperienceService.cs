@@ -146,7 +146,7 @@ namespace TripMate_WebAPI.Services
             if (existingTour == null) return null;
 
             existingTour.Id = Guid.NewGuid().ToString();
-            existingTour.Title = existingTour.Title + " (Bản sao)";
+            existingTour.Title = existingTour.Title + " (Copy)";
             existingTour.IsActive = false; // By default, duplicated tours are inactive until reviewed
             existingTour.CreatedAt = DateTime.UtcNow;
 

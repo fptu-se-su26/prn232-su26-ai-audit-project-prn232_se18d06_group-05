@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Quản lý Lịch";
+    ViewData["Title"] = "Calendar Management";
     ViewData["ActivePage"] = "Calendar";
     Layout = "_GuideLayout";
 }
@@ -98,14 +98,14 @@
                 
                 this.calendar = new FullCalendar.Calendar(calendarEl, {
                     initialView: 'dayGridMonth',
-                    locale: 'vi',
+                    locale: 'en',
                     headerToolbar: {
                         left: 'prev,next today',
                         center: 'title',
                         right: '' 
                     },
                     buttonText: {
-                        today: 'Hôm nay',
+                        today: 'Today',
                     },
                     firstDay: 1, // Start on Monday
                     height: 'auto', // Removes internal scrollbar completely
@@ -142,7 +142,7 @@
                             successCallback([]);
                         } catch (error) {
                             console.error('Error fetching calendar data:', error);
-                            showToast('error', 'Lỗi tải dữ liệu lịch');
+                            showToast('error', 'Failed to load calendar data.');
                             failureCallback(error);
                         }
                     },
@@ -203,7 +203,7 @@
                             `;
                         } else if (this.blockedDates.includes(dateStr)) {
                             const blockedClass = isPast ? 'blocked-label blocked-label-past' : 'blocked-label';
-                            html += `<div class="${blockedClass} w-full m-0 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[12px]">block</span> Đã chặn</div>`;
+                            html += `<div class="${blockedClass} w-full m-0 flex items-center justify-center gap-1"><span class="material-symbols-outlined text-[12px]">block</span> Blocked</div>`;
                         }
                         
                         html += `
@@ -227,15 +227,15 @@
 
                         if (this.bookings[dateStr]) {
                             cell.classList.add('fc-booked-day');
-                            cell.title = `Booking: ${this.bookings[dateStr].title}\nKhách: ${this.bookings[dateStr].guest}\nSố người: ${this.bookings[dateStr].pax}`;
+                            cell.title = `Booking: ${this.bookings[dateStr].title}\nTraveler: ${this.bookings[dateStr].guest}\nGuests: ${this.bookings[dateStr].pax}`;
                         } else if (this.blockedDates.includes(dateStr)) {
                             cell.classList.add('fc-blocked-day');
-                            cell.title = "Đã chặn";
+                            cell.title = "Blocked";
                         } else if (date < new Date().setHours(0,0,0,0)) {
                             cell.style.cursor = 'not-allowed';
                         } else {
                             cell.classList.add('fc-available-day');
-                            cell.title = "Ngày trống. Click để chặn.";
+                            cell.title = "Available date. Click to block.";
                         }
                     },
                     
@@ -244,7 +244,7 @@
                         const dateStr = info.dateStr;
                         
                         if (this.bookings[dateStr]) {
-                            showToast('warning', 'Ngày này đã có tour, không thể chặn!');
+                            showToast('warning', 'This date already has a booking and cannot be blocked.');
                             return;
                         }
                         
@@ -276,7 +276,7 @@
             
             clearAllBlocked() {
                 if (this.blockedDates.length === 0) return;
-                if (confirm('Bạn chắc chắn muốn bỏ chặn tất cả các ngày trong tháng?')) {
+                if (confirm('Remove all blocked dates in this month?')) {
                     this.blockedDates = [];
                     this.checkChanges();
                     this.calendar.render(); 
@@ -284,7 +284,7 @@
             },
             
             blockWeekends() {
-                if (confirm('Chặn tất cả Thứ 7 và Chủ Nhật đang hiển thị trên lịch?')) {
+                if (confirm('Block all visible Saturdays and Sundays?')) {
                     const view = this.calendar.view;
                     const start = view.activeStart;
                     const end = view.activeEnd;
@@ -354,15 +354,15 @@
                     });
                     
                     if (!res.ok) {
-                        throw new Error('Lỗi cập nhật dữ liệu');
+                        throw new Error('Failed to update calendar data.');
                     }
                     
                     this.originalBlockedDates = [...this.blockedDates];
                     this.hasChanges = false;
-                    showToast('success', 'Đã cập nhật lịch rảnh thành công!');
+                    showToast('success', 'Availability calendar updated successfully.');
                 } catch (error) {
                     console.error(error);
-                    showToast('error', 'Cập nhật thất bại. Vui lòng thử lại.');
+                    showToast('error', 'Update failed. Please try again.');
                 } finally {
                     this.isSaving = false;
                 }
@@ -427,18 +427,18 @@
                 <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500"></span>
             </span>
             <div class="flex-1 min-w-0">
-                <p class="text-sm font-semibold text-gray-800">Bạn có thay đổi chưa được lưu — <span class="font-normal text-gray-500">Hãy lưu trước khi chuyển trang khác.</span></p>
+                <p class="text-sm font-semibold text-gray-800">You have unsaved changes — <span class="font-normal text-gray-500">save them before leaving this page.</span></p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
                 <button @@click="discardChanges()"
                         class="px-3 py-1.5 rounded-lg text-xs font-bold text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors">
-                    Hủy bỏ
+                    Cancel
                 </button>
                 <button @@click="saveChanges()" :disabled="isSaving"
                         class="px-4 py-1.5 rounded-lg text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 transition-colors shadow-sm flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[14px] animate-spin" x-show="isSaving">autorenew</span>
                     <span class="material-symbols-outlined text-[14px]" x-show="!isSaving">save</span>
-                    <span x-text="isSaving ? 'Đang lưu...' : 'Lưu thay đổi'"></span>
+                    <span x-text="isSaving ? 'Saving...' : 'Save Changes'"></span>
                 </button>
             </div>
         </div>
@@ -450,7 +450,7 @@
                 <span class="material-symbols-outlined text-[20px]">event_available</span>
             </div>
             <div>
-                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Ngày sẵn sàng</p>
+                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Available Days</p>
                 <h3 class="text-xl font-black text-gray-900" x-text="getAvailableDays()"></h3>
             </div>
         </div>
@@ -460,7 +460,7 @@
                 <span class="material-symbols-outlined text-[20px]">event_busy</span>
             </div>
             <div>
-                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Đã chặn</p>
+                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Blocked</p>
                 <h3 class="text-xl font-black text-gray-900" x-text="blockedDates.length"></h3>
             </div>
         </div>
@@ -470,7 +470,7 @@
                 <span class="material-symbols-outlined text-[20px]">tour</span>
             </div>
             <div>
-                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Đã có tour</p>
+                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Booked</p>
                 <h3 class="text-xl font-black text-gray-900" x-text="bookedDatesCount"></h3>
             </div>
         </div>
@@ -480,7 +480,7 @@
                 <span class="material-symbols-outlined text-[20px]">payments</span>
             </div>
             <div>
-                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Dự kiến thu</p>
+                <p class="text-[11px] text-gray-500 font-bold mb-0.5 uppercase tracking-wider">Estimated Revenue</p>
                 <h3 class="text-lg font-black text-gray-900" x-text="formatCurrency(getTotalRevenue())"></h3>
             </div>
         </div>
@@ -497,20 +497,20 @@
                     <div class="flex flex-wrap gap-4">
                         <div class="flex items-center gap-2">
                             <div class="w-4 h-4 rounded-md bg-white border border-gray-300"></div>
-                            <span class="text-sm font-medium text-gray-700">Sẵn sàng (Click để chặn)</span>
+                            <span class="text-sm font-medium text-gray-700">Available (Click to block)</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <div class="w-4 h-4 rounded-md bg-red-100 border border-red-200"></div>
-                            <span class="text-sm font-medium text-gray-700">Đã chặn (Click để bỏ chặn)</span>
+                            <span class="text-sm font-medium text-gray-700">Blocked (Click to unblock)</span>
                         </div>
                         <div class="flex items-center gap-2">
                             <div class="w-4 h-4 rounded-md bg-blue-50 border border-blue-200"></div>
-                            <span class="text-sm font-medium text-gray-700">Đã có booking</span>
+                            <span class="text-sm font-medium text-gray-700">Booked</span>
                         </div>
                     </div>
                     
                     <button @@click="clearAllBlocked()" class="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-sm font-bold transition-colors border border-red-100 shadow-sm flex items-center gap-2 sm:ml-auto w-fit">
-                        <span class="material-symbols-outlined text-[16px]">delete_sweep</span> Bỏ chặn tất cả
+                        <span class="material-symbols-outlined text-[16px]">delete_sweep</span> Clear All Blocked Dates
                     </button>
                 </div>
 
@@ -527,13 +527,13 @@
                             :class="activeTab === 'stats' ? 'border-primary text-primary bg-orange-50/50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
                             class="flex-1 py-4 text-sm font-bold border-b-2 transition-all flex flex-col items-center justify-center gap-1">
                         <span class="material-symbols-outlined text-[20px]">event_busy</span>
-                        Ngày đã chặn
+                        Blocked Dates
                     </button>
                     <button @@click="activeTab = 'upcoming'" 
                             :class="activeTab === 'upcoming' ? 'border-primary text-primary bg-orange-50/50' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'"
                             class="flex-1 py-4 text-sm font-bold border-b-2 transition-all flex flex-col items-center justify-center gap-1">
                         <span class="material-symbols-outlined text-[20px]">tour</span>
-                        Tour sắp tới
+                        Upcoming Tours
                     </button>
                 </div>
                 
@@ -541,8 +541,8 @@
                 <div x-show="activeTab === 'stats'" class="flex-1 flex flex-col overflow-hidden">
                     <div class="p-4 bg-gray-50 border-b border-gray-100">
                         <div class="flex justify-between items-center text-sm">
-                            <span class="text-gray-500 font-medium">Tổng cộng trong tháng</span>
-                            <span class="font-bold text-gray-900 bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm"><span x-text="blockedDates.length"></span> ngày</span>
+                            <span class="text-gray-500 font-medium">Total this month</span>
+                            <span class="font-bold text-gray-900 bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm"><span x-text="blockedDates.length"></span> days</span>
                         </div>
                     </div>
                     <div class="overflow-y-auto p-0 flex-1">
@@ -551,7 +551,7 @@
                                 <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
                                     <span class="material-symbols-outlined text-gray-300 text-[32px]">event_available</span>
                                 </div>
-                                <p class="text-gray-500 text-sm">Bạn chưa chặn ngày nào.<br>Click vào lịch để chặn.</p>
+                                <p class="text-gray-500 text-sm">No blocked dates yet.<br>Click a date on the calendar to block it.</p>
                             </div>
                         </template>
                         
@@ -562,7 +562,7 @@
                                         <div class="w-2 h-2 rounded-full bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.6)]"></div>
                                         <span class="text-sm font-bold text-gray-700" x-text="formatDate(date)"></span>
                                     </div>
-                                    <button @@click="toggleDate(date)" class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1.5 rounded-md hover:bg-red-50" title="Bỏ chặn">
+                                    <button @@click="toggleDate(date)" class="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1.5 rounded-md hover:bg-red-50" title="Unblock">
                                         <span class="material-symbols-outlined text-[18px] block">close</span>
                                     </button>
                                 </li>
@@ -578,7 +578,7 @@
                             <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3">
                                 <span class="material-symbols-outlined text-gray-300 text-[32px]">tour</span>
                             </div>
-                            <p class="text-gray-500 text-sm">Chưa có booking nào sắp tới.</p>
+                            <p class="text-gray-500 text-sm">No upcoming bookings.</p>
                         </div>
                     </template>
                     
@@ -642,16 +642,16 @@
                     <div class="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-100 flex items-center justify-center mb-3">
                         <span class="material-symbols-outlined text-amber-500 text-[28px]">edit_calendar</span>
                     </div>
-                    <h3 class="font-bold text-gray-900 text-base leading-snug">Lưu thay đổi trước khi rời?</h3>
+                    <h3 class="font-bold text-gray-900 text-base leading-snug">Save changes before leaving?</h3>
                     <p class="text-gray-500 text-sm mt-1">
-                        Bạn có <strong class="text-amber-600 font-bold" x-text="blockedDates.length"></strong> ngày đã chặn chưa được lưu.
+                        You have <strong class="text-amber-600 font-bold" x-text="blockedDates.length"></strong> unsaved blocked date(s).
                     </p>
                 </div>
 
                 <!-- Warning note with amber tint to match context -->
                 <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 flex items-start gap-2.5 mb-5">
                     <span class="material-symbols-outlined text-amber-400 text-[16px] mt-px shrink-0">warning</span>
-                    <p class="text-amber-700 text-xs leading-relaxed">Nếu rời đi không lưu, mọi thay đổi sẽ bị <strong>mất hoàn toàn</strong> và lịch sẽ quay về trạng thái ban đầu.</p>
+                    <p class="text-amber-700 text-xs leading-relaxed">If you leave without saving, all changes will be permanently lost and the calendar will return to its previous state.</p>
                 </div>
 
                 <!--
@@ -663,13 +663,13 @@
                 <div class="flex gap-2.5">
                     <button @@click="showLeaveModal = false"
                             class="flex-1 py-2.5 px-4 rounded-xl font-semibold text-sm text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors">
-                        Ở lại trang
+                        Stay on Page
                     </button>
                     <button @@click="saveAndLeave()" :disabled="isSaving"
                             class="flex-[1.4] py-2.5 px-4 rounded-xl font-bold text-sm text-white bg-primary hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-1.5">
                         <span class="material-symbols-outlined text-[15px] animate-spin" x-show="isSaving">autorenew</span>
                         <span class="material-symbols-outlined text-[15px]" x-show="!isSaving">save</span>
-                        <span x-text="isSaving ? 'Đang lưu...' : 'Lưu & Rời đi'"></span>
+                        <span x-text="isSaving ? 'Saving...' : 'Save & Leave'"></span>
                     </button>
                 </div>
 
@@ -677,7 +677,7 @@
                 <div class="pt-3 mt-3 flex justify-center border-t border-gray-100">
                     <button @@click="confirmLeave()"
                             class="text-xs text-gray-400 hover:text-red-500 transition-colors font-medium underline underline-offset-2 decoration-gray-300 hover:decoration-red-400">
-                        Rời đi mà không lưu thay đổi
+                        Leave Without Saving
                     </button>
                 </div>
             </div>

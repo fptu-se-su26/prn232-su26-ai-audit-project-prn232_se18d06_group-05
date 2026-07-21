@@ -86,7 +86,7 @@ namespace TripMate_Webapi.Controllers
             if (string.IsNullOrEmpty(guideProfileId))
             {
                 _logger.LogWarning("Trip offer rejected because no guide profile was found. TraceId: {TraceId}", traceId);
-                return Unauthorized(new { success = false, message = "Không xác định được hồ sơ guide.", traceId });
+                return Unauthorized(new { success = false, message = "Unable to identify the guide profile.", traceId });
             }
 
             _logger.LogInformation(
@@ -109,12 +109,12 @@ namespace TripMate_Webapi.Controllers
                 result.ErrorMessage,
                 traceId);
 
-            if (result.ErrorMessage?.Contains("đã gửi offer", StringComparison.OrdinalIgnoreCase) == true)
+            if (result.ErrorMessage?.Contains("already sent an offer", StringComparison.OrdinalIgnoreCase) == true)
             {
                 return Conflict(new { success = false, message = result.ErrorMessage, traceId });
             }
 
-            return BadRequest(new { success = false, message = result.ErrorMessage ?? "Không thể gửi offer", traceId });
+            return BadRequest(new { success = false, message = result.ErrorMessage ?? "Unable to send the offer.", traceId });
         }
 
         [HttpGet]
@@ -258,7 +258,7 @@ namespace TripMate_Webapi.Controllers
             if (guideProfileId == null) return Unauthorized();
             
             await _calendarService.SaveBlockedDatesAsync(guideProfileId, req);
-            return Ok(new { message = "Cập nhật thành công" });
+            return Ok(new { message = "Updated successfully." });
         }
 
         // Helper method to get the guide profile ID of the currently logged-in user
@@ -309,12 +309,12 @@ namespace TripMate_Webapi.Controllers
             try
             {
                 var guideProfileId = await GetCurrentGuideProfileIdAsync();
-                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "Không có quyền thực hiện thao tác này" });
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "You are not authorized to perform this action." });
 
                 var success = await _experienceService.ToggleTourStatusAsync(id, guideProfileId);
                 
-                if (success) return Ok(new { success = true, message = "Cập nhật trạng thái thành công" });
-                return BadRequest(new { success = false, message = "Không tìm thấy gói trải nghiệm" });
+                if (success) return Ok(new { success = true, message = "Tour status updated successfully." });
+                return BadRequest(new { success = false, message = "Experience package not found." });
             }
             catch (Exception ex)
             {
@@ -329,12 +329,12 @@ namespace TripMate_Webapi.Controllers
             try
             {
                 var guideProfileId = await GetCurrentGuideProfileIdAsync();
-                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "Không có quyền thực hiện thao tác này" });
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "You are not authorized to perform this action." });
 
                 var success = await _experienceService.DeleteTourAsync(id, guideProfileId);
                 
-                if (success) return Ok(new { success = true, message = "Đã xóa gói trải nghiệm" });
-                return BadRequest(new { success = false, message = "Xóa thất bại" });
+                if (success) return Ok(new { success = true, message = "Experience package deleted." });
+                return BadRequest(new { success = false, message = "Delete failed." });
             }
             catch (Exception ex)
             {
@@ -349,12 +349,12 @@ namespace TripMate_Webapi.Controllers
             try
             {
                 var guideProfileId = await GetCurrentGuideProfileIdAsync();
-                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "Không có quyền thực hiện thao tác này" });
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "You are not authorized to perform this action." });
 
                 var newTour = await _experienceService.DuplicateTourAsync(id, guideProfileId);
                 
-                if (newTour != null) return Ok(new { success = true, message = "Nhân bản thành công" });
-                return BadRequest(new { success = false, message = "Không tìm thấy gói trải nghiệm" });
+                if (newTour != null) return Ok(new { success = true, message = "Tour duplicated successfully." });
+                return BadRequest(new { success = false, message = "Experience package not found." });
             }
             catch (Exception ex)
             {
@@ -413,15 +413,15 @@ namespace TripMate_Webapi.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ." });
+                    return BadRequest(new { success = false, message = "Invalid data." });
                 }
 
                 var guideProfileId = await GetCurrentGuideProfileIdAsync();
-                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "Bạn cần có hồ sơ hướng dẫn viên để tạo gói trải nghiệm." });
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "You need a guide profile to create an experience package." });
 
                 var createdTour = await _experienceService.CreateTourAsync(dto, guideProfileId);
 
-                return Ok(new { success = true, data = new { id = createdTour.Id }, message = "Tuyệt vời! Gói trải nghiệm của bạn đã được xuất bản." });
+                return Ok(new { success = true, data = new { id = createdTour.Id }, message = "Your experience package has been published." });
             }
             catch (Exception ex)
             {
@@ -454,7 +454,7 @@ namespace TripMate_Webapi.Controllers
                 if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
 
                 await _bookingService.UpdateGuideBookingStatusAsync(id, guideProfileId, 1); // 1 = Confirmed
-                return Ok(new { success = true, message = "Đã chấp nhận booking thành công" });
+                return Ok(new { success = true, message = "Booking accepted successfully." });
             }
             catch (Exception ex)
             {
@@ -474,7 +474,7 @@ namespace TripMate_Webapi.Controllers
                 if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
 
                 await _bookingService.UpdateGuideBookingStatusAsync(id, guideProfileId, 3); // 3 = Cancelled
-                return Ok(new { success = true, message = "Đã từ chối booking" });
+                return Ok(new { success = true, message = "Booking rejected." });
             }
             catch (Exception ex)
             {

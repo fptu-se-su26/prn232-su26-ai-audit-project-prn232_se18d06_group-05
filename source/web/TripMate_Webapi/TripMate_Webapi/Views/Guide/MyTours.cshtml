@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Quản lý Gói Tour";
+    ViewData["Title"] = "Tour Package Management";
     ViewData["ActivePage"] = "MyTours";
     Layout = "_GuideLayout";
 }
@@ -10,13 +10,13 @@
         <div>
             <div class="flex items-center gap-3 mb-1">
                 <h2 class="text-3xl font-bold text-gray-900">My Tours</h2>
-                <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-bold border border-blue-100" x-text="`${activeCount}/${tours.length} gói đang hoạt động`">
+                <span class="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-bold border border-blue-100" x-text="`${activeCount}/${tours.length} active packages`">
                 </span>
             </div>
-            <p class="text-gray-500 text-sm">Quản lý và tùy chỉnh các trải nghiệm bạn cung cấp.</p>
+            <p class="text-gray-500 text-sm">Manage and customize the experiences you offer.</p>
         </div>
         <a href="/Guide/CreateTour" class="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-xl font-bold transition-colors shadow-sm flex items-center gap-2 flex-shrink-0">
-            <span class="material-symbols-outlined text-[20px]">add</span> Tạo Gói Mới
+            <span class="material-symbols-outlined text-[20px]">add</span> Create New Package
         </a>
     </div>
 
@@ -24,18 +24,18 @@
     <div class="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 mb-8">
         <div class="relative flex-grow">
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">search</span>
-            <input type="text" x-model="searchQuery" placeholder="Tìm kiếm theo tên gói..." 
+            <input type="text" x-model="searchQuery" placeholder="Search by package name..."
                    class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl py-3 pl-12 pr-4 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
         </div>
         <div class="flex bg-gray-50 p-1 rounded-xl border border-gray-200">
             <button @@click="filter = 'all'" :class="{'bg-white shadow-sm font-bold text-gray-900': filter === 'all', 'text-gray-500 font-medium': filter !== 'all'}" class="px-6 py-2 rounded-lg text-sm transition-all">
-                Tất cả
+                All
             </button>
             <button @@click="filter = 'active'" :class="{'bg-white shadow-sm font-bold text-gray-900': filter === 'active', 'text-gray-500 font-medium': filter !== 'active'}" class="px-6 py-2 rounded-lg text-sm transition-all">
-                Đang hoạt động
+                Active
             </button>
             <button @@click="filter = 'hidden'" :class="{'bg-white shadow-sm font-bold text-gray-900': filter === 'hidden', 'text-gray-500 font-medium': filter !== 'hidden'}" class="px-6 py-2 rounded-lg text-sm transition-all">
-                Đã ẩn
+                Hidden
             </button>
         </div>
     </div>
@@ -53,12 +53,12 @@
                             <h3 class="text-xl font-bold text-gray-900" x-text="tour.title"></h3>
                             <template x-if="tour.isActive">
                                 <span class="flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-0.5 rounded-md text-xs font-bold border border-green-200">
-                                    <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div> Hoạt động
+                                    <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div> Active
                                 </span>
                             </template>
                             <template x-if="!tour.isActive">
                                 <span class="flex items-center gap-1 bg-gray-100 text-gray-600 px-2.5 py-0.5 rounded-md text-xs font-bold border border-gray-200">
-                                    Đã ẩn
+                                    Hidden
                                 </span>
                             </template>
                         </div>
@@ -66,11 +66,11 @@
                         <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-600 mb-4">
                             <div class="flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-[18px] text-gray-400">schedule</span>
-                                <span x-text="`${tour.durationHours} giờ`"></span>
+                                <span x-text="`${tour.durationHours} hours`"></span>
                             </div>
                             <div class="flex items-center gap-1.5">
                                 <span class="material-symbols-outlined text-[18px] text-gray-400">group</span>
-                                <span x-text="`Tối đa ${tour.maxGroupSize} người`"></span>
+                                <span x-text="`Up to ${tour.maxGroupSize} people`"></span>
                             </div>
                             <div class="flex items-center gap-1.5 font-bold text-primary">
                                 <span class="material-symbols-outlined text-[18px]">payments</span>
@@ -88,12 +88,12 @@
 
                     <div class="flex flex-row md:flex-col justify-end gap-3 min-w-[140px]">
                         <a :href="`/Guide/CreateTour?id=${tour.id}`" class="flex-1 md:flex-none text-center bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-xl font-medium transition-colors text-sm">
-                            Chỉnh sửa
+                            Edit
                         </a>
-                        <button @@click="toggleTourActive(tour)" class="flex-1 md:flex-none text-center bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-xl font-medium transition-colors text-sm" x-text="tour.isActive ? 'Ẩn gói' : 'Hiện gói'">
+                        <button @@click="toggleTourActive(tour)" class="flex-1 md:flex-none text-center bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-4 py-2 rounded-xl font-medium transition-colors text-sm" x-text="tour.isActive ? 'Hide Package' : 'Show Package'">
                         </button>
                         <button @@click="deleteTour(tour)" class="flex-1 md:flex-none text-center bg-white border border-red-200 text-red-600 hover:bg-red-50 px-4 py-2 rounded-xl font-medium transition-colors text-sm">
-                            Xóa
+                            Delete
                         </button>
                     </div>
                 </div>
@@ -102,7 +102,7 @@
         
         <div x-show="filteredTours.length === 0" class="bg-white rounded-2xl p-16 border border-gray-100 text-center text-gray-500 shadow-sm" x-cloak>
             <span class="material-symbols-outlined text-5xl mb-2 text-gray-300">explore_off</span>
-            <p class="text-sm">Không tìm thấy gói trải nghiệm nào.</p>
+            <p class="text-sm">No experience packages found.</p>
         </div>
     </div>
 </div>
@@ -132,11 +132,11 @@
                         if (res.ok) {
                             this.tours = await res.json();
                         } else {
-                            showToast('error', 'Lỗi khi tải danh sách tour.');
+                            showToast('error', 'Failed to load tours.');
                         }
                     } catch (err) {
                         console.error('Error loading tours:', err);
-                        showToast('error', 'Không thể kết nối đến máy chủ.');
+                        showToast('error', 'Unable to connect to the server.');
                     }
                 },
 
@@ -163,8 +163,9 @@
 
                 async toggleTourActive(tour) {
                     const nextState = !tour.isActive;
-                    const actionText = nextState ? 'hiện' : 'ẩn';
-                    if (!confirm(`Bạn có chắc muốn ${actionText} gói trải nghiệm này không?`)) return;
+                    const actionText = nextState ? 'show' : 'hide';
+                    const actionPast = nextState ? 'shown' : 'hidden';
+                    if (!confirm(`Are you sure you want to ${actionText} this experience package?`)) return;
 
                     try {
                         const res = await fetch(`/api/tours/${tour.id}`, {
@@ -177,19 +178,19 @@
                         });
                         if (res.ok) {
                             tour.isActive = nextState;
-                            showToast('success', `Đã ${actionText} gói trải nghiệm thành công!`);
+                            showToast('success', `Experience package ${actionPast} successfully.`);
                         } else {
                             const err = await res.json();
-                            showToast('error', err.message || 'Lỗi khi cập nhật trạng thái.');
+                            showToast('error', err.message || 'Failed to update tour status.');
                         }
                     } catch (err) {
                         console.error(err);
-                        showToast('error', 'Không thể kết nối đến máy chủ.');
+                        showToast('error', 'Unable to connect to the server.');
                     }
                 },
 
                 async deleteTour(tour) {
-                    if (!confirm('Bạn có chắc chắn muốn xóa gói trải nghiệm này? Hành động này không thể hoàn tác.')) return;
+                    if (!confirm('Are you sure you want to delete this experience package? This action cannot be undone.')) return;
 
                     try {
                         const res = await fetch(`/api/tours/${tour.id}`, {
@@ -200,18 +201,18 @@
                         });
                         if (res.status === 204) {
                             this.tours = this.tours.filter(t => t.id !== tour.id);
-                            showToast('success', 'Đã xóa gói trải nghiệm thành công!');
+                            showToast('success', 'Experience package deleted successfully.');
                         } else if (res.ok) {
                             const data = await res.json();
-                            showToast('success', data.message || 'Yêu cầu xóa đã được xử lý.');
+                            showToast('success', data.message || 'The deletion request has been processed.');
                             await this.loadTours(); // Reload list to see changes (like soft-delete archives)
                         } else {
                             const err = await res.json();
-                            showToast('error', err.message || 'Lỗi khi xóa gói trải nghiệm.');
+                            showToast('error', err.message || 'Failed to delete the experience package.');
                         }
                     } catch (err) {
                         console.error(err);
-                        showToast('error', 'Không thể kết nối đến máy chủ.');
+                        showToast('error', 'Unable to connect to the server.');
                     }
                 }
             }

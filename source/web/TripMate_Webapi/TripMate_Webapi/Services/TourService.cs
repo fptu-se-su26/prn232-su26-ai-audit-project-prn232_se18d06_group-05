@@ -119,7 +119,7 @@ public class TourService
         EnsureSuccess(response, content);
 
         var rows = JsonSerializer.Deserialize<List<ExperiencePackageRow>>(content, _json);
-        var created = rows?.FirstOrDefault() ?? throw new Exception("Tạo gói trải nghiệm thất bại");
+        var created = rows?.FirstOrDefault() ?? throw new Exception("Failed to create the experience package.");
 
         // Fetch full data with guide join
         return await GetTourByIdAsync(created.Id!) ?? created;
@@ -142,7 +142,7 @@ public class TourService
         if (req.IsActive.HasValue) updates["is_active"] = req.IsActive;
 
         if (updates.Count == 0)
-            return await GetTourByIdAsync(packageId) ?? throw new Exception("Gói trải nghiệm không tồn tại");
+            return await GetTourByIdAsync(packageId) ?? throw new Exception("Experience package not found.");
 
         var request = BuildRequest(HttpMethod.Patch,
             $"{_supabaseUrl}/rest/v1/experience_packages?id=eq.{packageId}", userToken);
@@ -155,7 +155,7 @@ public class TourService
         EnsureSuccess(response, content);
 
         return await GetTourByIdAsync(packageId)
-            ?? throw new Exception("Cập nhật gói trải nghiệm thất bại");
+            ?? throw new Exception("Failed to update the experience package.");
     }
 
     // ── DELETE package ────────────────────────────────────────────────────────

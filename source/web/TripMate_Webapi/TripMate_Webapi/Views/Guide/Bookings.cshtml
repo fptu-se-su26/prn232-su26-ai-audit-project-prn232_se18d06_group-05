@@ -1,5 +1,5 @@
 @{
-    ViewData["Title"] = "Quản lý Đặt Chỗ (Bookings)";
+    ViewData["Title"] = "Booking Management";
     ViewData["ActivePage"] = "Bookings";
     Layout = "_GuideLayout";
     
@@ -16,7 +16,7 @@
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
             <h2 class="text-3xl font-bold text-gray-900 mb-1">Bookings</h2>
-            <p class="text-gray-500 text-sm">Quản lý lịch đặt tour và phản hồi yêu cầu của du khách.</p>
+            <p class="text-gray-500 text-sm">Manage tour bookings and respond to traveler requests.</p>
         </div>
         <div class="flex items-center gap-3">
             <!-- Date Filter -->
@@ -28,7 +28,7 @@
             <!-- Sort Button -->
             <button @@click="toggleSort()" class="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm flex items-center gap-2 h-[38px]">
                 <span class="material-symbols-outlined text-[18px]" :class="sortOrder === 'desc' ? 'arrow_downward' : 'arrow_upward'">sort</span>
-                <span x-text="sortOrder === 'desc' ? 'Mới nhất' : 'Cũ nhất'"></span>
+                <span x-text="sortOrder === 'desc' ? 'Newest' : 'Oldest'"></span>
             </button>
         </div>
     </div>
@@ -40,7 +40,7 @@
                 <span class="material-symbols-outlined text-[20px]">book_online</span>
             </div>
             <div>
-                <p class="text-sm font-medium text-gray-500 mb-0.5">Tổng booking</p>
+                <p class="text-sm font-medium text-gray-500 mb-0.5">Total Bookings</p>
                 <p class="text-xl font-bold text-gray-900" x-text="stats.total"></p>
             </div>
         </div>
@@ -51,7 +51,7 @@
                 <span class="material-symbols-outlined text-[20px]">schedule</span>
             </div>
             <div>
-                <p class="text-sm font-medium text-gray-500 mb-0.5">Chờ duyệt</p>
+                <p class="text-sm font-medium text-gray-500 mb-0.5">Pending</p>
                 <div class="flex items-center gap-2">
                     <p class="text-xl font-bold" :class="stats.pending > 0 ? 'text-amber-600' : 'text-gray-900'" x-text="stats.pending"></p>
                     <span x-show="stats.pending > 0" class="flex h-2.5 w-2.5">
@@ -67,7 +67,7 @@
                 <span class="material-symbols-outlined text-[20px]">check_circle</span>
             </div>
             <div>
-                <p class="text-sm font-medium text-gray-500 mb-0.5">Đã xác nhận</p>
+                <p class="text-sm font-medium text-gray-500 mb-0.5">Confirmed</p>
                 <p class="text-xl font-bold text-gray-900" x-text="stats.confirmed"></p>
             </div>
         </div>
@@ -77,7 +77,7 @@
                 <span class="material-symbols-outlined text-[20px]">payments</span>
             </div>
             <div>
-                <p class="text-sm font-medium text-gray-500 mb-0.5">Doanh thu hoàn thành</p>
+                <p class="text-sm font-medium text-gray-500 mb-0.5">Completed Revenue</p>
                 <p class="text-xl font-black text-gray-900" x-text="formatCurrency(stats.revenue)"></p>
             </div>
         </div>
@@ -104,7 +104,7 @@
         <!-- Search -->
         <div class="relative w-full xl:w-auto flex-grow p-1">
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">search</span>
-            <input type="text" x-model="searchQuery" placeholder="Tìm tên khách, mã booking..." 
+            <input type="text" x-model="searchQuery" placeholder="Search traveler name or booking ID..."
                    class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl py-2.5 pl-12 pr-4 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
         </div>
     </div>
@@ -116,15 +116,15 @@
                 <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-5 text-gray-400">
                     <span class="material-symbols-outlined text-[40px]" x-text="currentTab === 'Pending' ? 'schedule' : (currentTab === 'Confirmed' ? 'check_circle' : (currentTab === 'Completed' ? 'done_all' : (currentTab === 'Cancelled' ? 'cancel' : (currentTab === 'Expired' ? 'timer_off' : 'inbox'))))"></span>
                 </div>
-                <h3 class="text-xl font-bold text-gray-900 mb-2" x-text="currentTab === 'all' ? 'Chưa có booking nào' : 'Không tìm thấy booking phù hợp'"></h3>
-                <p class="text-gray-500 max-w-md mx-auto mb-6" x-text="currentTab === 'all' ? 'Hồ sơ của bạn đang hoạt động — hãy chờ khách tìm đến! Bạn có thể xem lại lịch trình của mình trong lúc chờ đợi.' : 'Không có booking nào ở trạng thái này hoặc khớp với từ khóa tìm kiếm.'"></p>
+                <h3 class="text-xl font-bold text-gray-900 mb-2" x-text="currentTab === 'all' ? 'No bookings yet' : 'No matching bookings'"></h3>
+                <p class="text-gray-500 max-w-md mx-auto mb-6" x-text="currentTab === 'all' ? 'Your profile is active and ready for travelers. You can review your schedule while waiting for a booking.' : 'No bookings match this status or search term.'"></p>
                 <a x-show="currentTab === 'all'" href="/Guide/Calendar" class="inline-flex items-center gap-2 bg-primary text-white font-bold px-6 py-3 rounded-xl hover:bg-primary-dark transition-colors shadow-sm">
                     <span class="material-symbols-outlined text-[20px]">calendar_month</span>
-                    Xem lịch trình
+                    View Calendar
                 </a>
                 <button x-show="currentTab !== 'all'" @@click="currentTab = 'all'; searchQuery = ''" class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 font-bold px-6 py-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
                     <span class="material-symbols-outlined text-[20px]">filter_list_off</span>
-                    Xóa bộ lọc
+                    Clear Filters
                 </button>
             </div>
         </template>
@@ -140,25 +140,25 @@
                         
                         <!-- Status Badge -->
                         <span x-show="b.Status === 'Pending'" class="flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-md text-[11px] font-bold border border-amber-100 uppercase tracking-wide">
-                            <span class="material-symbols-outlined text-[14px]">schedule</span> Chờ duyệt
+                            <span class="material-symbols-outlined text-[14px]">schedule</span> Pending
                         </span>
                         <span x-show="b.Status === 'Confirmed'" class="flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-1 rounded-md text-[11px] font-bold border border-green-100 uppercase tracking-wide">
-                            <span class="material-symbols-outlined text-[14px]">check_circle</span> Đã xác nhận
+                            <span class="material-symbols-outlined text-[14px]">check_circle</span> Confirmed
                         </span>
                         <span x-show="b.Status === 'Completed'" class="flex items-center gap-1 bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-[11px] font-bold border border-gray-200 uppercase tracking-wide">
-                            <span class="material-symbols-outlined text-[14px]">done_all</span> Hoàn thành
+                            <span class="material-symbols-outlined text-[14px]">done_all</span> Completed
                         </span>
                         <span x-show="b.Status === 'Cancelled'" class="flex items-center gap-1 bg-red-50 text-red-700 px-2.5 py-1 rounded-md text-[11px] font-bold border border-red-100 uppercase tracking-wide">
-                            <span class="material-symbols-outlined text-[14px]">cancel</span> Đã hủy
+                            <span class="material-symbols-outlined text-[14px]">cancel</span> Cancelled
                         </span>
                         <span x-show="b.Status === 'Expired'" class="flex items-center gap-1 bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-[11px] font-bold border border-gray-200 uppercase tracking-wide">
-                            <span class="material-symbols-outlined text-[14px]">timer_off</span> Đã hết hạn
+                            <span class="material-symbols-outlined text-[14px]">timer_off</span> Expired
                         </span>
                     </div>
 
                     <!-- Countdown for Pending -->
                     <div x-show="b.Status === 'Pending'" class="flex items-center gap-2 text-sm">
-                        <span class="text-gray-500 hidden sm:inline">Phản hồi trong:</span>
+                        <span class="text-gray-500 hidden sm:inline">Respond within:</span>
                         <!-- Urgency Colors -->
                         <span class="font-bold px-2.5 py-1 rounded-md transition-colors shadow-sm"
                               :class="{
@@ -211,7 +211,7 @@
                                         </div>
                                         <div class="flex items-center gap-1.5">
                                             <span class="material-symbols-outlined text-[16px] text-gray-400">group</span>
-                                            <span class="font-medium text-gray-800" x-text="b.Guests + ' người'"></span>
+                                            <span class="font-medium text-gray-800" x-text="b.Guests + (b.Guests === 1 ? ' guest' : ' guests')"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -221,25 +221,25 @@
                         <!-- Right: Financial & Actions -->
                         <div class="lg:w-[300px] flex-shrink-0 flex flex-col justify-center items-end border-t lg:border-t-0 lg:border-l border-gray-100 pt-4 lg:pt-0 lg:pl-5">
                             <div class="text-right w-full mb-4">
-                                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1" x-text="b.Status === 'Expired' ? 'Giá trị booking' : 'Bạn sẽ nhận'"></p>
+                                <p class="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1" x-text="b.Status === 'Expired' ? 'Booking Value' : 'You\'ll Receive'"></p>
                                 <p class="text-2xl font-black" :class="b.Status === 'Expired' ? 'text-gray-500' : 'text-green-600'" x-text="formatCurrency(b.NetEarnings)"></p>
-                                <p class="text-[11px] text-gray-500 mt-1">Tổng tour: <span class="font-medium" x-text="formatCurrency(b.TotalAmount)"></span></p>
+                                <p class="text-[11px] text-gray-500 mt-1">Tour total: <span class="font-medium" x-text="formatCurrency(b.TotalAmount)"></span></p>
                             </div>
                             
                             <!-- Actions based on status -->
                             <div class="flex gap-2 w-full justify-end">
                                 <button @@click="openDetail(b)" class="bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 px-3 py-2 rounded-xl text-sm font-bold transition-colors whitespace-nowrap">
-                                    Chi tiết
+                                    Details
                                 </button>
                                 
                                 <!-- Pending Actions -->
                                 <template x-if="b.Status === 'Pending'">
                                     <div class="flex gap-2 flex-grow">
                                         <button @@click="rejectBooking(b.Id)" class="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-3 py-2 rounded-xl text-sm font-bold transition-colors whitespace-nowrap">
-                                            Từ chối
+                                            Reject
                                         </button>
                                         <button @@click="acceptBooking(b.Id)" class="flex-grow bg-primary text-white hover:bg-primary-dark px-3 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm text-center flex items-center justify-center gap-1 whitespace-nowrap">
-                                            <span class="material-symbols-outlined text-[16px]">check</span> Chấp nhận
+                                            <span class="material-symbols-outlined text-[16px]">check</span> Accept
                                         </button>
                                     </div>
                                 </template>
@@ -247,7 +247,7 @@
                                 <!-- Confirmed Actions -->
                                 <template x-if="b.Status === 'Confirmed'">
                                     <a href="/Guide/Messages" class="flex-grow bg-blue-50 border border-blue-100 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-xl text-sm font-bold transition-colors text-center flex items-center justify-center gap-1 whitespace-nowrap">
-                                        <span class="material-symbols-outlined text-[16px]">chat</span> Nhắn tin
+                                        <span class="material-symbols-outlined text-[16px]">chat</span> Message
                                     </a>
                                 </template>
 
@@ -255,7 +255,7 @@
                                 <template x-if="b.Status === 'Expired'">
                                     <div class="flex flex-grow items-center justify-center gap-1.5 rounded-xl border border-gray-200 bg-gray-100 px-3 py-2 text-sm font-bold text-gray-500">
                                         <span class="material-symbols-outlined text-[16px]">lock_clock</span>
-                                        Đã quá hạn phản hồi
+                                        Response deadline passed
                                     </div>
                                 </template>
                             </div>
@@ -317,7 +317,7 @@
                         <div class="flex h-full flex-col overflow-y-scroll bg-white shadow-2xl">
                             <!-- Panel Header -->
                             <div class="bg-gradient-to-r from-primary to-orange-400 px-6 py-4 flex items-center justify-between sticky top-0 z-10 shadow-sm">
-                                <h2 class="text-lg font-bold text-white" id="slide-over-title">Chi tiết Booking</h2>
+                                <h2 class="text-lg font-bold text-white" id="slide-over-title">Booking Details</h2>
                                 <button type="button" @@click="closeDetail()" class="rounded-full w-8 h-8 flex items-center justify-center text-white/80 hover:bg-white/20 hover:text-white transition-colors">
                                     <span class="material-symbols-outlined">close</span>
                                 </button>
@@ -329,24 +329,24 @@
                                     <!-- Header Info -->
                                     <div class="flex justify-between items-start">
                                         <span class="font-mono text-sm font-bold text-gray-500" x-text="'#' + b.Id"></span>
-                                        <span x-show="b.Status === 'Pending'" class="bg-amber-100 text-amber-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-amber-200">Chờ duyệt</span>
-                                        <span x-show="b.Status === 'Confirmed'" class="bg-green-100 text-green-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-green-200">Đã xác nhận</span>
-                                        <span x-show="b.Status === 'Completed'" class="bg-gray-100 text-gray-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-gray-200">Hoàn thành</span>
-                                        <span x-show="b.Status === 'Cancelled'" class="bg-red-100 text-red-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-red-200">Đã hủy</span>
-                                        <span x-show="b.Status === 'Expired'" class="bg-gray-100 text-gray-600 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-gray-200">Đã hết hạn</span>
+                                        <span x-show="b.Status === 'Pending'" class="bg-amber-100 text-amber-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-amber-200">Pending</span>
+                                        <span x-show="b.Status === 'Confirmed'" class="bg-green-100 text-green-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-green-200">Confirmed</span>
+                                        <span x-show="b.Status === 'Completed'" class="bg-gray-100 text-gray-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-gray-200">Completed</span>
+                                        <span x-show="b.Status === 'Cancelled'" class="bg-red-100 text-red-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-red-200">Cancelled</span>
+                                        <span x-show="b.Status === 'Expired'" class="bg-gray-100 text-gray-600 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-gray-200">Expired</span>
                                     </div>
 
                                     <div x-show="b.Status === 'Expired'" class="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm text-gray-600">
                                         <span class="material-symbols-outlined text-gray-500">timer_off</span>
                                         <div>
-                                            <p class="font-bold text-gray-800">Booking không còn chờ xử lý</p>
-                                            <p class="mt-0.5 text-xs leading-relaxed">Thời hạn phản hồi 24 giờ đã kết thúc. Bạn không thể chấp nhận hoặc từ chối booking này.</p>
+                                            <p class="font-bold text-gray-800">This booking is no longer pending</p>
+                                            <p class="mt-0.5 text-xs leading-relaxed">The 24-hour response window has ended. You can no longer accept or reject this booking.</p>
                                         </div>
                                     </div>
 
                                     <!-- THÔNG TIN KHÁCH -->
                                     <div>
-                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Thông tin khách</h3>
+                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Traveler Information</h3>
                                         <div class="flex items-center gap-4 bg-white border border-gray-100 shadow-sm rounded-xl p-4">
                                             <img :src="b.TravelerAvatar" class="w-12 h-12 rounded-full object-cover border border-gray-200 shadow-sm">
                                             <div class="flex-grow">
@@ -364,34 +364,34 @@
 
                                     <!-- CHI TIẾT ĐẶT LỊCH -->
                                     <div>
-                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Chi tiết đặt lịch</h3>
+                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Booking Details</h3>
                                         <div class="bg-gray-50 rounded-xl p-4 space-y-4 border border-gray-100 shadow-inner">
                                             <div>
-                                                <p class="text-sm text-gray-500 mb-1">Gói trải nghiệm</p>
+                                                <p class="text-sm text-gray-500 mb-1">Experience Package</p>
                                                 <p class="font-bold text-gray-900 text-sm" x-text="b.TourName"></p>
                                             </div>
                                             <div class="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <p class="text-sm text-gray-500 mb-1">Ngày đi</p>
+                                                    <p class="text-sm text-gray-500 mb-1">Trip Date</p>
                                                     <p class="font-medium text-gray-900 flex items-center gap-1.5">
                                                         <span class="material-symbols-outlined text-[18px] text-primary">calendar_month</span> <span x-text="b.Date"></span>
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <p class="text-sm text-gray-500 mb-1">Giờ bắt đầu</p>
+                                                    <p class="text-sm text-gray-500 mb-1">Start Time</p>
                                                     <p class="font-medium text-gray-900 flex items-center gap-1.5">
                                                         <span class="material-symbols-outlined text-[18px] text-primary">schedule</span> <span x-text="b.Time"></span>
                                                     </p>
                                                 </div>
                                                 <div>
-                                                    <p class="text-sm text-gray-500 mb-1">Số khách</p>
+                                                    <p class="text-sm text-gray-500 mb-1">Guests</p>
                                                     <p class="font-medium text-gray-900 flex items-center gap-1.5">
-                                                        <span class="material-symbols-outlined text-[18px] text-primary">group</span> <span x-text="b.Guests + ' người'"></span>
+                                                        <span class="material-symbols-outlined text-[18px] text-primary">group</span> <span x-text="b.Guests + (b.Guests === 1 ? ' guest' : ' guests')"></span>
                                                     </p>
                                                 </div>
                                             </div>
                                             <div x-show="b.Note" class="pt-4 border-t border-gray-200">
-                                                <p class="text-sm text-gray-500 mb-1">Ghi chú của khách</p>
+                                                <p class="text-sm text-gray-500 mb-1">Traveler Notes</p>
                                                 <p class="text-sm text-gray-800 italic leading-relaxed" x-text="`&quot;${b.Note}&quot;`"></p>
                                             </div>
                                         </div>
@@ -399,33 +399,33 @@
 
                                     <!-- THANH TOÁN -->
                                     <div>
-                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Thanh toán</h3>
+                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Payment</h3>
                                         <div class="bg-white border border-green-200 rounded-xl p-4 shadow-sm">
                                             <div class="space-y-3 text-sm">
                                                 <div class="flex justify-between text-gray-600">
-                                                    <span>Tổng tiền khách trả</span>
+                                                    <span>Total paid by traveler</span>
                                                     <span class="font-medium" x-text="formatCurrency(b.TotalAmount)"></span>
                                                 </div>
                                                 <div class="flex justify-between text-red-500">
-                                                    <span>Phí nền tảng (15%)</span>
+                                                    <span>Platform fee (15%)</span>
                                                     <span x-text="'-' + formatCurrency(b.PlatformFee)"></span>
                                                 </div>
                                                 <div class="pt-3 border-t border-gray-100 flex justify-between items-center">
-                                                    <span class="font-bold text-gray-900 text-sm">Bạn thực nhận</span>
+                                                    <span class="font-bold text-gray-900 text-sm">Your payout</span>
                                                     <span class="text-xl font-black text-green-600" x-text="formatCurrency(b.NetEarnings)"></span>
                                                 </div>
                                             </div>
                                             <div class="mt-4 pt-4 border-t flex items-center gap-2 text-sm p-3 rounded-lg font-medium"
                                                  :class="b.Status === 'Expired' ? 'border-gray-200 bg-gray-50 text-gray-600' : 'border-green-100 bg-green-50 text-green-700'">
                                                 <span class="material-symbols-outlined text-[20px]" x-text="b.Status === 'Expired' ? 'hourglass_disabled' : 'verified_user'"></span>
-                                                <span x-text="b.Status === 'Expired' ? 'Booking hết hạn — không thể ghi nhận doanh thu' : 'Đã thanh toán (Tạm giữ chờ tour xong)'"></span>
+                                                <span x-text="b.Status === 'Expired' ? 'Booking expired — no revenue recorded' : 'Paid (held until the tour is completed)'"></span>
                                             </div>
                                         </div>
                                     </div>
 
                                     <!-- TIMELINE -->
                                     <div>
-                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Tiến trình</h3>
+                                        <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Timeline</h3>
                                         <div class="relative pl-7 space-y-6">
                                             <div class="absolute left-[13px] top-2 bottom-2 w-0.5 bg-gray-200"></div>
                                             
@@ -433,7 +433,7 @@
                                                 <div class="absolute -left-[31px] w-7 h-7 bg-green-100 text-green-600 rounded-full flex items-center justify-center ring-4 ring-white">
                                                     <span class="material-symbols-outlined text-[14px]">done</span>
                                                 </div>
-                                                <p class="text-sm font-bold text-gray-900">Khách đặt lịch</p>
+                                                <p class="text-sm font-bold text-gray-900">Traveler booked</p>
                                                 <p class="text-xs text-gray-500">13/06/2026 10:23</p>
                                             </div>
                                             
@@ -441,8 +441,8 @@
                                                 <div class="absolute -left-[31px] w-7 h-7 rounded-full flex items-center justify-center ring-4 ring-white" :class="b.Status === 'Pending' ? 'bg-amber-100 text-amber-600' : (b.Status === 'Cancelled' ? 'bg-red-100 text-red-600' : (b.Status === 'Expired' ? 'bg-gray-100 text-gray-500' : 'bg-green-100 text-green-600'))">
                                                     <span class="material-symbols-outlined text-[14px]" x-text="b.Status === 'Pending' ? 'schedule' : (b.Status === 'Cancelled' ? 'close' : (b.Status === 'Expired' ? 'timer_off' : 'done_all'))"></span>
                                                 </div>
-                                                <p class="text-sm font-bold" :class="b.Status === 'Pending' ? 'text-amber-700' : (b.Status === 'Cancelled' ? 'text-red-700' : (b.Status === 'Expired' ? 'text-gray-600' : 'text-gray-900'))" x-text="b.Status === 'Pending' ? 'Đang chờ bạn duyệt' : (b.Status === 'Cancelled' ? 'Đã từ chối' : (b.Status === 'Expired' ? 'Đã hết hạn phản hồi' : 'Bạn đã xác nhận'))"></p>
-                                                <p class="text-xs text-gray-500" x-show="b.Status === 'Expired'">Thời hạn xử lý 24 giờ đã kết thúc.</p>
+                                                <p class="text-sm font-bold" :class="b.Status === 'Pending' ? 'text-amber-700' : (b.Status === 'Cancelled' ? 'text-red-700' : (b.Status === 'Expired' ? 'text-gray-600' : 'text-gray-900'))" x-text="b.Status === 'Pending' ? 'Waiting for your decision' : (b.Status === 'Cancelled' ? 'Rejected' : (b.Status === 'Expired' ? 'Response window expired' : 'You confirmed'))"></p>
+                                                <p class="text-xs text-gray-500" x-show="b.Status === 'Expired'">The 24-hour response window has ended.</p>
                                                 <p class="text-xs text-gray-500" x-show="b.Status !== 'Pending' && b.Status !== 'Expired'">13/06/2026 11:00</p>
                                                 <div x-show="b.Status === 'Pending'" class="mt-2 text-xs font-bold text-white bg-amber-500 inline-block px-2 py-1 rounded-md" x-text="formatCountdown(b.SecondsRemaining)"></div>
                                             </div>
@@ -451,8 +451,8 @@
                                                 <div class="absolute -left-[31px] w-7 h-7 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center ring-4 ring-white">
                                                     <span class="material-symbols-outlined text-[14px]">flag</span>
                                                 </div>
-                                                <p class="text-sm font-bold text-gray-900">Hoàn thành tour</p>
-                                                <p class="text-xs text-gray-500">Dự kiến: <span x-text="b.Date"></span></p>
+                                                <p class="text-sm font-bold text-gray-900">Tour completed</p>
+                                                <p class="text-xs text-gray-500">Expected: <span x-text="b.Date"></span></p>
                                             </div>
                                         </div>
                                     </div>
@@ -466,10 +466,10 @@
                                 <template x-if="selectedBooking && selectedBooking.Status === 'Pending'">
                                     <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-3 flex gap-3 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                                         <button @@click="rejectBooking(selectedBooking.Id); closeDetail()" class="w-1/3 py-2.5 bg-white border border-red-200 text-red-600 rounded-xl text-sm font-bold hover:bg-red-50 transition-colors">
-                                            Từ chối
+                                            Reject
                                         </button>
                                         <button @@click="acceptBooking(selectedBooking.Id); closeDetail()" class="w-2/3 py-2.5 bg-gradient-to-r from-primary to-orange-500 text-white rounded-xl text-sm font-bold hover:from-primary-dark hover:to-primary transition-colors shadow-md flex items-center justify-center gap-2">
-                                            <span class="material-symbols-outlined text-[18px]">verified</span> Chấp nhận ngay
+                                            <span class="material-symbols-outlined text-[18px]">verified</span> Accept Now
                                         </button>
                                     </div>
                                 </template>
@@ -501,12 +501,12 @@
 
                 get tabs() {
                     return [
-                        { id: 'all', label: 'Tất cả', count: this.bookings.length },
-                        { id: 'Pending', label: 'Chờ duyệt', count: this.bookings.filter(b => b.Status === 'Pending').length },
-                        { id: 'Confirmed', label: 'Đã xác nhận', count: this.bookings.filter(b => b.Status === 'Confirmed').length },
-                        { id: 'Completed', label: 'Hoàn thành', count: this.bookings.filter(b => b.Status === 'Completed').length },
-                        { id: 'Expired', label: 'Hết hạn', count: this.bookings.filter(b => b.Status === 'Expired').length },
-                        { id: 'Cancelled', label: 'Đã hủy', count: this.bookings.filter(b => b.Status === 'Cancelled').length }
+                        { id: 'all', label: 'All', count: this.bookings.length },
+                        { id: 'Pending', label: 'Pending', count: this.bookings.filter(b => b.Status === 'Pending').length },
+                        { id: 'Confirmed', label: 'Confirmed', count: this.bookings.filter(b => b.Status === 'Confirmed').length },
+                        { id: 'Completed', label: 'Completed', count: this.bookings.filter(b => b.Status === 'Completed').length },
+                        { id: 'Expired', label: 'Expired', count: this.bookings.filter(b => b.Status === 'Expired').length },
+                        { id: 'Cancelled', label: 'Cancelled', count: this.bookings.filter(b => b.Status === 'Cancelled').length }
                     ];
                 },
 
@@ -601,7 +601,7 @@
                 },
 
                 formatCountdown(seconds) {
-                    if (seconds <= 0) return "Hết hạn";
+                    if (seconds <= 0) return "Expired";
                     const h = Math.floor(seconds / 3600);
                     const m = Math.floor((seconds % 3600) / 60);
                     const s = seconds % 60;
@@ -645,7 +645,7 @@
                     if (!this.isBookingActionable(booking)) {
                         this.markBookingExpired(booking);
                         this.updateSidebarBadge();
-                        showToast('warning', 'Booking đã hết thời hạn phản hồi 24 giờ.');
+                        showToast('warning', 'The 24-hour booking response window has expired.');
                         return;
                     }
 
@@ -661,19 +661,19 @@
                             if (result.success) {
                                 booking.Status = 'Confirmed';
                                 this.updateSidebarBadge();
-                                showToast('success', `Đã xác nhận booking thành công! Kênh chat đã được mở.`);
+                                showToast('success', 'Booking confirmed successfully. The chat channel is now open.');
                                 if (this.selectedBooking && this.selectedBooking.Id === id) {
                                     this.selectedBooking.Status = 'Confirmed';
                                 }
                             } else {
-                                if ((result.message || '').toLowerCase().includes('hết hạn')) {
+                                if ((result.message || '').toLowerCase().includes('expired')) {
                                     this.markBookingExpired(booking);
                                     this.updateSidebarBadge();
                                 }
-                                showToast('error', result.message || 'Có lỗi xảy ra');
+                                showToast('error', result.message || 'Something went wrong.');
                             }
                         } catch (error) {
-                            showToast('error', 'Lỗi kết nối máy chủ');
+                            showToast('error', 'Unable to connect to the server.');
                         }
                     }
                 },
@@ -683,11 +683,11 @@
                     if (!this.isBookingActionable(booking)) {
                         this.markBookingExpired(booking);
                         this.updateSidebarBadge();
-                        showToast('warning', 'Booking đã hết thời hạn phản hồi 24 giờ.');
+                        showToast('warning', 'The 24-hour booking response window has expired.');
                         return;
                     }
 
-                    if (confirm('Bạn có chắc chắn muốn từ chối booking này? Tiền sẽ được hoàn lại cho khách.')) {
+                    if (confirm('Are you sure you want to reject this booking? The traveler will receive a refund.')) {
                         if (booking) {
                             try {
                                 const response = await fetch(`/Guide/RejectBooking/${id}`, {
@@ -700,19 +700,19 @@
                                 if (result.success) {
                                     booking.Status = 'Cancelled';
                                     this.updateSidebarBadge();
-                                    showToast('info', `Đã từ chối booking.`);
+                                    showToast('info', 'Booking rejected.');
                                     if (this.selectedBooking && this.selectedBooking.Id === id) {
                                         this.selectedBooking.Status = 'Cancelled';
                                     }
                                 } else {
-                                    if ((result.message || '').toLowerCase().includes('hết hạn')) {
+                                    if ((result.message || '').toLowerCase().includes('expired')) {
                                         this.markBookingExpired(booking);
                                         this.updateSidebarBadge();
                                     }
-                                    showToast('error', result.message || 'Có lỗi xảy ra');
+                                    showToast('error', result.message || 'Something went wrong.');
                                 }
                             } catch (error) {
-                                showToast('error', 'Lỗi kết nối máy chủ');
+                                showToast('error', 'Unable to connect to the server.');
                             }
                         }
                     }
