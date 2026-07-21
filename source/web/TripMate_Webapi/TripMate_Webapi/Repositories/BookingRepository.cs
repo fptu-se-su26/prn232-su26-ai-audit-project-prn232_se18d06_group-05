@@ -1,17 +1,35 @@
 using Supabase;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Net.Http.Headers;
+using System.Text.Json;
 using TripMate_Webapi.Entities;
+using TripMate_Webapi.Repositories.Models;
 
 namespace TripMate_Webapi.Repositories
 {
     public class BookingRepository : IBookingRepository
     {
         private readonly Client _supabase;
+        private readonly IHttpClientFactory _httpClientFactory;
+        private readonly string _supabaseUrl;
+        private readonly string _apiKey;
+        private static readonly JsonSerializerOptions CalendarJsonOptions = new()
+        {
+            PropertyNameCaseInsensitive = true
+        };
 
-        public BookingRepository(Client supabase)
+        public BookingRepository(Client supabase, IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _supabase = supabase;
+            _httpClientFactory = httpClientFactory;
+            _supabaseUrl = configuration["Supabase:Url"]
+                ?? Environment.GetEnvironmentVariable("SUPABASE_URL")
+                ?? throw new InvalidOperationException("Supabase URL is not configured.");
+            _apiKey = Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY")
+                ?? configuration["Supabase:AnonKey"]
+                ?? Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY")
+                ?? throw new InvalidOperationException("Supabase API key is not configured.");
         }
 
         public async Task<BookingEntity> CreateBookingAsync(BookingEntity booking, string? userToken = null)
@@ -133,14 +151,62 @@ namespace TripMate_Webapi.Repositories
             return response.Models.FirstOrDefault()?.Id;
         }
 
-        public async Task<List<BookingEntity>> GetGuideBookingsInRangeAsync(string guideProfileId, string start, string end)
+        public async Task<List<BookingEntity>> GetGuideBookingsInRangeAsync(string guideProfileId, string start, string endExclusive)
         {
             var response = await _supabase.From<BookingEntity>()
                 .Filter("guide_profile_id", Postgrest.Constants.Operator.Equals, guideProfileId)
                 .Filter("booking_date", Postgrest.Constants.Operator.GreaterThanOrEqual, start)
-                .Filter("booking_date", Postgrest.Constants.Operator.LessThanOrEqual, end)
+                .Filter("booking_date", Postgrest.Constants.Operator.LessThan, endExclusive)
                 .Get();
             return response.Models;
+        }
+
+        public async Task<List<CalendarBookingRecord>> GetGuideCalendarBookingsInRangeAsync(
+            string guideProfileId,
+            string start,
+            string endExclusive)
+        {
+            var encodedGuideId = Uri.EscapeDataString(guideProfileId);
+            var encodedStart = Uri.EscapeDataString(start);
+            var encodedEnd = Uri.EscapeDataString(endExclusive);
+            var select = string.Join(',', new[]
+            {
+                "id",
+                "traveler_id",
+                "experience_package_id",
+                "booking_date",
+                "start_time",
+                "guest_count",
+                "guide_earnings",
+                "status",
+                "traveler_notes",
+                "created_at",
+                "traveler:traveler_id(full_name,avatar_url)",
+                "experience_package:experience_package_id(title,duration_hours,meeting_point,cover_image_url)"
+            });
+
+            var url = $"{_supabaseUrl}/rest/v1/bookings" +
+                      $"?guide_profile_id=eq.{encodedGuideId}" +
+                      $"&booking_date=gte.{encodedStart}" +
+                      $"&booking_date=lt.{encodedEnd}" +
+                      "&order=booking_date.asc,start_time.asc" +
+                      $"&select={select}";
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, url);
+            request.Headers.Add("apikey", _apiKey);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            var client = _httpClientFactory.CreateClient();
+            using var response = await client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"Failed to load calendar bookings: {content}");
+            }
+
+            return JsonSerializer.Deserialize<List<CalendarBookingRecord>>(content, CalendarJsonOptions) ?? [];
         }
         public async Task<List<BookingEntity>> GetBookingsForGuideAsync(string guideProfileId)
         {

@@ -27,7 +27,10 @@ public class ExperiencePackageEntity : BaseModel
     public decimal PricePerSession { get; set; }
 
     [Column("price_per_person")]
-    public decimal? PricePerPerson { get; set; }
+    public decimal? PricePerPerson { get; set; } // Additional fee above IncludedGuestCount
+
+    [Column("included_guest_count")]
+    public int IncludedGuestCount { get; set; } = 1;
 
     [Column("max_group_size")]
     public int MaxGroupSize { get; set; } = 6;
@@ -40,6 +43,9 @@ public class ExperiencePackageEntity : BaseModel
 
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
+
+    [Column("publication_status")]
+    public string PublicationStatus { get; set; } = "published";
 
     [Column("city")]
     public string City { get; set; } = string.Empty;
@@ -61,6 +67,9 @@ public class ExperiencePackageEntity : BaseModel
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Column("updated_at")]
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     [Reference(typeof(GuideProfileEntity))]
     public GuideProfileEntity? GuideProfile { get; set; }

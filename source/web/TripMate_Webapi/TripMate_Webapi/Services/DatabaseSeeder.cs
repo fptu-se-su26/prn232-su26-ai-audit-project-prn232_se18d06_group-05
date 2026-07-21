@@ -372,8 +372,9 @@ public class DatabaseSeeder
                         title = "Custom Itinerary",
                         description = "A personalized tour based on your preferences.",
                         duration_hours = 4,
-                        price_per_session = 0,
+                        price_per_session = 500000,
                         price_per_person = 500000,
+                        included_guest_count = 1,
                         max_group_size = 10,
                         is_active = true,
                         created_at = DateTime.UtcNow
