@@ -98,8 +98,11 @@ public class ToursController : ControllerBase
     {
         if (string.IsNullOrWhiteSpace(request.Title) ||
             string.IsNullOrWhiteSpace(request.Description) ||
-            request.PricePerSession <= 0 || request.DurationHours <= 0)
-            return BadRequest(new { message = "Thiếu thông tin bắt buộc" });
+            request.PricePerSession <= 0 || request.DurationHours <= 0 ||
+            request.IncludedGuestCount < 1 ||
+            request.MaxGroupSize < request.IncludedGuestCount ||
+            request.PricePerPerson < 0)
+            return BadRequest(new { message = "The tour pricing or required information is invalid." });
 
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                    ?? User.FindFirst("sub")?.Value;

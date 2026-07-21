@@ -312,8 +312,7 @@ namespace TripMate_Webapi.Controllers
 
             var tours = await _experienceService.GetMyToursAsync(guideProfileId);
             
-            ViewBag.Tours = tours;
-            return View();
+            return View(tours);
         }
 
         [HttpPatch("/ToggleTourStatus/{id}")]
@@ -330,6 +329,10 @@ namespace TripMate_Webapi.Controllers
                 if (success) return Ok(new { success = true, message = "Tour status updated successfully." });
                 return BadRequest(new { success = false, message = "Experience package not found." });
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
             catch (Exception ex)
             {
                 return StatusCode(500, new { success = false, message = ex.Message });
@@ -345,10 +348,15 @@ namespace TripMate_Webapi.Controllers
                 var guideProfileId = await GetCurrentGuideProfileIdAsync();
                 if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized(new { success = false, message = "You are not authorized to perform this action." });
 
-                var success = await _experienceService.DeleteTourAsync(id, guideProfileId);
-                
-                if (success) return Ok(new { success = true, message = "Experience package deleted." });
-                return BadRequest(new { success = false, message = "Delete failed." });
+                var outcome = await _experienceService.DeleteTourAsync(id, guideProfileId);
+                var message = outcome == TourRemovalOutcome.Archived
+                    ? "This tour has booking history, so it was archived instead of permanently deleted."
+                    : "Experience package permanently deleted.";
+                return Ok(new { success = true, data = new { outcome = outcome.ToString().ToLowerInvariant() }, message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -367,7 +375,7 @@ namespace TripMate_Webapi.Controllers
 
                 var newTour = await _experienceService.DuplicateTourAsync(id, guideProfileId);
                 
-                if (newTour != null) return Ok(new { success = true, message = "Tour duplicated successfully." });
+                if (newTour != null) return Ok(new { success = true, data = new { id = newTour.Id }, message = "A draft copy has been created." });
                 return BadRequest(new { success = false, message = "Experience package not found." });
             }
             catch (Exception ex)
@@ -405,13 +413,17 @@ namespace TripMate_Webapi.Controllers
                 meetingPoint = tour.MeetingPoint,
                 description = tour.Description,
                 pricePerSession = tour.PricePerSession,
-                pricePerPerson = tour.PricePerPerson,
+                additionalGuestFee = tour.PricePerPerson,
+                includedGuestCount = Math.Max(1, tour.IncludedGuestCount),
                 timelineJson = tour.TimelineJson,
                 languages = tour.Languages,
                 includedItems = tour.IncludedItems,
                 tags = tour.Tags,
                 coverImageUrl = tour.CoverImageUrl,
-                galleryImageUrls = tour.GalleryImageUrls
+                galleryImageUrls = tour.GalleryImageUrls,
+                publicationStatus = string.IsNullOrWhiteSpace(tour.PublicationStatus)
+                    ? (tour.IsActive ? "published" : "hidden")
+                    : tour.PublicationStatus
             };
             
             ViewBag.TourData = System.Text.Json.JsonSerializer.Serialize(tourDto, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
@@ -427,7 +439,18 @@ namespace TripMate_Webapi.Controllers
             {
                 if (!ModelState.IsValid)
                 {
-                    return BadRequest(new { success = false, message = "Invalid data." });
+                    var errors = ModelState
+                        .Where(item => item.Value?.Errors.Count > 0)
+                        .ToDictionary(
+                            item => item.Key,
+                            item => item.Value!.Errors.Select(error => error.ErrorMessage).ToArray());
+                    var firstError = errors.Values.SelectMany(value => value).FirstOrDefault();
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = firstError ?? "Please review the highlighted fields.",
+                        errors
+                    });
                 }
 
                 var guideProfileId = await GetCurrentGuideProfileIdAsync();
@@ -435,12 +458,44 @@ namespace TripMate_Webapi.Controllers
 
                 var createdTour = await _experienceService.CreateTourAsync(dto, guideProfileId);
 
-                return Ok(new { success = true, data = new { id = createdTour.Id }, message = "Your experience package has been published." });
+                var message = string.IsNullOrWhiteSpace(dto.Id)
+                    ? "Your experience package has been published."
+                    : "Your changes have been saved.";
+                return Ok(new { success = true, data = new { id = createdTour.Id }, message });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating tour");
                 return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> SaveTourDraft([FromBody] SaveTourDraftDto dto)
+        {
+            try
+            {
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId))
+                    return Unauthorized(new { success = false, message = "You need a guide profile to save a draft." });
+
+                var draft = await _experienceService.SaveTourDraftAsync(dto, guideProfileId);
+                return Ok(new
+                {
+                    success = true,
+                    data = new { id = draft.Id, savedAt = draft.UpdatedAt },
+                    message = "Draft saved."
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving tour draft");
+                return StatusCode(500, new { success = false, message = "The draft could not be saved." });
             }
         }
 

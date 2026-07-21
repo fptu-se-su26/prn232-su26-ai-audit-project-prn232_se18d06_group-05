@@ -78,12 +78,13 @@ public class BookingService
         if (isUnavailable)
             throw new Exception("The guide is unavailable on this date.");
 
-        // 3. Calculate pricing
-        decimal totalAmount;
-        if (package.PricePerPerson.HasValue && package.PricePerPerson > 0)
-            totalAmount = package.PricePerPerson.Value * req.GuestCount;
-        else
-            totalAmount = package.PricePerSession;
+        // 3. Fixed-tour pricing: base price includes a configured number of guests;
+        // only guests above that threshold pay the additional guest fee.
+        var totalAmount = TourPricingCalculator.CalculateTotal(
+            package.PricePerSession,
+            package.PricePerPerson,
+            package.IncludedGuestCount,
+            req.GuestCount);
 
         var platformFee = Math.Round(totalAmount * PlatformFeeRate, 2);
         var guideEarnings = totalAmount - platformFee;

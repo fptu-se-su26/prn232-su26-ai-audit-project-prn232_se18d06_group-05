@@ -412,15 +412,17 @@ namespace TripMate_Webapi.Controllers
             decimal basePrice;
             if (selectedPackage != null)
             {
+                if (guests < 1 || guests > selectedPackage.MaxGroupSize)
+                    return BadRequest(new { error = $"This tour allows between 1 and {selectedPackage.MaxGroupSize} guests." });
+
                 // Force the guideId to match the actual owner of the package
                 guideId = selectedPackage.GuideProfileId ?? guideId;
                 
-                if (selectedPackage.PricePerSession > 0)
-                    basePrice = selectedPackage.PricePerSession;
-                else if (selectedPackage.PricePerPerson.HasValue && selectedPackage.PricePerPerson > 0)
-                    basePrice = selectedPackage.PricePerPerson.Value * guests;
-                else
-                    basePrice = 500_000m * guests;
+                basePrice = TourPricingCalculator.CalculateTotal(
+                    selectedPackage.PricePerSession,
+                    selectedPackage.PricePerPerson,
+                    selectedPackage.IncludedGuestCount,
+                    guests);
             }
             else
             {

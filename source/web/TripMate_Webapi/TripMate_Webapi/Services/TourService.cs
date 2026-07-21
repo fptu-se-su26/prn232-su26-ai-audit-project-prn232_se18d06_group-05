@@ -102,6 +102,7 @@ public class TourService
             duration_hours = req.DurationHours,
             price_per_session = req.PricePerSession,
             price_per_person = req.PricePerPerson,
+            included_guest_count = req.IncludedGuestCount,
             max_group_size = req.MaxGroupSize,
             included_items = req.IncludedItems ?? new List<string>(),
             tags = req.Tags ?? new List<string>(),
@@ -136,6 +137,7 @@ public class TourService
         if (req.DurationHours.HasValue) updates["duration_hours"] = req.DurationHours;
         if (req.PricePerSession.HasValue) updates["price_per_session"] = req.PricePerSession;
         if (req.PricePerPerson.HasValue) updates["price_per_person"] = req.PricePerPerson;
+        if (req.IncludedGuestCount.HasValue) updates["included_guest_count"] = req.IncludedGuestCount;
         if (req.MaxGroupSize.HasValue) updates["max_group_size"] = req.MaxGroupSize;
         if (req.IncludedItems != null) updates["included_items"] = req.IncludedItems;
         if (req.Tags != null) updates["tags"] = req.Tags;
@@ -211,6 +213,7 @@ public class TourService
             DurationHours: row.DurationHours,
             PricePerSession: row.PricePerSession,
             PricePerPerson: row.PricePerPerson,
+            IncludedGuestCount: row.IncludedGuestCount,
             MaxGroupSize: row.MaxGroupSize,
             IncludedItems: row.IncludedItems ?? [],
             Tags: row.Tags ?? [],
@@ -234,6 +237,7 @@ public class ExperiencePackageRow
     [JsonPropertyName("duration_hours")]    public decimal DurationHours { get; set; }
     [JsonPropertyName("price_per_session")] public decimal PricePerSession { get; set; }
     [JsonPropertyName("price_per_person")]  public decimal? PricePerPerson { get; set; }
+    [JsonPropertyName("included_guest_count")] public int IncludedGuestCount { get; set; } = 1;
     [JsonPropertyName("max_group_size")]    public int MaxGroupSize { get; set; } = 6;
     [JsonPropertyName("included_items")]    public List<string>? IncludedItems { get; set; }
     [JsonPropertyName("tags")]              public List<string>? Tags { get; set; }
