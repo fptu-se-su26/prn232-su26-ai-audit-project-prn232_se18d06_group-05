@@ -332,7 +332,6 @@
                     }
                 },
                 
-                // Deep copy initial data
                 form: {
                     FullName: '', PhoneNumber: '', Bio: '', AvatarUrl: '', CoverUrl: '', CityArea: 'Hội An', Nationality: '',
                     Languages: [], Specialties: [], Rating: 5.0, ReviewsCount: 0, BaseRate: 50000
@@ -393,6 +392,7 @@
                     } catch (err) {
                         console.error('Error loading profile:', err);
                     }
+                    window.initialProfile = JSON.parse(JSON.stringify(this.form));
                 },
 
                 formatCurrency(val) {
