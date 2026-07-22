@@ -57,9 +57,13 @@ namespace TripMate_Webapi.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "guide")]
         public async Task<IActionResult> UpdateProfileAjax([FromForm] UpdateGuideProfileRequest req, [FromServices] TripMate_WebAPI.Services.ICloudinaryService cloudinary)
         {
             var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            _logger.LogInformation("UpdateProfileAjax called. UserId={UserId}, FullName={FullName}, Bio={Bio}, Languages={Languages}, Specialties={Specialties}, BaseRate={BaseRate}, CityArea={CityArea}",
+                userId, req.FullName, req.Bio, req.Languages, req.Specialties, req.BaseRate, req.CityArea);
+
             if (string.IsNullOrEmpty(userId))
                 return Unauthorized(new { error = "Not authenticated" });
 
@@ -68,6 +72,8 @@ namespace TripMate_Webapi.Controllers
                 // Update User Profile
                 var profileResponse = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Where(x => x.Id == userId).Get();
                 var profile = profileResponse.Models.FirstOrDefault();
+                _logger.LogInformation("Profile found: {Found}, CurrentName={Name}", profile != null, profile?.FullName);
+
                 if (profile != null)
                 {
                     if (req.FullName != null) profile.FullName = req.FullName;
@@ -80,12 +86,15 @@ namespace TripMate_Webapi.Controllers
                         if (!string.IsNullOrEmpty(avatarUrl))
                             profile.AvatarUrl = avatarUrl;
                     }
-                    await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Update(profile);
+
+                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Update(profile);
+                    _logger.LogInformation("ProfileEntity update result: {Count} models returned", updateResult.Models.Count);
                 }
 
                 // Update Guide Profile
                 var guideResponse = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Where(x => x.UserId == userId).Get();
                 var guideProfile = guideResponse.Models.FirstOrDefault();
+                _logger.LogInformation("GuideProfile found: {Found}, Id={Id}", guideProfile != null, guideProfile?.Id);
 
                 if (guideProfile == null)
                 {
@@ -106,7 +115,8 @@ namespace TripMate_Webapi.Controllers
                             guideProfile.CoverPhotoUrl = coverUrl;
                     }
 
-                    await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Insert(guideProfile);
+                    var insertResult = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Insert(guideProfile);
+                    _logger.LogInformation("GuideProfile INSERT result: {Count} models", insertResult.Models.Count);
                 }
                 else
                 {
@@ -126,19 +136,23 @@ namespace TripMate_Webapi.Controllers
                         if (!string.IsNullOrEmpty(coverUrl))
                             guideProfile.CoverPhotoUrl = coverUrl;
                     }
-                    await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Update(guideProfile);
+
+                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Update(guideProfile);
+                    _logger.LogInformation("GuideProfile UPDATE result: {Count} models", updateResult.Models.Count);
                 }
 
+                _logger.LogInformation("UpdateProfileAjax SUCCESS for userId={UserId}", userId);
                 return Json(new { success = true, avatarUrl = profile?.AvatarUrl, coverUrl = guideProfile?.CoverPhotoUrl });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating guide profile");
+                _logger.LogError(ex, "Error updating guide profile for userId={UserId}", userId);
                 return StatusCode(500, new { error = "Internal server error", details = ex.Message });
             }
         }
 
         [HttpGet]
+        [Authorize(Roles = "guide")]
         public async Task<IActionResult> GetProfileAjax()
         {
             var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
