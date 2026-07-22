@@ -212,6 +212,16 @@ Ghi lại ít nhất một ví dụ nếu có.
 | Em/nhóm đã sửa như thế nào? | Đổi thành String.fromCharCode(64) để generate @ character dynamically |
 | Bài học rút ra | Cần cẩn thận với special characters trong Razor views, luôn test sau khi AI generate code |
 
+<br>
+
+| Nội dung | Mô tả |
+|---|---|
+| AI đã gợi ý gì? | Cấu trúc form hồ sơ Guide với các thẻ input `required` nằm rải rác trên nhiều tab ẩn/hiện bằng `x-show` |
+| Vì sao gợi ý đó sai/chưa phù hợp? | Trình duyệt chặn form submit nếu trường `required` bị ẩn (display: none). Lỗi xảy ra ngầm không báo gì, khiến người dùng bấm Lưu không có phản hồi |
+| Em/nhóm phát hiện bằng cách nào? | Bấm nút Submit không hoạt động, check Network tab không thấy request gửi đi |
+| Em/nhóm đã sửa như thế nào? | Gỡ thuộc tính `required` HTML5, tự viết validation thủ công bằng JavaScript và đổi nút sang `type="button"` |
+| Bài học rút ra | Cẩn thận với HTML5 form validation mặc định khi làm giao diện ẩn/hiện động (như Tabs). Phải kiểm soát validation bằng JS |
+
 ---
 
 ## 9. Phần đóng góp thật sự của sinh viên/nhóm

@@ -90,6 +90,7 @@ Tất cả đều sử dụng Solar Concierge design theme với màu cam #ff7a0
 | 3 | Razor syntax error với @ character | Razor parser nhầm @ trong JavaScript | Dùng String.fromCharCode(64) | Fixed |
 | 4 | TourDto not found error | Sai tên class | Đổi thành TourRow | Fixed |
 | 5 | ActivityItem duplicate definition | Trùng class trong 2 controllers | Đổi tên thành GuideBookingItem | Fixed |
+| 6 | Lỗi không lưu được hồ sơ Guide | Form HTML5 chặn submit vì trường required nằm ở tab ẩn | Bỏ thuộc tính required và dùng manual validation bằng JavaScript | Fixed |
 
 ## Ghi chú
 
