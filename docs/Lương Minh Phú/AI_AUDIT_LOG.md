@@ -259,6 +259,7 @@ Học được cách xử lý special characters trong Razor views và localStor
 | 1 | Duplicate ActivityItem class | Compilation error | Đổi tên thành GuideBookingItem |
 | 2 | Razor @ character issue | Syntax error | Dùng String.fromCharCode(64) |
 | 3 | TourDto vs TourRow confusion | Type error | Verify và fix tên class |
+| 4 | Lỗi không submit được form vì tab ẩn | Silent HTML5 validation | Đổi sang JS validation và bỏ thuộc tính required |
 
 ---
 

@@ -29,6 +29,7 @@
 | 3 | 30/05/2026 | Claude | Tạo dashboard | "làm guide dashboard" | Guide dashboard | Có | Views/Guide/ |
 | 4 | 30/05/2026 | Claude | Thêm logout | "thêm nút đăng xuất" | Logout button | Có | _Layout.cshtml |
 | 5 | 30/05/2026 | Claude | Fix Razor error | "bị lỗi @ character" | Fix với fromCharCode | Có | _Layout.cshtml |
+| 6 | 22/07/2026 | Claude/Gemini | Fix lỗi update profile | "lỗi update profile ở guide không thấy thay đổi" | Fix HTML5 validation tab ẩn | Có | Profile.cshtml |
 
 ---
 
@@ -392,6 +393,46 @@ Thành công với String.fromCharCode(64) và đổi comment.
 - Cung cấp error message đầy đủ hơn
 - Nêu rõ constraints (ví dụ: "không được dùng external libraries")
 - Yêu cầu AI giải thích approach trước khi code
+
+---
+
+### Prompt số 6 - Fix lỗi không lưu được hồ sơ Guide
+
+| Nội dung | Thông tin |
+|---|---|
+| Ngày sử dụng | 22/07/2026 |
+| Công cụ AI | Claude / Gemini |
+| Mục đích | Fix lỗi bấm nút "Lưu Thay Đổi" không có phản hồi nhưng request network vẫn trả 200 |
+| Phần việc liên quan | Frontend / AlpineJS / ASP.NET MVC |
+| Mức độ sử dụng | Hỏi debug |
+
+#### Prompt nguyên văn
+
+```text
+vẫn còn bug update profile ở tài khoản guide không thấy thay đổi, kiểm tra kĩ lại giúp tôi
+```
+
+#### Bối cảnh khi viết prompt
+
+Khi người dùng ấn "Lưu Thay Đổi" ở trang hồ sơ Guide, không có request gọi API update nào được gửi lên server, mặc dù có các request tự động load số lượng tin nhắn trả về 200. Nút lưu không chuyển sang trạng thái "Đang lưu".
+
+#### Kết quả AI trả về
+
+AI phân tích ra nguyên nhân gốc rễ là trình duyệt chặn submit do form có thẻ input mang thuộc tính `required` nhưng bị ẩn (display:none do khác tab).
+AI đã sửa lại `Profile.cshtml`:
+- Xóa bỏ các thuộc tính `required` khỏi các thẻ input trong HTML.
+- Thêm validate thủ công qua JavaScript (AlpineJS) trong hàm `saveProfile()`.
+- Chuyển `type="submit"` thành `type="button" @@click="saveProfile"` để không bị trình duyệt chặn ẩn.
+
+#### Kết quả đã áp dụng vào bài
+
+Áp dụng toàn bộ vào file `Views/Guide/Profile.cshtml`, form submit thành công, dữ liệu được cập nhật đúng.
+
+#### Đánh giá chất lượng prompt
+
+- [x] Prompt rõ ràng
+- [x] Prompt tạo ra kết quả tốt
+- [x] Kết quả AI xử lý xuất sắc một lỗi khó thấy (lỗi ngầm HTML5).
 
 ---
 

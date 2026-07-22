@@ -97,7 +97,7 @@
                             <div class="flex-grow space-y-4">
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Họ và tên <span class="text-red-500">*</span></label>
-                                    <input type="text" x-model="form.FullName" required
+                                    <input type="text" x-model="form.FullName"
                                            class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
                                 </div>
                                 <div>
@@ -107,7 +107,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Quốc tịch <span class="text-red-500">*</span></label>
-                                    <select x-model="form.Nationality" required class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                                    <select x-model="form.Nationality" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
                                         <option value="" disabled>-- Chọn quốc tịch --</option>
                                         <template x-for="country in countriesList" :key="country.alpha2Code">
                                             <option :value="country.name" x-text="country.name"></option>
@@ -116,7 +116,7 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Khu vực hoạt động <span class="text-red-500">*</span></label>
-                                    <select x-model="form.CityArea" required class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                                    <select x-model="form.CityArea" class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
                                         <option value="Hội An">Hội An</option>
                                         <option value="Đà Nẵng">Đà Nẵng</option>
                                         <option value="Huế">Huế</option>
@@ -133,7 +133,7 @@
                                 <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider">Giới thiệu bản thân (Bio) <span class="text-red-500">*</span></label>
                                 <span class="text-xs text-gray-400" x-text="`${form.Bio.length}/1000`"></span>
                             </div>
-                            <textarea x-model="form.Bio" required maxlength="1000" rows="5"
+                            <textarea x-model="form.Bio" maxlength="1000" rows="5"
                                       placeholder="Kể về bản thân bạn — bạn là ai, điều gì làm bạn trở thành người hướng dẫn đặc biệt..." 
                                       class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all"></textarea>
                         </div>
@@ -180,7 +180,7 @@
                     <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                         <h3 class="text-sm font-bold text-gray-900 mb-4 uppercase tracking-wider">Giá cơ bản mỗi giờ</h3>
                         <div class="relative max-w-sm mb-2">
-                            <input type="number" x-model.number="form.BaseRate" required min="50000" step="10000"
+                            <input type="number" x-model.number="form.BaseRate" min="50000" step="10000"
                                    class="w-full bg-gray-50 border border-gray-200 text-gray-900 font-bold rounded-xl px-4 py-3 pl-10 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
                             <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold">₫</span>
                         </div>
@@ -196,7 +196,7 @@
                     <button type="button" @@click="resetForm" class="px-6 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition-colors">
                         Hủy
                     </button>
-                    <button type="submit" class="px-8 py-2.5 rounded-xl font-bold bg-primary text-white hover:bg-primary-dark transition-colors shadow-sm flex items-center gap-2" :disabled="isSaving">
+                    <button type="button" @@click="saveProfile" class="px-8 py-2.5 rounded-xl font-bold bg-primary text-white hover:bg-primary-dark transition-colors shadow-sm flex items-center gap-2" :disabled="isSaving">
                         <span class="material-symbols-outlined text-[20px]" x-show="!isSaving">save</span>
                         <span class="material-symbols-outlined text-[20px] animate-spin" x-show="isSaving">autorenew</span>
                         <span x-text="isSaving ? 'Đang lưu...' : 'Lưu Thay Đổi'"></span>
@@ -332,7 +332,6 @@
                     }
                 },
                 
-                // Deep copy initial data
                 form: {
                     FullName: '', PhoneNumber: '', Bio: '', AvatarUrl: '', CoverUrl: '', CityArea: 'Hội An', Nationality: '',
                     Languages: [], Specialties: [], Rating: 5.0, ReviewsCount: 0, BaseRate: 50000
@@ -393,6 +392,7 @@
                     } catch (err) {
                         console.error('Error loading profile:', err);
                     }
+                    window.initialProfile = JSON.parse(JSON.stringify(this.form));
                 },
 
                 formatCurrency(val) {
@@ -408,8 +408,20 @@
 
                 async saveProfile() {
                     this.isSaving = true;
+                    if (!this.form.FullName || !this.form.Nationality || !this.form.CityArea || !this.form.Bio) {
+                        showToast('error', 'Vui lòng điền đầy đủ các thông tin bắt buộc (*) ở tab Thông tin cơ bản');
+                        this.isSaving = false;
+                        this.currentTab = 'basic';
+                        return;
+                    }
                     if (this.form.Languages.length === 0) {
                         showToast('error', 'Vui lòng chọn ít nhất 1 ngôn ngữ!');
+                        this.isSaving = false;
+                        this.currentTab = 'expertise';
+                        return;
+                    }
+                    if (!this.form.BaseRate || this.form.BaseRate < 50000) {
+                        showToast('error', 'Giá cơ bản tối thiểu là 50.000đ');
                         this.isSaving = false;
                         this.currentTab = 'expertise';
                         return;
