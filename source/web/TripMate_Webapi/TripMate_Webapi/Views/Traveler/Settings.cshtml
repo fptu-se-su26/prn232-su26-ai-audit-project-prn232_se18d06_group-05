@@ -91,8 +91,10 @@
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-on-surface mb-2">Nationality</label>
-                        <input type="text" id="nationalityInput" placeholder="e.g. Vietnamese"
-                               class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                        <select id="nationalityInput"
+                               class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                            <option value="">-- Select Nationality --</option>
+                        </select>
                     </div>
                 </div>
 
@@ -245,7 +247,7 @@
     }
 
     async function loadSettings() {
-        const token = localStorage.getItem('jwt_token');
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('jwt_token');
         let profileData = {};
 
         if (token) {
@@ -255,6 +257,9 @@
                 });
                 if (res.ok) {
                     profileData = await res.json();
+                    if (profileData.avatarUrl) {
+                        localStorage.setItem('userAvatarUrl', profileData.avatarUrl);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to load profile from backend", err);
@@ -264,21 +269,37 @@
         const userEmail = profileData.email || localStorage.getItem('userEmail') || '';
         const atIdx = userEmail.indexOf('\u0040');
         const displayName = profileData.displayName || (atIdx > 0 ? userEmail.substring(0, atIdx) : userEmail);
+        
+        try {
+            const countRes = await fetch('https://countries.dev/countries');
+            let countData = await countRes.json();
+            countData.sort((a, b) => a.name.localeCompare(b.name));
+            const natSelect = document.getElementById('nationalityInput');
+            countData.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                opt.textContent = c.name;
+                natSelect.appendChild(opt);
+            });
+        } catch (err) {
+            console.error("Failed to load countries", err);
+        }
 
         // Load stored profile
         const profile = JSON.parse(localStorage.getItem('travelerProfile') || '{}');
 
-        // Avatar initials
+        // Avatar initials / image
+        const currentAvatarUrl = profileData.avatarUrl || profile.avatarUrl || localStorage.getItem('userAvatarUrl');
         const initials = (profileData.displayName || profile.displayName || displayName).substring(0, 2).toUpperCase() || '?';
         const avatarEl = document.getElementById('avatarInitials');
         if (avatarEl) {
-            avatarEl.textContent = initials;
-            // Also handle showing actual avatar photo if available
-            if (profileData.avatarUrl) {
-                avatarEl.parentElement.style.backgroundImage = `url(${profileData.avatarUrl})`;
+            if (currentAvatarUrl) {
+                avatarEl.parentElement.style.backgroundImage = `url(${currentAvatarUrl})`;
                 avatarEl.parentElement.style.backgroundSize = 'cover';
                 avatarEl.parentElement.style.backgroundPosition = 'center';
-                avatarEl.textContent = ''; // Hide initials
+                avatarEl.textContent = '';
+            } else {
+                avatarEl.textContent = initials;
             }
         }
         const nameEl = document.getElementById('avatarName');
@@ -291,9 +312,9 @@
         setVal('displayNameInput', profileData.displayName || profile.displayName || displayName);
         setVal('phoneInput', profileData.phone || profile.phone || '');
         setVal('nationalityInput', profileData.nationality || profile.nationality || '');
-        setVal('bioInput', profile.bio || ''); // Bio is local only for now
+        setVal('bioInput', profile.bio || '');
 
-        // Travel preferences (from tripPreferences in localStorage)
+        // Travel preferences
         const prefs = JSON.parse(localStorage.getItem('tripPreferences') || '{}');
         setVal('defaultVibe', prefs.vibe || profile.defaultVibe || '');
         setVal('defaultBudget', prefs.budget || profile.defaultBudget || '');
@@ -310,10 +331,12 @@
             document.getElementById('personalityBadge').className = 'bg-white text-primary px-3 py-1 rounded-full text-sm font-bold shadow-sm border border-primary/20';
             document.getElementById('personalityType').className = 'text-3xl font-extrabold text-primary';
         }
+
+        if (typeof checkAuth === 'function') checkAuth();
     }
 
     async function saveProfile() {
-        const token = localStorage.getItem('jwt_token');
+        const token = localStorage.getItem('accessToken') || localStorage.getItem('jwt_token');
         const displayName = document.getElementById('displayNameInput').value.trim();
         const phone = document.getElementById('phoneInput').value.trim();
         const nationality = document.getElementById('nationalityInput').value.trim();
@@ -342,6 +365,7 @@
                     const data = await res.json();
                     if (data.avatarUrl) {
                         newAvatarUrl = data.avatarUrl;
+                        localStorage.setItem('userAvatarUrl', newAvatarUrl);
                     }
                 }
             } catch (err) {
@@ -360,16 +384,22 @@
         profile.updatedAt = new Date().toISOString();
 
         localStorage.setItem('travelerProfile', JSON.stringify(profile));
+        if (displayName) localStorage.setItem('userName', displayName);
 
-        // Cập nhật avatar initials ngay
         const initials = profile.displayName.substring(0, 2).toUpperCase() || '?';
         const avatarEl = document.getElementById('avatarInitials');
-        if (avatarEl && !avatarEl.parentElement.style.backgroundImage) {
+        if (avatarEl && newAvatarUrl) {
+            avatarEl.parentElement.style.backgroundImage = `url(${newAvatarUrl})`;
+            avatarEl.parentElement.style.backgroundSize = 'cover';
+            avatarEl.parentElement.style.backgroundPosition = 'center';
+            avatarEl.textContent = '';
+        } else if (avatarEl && !avatarEl.parentElement.style.backgroundImage) {
             avatarEl.textContent = initials;
         }
         document.getElementById('avatarName').textContent = profile.displayName;
 
         pendingAvatarFile = null;
+        if (typeof checkAuth === 'function') checkAuth();
         showToast('Profile saved successfully!', false);
     }
 

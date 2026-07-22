@@ -238,6 +238,9 @@
                 localStorage.setItem('userEmail', data.user?.email || '');
                 localStorage.setItem('userId', data.user?.id || '');
                 localStorage.setItem('userRole', data.user?.role || 'traveler');
+                if (data.user?.avatarUrl) {
+                    localStorage.setItem('userAvatarUrl', data.user.avatarUrl);
+                }
 
                 const role = data.user?.role || 'traveler';
                 const redirectUrl = localStorage.getItem('redirectAfterLogin');
@@ -303,6 +306,9 @@
                 localStorage.setItem('userEmail', data.user?.email || email);
                 localStorage.setItem('userId', data.user?.id || '');
                 localStorage.setItem('userRole', data.user?.role || 'traveler');
+                if (data.user?.avatarUrl) {
+                    localStorage.setItem('userAvatarUrl', data.user.avatarUrl);
+                }
 
                 const role = data.user?.role || 'traveler';
                 const redirectUrl = localStorage.getItem('redirectAfterLogin');
