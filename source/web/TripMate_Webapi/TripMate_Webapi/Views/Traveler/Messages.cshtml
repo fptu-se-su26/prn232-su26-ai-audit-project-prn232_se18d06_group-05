@@ -35,10 +35,14 @@
                     </template>
 
                     <template x-for="t in filteredThreads" :key="t.Id">
-                        <button @@click="selectThread(t)" class="w-full text-left p-4 border-b border-outline-variant/30 hover:bg-surface-variant transition-all flex gap-4 items-center">
+                        <button @@click="selectThread(t)" class="w-full text-left p-4 border-b border-outline-variant/30 hover:bg-surface-variant transition-all flex gap-4 items-center"
+                                :class="t.IsLocked ? 'opacity-70' : ''">
                             <div class="relative">
                                 <img :src="t.OtherAvatar || '/images/AVATAR.png'" class="w-14 h-14 rounded-full object-cover border border-outline-variant/30 shrink-0" />
                                 <div x-show="t.UnreadCount > 0" class="absolute -top-1 -right-1 bg-primary text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white" x-text="t.UnreadCount"></div>
+                                <div x-show="t.IsLocked" class="absolute inset-0 bg-gray-900/50 rounded-full flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-white text-[16px]">lock</span>
+                                </div>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex justify-between items-center mb-1">
@@ -87,7 +91,7 @@
                             <template x-for="(m, i) in activeThread.Messages" :key="i">
                                 <div class="flex flex-col group" :class="m.IsMine ? 'items-end' : 'items-start'" :data-msg-id="m.Id">
                                     <div class="flex items-center gap-2 max-w-[75%]">
-                                        <template x-if="m.IsMine && !m.editing && !isUrl(m.Text)">
+                                        <template x-if="m.IsMine && !activeThread.IsLocked && !m.editing && !isUrl(m.Text)">
                                             <button type="button" @@click.stop="startEdit(m)" class="hidden group-hover:flex items-center justify-center w-8 h-8 rounded-full bg-white border border-outline-variant/40 text-on-surface-variant shadow-sm hover:bg-surface hover:text-primary transition-colors" title="Edit" aria-label="Edit message">
                                                 <span class="material-symbols-outlined text-[14px]">edit</span>
                                             </button>
@@ -138,18 +142,48 @@
                         </div>
 
                         <div class="bg-white border-t border-outline-variant/30 p-4">
-                            <form @@submit.prevent="sendMessage" class="flex items-end gap-3 max-w-4xl mx-auto" onsubmit="event.preventDefault(); return false;">
-                                <label class="w-10 h-10 flex items-center justify-center mr-2 text-on-surface-variant cursor-pointer">
-                                    <input type="file" class="hidden" @@change="uploadAttachment($event)" />
-                                    <span class="material-symbols-outlined">attach_file</span>
-                                </label>
-                                <div class="flex-1 bg-surface border border-outline-variant/30 rounded-2xl overflow-hidden">
-                                    <textarea x-model="newMessage" @@keydown.enter.prevent="sendMessage" @@input="autoSize" rows="1" placeholder="Type a message..." class="w-full bg-transparent border-none text-on-surface text-sm px-4 py-3 max-h-32 resize-none focus:ring-0 outline-none"></textarea>
+                            <template x-if="activeThread.IsLocked">
+                                <div class="max-w-4xl mx-auto h-16 rounded-2xl border border-outline-variant/30 bg-surface flex items-center justify-center text-on-surface-variant/60">
+                                    <span class="material-symbols-outlined text-[26px]">lock</span>
                                 </div>
-                                <button type="button" @@click="sendMessage()" :disabled="!newMessage.trim()" class="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-50">
-                                    <span class="material-symbols-outlined">send</span>
-                                </button>
-                            </form>
+                            </template>
+                            <template x-if="!activeThread.IsLocked">
+                                <form @@submit.prevent="sendMessage" class="max-w-4xl mx-auto" onsubmit="event.preventDefault(); return false;">
+                                    <div class="rounded-2xl border border-outline-variant/30 bg-surface overflow-hidden focus-within:ring-2 focus-within:ring-primary transition-all">
+                                        <div x-show="pendingFiles.length > 0" class="flex flex-wrap gap-2 px-3 pt-3">
+                                            <template x-for="(item, index) in pendingFiles" :key="item.Id">
+                                                <div class="relative flex items-center gap-2 max-w-[240px] rounded-xl border border-outline-variant/30 bg-white p-2 pr-8 shadow-sm">
+                                                    <template x-if="item.PreviewUrl">
+                                                        <img :src="item.PreviewUrl" class="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
+                                                    </template>
+                                                    <template x-if="!item.PreviewUrl">
+                                                        <span class="material-symbols-outlined h-10 w-10 rounded-lg bg-surface-variant text-on-surface-variant flex items-center justify-center flex-shrink-0">insert_drive_file</span>
+                                                    </template>
+                                                    <div class="min-w-0">
+                                                        <p class="truncate text-xs font-semibold text-on-surface" x-text="item.Name"></p>
+                                                        <p class="text-[11px] text-on-surface-variant" x-text="formatFileSize(item.Size)"></p>
+                                                    </div>
+                                                    <button type="button" @@click="removePendingFile(index)" :disabled="isSending" class="absolute right-1.5 top-1.5 h-6 w-6 rounded-full text-on-surface-variant hover:bg-surface-variant disabled:opacity-40">
+                                                        <span class="material-symbols-outlined text-[16px]">close</span>
+                                                    </button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                        <div class="flex items-end gap-1 px-2 py-2">
+                                            <label class="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full text-on-surface-variant hover:bg-white hover:text-primary cursor-pointer transition-colors">
+                                                <input type="file" multiple class="hidden" :disabled="isSending" @@change="queueAttachments($event)" />
+                                                <span class="material-symbols-outlined text-[22px]">attach_file</span>
+                                            </label>
+                                            <textarea x-model="newMessage" @@keydown.enter.prevent="sendMessage" @@input="autoSize" rows="1" placeholder="Type a message..." :disabled="isSending"
+                                                      class="min-h-10 flex-1 bg-transparent border-none text-on-surface text-sm px-2 py-2.5 max-h-32 resize-none focus:ring-0 outline-none"></textarea>
+                                            <button x-show="canSend" x-transition type="button" @@click="sendMessage()" :disabled="isSending"
+                                                    class="h-10 w-10 flex-shrink-0 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-50 transition-all">
+                                                <span class="material-symbols-outlined text-[20px]">send</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </template>
                         </div>
                     </div>
                 </template>
@@ -167,6 +201,9 @@
                 activeThread: null,
                 searchQuery: '',
                 newMessage: '',
+                pendingFiles: [],
+                isSending: false,
+                _pendingFileSequence: 0,
                 _messageCreatedHandler: null,
                 _messageUpdatedHandler: null,
                 _chatReconnectedHandler: null,
@@ -185,6 +222,7 @@
                     document.removeEventListener('tripmate:message-created', this._messageCreatedHandler);
                     document.removeEventListener('tripmate:message-updated', this._messageUpdatedHandler);
                     document.removeEventListener('tripmate:chat-reconnected', this._chatReconnectedHandler);
+                    this.clearPendingFiles();
                 },
                 normalizeMessage(raw) {
                     if (!raw) return null;
@@ -234,10 +272,11 @@
                     const message = this.normalizeMessage(raw);
                     if (!message?.BookingId) return;
 
-                    let thread = this.threads.find(item => String(item.BookingId) === String(message.BookingId));
+                    const participantId = this.getMessageParticipantId(message);
+                    let thread = this.threads.find(item => String(this.getParticipantId(item)) === String(participantId));
                     if (!thread) {
                         await this.loadConversations();
-                        thread = this.threads.find(item => String(item.BookingId) === String(message.BookingId));
+                        thread = this.threads.find(item => String(this.getParticipantId(item)) === String(participantId));
                         if (!thread) return;
                     }
 
@@ -247,7 +286,7 @@
                     thread.TimeAgo = this.formatTimeAgo(message.SentAt);
 
                     const userId = localStorage.getItem('userId');
-                    const isActive = String(this.activeThread?.BookingId) === String(message.BookingId);
+                    const isActive = String(this.getParticipantId(this.activeThread)) === String(participantId);
                     if (message.ReceiverId === userId) {
                         if (isActive) {
                             thread.UnreadCount = 0;
@@ -264,7 +303,8 @@
                 handleRealtimeMessageUpdate(raw) {
                     const message = this.normalizeMessage(raw);
                     if (!message?.BookingId) return;
-                    const thread = this.threads.find(item => String(item.BookingId) === String(message.BookingId));
+                    const participantId = this.getMessageParticipantId(message);
+                    const thread = this.threads.find(item => String(this.getParticipantId(item)) === String(participantId));
                     const existing = thread?.Messages?.find(item => String(item.Id) === String(message.Id));
                     if (!existing) return;
                     existing.Text = message.Text;
@@ -274,9 +314,9 @@
                 },
                 async markThreadRead(thread) {
                     const token = localStorage.getItem('accessToken');
-                    if (!token || !thread?.BookingId) return;
+                    if (!token || !thread) return;
                     try {
-                        const response = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/mark-read`, {
+                        const response = await fetch(this.getMarkReadUrl(thread), {
                             method: 'POST',
                             headers: { 'Authorization': 'Bearer ' + token }
                         });
@@ -286,10 +326,10 @@
                     }
                 },
                 async reloadAfterReconnect() {
-                    const bookingId = this.activeThread?.BookingId;
+                    const participantId = this.getParticipantId(this.activeThread);
                     await this.loadConversations();
-                    if (!bookingId) return;
-                    const thread = this.threads.find(item => String(item.BookingId) === String(bookingId));
+                    if (!participantId) return;
+                    const thread = this.threads.find(item => String(this.getParticipantId(item)) === String(participantId));
                     if (thread) {
                         this.activeThread = thread;
                         await this.loadMessagesForThread(thread);
@@ -364,12 +404,40 @@
                     return this.truncateText(m, 80);
                 },
 
-                async uploadAttachment(e) {
-                    const files = e.target.files || e.dataTransfer?.files;
-                    if (!files || files.length === 0) return;
-                    const file = files[0];
-                    if (!this.activeThread) return;
-
+                get canSend() {
+                    return !!this.newMessage.trim() || this.pendingFiles.length > 0;
+                },
+                queueAttachments(event) {
+                    const files = Array.from(event.target.files || []);
+                    for (const file of files) {
+                        this.pendingFiles.push({
+                            Id: `pending-${Date.now()}-${this._pendingFileSequence++}`,
+                            File: file,
+                            Name: file.name,
+                            Size: file.size,
+                            PreviewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+                        });
+                    }
+                    event.target.value = '';
+                },
+                removePendingFile(index) {
+                    const [removed] = this.pendingFiles.splice(index, 1);
+                    if (removed?.PreviewUrl) URL.revokeObjectURL(removed.PreviewUrl);
+                },
+                clearPendingFiles() {
+                    for (const item of this.pendingFiles) {
+                        if (item.PreviewUrl) URL.revokeObjectURL(item.PreviewUrl);
+                    }
+                    this.pendingFiles = [];
+                },
+                formatFileSize(bytes) {
+                    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+                    const units = ['B', 'KB', 'MB', 'GB'];
+                    const unit = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+                    const value = bytes / Math.pow(1024, unit);
+                    return `${value >= 10 || unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit]}`;
+                },
+                async uploadPendingAttachment(file) {
                     const token = localStorage.getItem('accessToken');
                     const userId = localStorage.getItem('userId');
                     const receiverId = this.activeThread.OtherId;
@@ -378,31 +446,47 @@
                     fd.append('file', file);
                     fd.append('receiverId', receiverId || '');
 
-                    try {
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.BookingId)}/attachments`, {
-                            method: 'POST',
-                            headers: { 'Authorization': 'Bearer ' + token },
-                            body: fd
-                        });
-                        if (!res.ok) throw new Error('Upload failed');
-                        const msg = await res.json();
-                        const sent = { Id: msg.id || msg.Id, Text: msg.messageText || msg.MessageText || '', SentAt: msg.sentAt || msg.SentAt, IsMine: true, Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), IsRead: !!(msg.isRead || msg.IsRead) };
-                        this.appendMessageIfMissing(this.activeThread, {
-                            ...msg,
-                            senderId: userId,
-                            receiverId
-                        });
-                        this.activeThread.LastMessage = sent.Text;
-                        this.newMessage = '';
-                        this.scrollToBottom();
-                    } catch (e) { console.error(e); showToast('error', 'Failed to upload file'); }
-                    finally { e.target.value = null; }
+                    const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.ConfirmedBookingId)}/attachments`, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: fd
+                    });
+                    if (!res.ok) throw new Error('Upload failed');
+                    const msg = await res.json();
+                    this.appendMessageIfMissing(this.activeThread, {
+                        ...msg,
+                        senderId: userId,
+                        receiverId
+                    });
+                    this.activeThread.LastMessage = msg.messageText || msg.MessageText || '';
+                    this.scrollToBottom();
                 },
 
                 get filteredThreads() {
                     if (!this.searchQuery) return this.threads;
                     const q = this.searchQuery.toLowerCase();
                     return this.threads.filter(t => (t.OtherName || '').toLowerCase().includes(q) || (t.LastMessage || '').toLowerCase().includes(q));
+                },
+                getParticipantId(thread) {
+                    return thread?.ParticipantId || thread?.OtherId || '';
+                },
+                getMessageParticipantId(message) {
+                    const userId = localStorage.getItem('userId');
+                    return String(message?.SenderId) === String(userId)
+                        ? message?.ReceiverId
+                        : message?.SenderId;
+                },
+                getMessagesUrl(thread) {
+                    const participantId = this.getParticipantId(thread);
+                    return participantId
+                        ? `/api/chat/conversations/participants/${encodeURIComponent(participantId)}/messages`
+                        : `/api/chat/conversations/${encodeURIComponent(thread?.BookingId || '')}/messages`;
+                },
+                getMarkReadUrl(thread) {
+                    const participantId = this.getParticipantId(thread);
+                    return participantId
+                        ? `/api/chat/conversations/participants/${encodeURIComponent(participantId)}/mark-read`
+                        : `/api/chat/conversations/${encodeURIComponent(thread?.BookingId || '')}/mark-read`;
                 },
 
                 async loadConversations() {
@@ -423,7 +507,7 @@
                             const otherId = (travelerId === userId) ? guideId : travelerId;
 
                             // Get messages preview
-                            const mres = await fetch(`/api/chat/conversations/${encodeURIComponent(bookingId)}/messages`, { headers: { 'Authorization': 'Bearer ' + token } });
+                            const mres = await fetch(this.getMessagesUrl({ ParticipantId: otherId, BookingId: bookingId }), { headers: { 'Authorization': 'Bearer ' + token } });
                             const mdata = await mres.json();
                             const rows = mdata?.messages || [];
                             const messages = rows.map(r => ({
@@ -442,6 +526,7 @@
                             threads.push({
                                 Id: bookingId,
                                 BookingId: bookingId,
+                                BookingIds: [bookingId],
                                 ParticipantId: otherId,
                                 OtherId: otherId,
                                 OtherName: otherId,
@@ -458,21 +543,12 @@
                                 TimeAgo: newest ? this.formatTimeAgo(newest.SentAt) : '',
                                 Date: newest ? new Date(newest.SentAt).toLocaleDateString('en-US') : '',
                                 LastMessageAt: newest ? newest.SentAt : null,
-                                UnreadCount: messages.filter(m => !m.IsRead && m.ReceiverId === userId).length
+                                UnreadCount: messages.filter(m => !m.IsRead && m.ReceiverId === userId).length,
+                                IsLocked: true
                             });
                         }
 
                         this.threads = threads;
-
-                        // If page was opened with a bookingId query param, auto-open that conversation
-                        try {
-                            const params = new URLSearchParams(window.location.search);
-                            const bookingIdParam = params.get('bookingId');
-                            if (bookingIdParam) {
-                                const target = this.threads.find(t => (t.BookingId || t.Id || '').toString() === bookingIdParam.toString());
-                                if (target) await this.selectThread(target);
-                            }
-                        } catch(e) { console.warn('auto-open thread failed', e); }
 
                         // Merge server-provided active bookings (confirmed trips) so user can chat even if no messages exist
                         try {
@@ -480,48 +556,126 @@
                             for (const ab of active) {
                                 const bid = ab.bookingId || ab.BookingId || ab.BookingId?.toString();
                                 if (!bid) continue;
-                                if (!this.threads.find(t => t.BookingId === bid)) {
-                                    // guide profile may be nested
-                                    const gp = ab.guideProfile || ab.GuideProfile || ab.Guide || ab.guideProfile;
-                                    // prefer explicit DTO fields
-                                    let otherId = ab.guideUserId || ab.GuideUserId || gp?.userId || gp?.UserId || gp?.Id || gp?.id || (gp?.profile?.id || gp?.Profile?.Id);
-                                    let otherName = ab.guideName || ab.GuideName || gp?.profile?.fullName || gp?.Profile?.FullName || gp?.profile?.Full_Name || (ab.TourName || 'Guide');
-                                    let otherAvatar = ab.guideAvatar || ab.GuideAvatar || gp?.profile?.avatarUrl || gp?.Profile?.AvatarUrl || gp?.profile?.avatar_url || '/images/AVATAR.png';
+                                // guide profile may be nested
+                                const gp = ab.guideProfile || ab.GuideProfile || ab.Guide || ab.guideProfile;
+                                // prefer explicit DTO fields
+                                const otherId = ab.guideUserId || ab.GuideUserId || gp?.userId || gp?.UserId || gp?.Id || gp?.id || (gp?.profile?.id || gp?.Profile?.Id);
+                                const otherName = ab.guideName || ab.GuideName || gp?.profile?.fullName || gp?.Profile?.FullName || gp?.profile?.Full_Name || (ab.TourName || 'Guide');
+                                const otherAvatar = ab.guideAvatar || ab.GuideAvatar || gp?.profile?.avatarUrl || gp?.Profile?.AvatarUrl || gp?.profile?.avatar_url || '/images/AVATAR.png';
+                                const bookingDate = ab.bookingDate || ab.BookingDate || '';
+                                const bookingStatus = Number(ab.status ?? ab.Status);
+                                const confirmedBookingId = bookingStatus === 1 ? bid : null;
+                                const existing = this.threads.find(t => String(t.BookingId) === String(bid));
 
+                                if (existing) {
+                                    existing.ParticipantId = otherId || existing.ParticipantId;
+                                    existing.OtherId = otherId || existing.OtherId;
+                                    existing.OtherName = otherName || existing.OtherName;
+                                    existing.OtherAvatar = otherAvatar || existing.OtherAvatar;
+                                    existing.BookingDate = bookingDate || existing.BookingDate;
+                                    existing.BookingStatus = bookingStatus;
+                                    existing.BookingIds = Array.from(new Set([...(existing.BookingIds || [existing.BookingId]), bid]));
+                                    existing.ConfirmedBookingId = confirmedBookingId || existing.ConfirmedBookingId;
+                                    existing.IsLocked = !existing.ConfirmedBookingId;
+                                    existing.Date ||= bookingDate ? new Date(bookingDate).toLocaleDateString('en-US') : '';
+                                } else {
                                     this.threads.push({
                                         Id: bid,
                                         BookingId: bid,
+                                        BookingIds: [bid],
+                                        BookingStatus: bookingStatus,
+                                        ConfirmedBookingId: confirmedBookingId,
                                         ParticipantId: otherId || '',
                                         OtherId: otherId || '',
                                         OtherName: otherName || 'Guide',
                                         OtherAvatar: otherAvatar,
+                                        BookingDate: bookingDate,
                                         Messages: [],
                                         LastMessage: 'No messages yet',
                                         LastMessageAt: null,
                                         TimeAgo: '',
-                                        Date: (ab.bookingDate ? new Date(ab.bookingDate).toLocaleDateString('en-US') : ''),
-                                        UnreadCount: 0
+                                        Date: bookingDate ? new Date(bookingDate).toLocaleDateString('en-US') : '',
+                                        UnreadCount: 0,
+                                        IsLocked: !confirmedBookingId
                                     });
                                 }
                             }
                         } catch (e) { console.warn('merge active bookings failed', e); }
 
-                        // Deduplicate threads by participant (one chat per other user)
+                        // Show one sidebar thread per person. Always retain real
+                        // message data over an empty booking-only placeholder.
                         try {
                             const map = new Map();
+                            const requestedBookingId = new URLSearchParams(window.location.search).get('bookingId');
+                            const getThreadTime = thread => {
+                                const value = thread?.LastMessageAt || thread?.BookingDate;
+                                const time = value ? new Date(value).getTime() : 0;
+                                return Number.isNaN(time) ? 0 : time;
+                            };
+                            const getMessageTime = thread => {
+                                const time = thread?.LastMessageAt ? new Date(thread.LastMessageAt).getTime() : 0;
+                                return Number.isNaN(time) ? 0 : time;
+                            };
                             for (const th of this.threads) {
-                                const key = th.ParticipantId || th.OtherId || th.BookingId || th.Id || '';
+                                const participantId = th.ParticipantId || th.OtherId;
+                                const bookingId = th.BookingId || th.Id || '';
+                                const key = participantId
+                                    ? `participant:${String(participantId).trim().toLowerCase()}`
+                                    : (bookingId ? `booking:${String(bookingId)}` : null);
                                 if (!key) continue;
-                                // prefer thread with messages or most recent date
+
                                 const existing = map.get(key);
-                                const existingDate = existing && existing.Date ? new Date(existing.Date) : new Date(0);
-                                const thDate = th.Date ? new Date(th.Date) : new Date(0);
-                                if (!existing || (th.Messages && th.Messages.length > 0 && (!existing.Messages || existing.Messages.length === 0)) || thDate > existingDate) {
+                                if (!existing) {
+                                    th.BookingIds = Array.from(new Set([...(th.BookingIds || []), bookingId].filter(Boolean)));
+                                    th.IsLocked = !th.ConfirmedBookingId;
+                                    if (th.ConfirmedBookingId) th.BookingId = th.ConfirmedBookingId;
                                     map.set(key, th);
+                                    continue;
                                 }
+
+                                const thMessageTime = getMessageTime(th);
+                                const existingMessageTime = getMessageTime(existing);
+                                const thHasMessages = thMessageTime > 0 || (th.Messages?.length || 0) > 0;
+                                const existingHasMessages = existingMessageTime > 0 || (existing.Messages?.length || 0) > 0;
+                                const preferThis = (thHasMessages && !existingHasMessages)
+                                    || (thHasMessages === existingHasMessages && thHasMessages
+                                        && (thMessageTime > existingMessageTime
+                                            || (thMessageTime === existingMessageTime
+                                                && (th.Messages?.length || 0) > (existing.Messages?.length || 0))))
+                                    || (!thHasMessages && !existingHasMessages
+                                        && getThreadTime(th) > getThreadTime(existing));
+
+                                const winner = preferThis ? th : existing;
+                                const bookingIds = Array.from(new Set([
+                                    ...(existing.BookingIds || [existing.BookingId]),
+                                    ...(th.BookingIds || [th.BookingId])
+                                ].filter(Boolean)));
+                                const confirmedThreads = [existing, th].filter(item => item.ConfirmedBookingId);
+                                const requestedConfirmed = confirmedThreads.find(item =>
+                                    requestedBookingId && String(item.ConfirmedBookingId) === String(requestedBookingId));
+                                const confirmedThread = requestedConfirmed || confirmedThreads
+                                    .sort((a, b) => getThreadTime(b) - getThreadTime(a))[0];
+
+                                winner.BookingIds = bookingIds;
+                                winner.ConfirmedBookingId = confirmedThread?.ConfirmedBookingId || null;
+                                winner.IsLocked = !winner.ConfirmedBookingId;
+                                if (winner.ConfirmedBookingId) winner.BookingId = winner.ConfirmedBookingId;
+                                map.set(key, winner);
                             }
                             this.threads = Array.from(map.values());
                         } catch (e) { console.warn('dedupe threads failed', e); }
+
+                        // Auto-open only after deduplication so a deep link selects the
+                        // single retained thread for that person.
+                        try {
+                            const bookingIdParam = new URLSearchParams(window.location.search).get('bookingId');
+                            if (bookingIdParam) {
+                                const target = this.threads.find(t =>
+                                    (t.BookingIds || [t.BookingId || t.Id])
+                                        .some(id => String(id) === String(bookingIdParam)));
+                                if (target) await this.selectThread(target);
+                            }
+                        } catch(e) { console.warn('auto-open thread failed', e); }
 
                         // fetch profiles for display
                         for (const th of this.threads) {
@@ -541,6 +695,9 @@
                 },
 
                 async selectThread(thread) {
+                    if (this.isSending) return;
+                    this.newMessage = '';
+                    this.clearPendingFiles();
                     this.activeThread = thread;
                     await this.loadMessagesForThread(thread);
                     thread.UnreadCount = 0;
@@ -555,7 +712,7 @@
                         const pageSize = 30;
                         thread._pageSize = pageSize;
                         thread._offset = 0;
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/messages?limit=${pageSize}&offset=0`, { headers: { 'Authorization': 'Bearer ' + token } });
+                        const res = await fetch(`${this.getMessagesUrl(thread)}?limit=${pageSize}&offset=0`, { headers: { 'Authorization': 'Bearer ' + token } });
                         if (!res.ok) throw new Error('Failed to load messages');
                         const data = await res.json();
                         const rows = data?.messages || [];
@@ -582,7 +739,7 @@
 
                         // mark as read on server
                         try {
-                            const markReadResponse = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/mark-read`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
+                            const markReadResponse = await fetch(this.getMarkReadUrl(thread), { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } });
                             if (markReadResponse.ok) window.TripMateMessages?.refreshUnreadThreads();
                         } catch (e) { console.warn('mark-read failed', e); }
                     } catch (e) { console.error(e); }
@@ -596,7 +753,7 @@
                     try {
                         const pageSize = thread._pageSize || 30;
                         const offset = thread._loaded || 0;
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/messages?limit=${pageSize}&offset=${offset}`, { headers: { 'Authorization': 'Bearer ' + token } });
+                        const res = await fetch(`${this.getMessagesUrl(thread)}?limit=${pageSize}&offset=${offset}`, { headers: { 'Authorization': 'Bearer ' + token } });
                         if (!res.ok) throw new Error('Failed to load older messages');
                         const data = await res.json();
                         const rows = data?.messages || [];
@@ -617,26 +774,44 @@
 
                 async sendMessage() {
                     const text = this.newMessage.trim();
-                    if (!text || !this.activeThread) return;
+                    if ((!text && this.pendingFiles.length === 0) || !this.activeThread || this.isSending) return;
+                    if (this.activeThread.IsLocked || !this.activeThread.ConfirmedBookingId) {
+                        return;
+                    }
                     const token = localStorage.getItem('accessToken');
                     const userId = localStorage.getItem('userId');
                     const receiverId = this.activeThread.OtherId;
+                    this.isSending = true;
                     try {
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.BookingId)}/messages`, {
-                            method: 'POST', headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, body: JSON.stringify({ Content: text, ReceiverId: receiverId })
-                        });
-                        if (!res.ok) throw new Error('Send failed');
-                        const msg = await res.json();
-                        const sent = { Id: msg.id || msg.Id, Text: msg.messageText || msg.MessageText || text, SentAt: msg.sentAt || msg.SentAt, IsMine: true, Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }), IsRead: !!(msg.isRead || msg.IsRead) };
-                        this.appendMessageIfMissing(this.activeThread, {
-                            ...msg,
-                            senderId: userId,
-                            receiverId
-                        });
-                        this.activeThread.LastMessage = sent.Text;
-                        this.newMessage = '';
+                        if (text) {
+                            const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.ConfirmedBookingId)}/messages`, {
+                                method: 'POST',
+                                headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ Content: text, ReceiverId: receiverId })
+                            });
+                            if (!res.ok) throw new Error('Send failed');
+                            const msg = await res.json();
+                            this.appendMessageIfMissing(this.activeThread, {
+                                ...msg,
+                                senderId: userId,
+                                receiverId
+                            });
+                            this.activeThread.LastMessage = msg.messageText || msg.MessageText || text;
+                            this.newMessage = '';
+                        }
+
+                        while (this.pendingFiles.length > 0) {
+                            await this.uploadPendingAttachment(this.pendingFiles[0].File);
+                            this.removePendingFile(0);
+                        }
+
                         this.scrollToBottom();
-                    } catch (e) { console.error(e); showToast('error', 'Failed to send message'); }
+                    } catch (e) {
+                        console.error(e);
+                        showToast('error', 'Failed to send message or attachment');
+                    } finally {
+                        this.isSending = false;
+                    }
                 },
 
                 // Message editing helpers
@@ -660,12 +835,13 @@
                 },
                 async saveEdit(msg) {
                     if (!this.activeThread || !msg || !msg.Id) return;
+                    if (this.activeThread.IsLocked || !this.activeThread.ConfirmedBookingId) return;
                     const token = localStorage.getItem('accessToken');
                     if (!token) return;
                     // prevent editing attachments
                     if (this.isUrl(msg.Text)) { showToast('warning', 'Không th? ch?nh s?a t?p ?ính kèm'); msg.editing = false; return; }
                     try {
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.BookingId)}/messages/${encodeURIComponent(msg.Id)}`, {
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.ConfirmedBookingId)}/messages/${encodeURIComponent(msg.Id)}`, {
                             method: 'PATCH',
                             headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ Content: msg.editText })
