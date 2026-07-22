@@ -59,7 +59,8 @@
                     <!-- Cover Photo -->
                     <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                         <h3 class="text-sm font-bold text-gray-900 mb-4 uppercase tracking-wider">Ảnh Bìa (Cover)</h3>
-                        <div class="relative h-48 rounded-xl overflow-hidden group bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                        <input type="file" id="coverFileInput" accept="image/*" class="hidden" @@change="previewCover($event)">
+                        <div @@click="document.getElementById('coverFileInput').click()" class="relative h-48 rounded-xl overflow-hidden group bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
                             <template x-if="form.CoverUrl">
                                 <img :src="form.CoverUrl" class="absolute inset-0 w-full h-full object-cover">
                             </template>
@@ -82,7 +83,8 @@
                             <!-- Avatar -->
                             <div class="flex flex-col items-center gap-3">
                                 <h3 class="text-sm font-bold text-gray-900 uppercase tracking-wider w-full">Ảnh Đại Diện</h3>
-                                <div class="relative w-32 h-32 rounded-full overflow-hidden group bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
+                                <input type="file" id="avatarFileInput" accept="image/*" class="hidden" @@change="previewAvatar($event)">
+                                <div @@click="document.getElementById('avatarFileInput').click()" class="relative w-32 h-32 rounded-full overflow-hidden group bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
                                     <img :src="form.AvatarUrl" class="absolute inset-0 w-full h-full object-cover" x-show="form.AvatarUrl">
                                     <div class="absolute inset-0 bg-gray-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white">
                                         <span class="material-symbols-outlined text-2xl">photo_camera</span>
@@ -102,6 +104,15 @@
                                     <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Số điện thoại</label>
                                     <input type="tel" x-model="form.PhoneNumber"
                                            class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Quốc tịch <span class="text-red-500">*</span></label>
+                                    <select x-model="form.Nationality" required class="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
+                                        <option value="" disabled>-- Chọn quốc tịch --</option>
+                                        <template x-for="country in countriesList" :key="country.alpha2Code">
+                                            <option :value="country.name" x-text="country.name"></option>
+                                        </template>
+                                    </select>
                                 </div>
                                 <div>
                                     <label class="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-2">Khu vực hoạt động <span class="text-red-500">*</span></label>
@@ -302,21 +313,55 @@
                 
                 availableLanguages: ['Tiếng Việt', 'Tiếng Anh', 'Tiếng Hàn', 'Tiếng Nhật', 'Tiếng Pháp', 'Tiếng Trung'],
                 availableSpecialties: ['Ẩm thực đường phố', 'Văn hóa - Lịch sử', 'Nhiếp ảnh', 'Mạo hiểm', 'Nightlife', 'Thiên nhiên', 'Nghệ thuật địa phương', 'Mua sắm'],
+                countriesList: [],
+                pendingAvatarFile: null,
+                pendingCoverFile: null,
+
+                previewAvatar(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        this.pendingAvatarFile = file;
+                        this.form.AvatarUrl = URL.createObjectURL(file);
+                    }
+                },
+                previewCover(event) {
+                    const file = event.target.files[0];
+                    if (file) {
+                        this.pendingCoverFile = file;
+                        this.form.CoverUrl = URL.createObjectURL(file);
+                    }
+                },
                 
                 // Deep copy initial data
                 form: {
-                    FullName: '', PhoneNumber: '', Bio: '', AvatarUrl: '', CoverUrl: '', CityArea: 'Hội An',
+                    FullName: '', PhoneNumber: '', Bio: '', AvatarUrl: '', CoverUrl: '', CityArea: 'Hội An', Nationality: '',
                     Languages: [], Specialties: [], Rating: 5.0, ReviewsCount: 0, BaseRate: 50000
                 },
 
                 async init() {
+                    if (window.initialProfile) {
+                        const initData = window.initialProfile;
+                        if (initData.full_name) this.form.FullName = initData.full_name;
+                        if (initData.phone_number) this.form.PhoneNumber = initData.phone_number;
+                        if (initData.bio) this.form.Bio = initData.bio;
+                        if (initData.avatar_url) this.form.AvatarUrl = initData.avatar_url;
+                        if (initData.cover_photo_url) this.form.CoverUrl = initData.cover_photo_url;
+                        if (initData.city_area) this.form.CityArea = initData.city_area;
+                        if (initData.nationality) this.form.Nationality = initData.nationality;
+                        if (initData.languages) this.form.Languages = typeof initData.languages === 'string' ? initData.languages.split(',').map(s => s.trim()) : initData.languages;
+                        if (initData.specialties) this.form.Specialties = typeof initData.specialties === 'string' ? initData.specialties.split(',').map(s => s.trim()) : initData.specialties;
+                        if (initData.average_rating) this.form.Rating = initData.average_rating;
+                        if (initData.total_reviews) this.form.ReviewsCount = initData.total_reviews;
+                        if (initData.base_rate) this.form.BaseRate = initData.base_rate;
+                    }
+
                     const token = localStorage.getItem('accessToken');
                     if (!token) {
                         window.location.href = '/Auth/Login';
                         return;
                     }
                     try {
-                        const res = await fetch('/api/auth/profile', {
+                        const res = await fetch('/Guide/GetProfileAjax', {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
                         if (res.ok) {
@@ -326,13 +371,25 @@
                             this.form.Bio = data.bio || '';
                             this.form.AvatarUrl = data.avatar_url || '/images/AVATAR.png';
                             this.form.CoverUrl = data.cover_photo_url || '';
-                            this.form.CityArea = data.specialization || 'Hội An';
+                            this.form.CityArea = data.city_area || 'Hội An';
+                            this.form.Nationality = data.nationality || '';
                             this.form.Languages = data.languages ? (typeof data.languages === 'string' ? data.languages.split(',').map(s => s.trim()) : data.languages) : [];
-                            this.form.Specialties = data.specialization ? data.specialization.split(',').map(s => s.trim()) : [];
+                            this.form.Specialties = data.specialties ? (typeof data.specialties === 'string' ? data.specialties.split(',').map(s => s.trim()) : data.specialties) : [];
                             this.form.Rating = data.average_rating || 5.0;
                             this.form.ReviewsCount = data.total_reviews || 0;
+                            this.form.BaseRate = data.base_rate || 50000;
+                            if (data.avatar_url) {
+                                localStorage.setItem('userAvatarUrl', data.avatar_url);
+                            }
                             window.initialProfile = JSON.parse(JSON.stringify(this.form));
                         }
+                        
+                        try {
+                            const countRes = await fetch('https://countries.dev/countries');
+                            let countData = await countRes.json();
+                            countData.sort((a, b) => a.name.localeCompare(b.name));
+                            this.countriesList = countData;
+                        } catch(e) { console.error('Failed to load countries', e); }
                     } catch (err) {
                         console.error('Error loading profile:', err);
                     }
@@ -359,22 +416,43 @@
                     }
                     const token = localStorage.getItem('accessToken');
                     try {
-                        const res = await fetch('/api/auth/profile', {
-                            method: 'PATCH',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                            body: JSON.stringify({
-                                fullName: this.form.FullName,
-                                phoneNumber: this.form.PhoneNumber,
-                                bio: this.form.Bio,
-                                languages: this.form.Languages.join(', '),
-                                specialization: this.form.Specialties.join(', '),
-                                avatarUrl: this.form.AvatarUrl
-                            })
+                        const formData = new FormData();
+                        formData.append('FullName', this.form.FullName);
+                        formData.append('PhoneNumber', this.form.PhoneNumber || '');
+                        formData.append('Bio', this.form.Bio);
+                        formData.append('Nationality', this.form.Nationality);
+                        formData.append('CityArea', this.form.CityArea);
+                        formData.append('Languages', this.form.Languages.join(', '));
+                        formData.append('Specialties', this.form.Specialties.join(', '));
+                        formData.append('BaseRate', this.form.BaseRate);
+
+                        if (this.pendingAvatarFile) formData.append('AvatarFile', this.pendingAvatarFile);
+                        if (this.pendingCoverFile) formData.append('CoverFile', this.pendingCoverFile);
+
+                        const res = await fetch('/Guide/UpdateProfileAjax', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${token}` },
+                            body: formData
                         });
                         const data = await res.json();
                         if (res.ok) {
                             showToast('success', 'Đã lưu thông tin hồ sơ thành công!');
+                            if (data.avatarUrl) {
+                                this.form.AvatarUrl = data.avatarUrl;
+                                localStorage.setItem('userAvatarUrl', data.avatarUrl);
+                            }
+                            if (this.form.FullName) {
+                                localStorage.setItem('userName', this.form.FullName);
+                                document.querySelectorAll('.guide-display-name').forEach(el => el.textContent = this.form.FullName);
+                            }
+                            const container = document.getElementById('guideHeaderAvatar');
+                            if (this.form.AvatarUrl && container) {
+                                container.innerHTML = `<img src="${this.form.AvatarUrl}" class="w-full h-full object-cover" />`;
+                            }
+                            if (data.coverUrl) this.form.CoverUrl = data.coverUrl;
                             window.initialProfile = JSON.parse(JSON.stringify(this.form));
+                            this.pendingAvatarFile = null;
+                            this.pendingCoverFile = null;
                         } else {
                             showToast('error', data.message || 'Lỗi khi lưu thông tin');
                         }

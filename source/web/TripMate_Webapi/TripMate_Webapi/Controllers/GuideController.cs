@@ -42,6 +42,144 @@ namespace TripMate_Webapi.Controllers
             _dashboardService = dashboardService;
         }
 
+        public class UpdateGuideProfileRequest
+        {
+            public string? FullName { get; set; }
+            public string? PhoneNumber { get; set; }
+            public string? Nationality { get; set; }
+            public string? CityArea { get; set; }
+            public string? Bio { get; set; }
+            public string? Languages { get; set; }
+            public string? Specialties { get; set; }
+            public decimal? BaseRate { get; set; }
+            public IFormFile? AvatarFile { get; set; }
+            public IFormFile? CoverFile { get; set; }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateProfileAjax([FromForm] UpdateGuideProfileRequest req, [FromServices] TripMate_WebAPI.Services.ICloudinaryService cloudinary)
+        {
+            var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                // Update User Profile
+                var profileResponse = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Where(x => x.Id == userId).Get();
+                var profile = profileResponse.Models.FirstOrDefault();
+                if (profile != null)
+                {
+                    if (req.FullName != null) profile.FullName = req.FullName;
+                    if (req.PhoneNumber != null) profile.Phone = req.PhoneNumber;
+                    if (req.Nationality != null) profile.Location = req.Nationality;
+
+                    if (req.AvatarFile != null)
+                    {
+                        var avatarUrl = await cloudinary.UploadImageAsync(req.AvatarFile, "tripmate_avatars");
+                        if (!string.IsNullOrEmpty(avatarUrl))
+                            profile.AvatarUrl = avatarUrl;
+                    }
+                    await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Update(profile);
+                }
+
+                // Update Guide Profile
+                var guideResponse = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Where(x => x.UserId == userId).Get();
+                var guideProfile = guideResponse.Models.FirstOrDefault();
+
+                if (guideProfile == null)
+                {
+                    guideProfile = new TripMate_Webapi.Entities.GuideProfileEntity
+                    {
+                        UserId = userId,
+                        Bio = req.Bio ?? "",
+                        CityArea = req.CityArea ?? "Hội An",
+                        PricePerHour = req.BaseRate ?? 50000,
+                        Languages = req.Languages != null ? req.Languages.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList() : new List<string>(),
+                        Specialties = req.Specialties != null ? req.Specialties.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList() : new List<string>()
+                    };
+
+                    if (req.CoverFile != null)
+                    {
+                        var coverUrl = await cloudinary.UploadImageAsync(req.CoverFile, "tripmate_covers");
+                        if (!string.IsNullOrEmpty(coverUrl))
+                            guideProfile.CoverPhotoUrl = coverUrl;
+                    }
+
+                    await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Insert(guideProfile);
+                }
+                else
+                {
+                    if (req.CityArea != null) guideProfile.CityArea = req.CityArea;
+                    if (req.Bio != null) guideProfile.Bio = req.Bio;
+                    if (req.BaseRate != null) guideProfile.PricePerHour = req.BaseRate;
+                    
+                    if (req.Languages != null) 
+                        guideProfile.Languages = req.Languages.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+                    
+                    if (req.Specialties != null) 
+                        guideProfile.Specialties = req.Specialties.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+
+                    if (req.CoverFile != null)
+                    {
+                        var coverUrl = await cloudinary.UploadImageAsync(req.CoverFile, "tripmate_covers");
+                        if (!string.IsNullOrEmpty(coverUrl))
+                            guideProfile.CoverPhotoUrl = coverUrl;
+                    }
+                    await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Update(guideProfile);
+                }
+
+                return Json(new { success = true, avatarUrl = profile?.AvatarUrl, coverUrl = guideProfile?.CoverPhotoUrl });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating guide profile");
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetProfileAjax()
+        {
+            var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                var profileResponse = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Where(x => x.Id == userId).Get();
+                var profile = profileResponse.Models.FirstOrDefault();
+
+                var guideResponse = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Where(x => x.UserId == userId).Get();
+                var guideProfile = guideResponse.Models.FirstOrDefault();
+
+                if (profile == null) 
+                    return NotFound(new { error = "Profile not found" });
+
+                return Json(new {
+                    full_name = profile.FullName,
+                    phone_number = profile.Phone,
+                    nationality = profile.Location,
+                    avatar_url = profile.AvatarUrl,
+                    bio = guideProfile?.Bio ?? "",
+                    cover_photo_url = guideProfile?.CoverPhotoUrl ?? "",
+                    city_area = guideProfile?.CityArea ?? "Hội An",
+                    languages = guideProfile?.Languages != null ? string.Join(", ", guideProfile.Languages) : "",
+                    specialties = guideProfile?.Specialties != null ? string.Join(", ", guideProfile.Specialties) : "",
+                    average_rating = guideProfile?.AverageRating ?? 5.0m,
+                    total_reviews = guideProfile?.TotalReviews ?? 0,
+                    base_rate = guideProfile?.PricePerHour ?? 50000m
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching guide profile");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+
+
         // GET: /Guide/Index (List of all Guides for Traveler)
         public IActionResult Index()
         {
@@ -166,24 +304,32 @@ namespace TripMate_Webapi.Controllers
 
         // GET: /Guide/Profile
         [Authorize(Roles = "guide")]
-        public IActionResult Profile()
+        public async Task<IActionResult> Profile()
         {
-            var profileData = new
+            var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
             {
-                FullName = "Trần Minh",
-                PhoneNumber = "+84901234567",
-                CityArea = "Hội An",
-                Bio = "Xin chào! Mình là Minh, sinh ra và lớn lên tại phố cổ Hội An. Với hơn 5 năm kinh nghiệm dẫn tour, mình đam mê chia sẻ những câu chuyện văn hóa, lịch sử và đặc biệt là ẩm thực địa phương ẩn giấu sau những con hẻm nhỏ mà ít du khách biết tới.",
-                Languages = new[] { "Tiếng Việt", "Tiếng Anh" },
-                Specialties = new[] { "Ẩm thực đường phố", "Văn hóa - Lịch sử" },
-                BaseRate = 150000,
-                Rating = 4.9m,
-                ReviewsCount = 124,
-                IsVerified = true,
-                AvatarUrl = "/images/AVATAR.png",
-                CoverUrl = "https://images.unsplash.com/photo-1596422846543-75c6fc197f0a?auto=format&fit=crop&q=80&w=1000"
-            };
-            ViewBag.Profile = profileData;
+                var profileResponse = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Where(x => x.Id == userId).Get();
+                var profile = profileResponse.Models.FirstOrDefault();
+
+                var guideResponse = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Where(x => x.UserId == userId).Get();
+                var guideProfile = guideResponse.Models.FirstOrDefault();
+
+                ViewBag.Profile = new {
+                    full_name = profile?.FullName ?? "",
+                    phone_number = profile?.Phone ?? "",
+                    nationality = profile?.Location ?? "",
+                    avatar_url = profile?.AvatarUrl ?? "/images/AVATAR.png",
+                    bio = guideProfile?.Bio ?? "",
+                    cover_photo_url = guideProfile?.CoverPhotoUrl ?? "",
+                    city_area = guideProfile?.CityArea ?? "Hội An",
+                    languages = guideProfile?.Languages != null ? string.Join(", ", guideProfile.Languages) : "",
+                    specialties = guideProfile?.Specialties != null ? string.Join(", ", guideProfile.Specialties) : "",
+                    average_rating = guideProfile?.AverageRating ?? 5.0m,
+                    total_reviews = guideProfile?.TotalReviews ?? 0,
+                    base_rate = guideProfile?.PricePerHour ?? 50000m
+                };
+            }
             return View();
         }
 

@@ -139,7 +139,8 @@ namespace TripMate_Webapi.Controllers
                     {
                         id = result.User?.Id,
                         email = result.User?.Email,
-                        role = userRole
+                        role = userRole,
+                        avatarUrl = result.User?.AvatarUrl
                     }
                 });
             }
