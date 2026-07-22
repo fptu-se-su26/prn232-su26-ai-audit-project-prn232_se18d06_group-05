@@ -576,6 +576,7 @@ namespace TripMate_Webapi.Controllers
                     var active = guideBookings.Select(b => new TripMate_WebAPI.DTOs.Chat.ActiveBookingDto
                     {
                         BookingId = b.Id ?? string.Empty,
+                        Status = BookingService.MapStatus(b.Status),
                         TravelerId = b.TravelerId,
                         TravelerName = b.TravelerName,
                         TravelerAvatar = b.TravelerAvatar,

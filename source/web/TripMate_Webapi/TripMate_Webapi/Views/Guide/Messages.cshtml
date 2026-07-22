@@ -36,11 +36,10 @@
             
             <template x-for="t in filteredThreads" :key="t.Id">
                 <button @@click="selectThread(t)" 
-                        :disabled="t.IsLocked"
                         class="w-full text-left p-3 rounded-xl transition-colors flex items-start gap-3 relative group"
                         :class="[
                             activeThread && activeThread.Id === t.Id ? 'bg-orange-50' : 'hover:bg-gray-50',
-                            t.IsLocked ? 'opacity-60 cursor-not-allowed' : ''
+                            t.IsLocked ? 'opacity-70' : ''
                         ]">
                     
                     <div class="relative">
@@ -119,7 +118,7 @@
                         <div class="flex flex-col group" :class="msg.IsMine ? 'items-end' : 'items-start'" :data-msg-id="msg.Id">
                             <div class="flex items-center gap-2 max-w-[75%]">
                                 <!-- Edit button outside the message bubble -->
-                                <template x-if="msg.IsMine && !msg.editing && !isUrl(msg.Text)">
+                                <template x-if="msg.IsMine && !activeThread.IsLocked && !msg.editing && !isUrl(msg.Text)">
                                     <button type="button" @@click.stop="startEdit(msg)" class="hidden group-hover:flex items-center justify-center w-8 h-8 rounded-full bg-white border border-gray-200 text-gray-500 shadow-sm hover:bg-gray-50 hover:text-primary transition-colors" title="Edit" aria-label="Edit message">
                                         <span class="material-symbols-outlined text-[14px]">edit</span>
                                     </button>
@@ -181,28 +180,53 @@
 
                 <!-- Chat Input Area -->
                 <div class="bg-white border-t border-gray-100 p-4">
-                    <form @@submit.prevent="sendMessage" class="flex items-end gap-3 max-w-4xl mx-auto" onsubmit="event.preventDefault(); return false;">
-                        <label class="w-10 h-10 flex-shrink-0 flex items-center justify-center text-gray-400 hover:text-primary transition-colors rounded-full hover:bg-gray-50 cursor-pointer">
-                            <input type="file" class="hidden" @@change="uploadAttachment($event)" />
-                            <span class="material-symbols-outlined text-[24px]">attach_file</span>
-                        </label>
-                        
-                        <div class="flex-1 bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-all">
-                            <textarea x-model="newMessage" 
-                                      @@keydown.enter.prevent="sendMessage"
-                                      @@input="resizeMessageTextarea"
-                                      rows="1" 
-                                      placeholder="Nhập tin nhắn..." 
-                                      class="w-full bg-transparent border-none text-gray-900 text-sm px-4 py-3 max-h-32 resize-none focus:ring-0 outline-none"></textarea>
+                    <template x-if="activeThread.IsLocked">
+                        <div class="max-w-4xl mx-auto h-16 rounded-2xl border border-gray-200 bg-gray-50 flex items-center justify-center text-gray-400">
+                            <span class="material-symbols-outlined text-[26px]">lock</span>
                         </div>
-                        
-                        <button type="button" 
-                                @@click="sendMessage()"
-                                :disabled="!newMessage.trim()"
-                                class="w-12 h-12 flex-shrink-0 rounded-full bg-primary text-white flex items-center justify-center transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary-dark shadow-sm">
-                            <span class="material-symbols-outlined text-[20px] ml-1">send</span>
-                        </button>
-                    </form>
+                    </template>
+                    <template x-if="!activeThread.IsLocked">
+                        <form @@submit.prevent="sendMessage" class="max-w-4xl mx-auto" onsubmit="event.preventDefault(); return false;">
+                            <div class="rounded-2xl border border-gray-200 bg-gray-50 overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-all">
+                                <div x-show="pendingFiles.length > 0" class="flex flex-wrap gap-2 px-3 pt-3">
+                                    <template x-for="(item, index) in pendingFiles" :key="item.Id">
+                                        <div class="relative flex items-center gap-2 max-w-[240px] rounded-xl border border-gray-200 bg-white p-2 pr-8 shadow-sm">
+                                            <template x-if="item.PreviewUrl">
+                                                <img :src="item.PreviewUrl" class="h-10 w-10 rounded-lg object-cover flex-shrink-0" />
+                                            </template>
+                                            <template x-if="!item.PreviewUrl">
+                                                <span class="material-symbols-outlined h-10 w-10 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center flex-shrink-0">insert_drive_file</span>
+                                            </template>
+                                            <div class="min-w-0">
+                                                <p class="truncate text-xs font-semibold text-gray-700" x-text="item.Name"></p>
+                                                <p class="text-[11px] text-gray-400" x-text="formatFileSize(item.Size)"></p>
+                                            </div>
+                                            <button type="button" @@click="removePendingFile(index)" :disabled="isSending" class="absolute right-1.5 top-1.5 h-6 w-6 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-40">
+                                                <span class="material-symbols-outlined text-[16px]">close</span>
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                                <div class="flex items-end gap-1 px-2 py-2">
+                                    <label class="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-full text-gray-400 hover:bg-white hover:text-primary cursor-pointer transition-colors">
+                                        <input type="file" multiple class="hidden" :disabled="isSending" @@change="queueAttachments($event)" />
+                                        <span class="material-symbols-outlined text-[22px]">attach_file</span>
+                                    </label>
+                                    <textarea x-model="newMessage"
+                                              @@keydown.enter.prevent="sendMessage"
+                                              @@input="resizeMessageTextarea"
+                                              :disabled="isSending"
+                                              rows="1"
+                                              placeholder="Nhập tin nhắn..."
+                                              class="min-h-10 flex-1 bg-transparent border-none text-gray-900 text-sm px-2 py-2.5 max-h-32 resize-none focus:ring-0 outline-none"></textarea>
+                                    <button x-show="canSend" x-transition type="button" @@click="sendMessage()" :disabled="isSending"
+                                            class="h-10 w-10 flex-shrink-0 rounded-full bg-primary text-white flex items-center justify-center hover:bg-primary-dark disabled:opacity-50 transition-all">
+                                        <span class="material-symbols-outlined text-[20px]">send</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </template>
                 </div>
             </div>
         </template>
@@ -217,6 +241,9 @@
                 activeThread: null,
                 searchQuery: '',
                 newMessage: '',
+                pendingFiles: [],
+                isSending: false,
+                _pendingFileSequence: 0,
                 _messageCreatedHandler: null,
                 _messageUpdatedHandler: null,
                 _chatReconnectedHandler: null,
@@ -233,7 +260,8 @@
                     const requestedBookingId = new URLSearchParams(window.location.search).get('bookingId');
                     if (requestedBookingId) {
                         const requestedThread = this.threads.find(thread =>
-                            String(thread.BookingId) === String(requestedBookingId));
+                            (thread.BookingIds || [thread.BookingId])
+                                .some(id => String(id) === String(requestedBookingId)));
                         if (requestedThread) await this.selectThread(requestedThread);
                     }
                     window.TripMateChat?.start();
@@ -242,6 +270,7 @@
                     document.removeEventListener('tripmate:message-created', this._messageCreatedHandler);
                     document.removeEventListener('tripmate:message-updated', this._messageUpdatedHandler);
                     document.removeEventListener('tripmate:chat-reconnected', this._chatReconnectedHandler);
+                    this.clearPendingFiles();
                 },
                 normalizeMessage(raw) {
                     if (!raw) return null;
@@ -291,10 +320,11 @@
                     const message = this.normalizeMessage(raw);
                     if (!message?.BookingId) return;
 
-                    let thread = this.threads.find(item => String(item.BookingId) === String(message.BookingId));
+                    const participantId = this.getMessageParticipantId(message);
+                    let thread = this.threads.find(item => String(this.getParticipantId(item)) === String(participantId));
                     if (!thread) {
                         await this.loadConversations();
-                        thread = this.threads.find(item => String(item.BookingId) === String(message.BookingId));
+                        thread = this.threads.find(item => String(this.getParticipantId(item)) === String(participantId));
                         if (!thread) return;
                     }
 
@@ -304,7 +334,7 @@
                     thread.TimeAgo = this.formatTimeAgo(message.SentAt);
 
                     const userId = localStorage.getItem('userId');
-                    const isActive = String(this.activeThread?.BookingId) === String(message.BookingId);
+                    const isActive = String(this.getParticipantId(this.activeThread)) === String(participantId);
                     if (message.ReceiverId === userId) {
                         if (isActive) {
                             thread.UnreadCount = 0;
@@ -321,7 +351,8 @@
                 handleRealtimeMessageUpdate(raw) {
                     const message = this.normalizeMessage(raw);
                     if (!message?.BookingId) return;
-                    const thread = this.threads.find(item => String(item.BookingId) === String(message.BookingId));
+                    const participantId = this.getMessageParticipantId(message);
+                    const thread = this.threads.find(item => String(this.getParticipantId(item)) === String(participantId));
                     const existing = thread?.Messages?.find(item => String(item.Id) === String(message.Id));
                     if (!existing) return;
                     existing.Text = message.Text;
@@ -331,9 +362,9 @@
                 },
                 async markThreadRead(thread) {
                     const token = localStorage.getItem('accessToken');
-                    if (!token || !thread?.BookingId) return;
+                    if (!token || !thread) return;
                     try {
-                        const response = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/mark-read`, {
+                        const response = await fetch(this.getMarkReadUrl(thread), {
                             method: 'POST',
                             headers: { 'Authorization': 'Bearer ' + token }
                         });
@@ -343,10 +374,10 @@
                     }
                 },
                 async reloadAfterReconnect() {
-                    const bookingId = this.activeThread?.BookingId;
+                    const participantId = this.getParticipantId(this.activeThread);
                     await this.loadConversations();
-                    if (!bookingId) return;
-                    const thread = this.threads.find(item => String(item.BookingId) === String(bookingId));
+                    if (!participantId) return;
+                    const thread = this.threads.find(item => String(this.getParticipantId(item)) === String(participantId));
                     if (thread) {
                         this.activeThread = thread;
                         await this.loadMessagesForThread(thread);
@@ -418,48 +449,85 @@
                     }
                     return this.truncateText(m, 80);
                 },
+                getParticipantId(thread) {
+                    return thread?.ParticipantId || thread?.OtherId || thread?.TravelerId || '';
+                },
+                getMessageParticipantId(message) {
+                    const userId = localStorage.getItem('userId');
+                    return String(message?.SenderId) === String(userId)
+                        ? message?.ReceiverId
+                        : message?.SenderId;
+                },
+                getMessagesUrl(thread) {
+                    const participantId = this.getParticipantId(thread);
+                    return participantId
+                        ? `/api/chat/conversations/participants/${encodeURIComponent(participantId)}/messages`
+                        : `/api/chat/conversations/${encodeURIComponent(thread?.BookingId || '')}/messages`;
+                },
+                getMarkReadUrl(thread) {
+                    const participantId = this.getParticipantId(thread);
+                    return participantId
+                        ? `/api/chat/conversations/participants/${encodeURIComponent(participantId)}/mark-read`
+                        : `/api/chat/conversations/${encodeURIComponent(thread?.BookingId || '')}/mark-read`;
+                },
 
-                async uploadAttachment(e) {
-                    const files = e.target.files || e.dataTransfer?.files;
-                    if (!files || files.length === 0) return;
-                    const file = files[0];
-                    if (!this.activeThread) return;
-                    if (this.activeThread.IsLocked) { showToast('warning', 'Booking chưa được xác nhận'); return; }
-
+                get canSend() {
+                    return !!this.newMessage.trim() || this.pendingFiles.length > 0;
+                },
+                queueAttachments(event) {
+                    const files = Array.from(event.target.files || []);
+                    for (const file of files) {
+                        this.pendingFiles.push({
+                            Id: `pending-${Date.now()}-${this._pendingFileSequence++}`,
+                            File: file,
+                            Name: file.name,
+                            Size: file.size,
+                            PreviewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null
+                        });
+                    }
+                    event.target.value = '';
+                },
+                removePendingFile(index) {
+                    const [removed] = this.pendingFiles.splice(index, 1);
+                    if (removed?.PreviewUrl) URL.revokeObjectURL(removed.PreviewUrl);
+                },
+                clearPendingFiles() {
+                    for (const item of this.pendingFiles) {
+                        if (item.PreviewUrl) URL.revokeObjectURL(item.PreviewUrl);
+                    }
+                    this.pendingFiles = [];
+                },
+                formatFileSize(bytes) {
+                    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+                    const units = ['B', 'KB', 'MB', 'GB'];
+                    const unit = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+                    const value = bytes / Math.pow(1024, unit);
+                    return `${value >= 10 || unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit]}`;
+                },
+                async uploadPendingAttachment(file) {
                     const token = localStorage.getItem('accessToken');
                     const userId = localStorage.getItem('userId');
-                    const receiverId = (this.activeThread.TravelerId === userId) ? this.activeThread.GuideId : this.activeThread.TravelerId;
+                    const receiverId = this.activeThread.ParticipantId || this.activeThread.OtherId;
 
                     const fd = new FormData();
                     fd.append('file', file);
                     fd.append('receiverId', receiverId || '');
 
-                    try {
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.BookingId)}/attachments`, {
-                            method: 'POST',
-                            headers: { 'Authorization': 'Bearer ' + token },
-                            body: fd
-                        });
-                        if (!res.ok) throw new Error('Upload failed');
-                        const msg = await res.json();
-                        const sent = {
-                            Id: msg.id || msg.Id,
-                            Text: msg.messageText || msg.MessageText || msg.message_text || msg.MessageText || '',
-                            SentAt: msg.sentAt || msg.SentAt,
-                            IsMine: true,
-                            Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-                            IsRead: !!(msg.isRead || msg.IsRead)
-                        };
-                        this.appendMessageIfMissing(this.activeThread, {
-                            ...msg,
-                            senderId: userId,
-                            receiverId
-                        });
-                        this.activeThread.LastMessage = sent.Text;
-                        this.activeThread.TimeAgo = 'Vừa xong';
-                        this.scrollToBottom();
-                    } catch (e) { console.error(e); showToast('error', 'Tải tệp thất bại'); }
-                    finally { e.target.value = null; }
+                    const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.ConfirmedBookingId)}/attachments`, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: fd
+                    });
+                    if (!res.ok) throw new Error('Upload failed');
+                    const msg = await res.json();
+                    this.appendMessageIfMissing(this.activeThread, {
+                        ...msg,
+                        senderId: userId,
+                        receiverId
+                    });
+                    this.activeThread.LastMessage = msg.messageText || msg.MessageText || '';
+                    this.activeThread.TimeAgo = 'Vừa xong';
+                    this.scrollToBottom();
                 },
 
                 // Message editing helpers
@@ -484,12 +552,13 @@
                 },
                 async saveEdit(msg) {
                     if (!this.activeThread || !msg || !msg.Id) return;
+                    if (this.activeThread.IsLocked || !this.activeThread.ConfirmedBookingId) return;
                     const token = localStorage.getItem('accessToken');
                     if (!token) return;
                     // prevent editing attachments
                     if (this.isUrl(msg.Text)) { showToast('warning', 'Không thể chỉnh sửa tệp đính kèm'); msg.editing = false; return; }
                     try {
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.BookingId)}/messages/${encodeURIComponent(msg.Id)}`, {
+                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.ConfirmedBookingId)}/messages/${encodeURIComponent(msg.Id)}`, {
                             method: 'PATCH',
                             headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
                             body: JSON.stringify({ Content: msg.editText })
@@ -533,9 +602,10 @@
                             const bookingId = c.bookingId || c.BookingId;
                             const travelerId = c.travelerId || c.TravelerId || '';
                             const guideId = c.guideId || c.GuideId || '';
+                            const otherId = (travelerId === userId) ? guideId : travelerId;
 
-                            // Fetch messages for this booking to build thread preview
-                            const mres = await fetch(`/api/chat/conversations/${encodeURIComponent(bookingId)}/messages`, {
+                            // Fetch the permanent participant-pair history for the preview.
+                            const mres = await fetch(this.getMessagesUrl({ ParticipantId: otherId, BookingId: bookingId }), {
                                 headers: { 'Authorization': 'Bearer ' + token }
                             });
                             const mdata = await mres.json();
@@ -554,11 +624,11 @@
                             // preview, but reverse the collection used by the chat window.
                             const newest = messages.length ? messages[0] : null;
                             const chronologicalMessages = messages.slice().reverse();
-                            const otherId = (travelerId === userId) ? guideId : travelerId;
 
                             threads.push({
                                 Id: bookingId,
                                 BookingId: bookingId,
+                                BookingIds: [bookingId],
                                 TravelerId: travelerId,
                                 GuideId: guideId,
                                 ParticipantId: otherId,
@@ -577,7 +647,7 @@
                                 Date: newest ? new Date(newest.SentAt).toLocaleDateString('vi-VN') : '',
                                 LastMessageAt: newest ? newest.SentAt : null,
                                 UnreadCount: messages.filter(m => !m.IsRead && m.ReceiverId === userId).length,
-                                IsLocked: false,
+                                IsLocked: true,
                                 OtherId: otherId
                             });
                         }
@@ -601,68 +671,111 @@
                                 const participantId = ab.travelerId || ab.TravelerId || ab.TravelerId || ab.TravelerUserId || ab.TravelerUserId || '';
                                 const displayName = ab.travelerName || ab.TravelerName || ab.TravelerName || 'Traveler';
                                 const avatar = ab.travelerAvatar || ab.TravelerAvatar || '/images/AVATAR.png';
+                                const bookingDate = ab.bookingDate || ab.BookingDate || '';
+                                const bookingStatus = Number(ab.status ?? ab.Status);
+                                const confirmedBookingId = bookingStatus === 1 ? bid : null;
                                 if (!participantId) continue;
-                                if (!this.threads.find(t => t.ParticipantId === participantId)) {
+                                const existing = this.threads.find(t => String(t.BookingId) === String(bid));
+                                if (existing) {
+                                    // Booking data is authoritative for the guide/traveler relationship.
+                                    existing.ParticipantId = participantId;
+                                    existing.OtherId = participantId;
+                                    existing.TravelerId = participantId;
+                                    existing.TravelerName = displayName || existing.TravelerName;
+                                    existing.TravelerAvatar = avatar || existing.TravelerAvatar;
+                                    existing.TourName = ab.tourName || ab.TourName || existing.TourName;
+                                    existing.BookingDate = bookingDate || existing.BookingDate;
+                                    existing.BookingStatus = bookingStatus;
+                                    existing.BookingIds = Array.from(new Set([...(existing.BookingIds || [existing.BookingId]), bid]));
+                                    existing.ConfirmedBookingId = confirmedBookingId || existing.ConfirmedBookingId;
+                                    existing.IsLocked = !existing.ConfirmedBookingId;
+                                    existing.Date ||= bookingDate ? new Date(bookingDate).toLocaleDateString('vi-VN') : '';
+                                } else {
                                     this.threads.push({
                                         Id: bid,
                                         BookingId: bid,
+                                        BookingIds: [bid],
+                                        BookingStatus: bookingStatus,
+                                        ConfirmedBookingId: confirmedBookingId,
                                         ParticipantId: participantId,
                                         TravelerId: participantId,
                                         GuideId: ab.guideProfileId || ab.GuideProfileId || ab.GuideId || '',
                                         TravelerName: displayName,
                                         TravelerAvatar: avatar,
+                                        TourName: ab.tourName || ab.TourName || '',
+                                        BookingDate: bookingDate,
                                         Messages: [],
                                         LastMessage: 'Không có tin nhắn',
                                         LastMessageAt: null,
                                         TimeAgo: '',
-                                        Date: ab.bookingDate ? new Date(ab.bookingDate).toLocaleDateString('vi-VN') : '',
+                                        Date: bookingDate ? new Date(bookingDate).toLocaleDateString('vi-VN') : '',
                                         UnreadCount: 0,
-                                        IsLocked: false,
+                                        IsLocked: !confirmedBookingId,
                                         OtherId: participantId
                                     });
                                 }
                             }
                         } catch (e) { console.warn('merge active bookings failed', e); }
 
-                        // Determine locked state for threads by fetching booking details
-                        // (UI mock set IsLocked for pending bookings; live API needs this)
-                        try {
-                            for (const th of this.threads) {
-                                try {
-                                    if (!th.BookingId) { th.IsLocked = false; continue; }
-                                    const bres = await fetch(`/api/bookings/${encodeURIComponent(th.BookingId)}`, {
-                                        headers: { 'Authorization': 'Bearer ' + token }
-                                    });
-                                    if (!bres.ok) { th.IsLocked = false; continue; }
-                                    const bdata = await bres.json();
-                                    // booking DTO may use 'status' or 'Status'
-                                    const status = (bdata && (bdata.status ?? bdata.Status));
-                                    // Consider 0 = pending (locked for messaging until confirmed)
-                                    th.IsLocked = (status === 0 || status === '0');
-                                } catch (e) {
-                                    console.warn('Failed to fetch booking status for', th.BookingId, e);
-                                    th.IsLocked = false;
-                                }
-                            }
-                        } catch (e) { console.warn('fetch booking status failed', e); }
-
-                        // Deduplicate threads by participant (one chat per traveler)
+                        // Show one sidebar thread per person. Always retain real
+                        // message data over an empty booking-only placeholder.
                         try {
                             const map = new Map();
+                            const requestedBookingId = new URLSearchParams(window.location.search).get('bookingId');
+                            const getThreadTime = thread => {
+                                const value = thread?.LastMessageAt || thread?.BookingDate;
+                                const time = value ? new Date(value).getTime() : 0;
+                                return Number.isNaN(time) ? 0 : time;
+                            };
+                            const getMessageTime = thread => {
+                                const time = thread?.LastMessageAt ? new Date(thread.LastMessageAt).getTime() : 0;
+                                return Number.isNaN(time) ? 0 : time;
+                            };
                             for (const th of this.threads) {
-                                const key = (th.TravelerId || th.OtherId || th.BookingId || '').toString();
+                                const participantId = th.ParticipantId || th.OtherId || th.TravelerId;
+                                const bookingId = th.BookingId || th.Id || '';
+                                const key = participantId
+                                    ? `participant:${String(participantId).trim().toLowerCase()}`
+                                    : (bookingId ? `booking:${String(bookingId)}` : null);
                                 if (!key) continue;
+
                                 const existing = map.get(key);
-                                const existingDate = existing && existing.Date ? new Date(existing.Date) : new Date(0);
-                                const thDate = th.Date ? new Date(th.Date) : new Date(0);
-                                // Prefer thread with messages, then prefer unlocked (not locked), then most recent date
-                                const preferThis = !existing
-                                    || ((th.Messages && th.Messages.length > 0) && (!(existing.Messages && existing.Messages.length > 0)))
-                                    || ((th.Messages && th.Messages.length > 0) === (existing.Messages && existing.Messages.length > 0) && (existing.IsLocked && !th.IsLocked))
-                                    || (thDate > existingDate);
-                                if (preferThis) {
+                                if (!existing) {
+                                    th.BookingIds = Array.from(new Set([...(th.BookingIds || []), bookingId].filter(Boolean)));
+                                    th.IsLocked = !th.ConfirmedBookingId;
+                                    if (th.ConfirmedBookingId) th.BookingId = th.ConfirmedBookingId;
                                     map.set(key, th);
+                                    continue;
                                 }
+
+                                const thMessageTime = getMessageTime(th);
+                                const existingMessageTime = getMessageTime(existing);
+                                const thHasMessages = thMessageTime > 0 || (th.Messages?.length || 0) > 0;
+                                const existingHasMessages = existingMessageTime > 0 || (existing.Messages?.length || 0) > 0;
+                                const preferThis = (thHasMessages && !existingHasMessages)
+                                    || (thHasMessages === existingHasMessages && thHasMessages
+                                        && (thMessageTime > existingMessageTime
+                                            || (thMessageTime === existingMessageTime
+                                                && (th.Messages?.length || 0) > (existing.Messages?.length || 0))))
+                                    || (!thHasMessages && !existingHasMessages
+                                        && getThreadTime(th) > getThreadTime(existing));
+
+                                const winner = preferThis ? th : existing;
+                                const bookingIds = Array.from(new Set([
+                                    ...(existing.BookingIds || [existing.BookingId]),
+                                    ...(th.BookingIds || [th.BookingId])
+                                ].filter(Boolean)));
+                                const confirmedThreads = [existing, th].filter(item => item.ConfirmedBookingId);
+                                const requestedConfirmed = confirmedThreads.find(item =>
+                                    requestedBookingId && String(item.ConfirmedBookingId) === String(requestedBookingId));
+                                const confirmedThread = requestedConfirmed || confirmedThreads
+                                    .sort((a, b) => getThreadTime(b) - getThreadTime(a))[0];
+
+                                winner.BookingIds = bookingIds;
+                                winner.ConfirmedBookingId = confirmedThread?.ConfirmedBookingId || null;
+                                winner.IsLocked = !winner.ConfirmedBookingId;
+                                if (winner.ConfirmedBookingId) winner.BookingId = winner.ConfirmedBookingId;
+                                map.set(key, winner);
                             }
                             this.threads = Array.from(map.values());
                         } catch (e) { console.warn('dedupe threads failed', e); }
@@ -690,10 +803,9 @@
                 },
 
                 async selectThread(thread) {
-                    if (thread.IsLocked) {
-                        showToast('warning', 'Booking này chưa được xác nhận. Chat sẽ mở khi bạn xác nhận booking.');
-                        return;
-                    }
+                    if (this.isSending) return;
+                    this.newMessage = '';
+                    this.clearPendingFiles();
                     this.activeThread = thread;
 
                     // Refresh messages for selected thread
@@ -715,7 +827,7 @@
                         thread._pageSize = pageSize;
                         thread._offset = 0; // offset in pages (0 == newest page)
                         // Fetch newest page (newest-first) and then reverse for chronological
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/messages?limit=${pageSize}&offset=0`, {
+                        const res = await fetch(`${this.getMessagesUrl(thread)}?limit=${pageSize}&offset=0`, {
                             headers: { 'Authorization': 'Bearer ' + token }
                         });
                         if (!res.ok) throw new Error('Không thể tải tin nhắn');
@@ -743,7 +855,7 @@
                         thread.UnreadCount = rows.filter(m => !(m.isRead || m.IsRead) && (m.receiverId || m.ReceiverId) === userId).length;
                         // Mark messages as read on server for this user
                         try {
-                            const markReadResponse = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/mark-read`, {
+                            const markReadResponse = await fetch(this.getMarkReadUrl(thread), {
                                 method: 'POST',
                                 headers: { 'Authorization': 'Bearer ' + token }
                             });
@@ -764,7 +876,7 @@
                     try {
                         const pageSize = thread._pageSize || 30;
                         const offset = thread._loaded || 0;
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(thread.BookingId)}/messages?limit=${pageSize}&offset=${offset}`, {
+                        const res = await fetch(`${this.getMessagesUrl(thread)}?limit=${pageSize}&offset=${offset}`, {
                             headers: { 'Authorization': 'Bearer ' + token }
                         });
                         if (!res.ok) throw new Error('Không thể tải tin nhắn cũ');
@@ -791,42 +903,42 @@
 
                 async sendMessage() {
                     const text = this.newMessage.trim();
-                    if (!text || !this.activeThread) return;
+                    if ((!text && this.pendingFiles.length === 0) || !this.activeThread || this.isSending) return;
+                    if (this.activeThread.IsLocked || !this.activeThread.ConfirmedBookingId) {
+                        return;
+                    }
 
                     const token = localStorage.getItem('accessToken');
                     const userId = localStorage.getItem('userId');
-                    const receiverId = (this.activeThread.TravelerId === userId) ? this.activeThread.GuideId : this.activeThread.TravelerId;
+                    const receiverId = this.activeThread.ParticipantId || this.activeThread.OtherId;
 
+                    this.isSending = true;
                     try {
-                        const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.BookingId)}/messages`, {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': 'Bearer ' + token,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify({ Content: text, ReceiverId: receiverId })
-                        });
+                        if (text) {
+                            const res = await fetch(`/api/chat/conversations/${encodeURIComponent(this.activeThread.ConfirmedBookingId)}/messages`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': 'Bearer ' + token,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({ Content: text, ReceiverId: receiverId })
+                            });
+                            if (!res.ok) throw new Error('Không gửi được tin nhắn');
+                            const msg = await res.json();
+                            this.appendMessageIfMissing(this.activeThread, {
+                                ...msg,
+                                senderId: userId,
+                                receiverId
+                            });
+                            this.activeThread.LastMessage = msg.messageText || msg.MessageText || text;
+                            this.activeThread.TimeAgo = 'Vừa xong';
+                            this.newMessage = '';
+                        }
 
-                        if (!res.ok) throw new Error('Không gửi được tin nhắn');
-                        const msg = await res.json();
-
-                        // msg may be the created message object
-                        const sent = {
-                            Id: msg.id || msg.Id,
-                            Text: msg.messageText || msg.MessageText || msg.message_text || msg.MessageText || text,
-                            SentAt: msg.sentAt || msg.SentAt,
-                            IsMine: true,
-                            Time: new Date(msg.sentAt || msg.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-                            IsRead: !!(msg.isRead || msg.IsRead)
-                        };
-
-                        this.appendMessageIfMissing(this.activeThread, {
-                            ...msg,
-                            senderId: userId,
-                            receiverId
-                        });
-                        this.activeThread.LastMessage = sent.Text;
-                        this.activeThread.TimeAgo = 'Vừa xong';
+                        while (this.pendingFiles.length > 0) {
+                            await this.uploadPendingAttachment(this.pendingFiles[0].File);
+                            this.removePendingFile(0);
+                        }
 
                         // Move thread to top
                         const index = this.threads.findIndex(t => t.Id === this.activeThread.Id);
@@ -835,12 +947,12 @@
                             this.threads.unshift(t);
                         }
 
-                        this.newMessage = '';
-
                         this.scrollToBottom();
                     } catch (err) {
                         console.error(err);
-                        showToast('error', 'Gửi tin nhắn thất bại');
+                        showToast('error', 'Không thể gửi tin nhắn hoặc tệp đính kèm');
+                    } finally {
+                        this.isSending = false;
                     }
                 },
 
