@@ -9,8 +9,8 @@ namespace TripMate_WebAPI.Controllers;
 
 /// <summary>
 /// Chat controller — uses chat_messages table via ChatService.
-/// Conversations are simulated by grouping messages by booking_id.
-/// Route param {bookingId} replaces the old {conversationId}.
+/// Conversations are grouped permanently by participant pair. A confirmed
+/// booking ID is retained only as the validated channel for message mutations.
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
@@ -38,6 +38,8 @@ public class ChatController : ControllerBase
                           ?? User.FindFirst("sub")?.Value ?? "";
     private string UserToken => Request.Headers.Authorization.ToString()
         .Replace("Bearer ", "").Trim();
+    private string? UserRole => User.FindFirst(ClaimTypes.Role)?.Value
+                              ?? User.FindFirst("role")?.Value;
 
     /// <summary>Lấy hoặc tạo conversation (= booking_id group)</summary>
     [HttpPost("conversations")]
@@ -60,6 +62,9 @@ public class ChatController : ControllerBase
         if (file == null || file.Length == 0) return BadRequest(new { message = "No file provided" });
         try
         {
+            await _chat.EnsureChatBookingIsConfirmedAsync(
+                bookingId, UserId, receiverId, UserToken);
+
             // Use dedicated folder per chat
             var folder = $"tripmate_chat/{bookingId}";
             // Use UploadFileAsync to support arbitrary file types (images/videos/docs)
@@ -70,6 +75,14 @@ public class ChatController : ControllerBase
             var msg = await _chat.SendMessageAsync(bookingId, UserId, receiverId, url, UserToken);
             await BroadcastMessageAsync("MessageCreated", msg);
             return Ok(msg);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
         }
         catch (Exception ex)
         {
@@ -83,7 +96,7 @@ public class ChatController : ControllerBase
     {
         try
         {
-            var list = await _chat.GetMyConversationsAsync(UserId, UserToken);
+            var list = await _chat.GetMyConversationsAsync(UserId, UserToken, UserRole);
             return Ok(new { conversations = list });
         }
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
@@ -120,6 +133,22 @@ public class ChatController : ControllerBase
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
     }
 
+    /// <summary>Get the permanent combined thread with another user.</summary>
+    [HttpGet("conversations/participants/{participantId}/messages")]
+    public async Task<IActionResult> GetMessagesWithParticipant(string participantId)
+    {
+        try
+        {
+            var q = HttpContext.Request.Query;
+            var limit = q.ContainsKey("limit") && int.TryParse(q["limit"], out var l) ? l : 50;
+            var offset = q.ContainsKey("offset") && int.TryParse(q["offset"], out var o) ? o : 0;
+            var messages = await _chat.GetMessagesWithUserAsync(
+                UserId, participantId, UserToken, limit, offset);
+            return Ok(new { messages });
+        }
+        catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+    }
+
     /// <summary>Mark messages in booking as read for current user</summary>
     [HttpPost("conversations/{bookingId}/mark-read")]
     public async Task<IActionResult> MarkRead(string bookingId)
@@ -127,6 +156,18 @@ public class ChatController : ControllerBase
         try
         {
             await _chat.MarkMessagesAsReadAsync(bookingId, UserId, UserToken);
+            return Ok(new { success = true });
+        }
+        catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+    }
+
+    /// <summary>Mark the permanent combined thread with another user as read.</summary>
+    [HttpPost("conversations/participants/{participantId}/mark-read")]
+    public async Task<IActionResult> MarkParticipantRead(string participantId)
+    {
+        try
+        {
+            await _chat.MarkMessagesWithUserAsReadAsync(UserId, participantId, UserToken);
             return Ok(new { success = true });
         }
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
@@ -157,6 +198,8 @@ public class ChatController : ControllerBase
             await BroadcastMessageAsync("MessageCreated", msg);
             return Ok(msg);
         }
+        catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
     }
 
@@ -166,13 +209,17 @@ public class ChatController : ControllerBase
     {
         try
         {
-            var updated = await _chat.EditMessageAsync(messageId, UserId, req.Content, UserToken);
+            var updated = await _chat.EditMessageAsync(bookingId, messageId, UserId, req.Content, UserToken);
             await BroadcastMessageAsync("MessageUpdated", updated);
             return Ok(updated);
         }
         catch (UnauthorizedAccessException)
         {
             return Forbid();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
         catch (Exception ex)
         {

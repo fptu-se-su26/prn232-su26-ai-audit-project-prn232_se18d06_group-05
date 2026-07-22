@@ -160,9 +160,10 @@ namespace TripMate_Webapi.Controllers
 
             if (!string.IsNullOrEmpty(travelerId))
             {
-                // Lấy các booking đã confirmed hoặc completed (Status >= 1)
+                // Include all statuses so one permanent guide thread can be
+                // activated only when at least one related booking is confirmed.
                 var bookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
-                var activeBookings = bookings.Where(b => b.Status >= 1).ToList();
+                var activeBookings = bookings.ToList();
                 
                 // Prepare active bookings info for client (include booking id + guide profile)
                 var activeList = activeBookings
@@ -170,6 +171,7 @@ namespace TripMate_Webapi.Controllers
                     .Select(b => new TripMate_WebAPI.DTOs.Chat.ActiveBookingDto
                     {
                         BookingId = b.Id ?? string.Empty,
+                        Status = b.Status,
                         GuideProfileId = b.GuideProfile?.Id,
                         GuideUserId = b.GuideProfile?.UserId,
                         GuideName = b.GuideProfile?.Profile?.FullName ?? b.GuideProfile?.UserId,
