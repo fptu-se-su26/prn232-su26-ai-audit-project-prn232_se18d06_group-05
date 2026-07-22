@@ -24,7 +24,7 @@ namespace TripMate_WebAPI.DTOs
         public int ReviewsCount { get; set; }
         
         // Legacy (kept for compat)
-        public string DateRange { get; set; } = "Tháng này";
+        public string DateRange { get; set; } = "This month";
         public int BookingProgress { get; set; } = 75;
         
         // Chart
