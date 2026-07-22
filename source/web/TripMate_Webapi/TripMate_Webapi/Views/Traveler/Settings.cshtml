@@ -57,8 +57,9 @@
 
                 <!-- Avatar -->
                 <div class="flex items-center gap-6 mb-8">
+                    <input type="file" id="avatarFileInput" accept="image/*" class="hidden" onchange="previewAvatar(event)">
                     <div class="w-24 h-24 rounded-full bg-primary-container text-primary flex items-center justify-center text-3xl font-bold shadow-sm border border-primary/20 relative group cursor-pointer"
-                         id="avatarCircle">
+                         id="avatarCircle" onclick="document.getElementById('avatarFileInput').click()">
                         <span id="avatarInitials">?</span>
                         <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <span class="material-symbols-outlined text-white">photo_camera</span>
@@ -226,6 +227,23 @@
         setTimeout(() => toast.classList.add('hidden'), 3000);
     }
 
+    let pendingAvatarFile = null;
+    function previewAvatar(event) {
+        const file = event.target.files[0];
+        if (file) {
+            pendingAvatarFile = file;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const avatarEl = document.getElementById('avatarInitials');
+                avatarEl.parentElement.style.backgroundImage = `url(${e.target.result})`;
+                avatarEl.parentElement.style.backgroundSize = 'cover';
+                avatarEl.parentElement.style.backgroundPosition = 'center';
+                avatarEl.textContent = '';
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
     async function loadSettings() {
         const token = localStorage.getItem('jwt_token');
         let profileData = {};
@@ -301,20 +319,31 @@
         const nationality = document.getElementById('nationalityInput').value.trim();
         const bio = document.getElementById('bioInput').value.trim();
 
+        let newAvatarUrl = null;
+
         if (token) {
             try {
-                await fetch('/Traveler/UpdateProfileAjax', {
+                const formData = new FormData();
+                formData.append('DisplayName', displayName);
+                formData.append('Phone', phone);
+                formData.append('Nationality', nationality);
+                if (pendingAvatarFile) {
+                    formData.append('AvatarFile', pendingAvatarFile);
+                }
+
+                const res = await fetch('/Traveler/UpdateProfileAjax', {
                     method: 'POST',
                     headers: { 
-                        'Authorization': 'Bearer ' + token,
-                        'Content-Type': 'application/json'
+                        'Authorization': 'Bearer ' + token
                     },
-                    body: JSON.stringify({
-                        displayName: displayName,
-                        phone: phone,
-                        nationality: nationality
-                    })
+                    body: formData
                 });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.avatarUrl) {
+                        newAvatarUrl = data.avatarUrl;
+                    }
+                }
             } catch (err) {
                 console.error("Failed to save to backend", err);
             }
@@ -325,6 +354,9 @@
         profile.phone = phone;
         profile.nationality = nationality;
         profile.bio = bio;
+        if (newAvatarUrl) {
+            profile.avatarUrl = newAvatarUrl;
+        }
         profile.updatedAt = new Date().toISOString();
 
         localStorage.setItem('travelerProfile', JSON.stringify(profile));
@@ -337,6 +369,7 @@
         }
         document.getElementById('avatarName').textContent = profile.displayName;
 
+        pendingAvatarFile = null;
         showToast('Profile saved successfully!', false);
     }
 
