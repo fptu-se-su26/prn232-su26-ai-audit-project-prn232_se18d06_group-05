@@ -118,6 +118,9 @@ builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, Supa
 builder.Services.AddHttpClient<BookingReminderService>();
 builder.Services.AddScoped<BookingReminderService>();
 builder.Services.AddHostedService<BookingReminderWorker>();
+builder.Services.AddHttpClient<BookingCompletionService>();
+builder.Services.AddScoped<BookingCompletionService>();
+builder.Services.AddHostedService<BookingCompletionWorker>();
 
 // ── Survey Service ────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SurveyService>();

@@ -130,7 +130,14 @@
                                     </div>
                                     <div class="flex gap-2 shrink-0">
                                         <template x-if="!b.hasReviewed">
-                                            <button @@click="leaveReview(b.id)" class="bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all">Review</button>
+                                            <a :href="'/Traveler/Review/' + b.id" class="bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all flex items-center gap-1">
+                                                <span class="material-symbols-outlined text-sm">star</span> Write Review
+                                            </a>
+                                        </template>
+                                        <template x-if="b.hasReviewed">
+                                            <span class="bg-green-100 text-green-700 px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1">
+                                                <span class="material-symbols-outlined text-sm">check_circle</span> Reviewed
+                                            </span>
                                         </template>
                                         <a :href="'/Traveler/BookingDetails/' + b.id" class="border border-outline-variant text-on-surface-variant hover:bg-surface-variant px-3 py-2 rounded-xl text-xs font-bold transition-all">Details</a>
                                     </div>

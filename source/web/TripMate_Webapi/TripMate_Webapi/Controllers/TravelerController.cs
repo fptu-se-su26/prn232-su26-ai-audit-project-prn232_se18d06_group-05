@@ -298,10 +298,32 @@ namespace TripMate_Webapi.Controllers
             if (booking == null)
                 return RedirectToAction("Trips");
 
+            // Auto-complete if eligible: confirmed, fully paid, date has passed
+            if (booking.Status == 1 && booking.AmountPaid >= booking.TotalAmount 
+                && booking.BookingDate.Date < DateTime.UtcNow.Date)
+            {
+                try
+                {
+                    await _bookingRepository.UpdateBookingStatusAsync(booking.Id, 2);
+                    booking.Status = 2;
+                }
+                catch { /* non-critical, background worker will catch it */ }
+            }
+
             // Chỉ cho review khi Status = 2 (Completed)
-            // Nếu chưa completed, redirect về Trips để tránh review sai
-            // Tạm thời bỏ check này để test UI, sẽ bật lại khi Guide flow hoàn thiện
-            // if (booking.Status != 2) return RedirectToAction("Trips");
+            if (booking.Status != 2)
+            {
+                TempData["ErrorMessage"] = "You can only review trips that have been completed.";
+                return RedirectToAction("Trips");
+            }
+
+            // Check if already reviewed
+            var alreadyReviewed = await _reviewRepository.HasReviewForBookingAsync(id);
+            if (alreadyReviewed)
+            {
+                TempData["ErrorMessage"] = "You have already reviewed this trip.";
+                return RedirectToAction("Trips");
+            }
 
             return View(booking);
         }
@@ -823,7 +845,7 @@ namespace TripMate_Webapi.Controllers
         }
 
         [HttpPost("Traveler/UpdateProfileAjax")]
-        public async Task<IActionResult> UpdateProfileAjax([FromBody] UpdateProfileRequest req)
+        public async Task<IActionResult> UpdateProfileAjax([FromForm] UpdateProfileRequest req, [FromServices] TripMate_WebAPI.Services.ICloudinaryService cloudinary, [FromServices] Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
         {
             var travelerId = GetCurrentUserId();
             if (string.IsNullOrEmpty(travelerId))
@@ -838,7 +860,10 @@ namespace TripMate_Webapi.Controllers
                     profile.Phone = req.Phone;
                     profile.Location = req.Nationality;
                     await _supabase.From<ProfileEntity>().Update(profile);
-                    return Json(new { success = true });
+                    // Invalidate header component cache
+                    cache.Remove($"HeaderProfile_{travelerId}");
+
+                    return Json(new { success = true, avatarUrl = profile.AvatarUrl });
                 }
                 return NotFound(new { error = "Profile not found" });
             }
@@ -859,6 +884,27 @@ namespace TripMate_Webapi.Controllers
 
             var bookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
             
+            // ── Opportunistic auto-completion ──────────────────────────────────
+            // If a booking is Confirmed (1), fully paid, and booking date is past,
+            // transition it to Completed (2) right now so the UI is always fresh.
+            var today = DateTime.UtcNow.Date;
+            foreach (var b in bookings)
+            {
+                if (b.Status == 1 && b.AmountPaid >= b.TotalAmount && b.BookingDate.Date < today)
+                {
+                    try
+                    {
+                        await _bookingRepository.UpdateBookingStatusAsync(b.Id, 2);
+                        b.Status = 2;
+                        _logger.LogInformation("[AutoComplete] Booking {BookingId} → Completed on read", b.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "[AutoComplete] Failed for booking {BookingId}", b.Id);
+                    }
+                }
+            }
+
             var resultList = new List<object>();
             foreach(var b in bookings)
             {
@@ -1138,6 +1184,20 @@ namespace TripMate_Webapi.Controllers
             {
                 return Ok(new { saved = false });
             }
+        }
+
+        // GET: /Traveler/Notifications
+        [HttpGet]
+        public async Task<IActionResult> Notifications([FromServices] TripMate_Webapi.Repositories.INotificationRepository _notificationRepo)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+            {
+                return RedirectToAction("LoginView", "Auth");
+            }
+
+            var notifications = await _notificationRepo.GetNotificationsByUserIdAsync(travelerId, 50); // Fetch latest 50
+            return View(notifications);
         }
     }
 
