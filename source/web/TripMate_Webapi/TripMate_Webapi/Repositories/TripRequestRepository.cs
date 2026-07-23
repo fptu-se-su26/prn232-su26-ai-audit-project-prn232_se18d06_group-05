@@ -99,7 +99,7 @@ namespace TripMate_Webapi.Repositories
             if (request != null)
             {
                 request.Status = request.Status == "open" ? "closed" : "open";
-                await _supabase.From<TripRequestEntity>().Update(request);
+                await _supabase.From<TripRequestEntity>().Where(x => x.Id == request.Id).Update(request);
             }
         }
 

@@ -87,7 +87,7 @@ namespace TripMate_Webapi.Controllers
                             profile.AvatarUrl = avatarUrl;
                     }
 
-                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Update(profile);
+                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Where(x => x.Id == profile.Id).Update(profile);
                     _logger.LogInformation("ProfileEntity update result: {Count} models returned", updateResult.Models.Count);
                 }
 
@@ -137,7 +137,7 @@ namespace TripMate_Webapi.Controllers
                             guideProfile.CoverPhotoUrl = coverUrl;
                     }
 
-                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Update(guideProfile);
+                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Where(x => x.Id == guideProfile.Id).Update(guideProfile);
                     _logger.LogInformation("GuideProfile UPDATE result: {Count} models", updateResult.Models.Count);
                 }
 
@@ -380,7 +380,7 @@ namespace TripMate_Webapi.Controllers
                     if (dto.PhoneNumber != null) profile.Phone = dto.PhoneNumber;
                     if (dto.AvatarUrl != null) profile.AvatarUrl = dto.AvatarUrl;
                     if (dto.Location != null) profile.Location = dto.Location;
-                    await _supabase.From<ProfileEntity>().Update(profile);
+                    await _supabase.From<ProfileEntity>().Where(x => x.Id == profile.Id).Update(profile);
                 }
 
                 // Update guide profile (guide_profiles table)
@@ -394,7 +394,7 @@ namespace TripMate_Webapi.Controllers
                     if (dto.CityArea != null) guideProfile.CityArea = dto.CityArea;
                     if (dto.PricePerHour != null) guideProfile.PricePerHour = dto.PricePerHour;
                     if (dto.CoverPhotoUrl != null) guideProfile.CoverPhotoUrl = dto.CoverPhotoUrl;
-                    await _supabase.From<GuideProfileEntity>().Update(guideProfile);
+                    await _supabase.From<GuideProfileEntity>().Where(x => x.Id == guideProfile.Id).Update(guideProfile);
                 }
 
                 return Ok(new { success = true });
