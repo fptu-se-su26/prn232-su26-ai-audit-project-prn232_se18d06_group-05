@@ -12,14 +12,14 @@ namespace TripMate_Webapi.Controllers
     {
         private readonly SupabaseAuthService _authService;
         private readonly IGoogleAuthService _googleAuthService;
-        private readonly IPasswordResetService _passwordResetService;
+        private readonly ISupabasePasswordResetService _passwordResetService;
         private readonly ILogger<AuthController> _logger;
         private readonly IConfiguration _configuration;
 
         public AuthController(
             SupabaseAuthService authService,
             IGoogleAuthService googleAuthService,
-            IPasswordResetService passwordResetService,
+            ISupabasePasswordResetService passwordResetService,
             ILogger<AuthController> logger, 
             IConfiguration configuration)
         {
@@ -140,6 +140,7 @@ namespace TripMate_Webapi.Controllers
                         id = result.User?.Id,
                         email = result.User?.Email,
                         role = userRole,
+                        fullName = result.User?.FullName,
                         avatarUrl = result.User?.AvatarUrl
                     }
                 });
@@ -328,7 +329,9 @@ namespace TripMate_Webapi.Controllers
                     {
                         id = result.User?.Id,
                         email = result.User?.Email,
-                        role = result.User?.Role ?? "traveler"
+                        role = result.User?.Role ?? "traveler",
+                        fullName = result.User?.FullName,
+                        avatarUrl = result.User?.AvatarUrl
                     }
                 });
             }
@@ -389,8 +392,7 @@ namespace TripMate_Webapi.Controllers
                 _logger.LogInformation("Reset password request with access token");
 
                 // Validate input
-                if (string.IsNullOrWhiteSpace(request.Email) || 
-                    string.IsNullOrWhiteSpace(request.Token) || 
+                if (string.IsNullOrWhiteSpace(request.AccessToken) || 
                     string.IsNullOrWhiteSpace(request.NewPassword))
                 {
                     return BadRequest(new { message = "Thiếu thông tin bắt buộc" });
@@ -401,7 +403,7 @@ namespace TripMate_Webapi.Controllers
                     return BadRequest(new { message = "Mật khẩu mới phải có ít nhất 6 ký tự" });
                 }
 
-                var success = await _passwordResetService.ResetPasswordAsync(request.Email, request.Token, request.NewPassword);
+                var success = await _passwordResetService.ResetPasswordAsync(request.AccessToken, request.RefreshToken, request.NewPassword);
 
                 if (success)
                 {

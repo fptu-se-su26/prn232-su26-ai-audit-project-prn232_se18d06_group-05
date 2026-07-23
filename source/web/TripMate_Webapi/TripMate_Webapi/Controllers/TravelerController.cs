@@ -288,7 +288,13 @@ namespace TripMate_Webapi.Controllers
                         profile.AvatarUrl = avatarUrl;
                 }
 
-                await _supabase.From<Entities.ProfileEntity>().Where(x => x.Id == profile.Id).Update(profile);
+                await _supabase.From<Entities.ProfileEntity>()
+                    .Where(x => x.Id == profile.Id)
+                    .Set(x => x.FullName, profile.FullName)
+                    .Set(x => x.Phone, profile.Phone)
+                    .Set(x => x.Location, profile.Location)
+                    .Set(x => x.AvatarUrl, profile.AvatarUrl)
+                    .Update();
             }
 
             return Json(new { success = true, avatarUrl = profile?.AvatarUrl });
@@ -321,7 +327,14 @@ namespace TripMate_Webapi.Controllers
                 if (dto.Location != null) profile.Location = dto.Location;
                 if (dto.AvatarUrl != null) profile.AvatarUrl = dto.AvatarUrl;
                 if (dto.Email != null) profile.Email = dto.Email;
-                await supabase.From<Entities.ProfileEntity>().Where(x => x.Id == profile.Id).Update(profile);
+                await supabase.From<Entities.ProfileEntity>()
+                    .Where(x => x.Id == profile.Id)
+                    .Set(x => x.FullName, profile.FullName)
+                    .Set(x => x.Phone, profile.Phone)
+                    .Set(x => x.Location, profile.Location)
+                    .Set(x => x.AvatarUrl, profile.AvatarUrl)
+                    .Set(x => x.Email, profile.Email)
+                    .Update();
             }
 
             return Ok(new { success = true, avatarUrl = profile?.AvatarUrl });
@@ -889,7 +902,13 @@ namespace TripMate_Webapi.Controllers
                         }
                     }
 
-                    await _supabase.From<ProfileEntity>().Where(x => x.Id == profile.Id).Update(profile);
+                    await _supabase.From<ProfileEntity>()
+                        .Where(x => x.Id == profile.Id)
+                        .Set(x => x.FullName, profile.FullName)
+                        .Set(x => x.Phone, profile.Phone)
+                        .Set(x => x.Location, profile.Location)
+                        .Set(x => x.AvatarUrl, profile.AvatarUrl)
+                        .Update();
                     return Json(new { success = true, avatarUrl = profile.AvatarUrl });
                 }
                 return NotFound(new { error = "Profile not found" });

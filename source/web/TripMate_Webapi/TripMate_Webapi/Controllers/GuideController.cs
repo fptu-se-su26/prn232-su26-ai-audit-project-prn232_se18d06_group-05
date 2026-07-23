@@ -87,7 +87,13 @@ namespace TripMate_Webapi.Controllers
                             profile.AvatarUrl = avatarUrl;
                     }
 
-                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Where(x => x.Id == profile.Id).Update(profile);
+                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>()
+                        .Where(x => x.Id == profile.Id)
+                        .Set(x => x.FullName, profile.FullName)
+                        .Set(x => x.Phone, profile.Phone)
+                        .Set(x => x.Location, profile.Location)
+                        .Set(x => x.AvatarUrl, profile.AvatarUrl)
+                        .Update();
                     _logger.LogInformation("ProfileEntity update result: {Count} models returned", updateResult.Models.Count);
                 }
 
@@ -137,7 +143,15 @@ namespace TripMate_Webapi.Controllers
                             guideProfile.CoverPhotoUrl = coverUrl;
                     }
 
-                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Where(x => x.Id == guideProfile.Id).Update(guideProfile);
+                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>()
+                        .Where(x => x.Id == guideProfile.Id)
+                        .Set(x => x.Bio, guideProfile.Bio)
+                        .Set(x => x.CityArea, guideProfile.CityArea)
+                        .Set(x => x.PricePerHour, guideProfile.PricePerHour)
+                        .Set(x => x.Languages, guideProfile.Languages)
+                        .Set(x => x.Specialties, guideProfile.Specialties)
+                        .Set(x => x.CoverPhotoUrl, guideProfile.CoverPhotoUrl)
+                        .Update();
                     _logger.LogInformation("GuideProfile UPDATE result: {Count} models", updateResult.Models.Count);
                 }
 
@@ -380,7 +394,13 @@ namespace TripMate_Webapi.Controllers
                     if (dto.PhoneNumber != null) profile.Phone = dto.PhoneNumber;
                     if (dto.AvatarUrl != null) profile.AvatarUrl = dto.AvatarUrl;
                     if (dto.Location != null) profile.Location = dto.Location;
-                    await _supabase.From<ProfileEntity>().Where(x => x.Id == profile.Id).Update(profile);
+                    await _supabase.From<ProfileEntity>()
+                        .Where(x => x.Id == profile.Id)
+                        .Set(x => x.FullName, profile.FullName)
+                        .Set(x => x.Phone, profile.Phone)
+                        .Set(x => x.Location, profile.Location)
+                        .Set(x => x.AvatarUrl, profile.AvatarUrl)
+                        .Update();
                 }
 
                 // Update guide profile (guide_profiles table)
@@ -394,7 +414,15 @@ namespace TripMate_Webapi.Controllers
                     if (dto.CityArea != null) guideProfile.CityArea = dto.CityArea;
                     if (dto.PricePerHour != null) guideProfile.PricePerHour = dto.PricePerHour;
                     if (dto.CoverPhotoUrl != null) guideProfile.CoverPhotoUrl = dto.CoverPhotoUrl;
-                    await _supabase.From<GuideProfileEntity>().Where(x => x.Id == guideProfile.Id).Update(guideProfile);
+                    await _supabase.From<GuideProfileEntity>()
+                        .Where(x => x.Id == guideProfile.Id)
+                        .Set(x => x.Bio, guideProfile.Bio)
+                        .Set(x => x.CityArea, guideProfile.CityArea)
+                        .Set(x => x.PricePerHour, guideProfile.PricePerHour)
+                        .Set(x => x.Languages, guideProfile.Languages)
+                        .Set(x => x.Specialties, guideProfile.Specialties)
+                        .Set(x => x.CoverPhotoUrl, guideProfile.CoverPhotoUrl)
+                        .Update();
                 }
 
                 return Ok(new { success = true });
