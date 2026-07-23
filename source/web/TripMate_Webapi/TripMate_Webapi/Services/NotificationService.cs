@@ -56,6 +56,7 @@ public sealed class NotificationService : INotificationService
     private readonly string _anonKey;
     private readonly string _serviceRoleKey;
     private readonly ILogger<NotificationService> _logger;
+    private readonly INotificationRepository _notificationRepository;
 
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
     {
@@ -67,32 +68,9 @@ public sealed class NotificationService : INotificationService
         IEmailService emailService,
         IHubContext<NotificationHub> hub,
         IConfiguration config,
-        ILogger<NotificationService> logger)
+        ILogger<NotificationService> logger,
+        INotificationRepository notificationRepository)
     {
-        private readonly HttpClient _http;
-        private readonly IEmailService _emailService;
-        private readonly string _supabaseUrl;
-        private readonly string _anonKey;
-        private readonly string _serviceRoleKey;
-        private readonly ILogger<NotificationService> _logger;
-        private readonly JsonSerializerOptions _json;
-        private readonly INotificationRepository _notificationRepository;
-
-        public NotificationService(
-            HttpClient http,
-            IEmailService emailService,
-            IConfiguration config,
-            ILogger<NotificationService> logger,
-            INotificationRepository notificationRepository)
-        {
-            _http = http;
-            _emailService = emailService;
-            _supabaseUrl = config["Supabase:Url"] ?? throw new Exception("Supabase URL not configured");
-            _anonKey = config["Supabase:AnonKey"] ?? throw new Exception("Supabase Anon Key not configured");
-            _serviceRoleKey = config["Supabase:ServiceRoleKey"] ?? throw new Exception("Supabase Service Role Key not configured");
-            _logger = logger;
-            _json = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            _notificationRepository = notificationRepository;
         _http = http;
         _emailService = emailService;
         _hub = hub;
@@ -100,6 +78,7 @@ public sealed class NotificationService : INotificationService
         _anonKey = config["Supabase:AnonKey"] ?? throw new InvalidOperationException("Supabase Anon Key not configured");
         _serviceRoleKey = config["Supabase:ServiceRoleKey"] ?? throw new InvalidOperationException("Supabase Service Role Key not configured");
         _logger = logger;
+        _notificationRepository = notificationRepository;
     }
 
     public async Task SendAsync(
@@ -454,6 +433,10 @@ public sealed class NotificationService : INotificationService
                 _logger.LogInformation("Realtime notification sent to user {UserId}: {Type} - {Title}", userId, type, title);
             }
             catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to save or send realtime notification to user {UserId}", userId);
+            }
+        }
     private async Task NotifyAdminsByEmailAsync(string guideName, string guideEmail)
     {
         try
