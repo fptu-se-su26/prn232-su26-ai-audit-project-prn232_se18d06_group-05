@@ -239,8 +239,12 @@
                 localStorage.setItem('userEmail', data.user?.email || '');
                 localStorage.setItem('userId', data.user?.id || '');
                 localStorage.setItem('userRole', data.user?.role || 'traveler');
+                // Always reset profile data to prevent leaking between accounts
+                localStorage.setItem('userName', data.user?.fullName || data.user?.email?.split('@@')[0] || '');
                 if (data.user?.avatarUrl) {
                     localStorage.setItem('userAvatarUrl', data.user.avatarUrl);
+                } else {
+                    localStorage.removeItem('userAvatarUrl');
                 }
 
                 const role = data.user?.role || 'traveler';
@@ -307,8 +311,12 @@
                 localStorage.setItem('userEmail', data.user?.email || email);
                 localStorage.setItem('userId', data.user?.id || '');
                 localStorage.setItem('userRole', data.user?.role || 'traveler');
+                // Always reset profile data to prevent leaking between accounts
+                localStorage.setItem('userName', data.user?.fullName || data.user?.email?.split('@@')[0] || '');
                 if (data.user?.avatarUrl) {
                     localStorage.setItem('userAvatarUrl', data.user.avatarUrl);
+                } else {
+                    localStorage.removeItem('userAvatarUrl');
                 }
 
                 const role = data.user?.role || 'traveler';

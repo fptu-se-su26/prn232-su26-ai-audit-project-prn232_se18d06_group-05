@@ -67,6 +67,12 @@
         ::-webkit-scrollbar-thumb { background: #d3c4b9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #ff7a00; }
     </style>
+    <script>
+        // Catch Supabase Auth recovery tokens on any page and redirect to ResetPassword
+        if (window.location.hash && window.location.hash.includes('type=recovery')) {
+            window.location.href = '/Auth/ResetPassword' + window.location.hash;
+        }
+    </script>
 </head>
 @* in Views/Shared/_Layout.cshtml, before </body> *@
 @RenderSection("Scripts", required: false)
@@ -317,6 +323,8 @@
             localStorage.removeItem('userEmail');
             localStorage.removeItem('userId');
             localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('userAvatarUrl');
             localStorage.removeItem('surveyCompleted');
             localStorage.removeItem('personalityProfile');
             
