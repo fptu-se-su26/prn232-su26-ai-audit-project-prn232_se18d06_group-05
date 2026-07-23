@@ -288,7 +288,7 @@ namespace TripMate_Webapi.Controllers
                         profile.AvatarUrl = avatarUrl;
                 }
 
-                await _supabase.From<Entities.ProfileEntity>().Update(profile);
+                await _supabase.From<Entities.ProfileEntity>().Where(x => x.Id == profile.Id).Update(profile);
             }
 
             return Json(new { success = true, avatarUrl = profile?.AvatarUrl });
@@ -321,7 +321,7 @@ namespace TripMate_Webapi.Controllers
                 if (dto.Location != null) profile.Location = dto.Location;
                 if (dto.AvatarUrl != null) profile.AvatarUrl = dto.AvatarUrl;
                 if (dto.Email != null) profile.Email = dto.Email;
-                await supabase.From<Entities.ProfileEntity>().Update(profile);
+                await supabase.From<Entities.ProfileEntity>().Where(x => x.Id == profile.Id).Update(profile);
             }
 
             return Ok(new { success = true, avatarUrl = profile?.AvatarUrl });
@@ -889,7 +889,7 @@ namespace TripMate_Webapi.Controllers
                         }
                     }
 
-                    await _supabase.From<ProfileEntity>().Update(profile);
+                    await _supabase.From<ProfileEntity>().Where(x => x.Id == profile.Id).Update(profile);
                     return Json(new { success = true, avatarUrl = profile.AvatarUrl });
                 }
                 return NotFound(new { error = "Profile not found" });
