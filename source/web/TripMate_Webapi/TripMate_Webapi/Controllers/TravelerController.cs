@@ -842,6 +842,7 @@ namespace TripMate_Webapi.Controllers
             public string DisplayName { get; set; } = string.Empty;
             public string Phone { get; set; } = string.Empty;
             public string Nationality { get; set; } = string.Empty;
+            public IFormFile? AvatarFile { get; set; }
         }
 
         [HttpPost("Traveler/UpdateProfileAjax")]
@@ -856,9 +857,19 @@ namespace TripMate_Webapi.Controllers
                 var profile = await _supabase.From<ProfileEntity>().Where(x => x.Id == travelerId).Single();
                 if (profile != null)
                 {
-                    profile.FullName = req.DisplayName;
-                    profile.Phone = req.Phone;
-                    profile.Location = req.Nationality;
+                    if (req.DisplayName != null) profile.FullName = req.DisplayName;
+                    if (req.Phone != null) profile.Phone = req.Phone;
+                    if (req.Nationality != null) profile.Location = req.Nationality;
+                    
+                    if (req.AvatarFile != null)
+                    {
+                        var avatarUrl = await cloudinary.UploadImageAsync(req.AvatarFile, "tripmate_avatars");
+                        if (!string.IsNullOrEmpty(avatarUrl))
+                        {
+                            profile.AvatarUrl = avatarUrl;
+                        }
+                    }
+
                     await _supabase.From<ProfileEntity>().Update(profile);
                     // Invalidate header component cache
                     cache.Remove($"HeaderProfile_{travelerId}");
