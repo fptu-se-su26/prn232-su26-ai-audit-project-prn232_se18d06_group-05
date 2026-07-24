@@ -105,28 +105,55 @@ feat, fix, docs, test, refactor, style, chore
 
 ## 8. How to Run
 
-```text
-1. Prerequisites
-Flutter SDK
-flutter --version
-# >= 3.11.3
-.NET SDK
-dotnet --version
-# >= 7.0
-2. Clone & Setup
+### Prerequisites
+
+Ensure you have the following installed before running the project:
+
+- **.NET SDK**: `>= 9.0`
+  ```bash
+  dotnet --version
+  ```
+
+- **Node.js & npm**: *(For frontend toolings/Tailwind CSS)*
+  ```bash
+  npm --version
+  ```
+
+### 1. Clone & Setup
+
+Clone the repository to your local machine:
+
+```bash
 git clone <repository-url>
-cd flutter_tripmate_application
-
-Install dependencies:
-
-flutter pub get
-
-Environment setup:
-
-cp .env.example .env
-
-Update .env with Supabase credentials.
+cd tripmate_flutter
 ```
+
+### 2. Environment Variables (.env)
+
+The project relies on environment variables for API keys and database configuration (Supabase, PayOS, Cloudinary, etc.).
+Copy the example environment file or create a new `.env` file at the root of the `.NET` project and update it with your actual credentials:
+
+```bash
+cp .env.example .env
+```
+*(Make sure to fill in all the required keys before running the server).*
+
+### 3. Running the Web Application (Backend & Web UI)
+
+Navigate to the Web API project directory:
+
+```bash
+cd source/web/TripMate_Webapi/TripMate_Webapi
+```
+
+Restore dependencies and run the .NET application:
+
+```bash
+dotnet restore
+dotnet run
+```
+The web application will start. You can visit the provided local URL (e.g. `http://localhost:5000` or `https://localhost:7000`) in your browser.
+
 
 ---
 

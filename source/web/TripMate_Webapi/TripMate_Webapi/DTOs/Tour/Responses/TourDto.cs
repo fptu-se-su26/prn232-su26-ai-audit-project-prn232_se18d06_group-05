@@ -13,6 +13,7 @@ public record TourDto(
     decimal DurationHours,
     decimal PricePerSession,
     decimal? PricePerPerson,
+    int IncludedGuestCount,
     int MaxGroupSize,
     List<string> IncludedItems,
     List<string> Tags,

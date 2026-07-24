@@ -10,6 +10,7 @@ public record CreateTourRequest(
     decimal DurationHours,
     decimal PricePerSession,
     decimal? PricePerPerson = null,
+    int IncludedGuestCount = 1,
     int MaxGroupSize = 6,
     List<string>? IncludedItems = null,
     List<string>? Tags = null

@@ -439,6 +439,8 @@
                     localStorage.setItem('userEmail', data.user?.email || email);
                     localStorage.setItem('userId', data.user?.id || '');
                     localStorage.setItem('userRole', data.user?.role || role);
+                    localStorage.setItem('userName', data.user?.fullName || email.split('@@')[0] || '');
+                    localStorage.removeItem('userAvatarUrl');
                     window.location.href = '/Survey/Personality';
                 } else {
                     alert('Đăng ký thành công! Vui lòng đăng nhập.');

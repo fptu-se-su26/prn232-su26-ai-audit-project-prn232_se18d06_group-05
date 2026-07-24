@@ -39,6 +39,7 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/Dashboard
         public async Task<IActionResult> Dashboard()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 // Load data from services
@@ -50,11 +51,31 @@ namespace TripMate_Webapi.Controllers
                 var reviews = await _adminService.GetReviewsAsync();
 
                 // Compute real numbers from DB
-                var realTotalRevenue = kpis.TotalGmv; 
+                var realTotalRevenue = kpis.PlatformRevenue; 
                 var realNewBookings = bookings.Count;
                 var realActiveUsers = users.Count(u => u.IsActive).ToString(); 
-                var realBookingProgress = realNewBookings > 0 ? (int)Math.Min(100, (realNewBookings * 100) / 100) : 0; 
+                var realBookingProgress = (int)Math.Min(100, (realNewBookings * 100.0) / 50.0); // Target: 50 bookings
+
+                // Compute revenue growth dynamically (This month platform fee vs last month)
+                var now = DateTime.UtcNow;
+                var thisMonthBookings = bookings.Where(b => b.CreatedAt.Month == now.Month && b.CreatedAt.Year == now.Year && b.Status == 2).ToList();
+                var lastMonthBookings = bookings.Where(b => b.CreatedAt.Month == now.AddMonths(-1).Month && b.CreatedAt.Year == now.AddMonths(-1).Year && b.Status == 2).ToList();
                 
+                decimal thisMonthRevenue = thisMonthBookings.Sum(b => b.PlatformFee);
+                decimal lastMonthRevenue = lastMonthBookings.Sum(b => b.PlatformFee);
+                decimal revenueGrowth = 0.0m;
+                if (lastMonthRevenue > 0)
+                {
+                    revenueGrowth = Math.Round(((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100, 1);
+                }
+                else if (thisMonthRevenue > 0)
+                {
+                    revenueGrowth = 100.0m; // 100% growth if there is new revenue and none last month
+                }
+                
+                // Load pending applications
+                var pendingApps = await _guideApprovalService.GetPendingApplicationsAsync();
+
                 // Prepare view model
                 var viewModel = new DashboardViewModel
                 {
@@ -62,13 +83,14 @@ namespace TripMate_Webapi.Controllers
                     AdminRole = "Super Admin",
                     DateRange = $"{DateTime.Now.AddDays(-7):MMM dd, yyyy} - {DateTime.Now:MMM dd, yyyy}",
                     TotalRevenue = realTotalRevenue,
-                    RevenueGrowth = 15.0m, 
+                    RevenueGrowth = revenueGrowth, 
                     NewBookings = realNewBookings,
-                    BookingProgress = realBookingProgress == 0 ? 80 : realBookingProgress, 
+                    BookingProgress = realBookingProgress, 
                     ActiveUsers = realActiveUsers,
-                    PendingCount = tours.Count(),
+                    PendingCount = pendingGuidesCount,
                     PendingGuidesCount = pendingGuidesCount,
                     PendingTours = tours.Take(3).ToList(),
+                    PendingApplications = pendingApps.Take(3).ToList(),
                     RecentActivities = GetRecentActivities(bookings, reviews, users)
                 };
 
@@ -84,6 +106,7 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/Survey
         public IActionResult Survey()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             return View();
         }
 
@@ -93,6 +116,7 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/GuideApprovals
         public async Task<IActionResult> GuideApprovals()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 var pendingApplications = await _guideApprovalService.GetPendingApplicationsAsync();
@@ -116,6 +140,7 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/GuideDetail/{id}
         public async Task<IActionResult> GuideDetail(string id)
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 var application = await _guideApprovalService.GetApplicationByIdAsync(id);
@@ -136,18 +161,21 @@ namespace TripMate_Webapi.Controllers
         // GET: /Admin/Escrow
         public IActionResult Escrow()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             return View();
         }
 
         // GET: /Admin/Moderation
         public IActionResult Moderation()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             return View();
         }
 
         // GET: /Admin/Guides
         public async Task<IActionResult> Guides()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 var guides = await _adminService.GetGuidesAsync();
@@ -160,9 +188,42 @@ namespace TripMate_Webapi.Controllers
             }
         }
 
+        // GET: /Admin/Users
+        public async Task<IActionResult> Users()
+        {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
+            try
+            {
+                var users = await _adminService.GetUsersAsync();
+                return View(users);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading users list view");
+                return View(new List<TripMate_WebAPI.DTOs.Auth.ProfileRow>());
+            }
+        }
+
+        // GET: /Admin/Bookings
+        public async Task<IActionResult> Bookings()
+        {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
+            try
+            {
+                var bookings = await _adminService.GetBookingsAsync();
+                return View(bookings);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading bookings list view");
+                return View(new List<AdminBookingRow>());
+            }
+        }
+
         // GET: /Admin/Analytics
         public async Task<IActionResult> Analytics()
         {
+            if (!IsAdmin()) return Redirect("/Auth/Login");
             try
             {
                 var kpis = await _adminService.GetKpisAsync();
@@ -485,7 +546,7 @@ namespace TripMate_Webapi.Controllers
         {
             // 1. Fallback for seed user email
             var email = User.FindFirst(ClaimTypes.Email)?.Value ?? User.FindFirst("email")?.Value;
-            if (email == "admin@tripmate.com") return true;
+            if (email == "admin@tripmate.com" || email == "admin2@tripmate.com") return true;
 
             // 2. Main claim check (JWT user_metadata claim)
             var metadataClaim = User.FindFirst("user_metadata")?.Value;
@@ -715,6 +776,34 @@ namespace TripMate_Webapi.Controllers
             }
         }
 
+        // GET: /api/admin/users/export
+        [HttpGet("/api/admin/users/export")]
+        public async Task<IActionResult> ExportUsers()
+        {
+            if (!IsAdmin()) return Forbid();
+
+            try
+            {
+                var users = await _adminService.GetUsersAsync();
+
+                var builder = new System.Text.StringBuilder();
+                builder.AppendLine("User ID,Email,Full Name,Phone Number,Role,Is Active,Created At");
+
+                foreach (var u in users)
+                {
+                    builder.AppendLine($"\"{u.Id}\",\"{u.Email}\",\"{u.FullName}\",\"{u.PhoneNumber}\",\"{u.Role}\",{u.IsActive},\"{u.CreatedAt:yyyy-MM-dd HH:mm:ss}\"");
+                }
+
+                var content = System.Text.Encoding.UTF8.GetBytes(builder.ToString());
+                return File(content, "text/csv", $"users_export_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error exporting users");
+                return StatusCode(500, new { message = "File export error" });
+            }
+        }
+
         // POST: /api/admin/users/{id}/role
         [HttpPost("/api/admin/users/{id}/role")]
         public async Task<IActionResult> ForceUserRole(string id, [FromBody] RoleUpdateRequest request)
@@ -920,6 +1009,7 @@ namespace TripMate_Webapi.Controllers
         public int PendingCount { get; set; }
         public int PendingGuidesCount { get; set; }
         public List<ExperiencePackageRow> PendingTours { get; set; } = new();
+        public List<GuideApplicationRow> PendingApplications { get; set; } = new();
         public List<ActivityItem> RecentActivities { get; set; } = new();
     }
 

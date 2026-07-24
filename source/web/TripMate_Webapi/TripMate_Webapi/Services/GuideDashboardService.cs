@@ -38,7 +38,7 @@ namespace TripMate_WebAPI.Services
 
             vm.GuideName = guideProfile.Profile?.FullName ?? "Guide";
             vm.AvatarUrl = guideProfile.Profile?.AvatarUrl ?? "/images/AVATAR.png";
-            vm.Location = guideProfile.CityArea ?? "Chưa cập nhật";
+            vm.Location = guideProfile.CityArea ?? "Not updated";
             vm.IsVerified = guideProfile.IsVerified ?? false;
             vm.AverageRating = guideProfile.AverageRating ?? 0;
             vm.ReviewsCount = guideProfile.TotalReviews ?? 0;
@@ -149,10 +149,10 @@ namespace TripMate_WebAPI.Services
             // 8. Recent Activities (Mock for MVP)
             vm.RecentActivities = new List<ActivityItem>
             {
-                new ActivityItem { Icon = "person_add", Title = "Booking mới", Description = "Phạm Thị D đặt tour Hội An Phố Cổ", TimeAgo = "2 giờ trước", IconBgClass = "bg-green-100", IconTextClass = "text-green-600" },
-                new ActivityItem { Icon = "star", Title = "Đánh giá mới", Description = "Trần Thị B đánh giá 5 sao cho tour Sapa", TimeAgo = "5 giờ trước", IconBgClass = "bg-yellow-100", IconTextClass = "text-yellow-600" },
-                new ActivityItem { Icon = "check_circle", Title = "Tour hoàn thành", Description = "Tour Đà Nẵng - Hội An kết thúc thành công", TimeAgo = "1 ngày trước", IconBgClass = "bg-blue-100", IconTextClass = "text-blue-600" },
-                new ActivityItem { Icon = "payments", Title = "Nhận thanh toán", Description = "₫2,500,000 từ booking #1234", TimeAgo = "2 ngày trước", IconBgClass = "bg-primary/10", IconTextClass = "text-primary" }
+                new ActivityItem { Icon = "person_add", Title = "New booking", Description = "Phạm Thị D booked the Hoi An Ancient Town tour", TimeAgo = "2 hours ago", IconBgClass = "bg-green-100", IconTextClass = "text-green-600" },
+                new ActivityItem { Icon = "star", Title = "New review", Description = "Trần Thị B left a 5-star review for the Sapa tour", TimeAgo = "5 hours ago", IconBgClass = "bg-yellow-100", IconTextClass = "text-yellow-600" },
+                new ActivityItem { Icon = "check_circle", Title = "Tour completed", Description = "The Da Nang - Hoi An tour was completed successfully", TimeAgo = "1 day ago", IconBgClass = "bg-blue-100", IconTextClass = "text-blue-600" },
+                new ActivityItem { Icon = "payments", Title = "Payment received", Description = "₫2,500,000 from booking #1234", TimeAgo = "2 days ago", IconBgClass = "bg-primary/10", IconTextClass = "text-primary" }
             };
 
             return vm;

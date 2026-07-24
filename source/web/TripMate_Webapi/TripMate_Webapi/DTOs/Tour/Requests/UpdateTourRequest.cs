@@ -10,6 +10,7 @@ public record UpdateTourRequest(
     decimal? DurationHours = null,
     decimal? PricePerSession = null,
     decimal? PricePerPerson = null,
+    int? IncludedGuestCount = null,
     int? MaxGroupSize = null,
     List<string>? IncludedItems = null,
     List<string>? Tags = null,

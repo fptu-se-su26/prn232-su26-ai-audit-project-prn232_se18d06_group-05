@@ -6,6 +6,6 @@ namespace TripMate_WebAPI.Services
     public interface ICalendarService
     {
         Task<CalendarDataDto> GetCalendarDataAsync(string guideProfileId, string start, string end);
-        Task SaveBlockedDatesAsync(string guideProfileId, SaveBlockedDatesRequest req);
+        Task<SaveBlockedDatesResult> SaveBlockedDatesAsync(string guideProfileId, SaveBlockedDatesRequest req);
     }
 }

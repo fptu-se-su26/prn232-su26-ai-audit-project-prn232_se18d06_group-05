@@ -16,6 +16,7 @@ namespace TripMate_WebAPI.Services
         private readonly string _supabaseUrl;
         private readonly string _anonKey;
         private readonly string _recaptchaSecretKey;
+        private readonly string _appUrl;
         private readonly ILogger<SupabasePasswordResetService> _logger;
         
         private static readonly JsonSerializerOptions _json = new()
@@ -33,6 +34,7 @@ namespace TripMate_WebAPI.Services
             _supabaseUrl = config["Supabase:Url"] ?? throw new Exception("Supabase URL not configured");
             _anonKey = config["Supabase:AnonKey"] ?? throw new Exception("Supabase Anon Key not configured");
             _recaptchaSecretKey = config["ReCaptcha:SecretKey"] ?? "6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe"; // Test key as fallback
+            _appUrl = config["AppUrl"] ?? "http://localhost:5122";
             _logger = logger;
         }
 
@@ -49,16 +51,11 @@ namespace TripMate_WebAPI.Services
                 }
 
                 // Use Supabase Auth to send password reset email
-                var body = JsonSerializer.Serialize(new 
-                { 
-                    email,
-                    options = new
-                    {
-                        redirectTo = "https://tripmate-w9sv.onrender.com/Auth/ResetPassword"
-                    }
-                });
+                // GoTrue expects redirect_to in the query string, not the body
+                var body = JsonSerializer.Serialize(new { email });
+                var redirectUrl = $"{_appUrl.TrimEnd('/')}/Auth/ResetPassword";
                 
-                var request = new HttpRequestMessage(HttpMethod.Post, $"{_supabaseUrl}/auth/v1/recover");
+                var request = new HttpRequestMessage(HttpMethod.Post, $"{_supabaseUrl}/auth/v1/recover?redirect_to={Uri.EscapeDataString(redirectUrl)}");
                 request.Headers.Add("apikey", _anonKey);
                 request.Content = new StringContent(body, Encoding.UTF8, "application/json");
 

@@ -1051,8 +1051,8 @@
                             // Use the shared Guide layout toast only after persistence succeeds.
                             showToast(
                                 'success',
-                                'Offer của bạn đã được lưu và gửi tới traveler.',
-                                'Gửi offer thành công',
+                                'Your offer has been saved and sent to the traveler.',
+                                'Offer sent successfully',
                                 4500
                             );
                         }
@@ -1060,8 +1060,8 @@
                         console.error('Error sending offer:', err);
                         const errorMessage = err instanceof Error && err.message
                             ? err.message
-                            : 'Đã xảy ra lỗi. Vui lòng thử lại.';
-                        showToast('error', errorMessage, 'Không thể gửi offer');
+                            : 'Something went wrong. Please try again.';
+                        showToast('error', errorMessage, 'Unable to send offer');
                     } finally {
                         this.isSubmitting = false;
                     }

@@ -400,43 +400,8 @@ public sealed class NotificationService : INotificationService
         }
     }
 
-        public async Task SendAsync(string userId, string type, string title, string message, object? data = null)
-        {
-            try
-            {
-                string linkUrl = "/Traveler/Trips";
-                if (data != null)
-                {
-                    try {
-                        var json = JsonSerializer.Serialize(data);
-                        var doc = JsonDocument.Parse(json);
-                        if (doc.RootElement.TryGetProperty("bookingId", out var bookingIdProp))
-                        {
-                            linkUrl = "/Traveler/BookingDetails/" + bookingIdProp.GetString();
-                        }
-                    } catch {}
-                }
 
-                var notification = new TripMate_Webapi.Entities.NotificationEntity
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    UserId = userId,
-                    Title = title,
-                    Message = message,
-                    Type = type,
-                    IsRead = false,
-                    LinkUrl = linkUrl,
-                    CreatedAt = DateTime.UtcNow
-                };
 
-                await _notificationRepository.CreateNotificationAsync(notification);
-                _logger.LogInformation("Realtime notification sent to user {UserId}: {Type} - {Title}", userId, type, title);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to save or send realtime notification to user {UserId}", userId);
-            }
-        }
     private async Task NotifyAdminsByEmailAsync(string guideName, string guideEmail)
     {
         try

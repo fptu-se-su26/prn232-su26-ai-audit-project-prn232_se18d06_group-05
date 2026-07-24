@@ -349,7 +349,9 @@ namespace TripMate_WebAPI.Services
                 if (booking is null) return false;
 
                 var status = approve ? 3 : 1; // 3 = Cancelled, 1 = Restored back to Confirmed
-                var updates = new { status = status, updated_at = DateTime.UtcNow };
+                var updates = approve 
+                    ? (object)new { status = status, updated_at = DateTime.UtcNow }
+                    : (object)new { status = status, cancel_reason = (string?)null, updated_at = DateTime.UtcNow };
                 
                 var patchReq = BuildAdminRequest(HttpMethod.Patch, $"{_supabaseUrl}/rest/v1/bookings?id=eq.{bookingId}");
                 patchReq.Content = new StringContent(JsonSerializer.Serialize(updates), Encoding.UTF8, "application/json");
@@ -665,6 +667,44 @@ namespace TripMate_WebAPI.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error toggling guide verification for {GuideId}", guideId);
+                return false;
+            }
+        }
+
+        public async Task<bool> DeleteUserAsync(string userId)
+        {
+            try
+            {
+                var url = $"{_supabaseUrl}/auth/v1/admin/users/{userId}";
+                var req = BuildAdminRequest(HttpMethod.Delete, url);
+                
+                var response = await _http.SendAsync(req);
+                var content = await response.Content.ReadAsStringAsync();
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    _logger.LogInformation("User {UserId} deleted successfully from Supabase Auth", userId);
+                    return true;
+                }
+                else
+                {
+                    _logger.LogError("Failed to delete user {UserId}: {StatusCode} - {Content}", userId, response.StatusCode, content);
+                    
+                    // Fallback: if auth deletion fails or is restricted, try deleting from profiles directly
+                    var profileUrl = $"{_supabaseUrl}/rest/v1/profiles?id=eq.{userId}";
+                    var profileReq = BuildAdminRequest(HttpMethod.Delete, profileUrl);
+                    var profileResponse = await _http.SendAsync(profileReq);
+                    if (profileResponse.IsSuccessStatusCode)
+                    {
+                        _logger.LogInformation("Deleted profile row for user {UserId} from public.profiles directly", userId);
+                        return true;
+                    }
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error deleting user {UserId}", userId);
                 return false;
             }
         }

@@ -56,7 +56,7 @@ namespace TripMate_Webapi.Repositories
             if (response == null) return false;
 
             response.IsActive = !response.IsActive;
-            await _supabase.From<ExperiencePackageEntity>().Update(response);
+            await _supabase.From<ExperiencePackageEntity>().Where(e => e.Id == response.Id).Update(response);
             return true;
         }
 

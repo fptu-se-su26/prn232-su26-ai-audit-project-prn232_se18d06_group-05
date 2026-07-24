@@ -1,0 +1,150 @@
+<div x-show="isDetailsOpen"
+     @@keydown.escape.window="closeBookingDetails()"
+     class="fixed inset-0 z-[80]"
+     style="display: none;"
+     role="dialog"
+     aria-modal="true"
+     aria-labelledby="calendar-booking-drawer-title">
+    <div x-show="isDetailsOpen"
+         x-transition.opacity
+         class="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px]"
+         @@click="closeBookingDetails()"></div>
+
+    <aside x-show="isDetailsOpen"
+           x-transition:enter="transform transition ease-out duration-300"
+           x-transition:enter-start="translate-x-full"
+           x-transition:enter-end="translate-x-0"
+           x-transition:leave="transform transition ease-in duration-200"
+           x-transition:leave-start="translate-x-0"
+           x-transition:leave-end="translate-x-full"
+           class="absolute inset-y-0 right-0 flex w-full max-w-[460px] flex-col bg-white shadow-2xl">
+        <header class="flex items-start justify-between border-b border-gray-100 px-5 py-4">
+            <div class="min-w-0">
+                <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary">Trip schedule</p>
+                <h2 id="calendar-booking-drawer-title"
+                    class="mt-1 text-lg font-bold text-gray-900"
+                    x-text="formatLongDate(selectedDate)"></h2>
+                <p class="mt-0.5 text-sm text-gray-500"
+                   x-text="`${selectedDayBookings.length} ${selectedDayBookings.length === 1 ? 'booking' : 'bookings'} on this day`"></p>
+            </div>
+            <button type="button"
+                    data-booking-drawer-close
+                    @@click="closeBookingDetails()"
+                    class="rounded-full p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
+                    aria-label="Close booking details">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </header>
+
+        <div class="flex-1 overflow-y-auto">
+            <template x-if="selectedDayBookings.length > 1">
+                <div class="border-b border-gray-100 bg-gray-50 px-4 py-3">
+                    <p class="mb-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">Tours on this day</p>
+                    <div class="flex gap-2 overflow-x-auto pb-1">
+                        <template x-for="bookingItem in selectedDayBookings" :key="bookingItem.id">
+                            <button type="button"
+                                    @@click="selectBooking(bookingItem)"
+                                    :class="selectedBooking?.id === bookingItem.id ? 'border-primary bg-orange-50 text-primary' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'"
+                                    class="min-w-[150px] rounded-xl border px-3 py-2 text-left transition-colors">
+                                <span class="block text-xs font-bold tabular-nums" x-text="bookingItem.startTime || 'Time TBD'"></span>
+                                <span class="mt-0.5 block truncate text-xs font-semibold" x-text="bookingItem.title"></span>
+                            </button>
+                        </template>
+                    </div>
+                </div>
+            </template>
+
+            <template x-if="selectedBooking">
+                <div x-data="{ get booking() { return selectedBooking; } }" class="space-y-5 p-5">
+                    <section class="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                        <div class="relative h-36 bg-gradient-to-br from-blue-600 to-indigo-700">
+                            <img x-show="booking.coverImageUrl"
+                                 :src="booking.coverImageUrl"
+                                 :alt="booking.title"
+                                 class="h-full w-full object-cover">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-900/10 to-transparent"></div>
+                            <div class="absolute inset-x-0 bottom-0 p-4 text-white">
+                                <span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
+                                      :class="statusBadgeClass(booking.status)"
+                                      x-text="statusLabel(booking.status)"></span>
+                                <h3 class="mt-2 line-clamp-2 text-lg font-bold leading-snug" x-text="booking.title"></h3>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 divide-x divide-gray-100 border-t border-gray-100">
+                            <div class="p-4">
+                                <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Time</p>
+                                <p class="mt-1 flex items-center gap-1.5 text-sm font-bold text-gray-900">
+                                    <span class="material-symbols-outlined text-[17px] text-primary">schedule</span>
+                                    <span x-text="booking.endTime ? `${booking.startTime}–${booking.endTime}` : (booking.startTime || 'To be confirmed')"></span>
+                                </p>
+                            </div>
+                            <div class="p-4">
+                                <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Your payout</p>
+                                <p class="mt-1 text-sm font-bold text-green-600" x-text="formatCurrency(booking.revenue)"></p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h3 class="mb-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">Traveler</h3>
+                        <div class="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50 p-3">
+                            <img :src="booking.travelerAvatarUrl || '/images/AVATAR.png'"
+                                 :alt="`${booking.guest} avatar`"
+                                 class="h-11 w-11 rounded-full border border-white object-cover shadow-sm">
+                            <div class="min-w-0 flex-1">
+                                <p class="truncate text-sm font-bold text-gray-900" x-text="booking.guest"></p>
+                                <p class="mt-0.5 flex items-center gap-1 text-xs text-gray-500">
+                                    <span class="material-symbols-outlined text-[15px]">group</span>
+                                    <span x-text="`${booking.guestCount} ${booking.guestCount === 1 ? 'guest' : 'guests'}`"></span>
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="space-y-3 rounded-xl border border-gray-100 p-4">
+                        <div class="flex items-start gap-3">
+                            <span class="material-symbols-outlined mt-0.5 text-[19px] text-gray-400">location_on</span>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500">Meeting point</p>
+                                <p class="mt-0.5 text-sm leading-relaxed text-gray-800" x-text="booking.meetingPoint || 'Not provided'"></p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3 border-t border-gray-100 pt-3">
+                            <span class="material-symbols-outlined mt-0.5 text-[19px] text-gray-400">notes</span>
+                            <div>
+                                <p class="text-xs font-bold text-gray-500">Traveler notes</p>
+                                <p class="mt-0.5 whitespace-pre-line text-sm leading-relaxed text-gray-800"
+                                   x-text="booking.travelerNotes || 'No notes from the traveler.'"></p>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div class="rounded-xl bg-gray-50 px-4 py-3 text-xs text-gray-500">
+                        Booking ID: <span class="font-mono font-semibold text-gray-700" x-text="booking.id"></span>
+                    </div>
+                </div>
+            </template>
+        </div>
+
+        <template x-if="selectedBooking">
+            <footer x-data="{ get booking() { return selectedBooking; } }" class="border-t border-gray-100 bg-white p-4">
+                <div class="flex gap-2">
+                    <a :href="`/Guide/Bookings?bookingId=${encodeURIComponent(booking.id)}`"
+                       class="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-center text-sm font-bold text-gray-700 transition-colors hover:bg-gray-50">
+                        View Booking
+                    </a>
+                    <a x-show="booking.status === 'confirmed'"
+                       :href="`/Guide/Messages?bookingId=${encodeURIComponent(booking.id)}`"
+                       class="flex flex-[1.2] items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark">
+                        <span class="material-symbols-outlined text-[18px]">chat</span>
+                        Message Traveler
+                    </a>
+                </div>
+                <p x-show="booking.status === 'pending'" class="mt-2 text-center text-xs text-amber-600">
+                    Messaging becomes available after the booking is confirmed.
+                </p>
+            </footer>
+        </template>
+    </aside>
+</div>

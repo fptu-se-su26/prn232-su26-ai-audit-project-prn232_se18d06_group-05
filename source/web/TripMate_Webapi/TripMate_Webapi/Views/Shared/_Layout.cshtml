@@ -67,6 +67,12 @@
         ::-webkit-scrollbar-thumb { background: #d3c4b9; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #ff7a00; }
     </style>
+    <script>
+        // Catch Supabase Auth recovery tokens on any page and redirect to ResetPassword
+        if (window.location.hash && window.location.hash.includes('type=recovery')) {
+            window.location.href = '/Auth/ResetPassword' + window.location.hash;
+        }
+    </script>
 </head>
 @* in Views/Shared/_Layout.cshtml, before </body> *@
 @RenderSection("Scripts", required: false)
@@ -74,8 +80,8 @@
     <!-- TopNavBar -->
     <header class="sticky top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm border-b border-outline-variant/30">
         <div class="flex justify-between items-center h-20 px-12 max-w-[1440px] mx-auto">
-            <div class="flex items-center gap-8">
-                <a href="/" class="flex items-center gap-3">
+            <div class="flex items-center gap-8 shrink-0">
+                <a href="/" class="flex items-center gap-3 tripmate-logo-link">
                     <img alt="TripMate Logo" class="h-10 w-10 rounded-full object-cover" src="/images/AVATAR.png"/>
                     <span class="text-2xl font-extrabold tracking-tight text-on-surface">TRIPMATE</span>
                 </a>
@@ -101,7 +107,7 @@
                     Post a Trip Request
                 </a>
             </nav>
-            <div id="headerTools" class="flex items-center gap-6">
+            <div id="headerTools" class="flex items-center gap-6 shrink-0">
                 <a class="text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap font-bold" href="/Home/BecomeAGuide">Become a guide</a>
                 
                 <div class="flex items-center gap-4">
@@ -221,12 +227,117 @@
     <script>
         // Check authentication and display user section
         function checkAuth() {
-            const token = localStorage.getItem('accessToken');
+            const token = localStorage.getItem('accessToken') || localStorage.getItem('jwt_token');
             const userEmail = localStorage.getItem('userEmail');
             const userRole = localStorage.getItem('userRole');
+            const userAvatarUrl = localStorage.getItem('userAvatarUrl');
+            const userSection = document.getElementById('userSection');
+
             if (token && userEmail) {
                 // Dispatch auth-changed event for Alpine components (like notification bell)
                 document.dispatchEvent(new CustomEvent('auth-changed', { detail: { isLoggedIn: true } }));
+                
+                // User is logged in
+                const atChar = String.fromCharCode(64); // at symbol
+                const atIndex = userEmail.indexOf(atChar);
+                const storedName = localStorage.getItem('userName');
+                const displayName = storedName || (atIndex > 0 ? userEmail.substring(0, atIndex) : userEmail);
+                
+                const avatarContent = userAvatarUrl 
+                    ? `<img src="${userAvatarUrl}" class="w-full h-full object-cover rounded-full" alt="${displayName}"/>`
+                    : `<div class="w-full h-full flex items-center justify-center text-primary font-bold">${displayName.substring(0, 1).toUpperCase()}</div>`;
+
+                userSection.innerHTML = `
+                    <div class="relative" x-data="{ accountMenuOpen: false }">
+                        <button type="button"
+                                @@click="accountMenuOpen = !accountMenuOpen"
+                                :aria-expanded="accountMenuOpen"
+                                class="flex items-center gap-2 rounded-full p-1 pr-2 text-on-surface transition-colors hover:bg-primary-container focus:outline-none">
+                            <span class="hidden max-w-36 truncate text-sm font-medium lg:inline">${displayName}</span>
+                            <div class="flex h-10 w-10 items-center justify-center rounded-full border border-primary/20 bg-primary-container text-sm font-bold text-primary overflow-hidden">
+                                ${avatarContent}
+                            </div>
+                            <span class="material-symbols-outlined hidden text-[18px] text-on-surface-variant transition-transform duration-200 sm:inline"
+                                  :class="accountMenuOpen ? 'rotate-180' : ''">expand_more</span>
+                        </button>
+                        <!-- Dropdown Menu -->
+                        <div x-show="accountMenuOpen"
+                             @@click.outside="accountMenuOpen = false"
+                             @@keydown.escape.window="accountMenuOpen = false"
+                             x-transition:enter="transition ease-out duration-150"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-100"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             style="display: none;"
+                             class="absolute right-0 mt-3 w-64 origin-top-right overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface shadow-xl z-50">
+                            
+                            <div class="border-b border-outline-variant/30 px-4 py-4">
+                                <p class="truncate text-base font-bold text-on-surface">${displayName}</p>
+                                <p class="mt-0.5 truncate text-sm text-on-surface-variant">${userEmail}</p>
+                                <span class="mt-2 inline-flex rounded-full bg-primary-container px-2.5 py-1 text-xs font-bold text-primary capitalize">
+                                    ${userRole || 'traveler'}
+                                </span>
+                            </div>
+
+                            <div class="p-2">
+                                ${userRole === 'traveler' ? `
+                                <a href="/Traveler/Dashboard" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                                    My Dashboard
+                                </a>
+                                <a href="/Traveler/Trips" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+                                    My Trips
+                                </a>
+                                <a href="/Traveler/Saved" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">favorite</span>
+                                    Saved Guides
+                                </a>
+                                <a href="/Traveler/Messages" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">chat</span>
+                                    Messages
+                                </a>
+                                ` : ''}
+                                ${userRole === 'admin' ? `
+                                <a href="/Admin/Dashboard" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+                                    Admin Dashboard
+                                </a>
+                                ` : ''}
+                                ${userRole === 'guide' ? `
+                                <a href="/Guide/Dashboard" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                                    Guide Dashboard
+                                </a>
+                                ` : ''}
+                                ${userRole === 'guide' ? `
+                                <a href="/Guide/Profile" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-variant">
+                                    <span class="material-symbols-outlined text-[20px]">person</span>
+                                    Profile
+                                </a>
+                                <a href="/Guide/Profile" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-variant">
+                                    <span class="material-symbols-outlined text-[20px]">settings</span>
+                                    Settings
+                                </a>
+                                ` : ''}
+                                ${userRole !== 'guide' && userRole !== 'admin' ? `
+                                <a href="/Traveler/Settings" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-variant">
+                                    <span class="material-symbols-outlined text-[20px]">person</span>
+                                    Profile
+                                </a>
+                                ` : ''}
+                                <div class="my-1 border-t border-outline-variant/30"></div>
+                                <button type="button" @@click="accountMenuOpen = false; logout()" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
+                                    <span class="material-symbols-outlined text-[20px]">logout</span>
+                                    Log Out
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+>>>>>>> e74a603316fa749bcfa34e9e39e03c67f15a2ccc
 
                 // Optionally adjust Main Nav based on role
                 if(userRole === 'traveler') {
@@ -241,6 +352,13 @@
                         const container = document.getElementById('savedContainer');
                         if (container) container.appendChild(savedGuides);
                     }
+                }
+                
+                if (userRole === 'guide') {
+                    const logoLinks = document.querySelectorAll('.tripmate-logo-link');
+                    logoLinks.forEach(link => {
+                        link.href = '/Guide/Dashboard';
+                    });
                 }
             } else {
                 // User is not logged in, dispatch event and fallback login UI will be rendered by server
@@ -259,6 +377,8 @@
             localStorage.removeItem('userId');
             localStorage.removeItem('userEmail');
             localStorage.removeItem('userRole');
+            localStorage.removeItem('userName');
+            localStorage.removeItem('userAvatarUrl');
             localStorage.removeItem('surveyCompleted');
             localStorage.removeItem('personalityProfile');
             

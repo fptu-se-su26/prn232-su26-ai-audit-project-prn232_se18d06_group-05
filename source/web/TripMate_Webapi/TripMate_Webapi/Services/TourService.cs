@@ -70,6 +70,25 @@ public class TourService
         return results.Where(r => r.Id != "00000000-0000-0000-0000-000000000000").ToList();
     }
 
+    // ── GET guide profile ID by user ID ───────────────────────────────────────
+
+    public async Task<string?> GetGuideProfileIdByUserIdAsync(string userId, string userToken)
+    {
+        var query = $"{_supabaseUrl}/rest/v1/guide_profiles?user_id=eq.{userId}&select=id";
+        var request = BuildRequest(HttpMethod.Get, query, userToken);
+        var response = await _http.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+        EnsureSuccess(response, content);
+
+        using var doc = JsonDocument.Parse(content);
+        var first = doc.RootElement.EnumerateArray().FirstOrDefault();
+        if (first.ValueKind == JsonValueKind.Object && first.TryGetProperty("id", out var idProp))
+        {
+            return idProp.GetString();
+        }
+        return null;
+    }
+
     // ── POST create package ───────────────────────────────────────────────────
 
     public async Task<ExperiencePackageRow> CreateTourAsync(
@@ -83,6 +102,7 @@ public class TourService
             duration_hours = req.DurationHours,
             price_per_session = req.PricePerSession,
             price_per_person = req.PricePerPerson,
+            included_guest_count = req.IncludedGuestCount,
             max_group_size = req.MaxGroupSize,
             included_items = req.IncludedItems ?? new List<string>(),
             tags = req.Tags ?? new List<string>(),
@@ -100,7 +120,7 @@ public class TourService
         EnsureSuccess(response, content);
 
         var rows = JsonSerializer.Deserialize<List<ExperiencePackageRow>>(content, _json);
-        var created = rows?.FirstOrDefault() ?? throw new Exception("Tạo gói trải nghiệm thất bại");
+        var created = rows?.FirstOrDefault() ?? throw new Exception("Failed to create the experience package.");
 
         // Fetch full data with guide join
         return await GetTourByIdAsync(created.Id!) ?? created;
@@ -117,13 +137,14 @@ public class TourService
         if (req.DurationHours.HasValue) updates["duration_hours"] = req.DurationHours;
         if (req.PricePerSession.HasValue) updates["price_per_session"] = req.PricePerSession;
         if (req.PricePerPerson.HasValue) updates["price_per_person"] = req.PricePerPerson;
+        if (req.IncludedGuestCount.HasValue) updates["included_guest_count"] = req.IncludedGuestCount;
         if (req.MaxGroupSize.HasValue) updates["max_group_size"] = req.MaxGroupSize;
         if (req.IncludedItems != null) updates["included_items"] = req.IncludedItems;
         if (req.Tags != null) updates["tags"] = req.Tags;
         if (req.IsActive.HasValue) updates["is_active"] = req.IsActive;
 
         if (updates.Count == 0)
-            return await GetTourByIdAsync(packageId) ?? throw new Exception("Gói trải nghiệm không tồn tại");
+            return await GetTourByIdAsync(packageId) ?? throw new Exception("Experience package not found.");
 
         var request = BuildRequest(HttpMethod.Patch,
             $"{_supabaseUrl}/rest/v1/experience_packages?id=eq.{packageId}", userToken);
@@ -136,7 +157,7 @@ public class TourService
         EnsureSuccess(response, content);
 
         return await GetTourByIdAsync(packageId)
-            ?? throw new Exception("Cập nhật gói trải nghiệm thất bại");
+            ?? throw new Exception("Failed to update the experience package.");
     }
 
     // ── DELETE package ────────────────────────────────────────────────────────
@@ -192,6 +213,7 @@ public class TourService
             DurationHours: row.DurationHours,
             PricePerSession: row.PricePerSession,
             PricePerPerson: row.PricePerPerson,
+            IncludedGuestCount: row.IncludedGuestCount,
             MaxGroupSize: row.MaxGroupSize,
             IncludedItems: row.IncludedItems ?? [],
             Tags: row.Tags ?? [],
@@ -215,6 +237,7 @@ public class ExperiencePackageRow
     [JsonPropertyName("duration_hours")]    public decimal DurationHours { get; set; }
     [JsonPropertyName("price_per_session")] public decimal PricePerSession { get; set; }
     [JsonPropertyName("price_per_person")]  public decimal? PricePerPerson { get; set; }
+    [JsonPropertyName("included_guest_count")] public int IncludedGuestCount { get; set; } = 1;
     [JsonPropertyName("max_group_size")]    public int MaxGroupSize { get; set; } = 6;
     [JsonPropertyName("included_items")]    public List<string>? IncludedItems { get; set; }
     [JsonPropertyName("tags")]              public List<string>? Tags { get; set; }

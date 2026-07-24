@@ -81,40 +81,40 @@ namespace TripMate_Webapi.Services
             {
                 if (string.IsNullOrWhiteSpace(request.TripRequestId))
                 {
-                    return (false, "Bạn cần chọn một yêu cầu chuyến đi hợp lệ.", null);
+                    return (false, "Please select a valid trip request.", null);
                 }
 
                 if (string.IsNullOrWhiteSpace(request.Message))
                 {
-                    return (false, "Vui lòng nhập lời nhắn cho offer.", null);
+                    return (false, "Please enter a message for your offer.", null);
                 }
 
                 if (request.ProposedPrice <= 0)
                 {
-                    return (false, "Giá đề xuất phải lớn hơn 0.", null);
+                    return (false, "The proposed price must be greater than 0.", null);
                 }
 
                 var tripRequest = await _tripRequestRepository.GetTripRequestByIdAsync(request.TripRequestId);
                 if (tripRequest == null)
                 {
-                    return (false, "Không tìm thấy yêu cầu chuyến đi này.", null);
+                    return (false, "Trip request not found.", null);
                 }
 
                 if (!string.Equals(tripRequest.Status, "open", StringComparison.OrdinalIgnoreCase))
                 {
-                    return (false, "Yêu cầu chuyến đi này hiện không còn mở để nhận offer.", null);
+                    return (false, "This trip request is no longer open for offers.", null);
                 }
 
                 if (tripRequest.StartDate < DateTime.UtcNow.Date)
                 {
-                    return (false, "Yêu cầu chuyến đi này đã không còn là request sắp tới.", null);
+                    return (false, "This trip request is no longer upcoming.", null);
                 }
 
                 var guideOffers = await _tripRequestRepository.GetTripOffersByGuideAsync(guideProfileId);
                 var hasExistingOffer = guideOffers.Any(o => string.Equals(o.TripRequestId, request.TripRequestId, StringComparison.OrdinalIgnoreCase));
                 if (hasExistingOffer)
                 {
-                    return (false, "Bạn đã gửi offer cho yêu cầu này rồi.", null);
+                    return (false, "You have already sent an offer for this request.", null);
                 }
 
                 var newOffer = new TripOfferEntity
@@ -133,7 +133,7 @@ namespace TripMate_Webapi.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error sending trip offer");
-                return (false, "Không thể gửi offer lúc này. Vui lòng thử lại sau.", null);
+                return (false, "Unable to send the offer right now. Please try again later.", null);
             }
         }
 

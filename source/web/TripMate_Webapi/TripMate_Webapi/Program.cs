@@ -66,7 +66,10 @@ builder.Services.AddHttpClient<SupabaseAuthService>();
 builder.Services.AddScoped<SupabaseAuthService>();
 builder.Services.AddHttpClient<GoogleAuthService>();
 builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
-builder.Services.AddHttpClient<SupabasePasswordResetService>();
+builder.Services.AddHttpClient<SupabasePasswordResetService>().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+});
 builder.Services.AddScoped<ISupabasePasswordResetService, SupabasePasswordResetService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -107,6 +110,10 @@ builder.Services.AddScoped<GuideApprovalService>();
 // ── Admin Service ─────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<AdminService>();
 builder.Services.AddScoped<AdminService>();
+
+// ── Problem Report Service ────────────────────────────────────────────────────
+builder.Services.AddHttpClient<ProblemReportService>();
+builder.Services.AddScoped<ProblemReportService>();
 
 // ── PayOS Service ─────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IPayOSService, PayOSService>();

@@ -28,6 +28,21 @@ public class ProfileRow
     [JsonPropertyName("is_active")]
     public bool IsActive { get; set; } = true;
 
+    [JsonPropertyName("bio")]
+    public string? Bio { get; set; }
+
+    [JsonPropertyName("languages")]
+    public string? Languages { get; set; }
+
+    [JsonPropertyName("experience")]
+    public string? Experience { get; set; }
+
+    [JsonPropertyName("specialization")]
+    public string? Specialization { get; set; }
+
+    [JsonPropertyName("certificate_url")]
+    public string? CertificateUrl { get; set; }
+
     [JsonPropertyName("created_at")]
     public DateTime CreatedAt { get; set; }
 

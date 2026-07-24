@@ -163,9 +163,10 @@ namespace TripMate_Webapi.Controllers
 
             if (!string.IsNullOrEmpty(travelerId))
             {
-                // Lấy các booking đã confirmed hoặc completed (Status >= 1)
+                // Include all statuses so one permanent guide thread can be
+                // activated only when at least one related booking is confirmed.
                 var bookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
-                var activeBookings = bookings.Where(b => b.Status >= 1).ToList();
+                var activeBookings = bookings.ToList();
                 
                 // Prepare active bookings info for client (include booking id + guide profile)
                 var activeList = activeBookings
@@ -173,6 +174,7 @@ namespace TripMate_Webapi.Controllers
                     .Select(b => new TripMate_WebAPI.DTOs.Chat.ActiveBookingDto
                     {
                         BookingId = b.Id ?? string.Empty,
+                        Status = b.Status,
                         GuideProfileId = b.GuideProfile?.Id,
                         GuideUserId = b.GuideProfile?.UserId,
                         GuideName = b.GuideProfile?.Profile?.FullName ?? b.GuideProfile?.UserId,
@@ -256,6 +258,49 @@ namespace TripMate_Webapi.Controllers
             return View();
         }
 
+
+
+        public class UpdateTravelerProfileRequest
+        {
+            public string? DisplayName { get; set; }
+            public string? Phone { get; set; }
+            public string? Nationality { get; set; }
+            public IFormFile? AvatarFile { get; set; }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> UpdateProfileAjax([FromForm] UpdateTravelerProfileRequest req, [FromServices] TripMate_WebAPI.Services.ICloudinaryService cloudinary)
+        {
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var profileResponse = await _supabase.From<Entities.ProfileEntity>().Where(x => x.Id == userId).Get();
+            var profile = profileResponse.Models.FirstOrDefault();
+            if (profile != null)
+            {
+                if (!string.IsNullOrEmpty(req.DisplayName)) profile.FullName = req.DisplayName;
+                if (req.Phone != null) profile.Phone = req.Phone;
+                if (req.Nationality != null) profile.Location = req.Nationality;
+
+                if (req.AvatarFile != null)
+                {
+                    var avatarUrl = await cloudinary.UploadImageAsync(req.AvatarFile, "tripmate_avatars");
+                    if (!string.IsNullOrEmpty(avatarUrl))
+                        profile.AvatarUrl = avatarUrl;
+                }
+
+                await _supabase.From<Entities.ProfileEntity>()
+                    .Where(x => x.Id == profile.Id)
+                    .Set(x => x.FullName, profile.FullName)
+                    .Set(x => x.Phone, profile.Phone)
+                    .Set(x => x.Location, profile.Location)
+                    .Set(x => x.AvatarUrl, profile.AvatarUrl)
+                    .Update();
+            }
+
+            return Json(new { success = true, avatarUrl = profile?.AvatarUrl });
+        }
+
         // ponytail ultra: minimal inline update
         public class UpdateTravelerProfileDto
         {
@@ -277,7 +322,7 @@ namespace TripMate_Webapi.Controllers
             
             if (!result.Success) return BadRequest(new { error = result.Message });
 
-            return Ok(new { success = true });
+            return Ok(new { success = true, avatarUrl = profile?.AvatarUrl });
         }
 
         // GET: /Traveler/Review/{id} [Auth required]
@@ -609,9 +654,9 @@ namespace TripMate_Webapi.Controllers
 
         public class UpdateProfileRequest
         {
-            public string DisplayName { get; set; } = string.Empty;
-            public string Phone { get; set; } = string.Empty;
-            public string Nationality { get; set; } = string.Empty;
+            public string? DisplayName { get; set; }
+            public string? Phone { get; set; }
+            public string? Nationality { get; set; }
             public IFormFile? AvatarFile { get; set; }
         }
 
@@ -628,6 +673,7 @@ namespace TripMate_Webapi.Controllers
             if (result.Success)
             {
                 return Json(new { success = true, avatarUrl = result.AvatarUrl });
+
             }
             
             if (result.Message == "Profile not found")

@@ -57,8 +57,9 @@
 
                 <!-- Avatar -->
                 <div class="flex items-center gap-6 mb-8">
+                    <input type="file" id="avatarFileInput" accept="image/*" class="hidden" onchange="previewAvatar(event)">
                     <div class="w-24 h-24 rounded-full bg-primary-container text-primary flex items-center justify-center text-3xl font-bold shadow-sm border border-primary/20 relative group cursor-pointer"
-                         id="avatarCircle">
+                         id="avatarCircle" onclick="document.getElementById('avatarFileInput').click()">
                         <span id="avatarInitials">?</span>
                         <div class="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                             <span class="material-symbols-outlined text-white">photo_camera</span>
@@ -90,8 +91,10 @@
                     </div>
                     <div>
                         <label class="block text-sm font-bold text-on-surface mb-2">Nationality</label>
-                        <input type="text" id="nationalityInput" placeholder="e.g. Vietnamese"
-                               class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none" />
+                        <select id="nationalityInput"
+                               class="w-full bg-surface border border-outline-variant/50 rounded-xl p-3 text-on-surface focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                            <option value="">-- Select Nationality --</option>
+                        </select>
                     </div>
                 </div>
 
@@ -266,6 +269,21 @@
         const userEmail = profileData.email || localStorage.getItem('userEmail') || '';
         const atIdx = userEmail.indexOf('\u0040');
         const displayName = profileData.displayName || (atIdx > 0 ? userEmail.substring(0, atIdx) : userEmail);
+        
+        try {
+            const countRes = await fetch('https://countries.dev/countries');
+            let countData = await countRes.json();
+            countData.sort((a, b) => a.name.localeCompare(b.name));
+            const natSelect = document.getElementById('nationalityInput');
+            countData.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                opt.textContent = c.name;
+                natSelect.appendChild(opt);
+            });
+        } catch (err) {
+            console.error("Failed to load countries", err);
+        }
 
         try {
             const countRes = await fetch('https://countries.dev/countries');
@@ -309,9 +327,9 @@
         setVal('displayNameInput', profileData.displayName || profile.displayName || displayName);
         setVal('phoneInput', profileData.phone || profile.phone || '');
         setVal('nationalityInput', profileData.nationality || profile.nationality || '');
-        setVal('bioInput', profile.bio || ''); // Bio is local only for now
+        setVal('bioInput', profile.bio || '');
 
-        // Travel preferences (from tripPreferences in localStorage)
+        // Travel preferences
         const prefs = JSON.parse(localStorage.getItem('tripPreferences') || '{}');
         setVal('defaultVibe', prefs.vibe || profile.defaultVibe || '');
         setVal('defaultBudget', prefs.budget || profile.defaultBudget || '');
@@ -328,6 +346,7 @@
             document.getElementById('personalityBadge').className = 'bg-white text-primary px-3 py-1 rounded-full text-sm font-bold shadow-sm border border-primary/20';
             document.getElementById('personalityType').className = 'text-3xl font-extrabold text-primary';
         }
+
         if (typeof checkAuth === 'function') checkAuth();
     }
 
