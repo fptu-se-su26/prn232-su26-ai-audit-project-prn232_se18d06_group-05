@@ -111,7 +111,7 @@
                 <a class="text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap font-bold" href="/Home/BecomeAGuide">Become a guide</a>
                 
                 <div class="flex items-center gap-4">
-                    <div class="relative flex items-center justify-center" x-data="notificationDropdown()" x-show="isLoggedIn" style="display: none;">
+                    <div class="relative flex items-center justify-center" x-data="notificationDropdown()" x-show="isLoggedIn" style="display: none;" @@auth-changed.window="isLoggedIn = $event.detail.isLoggedIn; if(isLoggedIn) { token = localStorage.getItem('accessToken') || localStorage.getItem('jwt_token'); init() }">
                         <button @@click="toggleDropdown()" class="text-on-surface-variant hover:text-primary transition-colors flex items-center justify-center relative">
                             <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">notifications</span>
                             <span x-show="unreadCount > 0" class="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full" x-text="unreadCount > 99 ? '99+' : unreadCount" style="display: none;"></span>
@@ -168,8 +168,7 @@
                         else
                         {
                             <div class="flex items-center gap-4" id="fallback-login-btn">
-                                <a href="/Auth/Login" class="text-on-surface-variant hover:text-primary transition-colors font-bold whitespace-nowrap">Log in</a>
-                                <a href="/Auth/Register" class="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-full font-bold transition-all shadow-md hover:shadow-lg whitespace-nowrap">Sign up</a>
+                                <a href="/Auth/Login" class="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-full font-bold transition-all shadow-md hover:shadow-lg whitespace-nowrap">Log in</a>
                             </div>
                         }
                     </div>
@@ -273,46 +272,42 @@
                              style="display: none;"
                              class="absolute right-0 mt-3 w-64 origin-top-right overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface shadow-xl z-50">
                             
-                            <div class="border-b border-outline-variant/30 px-4 py-4">
+                            <a href="${userRole?.toLowerCase() === 'guide' ? '/Guide/Dashboard' : (userRole?.toLowerCase() === 'admin' ? '/Admin/Dashboard' : '/Traveler/Dashboard')}" @@click="accountMenuOpen = false" class="block border-b border-outline-variant/30 px-4 py-4 hover:bg-surface-variant transition-colors">
                                 <p class="truncate text-base font-bold text-on-surface">${displayName}</p>
                                 <p class="mt-0.5 truncate text-sm text-on-surface-variant">${userEmail}</p>
                                 <span class="mt-2 inline-flex rounded-full bg-primary-container px-2.5 py-1 text-xs font-bold text-primary capitalize">
                                     ${userRole || 'traveler'}
                                 </span>
-                            </div>
+                            </a>
 
                             <div class="p-2">
-                                ${userRole === 'traveler' ? `
-                                <a href="/Traveler/Dashboard" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
-                                    <span class="material-symbols-outlined text-[20px]">dashboard</span>
-                                    My Dashboard
-                                </a>
+                                ${userRole?.toLowerCase() === 'traveler' ? `
                                 <a href="/Traveler/Trips" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
                                     <span class="material-symbols-outlined text-[20px]">calendar_month</span>
                                     My Trips
-                                </a>
-                                <a href="/Traveler/Saved" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
-                                    <span class="material-symbols-outlined text-[20px]">favorite</span>
-                                    Saved Guides
                                 </a>
                                 <a href="/Traveler/Messages" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
                                     <span class="material-symbols-outlined text-[20px]">chat</span>
                                     Messages
                                 </a>
+                                <a href="/Traveler/Settings" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">manage_accounts</span>
+                                    Account Settings
+                                </a>
                                 ` : ''}
-                                ${userRole === 'admin' ? `
+                                ${userRole?.toLowerCase() === 'admin' ? `
                                 <a href="/Admin/Dashboard" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
                                     <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
                                     Admin Dashboard
                                 </a>
                                 ` : ''}
-                                ${userRole === 'guide' ? `
+                                ${userRole?.toLowerCase() === 'guide' ? `
                                 <a href="/Guide/Dashboard" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
                                     <span class="material-symbols-outlined text-[20px]">dashboard</span>
                                     Guide Dashboard
                                 </a>
                                 ` : ''}
-                                ${userRole === 'guide' ? `
+                                ${userRole?.toLowerCase() === 'guide' ? `
                                 <a href="/Guide/Profile" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-variant">
                                     <span class="material-symbols-outlined text-[20px]">person</span>
                                     Profile
@@ -322,12 +317,7 @@
                                     Settings
                                 </a>
                                 ` : ''}
-                                ${userRole !== 'guide' && userRole !== 'admin' ? `
-                                <a href="/Traveler/Settings" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-variant">
-                                    <span class="material-symbols-outlined text-[20px]">person</span>
-                                    Profile
-                                </a>
-                                ` : ''}
+
                                 <div class="my-1 border-t border-outline-variant/30"></div>
                                 <button type="button" @@click="accountMenuOpen = false; logout()" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
                                     <span class="material-symbols-outlined text-[20px]">logout</span>
@@ -337,10 +327,9 @@
                         </div>
                     </div>
                 `;
->>>>>>> e74a603316fa749bcfa34e9e39e03c67f15a2ccc
 
                 // Optionally adjust Main Nav based on role
-                if(userRole === 'traveler') {
+                if(userRole?.toLowerCase() === 'traveler') {
                     // Inject Saved Guides link in header tools
                     if(!document.getElementById('savedGuidesLink')) {
                         const savedGuides = document.createElement('a');
@@ -354,7 +343,7 @@
                     }
                 }
                 
-                if (userRole === 'guide') {
+                if (userRole?.toLowerCase() === 'guide') {
                     const logoLinks = document.querySelectorAll('.tripmate-logo-link');
                     logoLinks.forEach(link => {
                         link.href = '/Guide/Dashboard';
@@ -541,7 +530,7 @@
                 isLoading: false,
                 unreadCount: 0,
                 notifications: [],
-                token: localStorage.getItem('accessToken'),
+                token: localStorage.getItem('accessToken') || localStorage.getItem('jwt_token'),
 
                 init() {
                     if (this.token) {

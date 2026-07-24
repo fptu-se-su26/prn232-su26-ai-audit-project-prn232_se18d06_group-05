@@ -260,46 +260,7 @@ namespace TripMate_Webapi.Controllers
 
 
 
-        public class UpdateTravelerProfileRequest
-        {
-            public string? DisplayName { get; set; }
-            public string? Phone { get; set; }
-            public string? Nationality { get; set; }
-            public IFormFile? AvatarFile { get; set; }
-        }
 
-        [HttpPost]
-        public async Task<IActionResult> UpdateProfileAjax([FromForm] UpdateTravelerProfileRequest req, [FromServices] TripMate_WebAPI.Services.ICloudinaryService cloudinary)
-        {
-            var userId = GetCurrentUserId();
-            if (string.IsNullOrEmpty(userId)) return Unauthorized();
-
-            var profileResponse = await _supabase.From<Entities.ProfileEntity>().Where(x => x.Id == userId).Get();
-            var profile = profileResponse.Models.FirstOrDefault();
-            if (profile != null)
-            {
-                if (!string.IsNullOrEmpty(req.DisplayName)) profile.FullName = req.DisplayName;
-                if (req.Phone != null) profile.Phone = req.Phone;
-                if (req.Nationality != null) profile.Location = req.Nationality;
-
-                if (req.AvatarFile != null)
-                {
-                    var avatarUrl = await cloudinary.UploadImageAsync(req.AvatarFile, "tripmate_avatars");
-                    if (!string.IsNullOrEmpty(avatarUrl))
-                        profile.AvatarUrl = avatarUrl;
-                }
-
-                await _supabase.From<Entities.ProfileEntity>()
-                    .Where(x => x.Id == profile.Id)
-                    .Set(x => x.FullName, profile.FullName)
-                    .Set(x => x.Phone, profile.Phone)
-                    .Set(x => x.Location, profile.Location)
-                    .Set(x => x.AvatarUrl, profile.AvatarUrl)
-                    .Update();
-            }
-
-            return Json(new { success = true, avatarUrl = profile?.AvatarUrl });
-        }
 
         // ponytail ultra: minimal inline update
         public class UpdateTravelerProfileDto
@@ -322,7 +283,7 @@ namespace TripMate_Webapi.Controllers
             
             if (!result.Success) return BadRequest(new { error = result.Message });
 
-            return Ok(new { success = true, avatarUrl = profile?.AvatarUrl });
+            return Ok(new { success = true, avatarUrl = result.AvatarUrl });
         }
 
         // GET: /Traveler/Review/{id} [Auth required]
