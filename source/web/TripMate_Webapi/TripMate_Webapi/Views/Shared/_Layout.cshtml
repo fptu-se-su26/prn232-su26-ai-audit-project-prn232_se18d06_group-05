@@ -234,57 +234,90 @@
                     : `<div class="w-full h-full flex items-center justify-center text-primary font-bold">${displayName.substring(0, 1).toUpperCase()}</div>`;
 
                 userSection.innerHTML = `
-                    <div class="relative group">
-                        <button class="flex items-center gap-3 hover:bg-primary-container px-4 py-2 rounded-full transition-all">
-                            <span class="text-sm font-medium text-on-surface">${displayName}</span>
-                            <div class="h-10 w-10 rounded-full overflow-hidden border-2 border-primary/20 bg-primary-container flex items-center justify-center">
+                    <div class="relative" x-data="{ accountMenuOpen: false }">
+                        <button type="button"
+                                @@click="accountMenuOpen = !accountMenuOpen"
+                                :aria-expanded="accountMenuOpen"
+                                class="flex items-center gap-2 rounded-full p-1 pr-2 text-on-surface transition-colors hover:bg-primary-container focus:outline-none">
+                            <span class="hidden max-w-36 truncate text-sm font-medium lg:inline">${displayName}</span>
+                            <div class="flex h-10 w-10 items-center justify-center rounded-full border border-primary/20 bg-primary-container text-sm font-bold text-primary overflow-hidden">
                                 ${avatarContent}
                             </div>
+                            <span class="material-symbols-outlined hidden text-[18px] text-on-surface-variant transition-transform duration-200 sm:inline"
+                                  :class="accountMenuOpen ? 'rotate-180' : ''">expand_more</span>
                         </button>
                         <!-- Dropdown Menu -->
-                        <div class="absolute right-0 top-full mt-2 w-56 bg-surface rounded-xl shadow-2xl border border-outline-variant/30 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-                            <a href="${userRole === 'guide' ? '/Guide/Dashboard' : '/Traveler/Dashboard'}" class="block p-4 border-b border-outline-variant/30 hover:bg-surface-variant transition-colors">
-                                <p class="font-bold text-on-surface">${displayName}</p>
-                                <p class="text-xs text-on-surface-variant">${userEmail}</p>
-                                <span class="inline-block mt-2 px-3 py-1 bg-primary-container text-primary text-xs font-bold rounded-full capitalize">
+                        <div x-show="accountMenuOpen"
+                             @@click.outside="accountMenuOpen = false"
+                             @@keydown.escape.window="accountMenuOpen = false"
+                             x-transition:enter="transition ease-out duration-150"
+                             x-transition:enter-start="opacity-0 scale-95"
+                             x-transition:enter-end="opacity-100 scale-100"
+                             x-transition:leave="transition ease-in duration-100"
+                             x-transition:leave-start="opacity-100 scale-100"
+                             x-transition:leave-end="opacity-0 scale-95"
+                             style="display: none;"
+                             class="absolute right-0 mt-3 w-64 origin-top-right overflow-hidden rounded-2xl border border-outline-variant/30 bg-surface shadow-xl z-50">
+                            
+                            <div class="border-b border-outline-variant/30 px-4 py-4">
+                                <p class="truncate text-base font-bold text-on-surface">${displayName}</p>
+                                <p class="mt-0.5 truncate text-sm text-on-surface-variant">${userEmail}</p>
+                                <span class="mt-2 inline-flex rounded-full bg-primary-container px-2.5 py-1 text-xs font-bold text-primary capitalize">
                                     ${userRole || 'traveler'}
                                 </span>
-                            </a>
+                            </div>
+
                             <div class="p-2">
                                 ${userRole === 'traveler' ? `
-                                <a href="/Traveler/Trips" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
-                                    <span class="material-symbols-outlined text-on-surface-variant">calendar_month</span>
-                                    <span class="font-medium">My Trips</span>
+                                <a href="/Traveler/Dashboard" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                                    My Dashboard
                                 </a>
-                                <a href="/Traveler/Messages" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
-                                    <span class="material-symbols-outlined text-on-surface-variant">chat</span>
-                                    <span class="font-medium">Messages</span>
+                                <a href="/Traveler/Trips" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">calendar_month</span>
+                                    My Trips
+                                </a>
+                                <a href="/Traveler/Saved" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">favorite</span>
+                                    Saved Guides
+                                </a>
+                                <a href="/Traveler/Messages" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">chat</span>
+                                    Messages
+                                </a>
+                                ` : ''}
+                                ${userRole === 'admin' ? `
+                                <a href="/Admin/Dashboard" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">admin_panel_settings</span>
+                                    Admin Dashboard
                                 </a>
                                 ` : ''}
                                 ${userRole === 'guide' ? `
-                                <a href="/Guide/Dashboard" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
-                                    <span class="material-symbols-outlined text-on-surface-variant">dashboard</span>
-                                    <span class="font-medium">Guide Dashboard</span>
+                                <a href="/Guide/Dashboard" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-primary-container hover:text-primary">
+                                    <span class="material-symbols-outlined text-[20px]">dashboard</span>
+                                    Guide Dashboard
                                 </a>
                                 ` : ''}
                                 ${userRole === 'guide' ? `
-                                <a href="/Guide/Profile" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
-                                    <span class="material-symbols-outlined text-on-surface-variant">person</span>
-                                    <span class="font-medium">Profile</span>
+                                <a href="/Guide/Profile" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-variant">
+                                    <span class="material-symbols-outlined text-[20px]">person</span>
+                                    Profile
                                 </a>
-                                <a href="/Guide/Profile" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
-                                    <span class="material-symbols-outlined text-on-surface-variant">settings</span>
-                                    <span class="font-medium">Settings</span>
+                                <a href="/Guide/Profile" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-variant">
+                                    <span class="material-symbols-outlined text-[20px]">settings</span>
+                                    Settings
                                 </a>
-                                ` : `
-                                <a href="/Traveler/Settings" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
-                                    <span class="material-symbols-outlined text-on-surface-variant">manage_accounts</span>
-                                    <span class="font-medium">Profile & Setting</span>
+                                ` : ''}
+                                ${userRole !== 'guide' && userRole !== 'admin' ? `
+                                <a href="/Traveler/Settings" @@click="accountMenuOpen = false" class="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-on-surface transition-colors hover:bg-surface-variant">
+                                    <span class="material-symbols-outlined text-[20px]">person</span>
+                                    Profile
                                 </a>
-                                `}
-                                <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 rounded-lg transition-all text-red-600 font-medium">
-                                    <span class="material-symbols-outlined">logout</span>
-                                    <span>Logout</span>
+                                ` : ''}
+                                <div class="my-1 border-t border-outline-variant/30"></div>
+                                <button type="button" @@click="accountMenuOpen = false; logout()" class="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50">
+                                    <span class="material-symbols-outlined text-[20px]">logout</span>
+                                    Log Out
                                 </button>
                             </div>
                         </div>
