@@ -19,10 +19,13 @@ namespace TripMate_Webapi.Repositories
             PropertyNameCaseInsensitive = true
         };
 
+        private readonly IConfiguration _config;
+
         public BookingRepository(Client supabase, IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
             _supabase = supabase;
             _httpClientFactory = httpClientFactory;
+            _config = configuration;
             _supabaseUrl = configuration["Supabase:Url"]
                 ?? Environment.GetEnvironmentVariable("SUPABASE_URL")
                 ?? throw new InvalidOperationException("Supabase URL is not configured.");
@@ -34,9 +37,9 @@ namespace TripMate_Webapi.Repositories
 
         public async Task<BookingEntity> CreateBookingAsync(BookingEntity booking, string? userToken = null)
         {
-            var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
-            var anonKey = Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
-            var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+            var supabaseUrl = _supabaseUrl;
+            var anonKey = _config["Supabase:AnonKey"] ?? Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
+            var serviceKey = _config["Supabase:ServiceRoleKey"] ?? Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
             var tokenToUse = userToken ?? serviceKey ?? anonKey;
             
             using var http = new System.Net.Http.HttpClient();
@@ -96,9 +99,9 @@ namespace TripMate_Webapi.Repositories
 
         public async Task<BookingEntity> UpdateBookingAsync(BookingEntity booking)
         {
-            var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
-            var anonKey = Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
-            var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+            var supabaseUrl = _supabaseUrl;
+            var anonKey = _config["Supabase:AnonKey"] ?? Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
+            var serviceKey = _config["Supabase:ServiceRoleKey"] ?? Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
             var tokenToUse = serviceKey ?? anonKey;
             
             using var http = new System.Net.Http.HttpClient();
@@ -220,9 +223,9 @@ namespace TripMate_Webapi.Repositories
 
         public async Task UpdateBookingStatusAsync(string bookingId, int status)
         {
-            var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
-            var anonKey = Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
-            var serviceKey = Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+            var supabaseUrl = _supabaseUrl;
+            var anonKey = _config["Supabase:AnonKey"] ?? Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
+            var serviceKey = _config["Supabase:ServiceRoleKey"] ?? Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
             var tokenToUse = serviceKey ?? anonKey;
             
             using var http = new System.Net.Http.HttpClient();
