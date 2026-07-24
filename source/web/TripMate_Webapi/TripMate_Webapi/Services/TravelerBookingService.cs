@@ -140,6 +140,48 @@ namespace TripMate_WebAPI.Services
             return (true, "Success", createdBooking.Id, paymentUrl);
         }
 
+        public async Task<(bool Success, string Message, string? BookingId, string? PaymentUrl)> CreateBookingFromOfferAsync(
+            string travelerId, TripRequestEntity request, TripOfferEntity offer)
+        {
+            string packageId = "00000000-0000-0000-0000-000000000000"; // Custom Tour
+            
+            // ProposedPrice is the total price for the trip (agreed by Guide)
+            decimal basePrice = offer.ProposedPrice;
+            var platformFee = Math.Round(basePrice * 0.15m, 0);
+            var guideEarnings = basePrice - platformFee;
+            long orderCode = long.Parse(DateTimeOffset.UtcNow.ToString("yyMMddHHmmssfff"));
+
+            // Calculate guest count based on TripRequest
+            int guests = request.GroupSize > 0 ? request.GroupSize : 1;
+            
+            // Use StartDate as BookingDate
+            var date = request.StartDate;
+
+            var booking = new BookingEntity
+            {
+                TravelerId = travelerId,
+                GuideProfileId = offer.GuideProfileId,
+                ExperiencePackageId = packageId,
+                BookingDate = date,
+                StartTime = date.Date.AddHours(9), // default start time
+                GuestCount = guests,
+                TotalAmount = basePrice,
+                PlatformFee = platformFee,
+                GuideEarnings = guideEarnings,
+                TravelerNotes = $"Accepted Offer for Trip Request: {request.Destination}",
+                PaymentReference = orderCode.ToString(),
+                Status = -1
+            };
+
+            var createdBooking = await _bookingRepository.CreateBookingAsync(booking);
+            
+            // Generate payOS link for 30% deposit
+            int depositAmount = (int)Math.Round(createdBooking.TotalAmount * 0.3m);
+            string paymentUrl = await _payOSService.CreatePaymentLink(createdBooking, orderCode, depositAmount);
+
+            return (true, "Success", createdBooking.Id, paymentUrl);
+        }
+
         public async Task<(bool Success, string Message, int? NewStatus)> ProcessPaymentCallbackAsync(
             string bookingId, string status, string cancel, string orderCode)
         {

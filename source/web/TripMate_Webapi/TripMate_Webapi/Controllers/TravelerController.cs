@@ -794,6 +794,134 @@ namespace TripMate_Webapi.Controllers
             await _tripRequestRepository.ToggleTripRequestStatusAsync(id);
             return Json(new { success = true });
         }
+
+        // GET: /Traveler/GetTripOffersAjax/{requestId}
+        [HttpGet("Traveler/GetTripOffersAjax/{requestId}")]
+        public async Task<IActionResult> GetTripOffersAjax(string requestId)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                var request = await _tripRequestRepository.GetTripRequestByIdAsync(requestId);
+                if (request == null || request.TravelerId != travelerId)
+                    return NotFound(new { error = "Trip request not found or unauthorized" });
+
+                var offers = await _tripRequestRepository.GetTripOffersByRequestIdAsync(requestId);
+                
+                // Get unique guide profile ids to enrich offers
+                var guideProfileIds = offers.Select(o => o.GuideProfileId).Distinct().ToList();
+                var profilesMap = new Dictionary<string, object>();
+                
+                foreach(var gId in guideProfileIds)
+                {
+                    var guideProfile = await _guideRepository.GetGuideByProfileIdAsync(gId);
+                    if (guideProfile != null)
+                    {
+                        profilesMap[gId] = new {
+                            name = guideProfile.Profile?.FullName ?? "Local Guide",
+                            avatarUrl = guideProfile.Profile?.AvatarUrl ?? "",
+                            rating = guideProfile.AverageRating
+                        };
+                    }
+                }
+
+                var result = offers.Select(o => new {
+                    id = o.Id,
+                    guideProfileId = o.GuideProfileId,
+                    message = o.Message,
+                    proposedPrice = o.ProposedPrice,
+                    status = o.Status,
+                    createdAt = o.CreatedAt.ToString("MMM dd, yyyy HH:mm"),
+                    guide = profilesMap.ContainsKey(o.GuideProfileId) ? profilesMap[o.GuideProfileId] : null
+                });
+
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching offers for request {RequestId}", requestId);
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        // POST: /Traveler/AcceptOfferAjax/{offerId}
+        [HttpPost("Traveler/AcceptOfferAjax/{offerId}")]
+        public async Task<IActionResult> AcceptOfferAjax(string offerId)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                var offer = await _tripRequestRepository.GetTripOfferByIdAsync(offerId);
+                if (offer == null) return NotFound(new { error = "Offer not found" });
+
+                var request = await _tripRequestRepository.GetTripRequestByIdAsync(offer.TripRequestId);
+                if (request == null || request.TravelerId != travelerId)
+                    return Unauthorized(new { error = "Unauthorized" });
+
+                if (request.Status != "open")
+                    return BadRequest(new { error = "This request is no longer open." });
+
+                // Update all offers for this request
+                var allOffers = await _tripRequestRepository.GetTripOffersByRequestIdAsync(request.Id);
+                foreach(var o in allOffers)
+                {
+                    o.Status = (o.Id == offerId) ? "accepted" : "rejected";
+                    await _tripRequestRepository.UpdateTripOfferAsync(o);
+                }
+
+                // Close request
+                request.Status = "closed";
+                await _tripRequestRepository.UpdateTripRequestAsync(request);
+
+                // Generate booking & payment link
+                var result = await _travelerBookingService.CreateBookingFromOfferAsync(travelerId, request, offer);
+
+                if (!result.Success)
+                    return BadRequest(new { error = result.Message });
+
+                return Json(new { success = true, paymentUrl = result.PaymentUrl, bookingId = result.BookingId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error accepting offer {OfferId}", offerId);
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+        // POST: /Traveler/RejectOfferAjax/{offerId}
+        [HttpPost("Traveler/RejectOfferAjax/{offerId}")]
+        public async Task<IActionResult> RejectOfferAjax(string offerId)
+        {
+            var travelerId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(travelerId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                var offer = await _tripRequestRepository.GetTripOfferByIdAsync(offerId);
+                if (offer == null) return NotFound(new { error = "Offer not found" });
+
+                var request = await _tripRequestRepository.GetTripRequestByIdAsync(offer.TripRequestId);
+                if (request == null || request.TravelerId != travelerId)
+                    return Unauthorized(new { error = "Unauthorized" });
+
+                offer.Status = "rejected";
+                await _tripRequestRepository.UpdateTripOfferAsync(offer);
+
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error rejecting offer {OfferId}", offerId);
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
         // GET: /Traveler/GetSavedGuidesAjax  [Bearer Auth via header]
         [HttpGet]
         public async Task<IActionResult> GetSavedGuidesAjax()
