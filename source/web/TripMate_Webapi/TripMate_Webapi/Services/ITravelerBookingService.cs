@@ -13,6 +13,9 @@ namespace TripMate_WebAPI.Services
         Task<(bool Success, string Message, string? BookingId, string? PaymentUrl)> CreateTourBookingAsync(
             string travelerId, string guideId, string packageId, DateTime date, int guests);
 
+        Task<(bool Success, string Message, string? BookingId, string? PaymentUrl)> CreateBookingFromOfferAsync(
+            string travelerId, TripRequestEntity request, TripOfferEntity offer);
+
         Task<(bool Success, string Message, int? NewStatus)> ProcessPaymentCallbackAsync(
             string bookingId, string status, string cancel, string orderCode);
 

@@ -193,13 +193,14 @@
                             </div>
                             ${trip.notes ? `<p class="text-on-surface-variant mb-6 line-clamp-2">"${trip.notes}"</p>` : ''}
                             ${!isClosed ? `
-                            <div class="bg-surface p-4 rounded-xl border border-outline-variant/30 flex items-center gap-3">
-                                <div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-primary">mail</span>
-                                </div>
-                                <div>
-                                    <p class="font-bold text-on-surface">Waiting for Offers</p>
-                                    <p class="text-xs text-on-surface-variant">Local guides have not responded yet.</p>
+                            <div id="offers-container-${trip.id}" class="mt-4">
+                                <button onclick="loadOffers('${trip.id}')" class="bg-primary/10 text-primary px-4 py-2 rounded-xl font-bold text-sm hover:bg-primary/20 transition-colors flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-[18px]">local_offer</span> View Guide Offers
+                                </button>
+                                <div id="offers-list-${trip.id}" class="hidden flex-col gap-4 mt-4">
+                                    <div class="text-center py-4 text-on-surface-variant text-sm flex items-center justify-center gap-2">
+                                        <div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div> Loading offers...
+                                    </div>
                                 </div>
                             </div>` : ''}
                         </div>
@@ -454,6 +455,148 @@
                 }
             }
         });
+    }
+
+    async function loadOffers(tripId) {
+        if (!token) return;
+        const listDiv = document.getElementById(`offers-list-${tripId}`);
+        const btn = listDiv.previousElementSibling;
+        
+        if (!listDiv.classList.contains('hidden') && listDiv.innerHTML.indexOf('Loading') === -1) {
+            listDiv.classList.add('hidden');
+            btn.innerHTML = `<span class="material-symbols-outlined text-[18px]">local_offer</span> View Guide Offers`;
+            return;
+        }
+
+        listDiv.classList.remove('hidden');
+        btn.innerHTML = `<span class="material-symbols-outlined text-[18px]">expand_less</span> Hide Offers`;
+        listDiv.innerHTML = `<div class="text-center py-4 text-on-surface-variant text-sm flex items-center justify-center gap-2">
+                                <div class="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div> Loading offers...
+                             </div>`;
+
+        try {
+            const res = await fetch(`/Traveler/GetTripOffersAjax/${tripId}`, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) {
+                const offers = await res.json();
+                if (offers.length === 0) {
+                    listDiv.innerHTML = `
+                    <div class="bg-surface p-4 rounded-xl border border-outline-variant/30 flex items-center gap-3">
+                        <div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center">
+                            <span class="material-symbols-outlined text-primary">hourglass_empty</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-on-surface">Waiting for Offers</p>
+                            <p class="text-xs text-on-surface-variant">Local guides have not responded to this request yet.</p>
+                        </div>
+                    </div>`;
+                    return;
+                }
+
+                let html = '';
+                offers.forEach(o => {
+                    const guideName = o.guide ? o.guide.name : 'Unknown Guide';
+                    const guideAvatar = o.guide && o.guide.avatarUrl ? `<img src="${o.guide.avatarUrl}" class="w-12 h-12 rounded-full object-cover shadow-sm border border-white">` : `<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center text-primary shadow-sm border border-white"><span class="material-symbols-outlined">person</span></div>`;
+                    const guideRating = o.guide && o.guide.rating > 0 ? `<span class="flex items-center text-xs font-bold text-orange-500"><span class="material-symbols-outlined text-[14px]">star</span> ${o.guide.rating.toFixed(1)}</span>` : '';
+                    
+                    let actionsHtml = '';
+                    if (o.status === 'pending') {
+                        actionsHtml = `
+                            <div class="flex flex-col sm:flex-row gap-2 mt-4 sm:mt-0 sm:ml-auto shrink-0">
+                                <button onclick="acceptOffer('${o.id}')" class="bg-primary text-white px-4 py-2 rounded-xl font-bold text-sm shadow hover:shadow-lg hover:-translate-y-0.5 transition-all w-full sm:w-auto">
+                                    Accept & Pay 30%
+                                </button>
+                                <button onclick="rejectOffer('${o.id}')" class="bg-surface-variant text-on-surface px-4 py-2 rounded-xl font-bold text-sm hover:bg-red-50 hover:text-red-600 transition-colors w-full sm:w-auto">
+                                    Reject
+                                </button>
+                            </div>
+                        `;
+                    } else if (o.status === 'accepted') {
+                        actionsHtml = `<div class="mt-4 sm:mt-0 sm:ml-auto shrink-0"><span class="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-full text-xs">Accepted</span></div>`;
+                    } else if (o.status === 'rejected') {
+                        actionsHtml = `<div class="mt-4 sm:mt-0 sm:ml-auto shrink-0"><span class="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full text-xs">Rejected</span></div>`;
+                    }
+
+                    html += `
+                        <div class="bg-surface rounded-xl p-4 sm:p-5 border border-outline-variant/30 flex flex-col sm:flex-row sm:items-center gap-4 hover:border-primary/30 transition-colors">
+                            <div class="flex gap-4 items-center flex-1">
+                                ${guideAvatar}
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <a href="/Traveler/GuideProfile/${o.guideProfileId}" class="font-bold text-on-surface hover:text-primary transition-colors text-lg">${guideName}</a>
+                                        ${guideRating}
+                                    </div>
+                                    <p class="text-sm font-extrabold text-green-600 mb-1">${o.proposedPrice.toLocaleString()} VND</p>
+                                    <p class="text-sm text-on-surface-variant italic line-clamp-2">"${o.message}"</p>
+                                </div>
+                            </div>
+                            ${actionsHtml}
+                        </div>
+                    `;
+                });
+                listDiv.innerHTML = html;
+            } else {
+                listDiv.innerHTML = `<p class="text-red-500 text-sm">Failed to load offers.</p>`;
+            }
+        } catch (err) {
+            console.error(err);
+            listDiv.innerHTML = `<p class="text-red-500 text-sm">Network error.</p>`;
+        }
+    }
+
+    async function acceptOffer(offerId) {
+        Swal.fire({
+            title: 'Accept Offer?',
+            text: "You will be redirected to pay a 30% deposit to confirm this trip.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#ff7a00',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, proceed to payment!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                if (!token) return;
+                Swal.fire({
+                    title: 'Processing...',
+                    text: 'Setting up your booking...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+                try {
+                    const res = await fetch('/Traveler/AcceptOfferAjax/' + offerId, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    const data = await res.json();
+                    if (res.ok && data.success) {
+                        window.location.href = data.paymentUrl;
+                    } else {
+                        Swal.fire({title: 'Error', text: data.error || 'Failed to accept offer.', icon: 'error', customClass: { popup: 'swal-top-fix' }});
+                    }
+                } catch (err) {
+                    Swal.fire({title: 'Error', text: 'Connection error.', icon: 'error', customClass: { popup: 'swal-top-fix' }});
+                }
+            }
+        });
+    }
+
+    async function rejectOffer(offerId) {
+        if (!confirm('Are you sure you want to reject this offer?')) return;
+        try {
+            const res = await fetch('/Traveler/RejectOfferAjax/' + offerId, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) {
+                showAlert('Offer rejected.');
+                loadTrips(); // Reload trips to refresh open requests state
+            } else {
+                showAlert('Failed to reject offer.', 'error');
+            }
+        } catch (err) {
+            showAlert('Connection error.', 'error');
+        }
     }
 
     async function leaveReview(id) {
