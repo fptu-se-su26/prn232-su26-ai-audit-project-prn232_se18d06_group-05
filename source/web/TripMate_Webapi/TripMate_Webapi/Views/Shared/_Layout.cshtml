@@ -80,8 +80,8 @@
     <!-- TopNavBar -->
     <header class="sticky top-0 w-full z-50 bg-surface/80 backdrop-blur-md shadow-sm border-b border-outline-variant/30">
         <div class="flex justify-between items-center h-20 px-12 max-w-[1440px] mx-auto">
-            <div class="flex items-center gap-8">
-                <a href="/" class="flex items-center gap-3">
+            <div class="flex items-center gap-8 shrink-0">
+                <a href="/" class="flex items-center gap-3 tripmate-logo-link">
                     <img alt="TripMate Logo" class="h-10 w-10 rounded-full object-cover" src="/images/AVATAR.png"/>
                     <span class="text-2xl font-extrabold tracking-tight text-on-surface">TRIPMATE</span>
                 </a>
@@ -107,7 +107,7 @@
                     Post a Trip Request
                 </a>
             </nav>
-            <div id="headerTools" class="flex items-center gap-6">
+            <div id="headerTools" class="flex items-center gap-6 shrink-0">
                 <a class="text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap font-bold" href="/Home/BecomeAGuide">Become a guide</a>
                 
                 <div class="flex items-center gap-4">
@@ -337,6 +337,13 @@
                         const container = document.getElementById('savedContainer');
                         if (container) container.appendChild(savedGuides);
                     }
+                }
+                
+                if (userRole === 'guide') {
+                    const logoLinks = document.querySelectorAll('.tripmate-logo-link');
+                    logoLinks.forEach(link => {
+                        link.href = '/Guide/Dashboard';
+                    });
                 }
             } else {
                 // User is not logged in
