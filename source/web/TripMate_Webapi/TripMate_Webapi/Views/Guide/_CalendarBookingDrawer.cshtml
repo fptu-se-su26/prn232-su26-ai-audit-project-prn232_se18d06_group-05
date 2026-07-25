@@ -46,7 +46,7 @@
                                     @@click="selectBooking(bookingItem)"
                                     :class="selectedBooking?.id === bookingItem.id ? 'border-primary bg-orange-50 text-primary' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'"
                                     class="min-w-[150px] rounded-xl border px-3 py-2 text-left transition-colors">
-                                <span class="block text-xs font-bold tabular-nums" x-text="bookingDayTimeLabel(bookingItem)"></span>
+                                <span class="block text-xs font-bold tabular-nums" x-text="bookingItem.startTime || 'Time TBD'"></span>
                                 <span class="mt-0.5 block truncate text-xs font-semibold" x-text="bookingItem.title"></span>
                             </button>
                         </template>
@@ -67,22 +67,16 @@
                                 <span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider"
                                       :class="statusBadgeClass(booking.status)"
                                       x-text="statusLabel(booking.status)"></span>
-                                <span x-show="booking.durationLabel"
-                                      class="ml-1 inline-flex rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-bold"
-                                      x-text="booking.durationLabel"></span>
                                 <h3 class="mt-2 line-clamp-2 text-lg font-bold leading-snug" x-text="booking.title"></h3>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-2 divide-x divide-gray-100 border-t border-gray-100">
                             <div class="p-4">
-                                <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Schedule</p>
-                                <p class="mt-1 text-sm font-bold text-gray-900" x-text="bookingDateRangeLabel(booking)"></p>
-                                <p class="mt-0.5 flex items-center gap-1.5 text-xs font-semibold text-gray-500">
-                                    <span class="material-symbols-outlined text-[15px] text-primary">schedule</span>
-                                    <span x-text="bookingOverallTimeLabel(booking)"></span>
-                                    <span aria-hidden="true">·</span>
-                                    <span x-text="booking.timeZone || 'Asia/Ho_Chi_Minh'"></span>
+                                <p class="text-[11px] font-bold uppercase tracking-wider text-gray-400">Time</p>
+                                <p class="mt-1 flex items-center gap-1.5 text-sm font-bold text-gray-900">
+                                    <span class="material-symbols-outlined text-[17px] text-primary">schedule</span>
+                                    <span x-text="booking.endTime ? `${booking.startTime}–${booking.endTime}` : (booking.startTime || 'To be confirmed')"></span>
                                 </p>
                             </div>
                             <div class="p-4">
@@ -125,12 +119,6 @@
                             </div>
                         </div>
                     </section>
-
-                    <div x-show="!booking.scheduleConfigured"
-                         class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-800">
-                        <span class="material-symbols-outlined text-[18px]">warning</span>
-                        <span>This legacy package has no default start/end schedule. The displayed span is derived from its saved duration.</span>
-                    </div>
 
                     <div class="rounded-xl bg-gray-50 px-4 py-3 text-xs text-gray-500">
                         Booking ID: <span class="font-mono font-semibold text-gray-700" x-text="booking.id"></span>

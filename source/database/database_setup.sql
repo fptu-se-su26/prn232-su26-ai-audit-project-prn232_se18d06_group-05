@@ -22,6 +22,10 @@ DROP TABLE IF EXISTS public.survey_questions CASCADE;
 DROP TABLE IF EXISTS public.profiles CASCADE;
 
 
+ALTER TABLE public.bookings
+DROP COLUMN payment_reference,
+DROP COLUMN payment_method;
+
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ==========================================
@@ -37,7 +41,9 @@ CREATE TABLE public.profiles (
   phone_number text,
   avatar_url text,
   is_active boolean DEFAULT true,
+  publication_status text NOT NULL DEFAULT 'published',
   created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
@@ -83,40 +89,18 @@ CREATE TABLE public.experience_packages (
   title text NOT NULL,
   description text NOT NULL,
   duration_hours numeric(4,1) NOT NULL,
-  duration_type text NOT NULL DEFAULT 'same_day',
-  duration_minutes integer,
-  duration_days integer NOT NULL DEFAULT 1,
-  default_start_time time without time zone,
-  default_end_time time without time zone,
-  time_zone text NOT NULL DEFAULT 'Asia/Ho_Chi_Minh',
   price_per_session numeric(12,2) NOT NULL,
   price_per_person numeric(12,2) DEFAULT 0,
   included_guest_count integer NOT NULL DEFAULT 1,
   max_group_size integer DEFAULT 6,
   included_items text[] DEFAULT '{}'::text[],
   tags text[] DEFAULT '{}'::text[],
-  city text NOT NULL DEFAULT '',
-  meeting_point text NOT NULL DEFAULT '',
-  languages text[] DEFAULT '{}'::text[],
-  cover_image_url text NOT NULL DEFAULT '',
-  gallery_image_urls text[] DEFAULT '{}'::text[],
-  timeline_json jsonb NOT NULL DEFAULT '[]'::jsonb,
   is_active boolean DEFAULT true,
-  publication_status text NOT NULL DEFAULT 'published',
   created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT experience_packages_pkey PRIMARY KEY (id),
   CONSTRAINT exp_pkg_included_guest_count_check CHECK (included_guest_count >= 1),
   CONSTRAINT exp_pkg_max_group_size_check CHECK (max_group_size >= included_guest_count),
   CONSTRAINT exp_pkg_price_check CHECK (price_per_session >= 0 AND COALESCE(price_per_person, 0) >= 0),
-  CONSTRAINT exp_pkg_duration_type_check CHECK (duration_type IN ('same_day', 'multi_day')),
-  CONSTRAINT exp_pkg_duration_minutes_check CHECK (duration_minutes IS NULL OR duration_minutes >= 30),
-  CONSTRAINT exp_pkg_duration_days_check CHECK (duration_days >= 1),
-  CONSTRAINT exp_pkg_duration_shape_check CHECK (
-    (duration_type = 'same_day' AND duration_days = 1)
-    OR (duration_type = 'multi_day' AND duration_days >= 2)
-  ),
-  CONSTRAINT exp_pkg_time_zone_check CHECK (BTRIM(time_zone) <> ''),
   CONSTRAINT exp_pkg_publication_status_check CHECK (publication_status IN ('draft', 'published', 'hidden')),
   CONSTRAINT exp_pkg_guide_fkey FOREIGN KEY (guide_profile_id) REFERENCES public.guide_profiles(id) ON DELETE CASCADE
 );

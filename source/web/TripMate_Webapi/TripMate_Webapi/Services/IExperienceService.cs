@@ -16,7 +16,7 @@ namespace TripMate_WebAPI.Services
     {
         Task<ExperiencePackageEntity> CreateTourAsync(CreateTourDto dto, string guideProfileId);
         Task<ExperiencePackageEntity> SaveTourDraftAsync(SaveTourDraftDto dto, string guideProfileId);
-        Task<TourEditorDto?> GetTourEditorAsync(string id, string guideProfileId);
+        Task<ExperiencePackageEntity?> GetPackageByIdAsync(string id, string guideProfileId);
         Task<List<MyTourDashboardDto>> GetMyToursAsync(string guideProfileId);
         Task<bool> ToggleTourStatusAsync(string tourId, string guideProfileId);
         Task<TourRemovalOutcome> DeleteTourAsync(string tourId, string guideProfileId);

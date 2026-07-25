@@ -44,44 +44,26 @@ namespace TripMate_WebAPI.Services
             vm.ReviewsCount = guideProfile.TotalReviews ?? 0;
             vm.ProfileViewsThisMonth = guideProfile.TotalViews; // Or ViewsThisMonth if we implement it
 
-            // Bookings and tours are independent once the guide profile is known.
-            var bookingsTask = _bookingRepo.GetBookingsForGuideAsync(guideProfile.Id);
-            var toursTask = _packageRepo.GetPackagesByGuideIdAsync(guideProfile.Id);
-            await Task.WhenAll(bookingsTask, toursTask);
-
-            var bookings = await bookingsTask;
-            var tours = await toursTask;
+            // 2. Get all Bookings for this Guide
+            var bookings = await _bookingRepo.GetBookingsForGuideAsync(guideProfile.Id);
 
             // 3. Compute Metrics
             var now = DateTime.UtcNow;
-            vm.EarningsYear = now.Year;
             var currentMonthBookings = bookings.Where(b => b.CreatedAt.Year == now.Year && b.CreatedAt.Month == now.Month).ToList();
             var lastMonth = now.AddMonths(-1);
+            var lastMonthBookings = bookings.Where(b => b.CreatedAt.Year == lastMonth.Year && b.CreatedAt.Month == lastMonth.Month).ToList();
 
             vm.TotalBookings = currentMonthBookings.Count;
-            var pendingBookings = bookings
-                .Where(b => BookingResponsePolicy.IsAwaitingGuideResponse(b.Status, b.CreatedAt, now))
-                .ToList();
-            vm.PendingBookingsCount = pendingBookings.Count;
-            if (pendingBookings.Any())
-            {
-                var nearestDeadline = pendingBookings
-                    .Select(b => BookingResponsePolicy.GetDeadlineUtc(b.CreatedAt))
-                    .Min();
-                vm.PendingResponseTimeRemaining = FormatDuration(nearestDeadline - now);
-            }
+            vm.PendingBookingsCount = bookings.Count(b => b.Status == 0);
 
-            // A completed booking is released by the admin flow. UpdatedAt therefore
-            // represents when this amount became guide earnings more accurately than CreatedAt.
-            var completedBookings = bookings.Where(b => b.Status == 2).ToList();
-            vm.TotalEarnings = completedBookings
-                .Where(b => IsInMonth(b.UpdatedAt, now.Year, now.Month))
+            // Earnings
+            vm.TotalEarnings = currentMonthBookings
+                .Where(b => b.Status == 2) // Completed only
                 .Sum(b => b.GuideEarnings);
 
-            var lastMonthEarnings = completedBookings
-                .Where(b => IsInMonth(b.UpdatedAt, lastMonth.Year, lastMonth.Month))
+            var lastMonthEarnings = lastMonthBookings
+                .Where(b => b.Status == 2)
                 .Sum(b => b.GuideEarnings);
-            vm.HasPreviousMonthEarnings = lastMonthEarnings > 0;
 
             if (lastMonthEarnings > 0)
             {
@@ -89,7 +71,7 @@ namespace TripMate_WebAPI.Services
             }
             else
             {
-                vm.EarningsGrowth = 0;
+                vm.EarningsGrowth = vm.TotalEarnings > 0 ? 100 : 0;
             }
 
             // Acceptance Rate
@@ -98,12 +80,10 @@ namespace TripMate_WebAPI.Services
             {
                 var acceptedCount = resolvedBookings.Count(b => b.Status == 1 || b.Status == 2);
                 vm.AcceptanceRate = (int)Math.Round((double)acceptedCount / resolvedBookings.Count * 100);
-                vm.HasAcceptanceRateData = true;
             }
             else
             {
-                vm.AcceptanceRate = 0;
-                vm.HasAcceptanceRateData = false;
+                vm.AcceptanceRate = 100; // Default if no resolved bookings
             }
 
             // Response Time (estimate from UpdatedAt - CreatedAt for responded bookings)
@@ -112,27 +92,25 @@ namespace TripMate_WebAPI.Services
             {
                 var totalMinutes = respondedBookings.Sum(b => (b.UpdatedAt - b.CreatedAt).TotalMinutes);
                 vm.ResponseTimeMinutes = (int)Math.Round(totalMinutes / respondedBookings.Count);
-                vm.HasResponseTimeData = true;
             }
             else
             {
-                vm.ResponseTimeMinutes = 0;
-                vm.HasResponseTimeData = false;
+                vm.ResponseTimeMinutes = 15; // Default mock value if none responded yet
             }
 
             // 4. Earnings Sparkline (12 months)
             var sparkline = new List<decimal>();
             for (int i = 1; i <= 12; i++)
             {
-                var monthEarnings = completedBookings
-                    .Where(b => IsInMonth(b.UpdatedAt, now.Year, i))
+                var monthEarnings = bookings
+                    .Where(b => b.CreatedAt.Year == now.Year && b.CreatedAt.Month == i && b.Status == 2)
                     .Sum(b => b.GuideEarnings);
                 sparkline.Add(monthEarnings);
             }
             vm.EarningsSparkline = sparkline;
-            vm.YearlyEarnings = sparkline.Sum();
 
             // 5. Active Tours
+            var tours = await _packageRepo.GetPackagesByGuideIdAsync(guideProfile.Id);
             vm.ActiveTours = tours.Count(t => t.IsActive);
 
             // 6. Recent Bookings (Top 4)
@@ -146,8 +124,8 @@ namespace TripMate_WebAPI.Services
                     TourName = b.ExperiencePackage?.Title ?? "Tour",
                     Date = b.BookingDate.ToString("dd/MM/yyyy"),
                     Time = b.StartTime.ToString("HH:mm"),
-                    Status = GetStatusString(b.Status, b.CreatedAt, now),
-                    Amount = b.GuideEarnings,
+                    Status = GetStatusString(b.Status),
+                    Amount = b.TotalAmount,
                     Guests = b.GuestCount
                 }).ToList();
 
@@ -155,6 +133,8 @@ namespace TripMate_WebAPI.Services
             vm.UpcomingSchedule = bookings
                 .Where(b => b.Status == 1 && b.BookingDate.Date.Add(b.StartTime.TimeOfDay) >= now)
                 .OrderBy(b => b.BookingDate.Date.Add(b.StartTime.TimeOfDay))
+                .Where(b => b.Status == 1 && b.BookingDate.Date >= now.Date)
+                .OrderBy(b => b.BookingDate).ThenBy(b => b.StartTime)
                 .Take(3)
                 .Select(b => new UpcomingTourItem
                 {
@@ -163,8 +143,7 @@ namespace TripMate_WebAPI.Services
                     Date = b.BookingDate.ToString("dd/MM/yyyy"),
                     Time = b.StartTime.ToString("HH:mm"),
                     Guests = b.GuestCount,
-                    Status = "Confirmed",
-                    StartsIn = FormatDuration(b.BookingDate.Date.Add(b.StartTime.TimeOfDay) - now)
+                    Status = "Confirmed"
                 }).ToList();
 
             // 8. Recent Activities (Mock for MVP)
@@ -179,50 +158,16 @@ namespace TripMate_WebAPI.Services
             return vm;
         }
 
-        private static bool IsInMonth(DateTime value, int year, int month)
+        private string GetStatusString(int status)
         {
-            var utcValue = BookingResponsePolicy.AsUtc(value);
-            return utcValue.Year == year && utcValue.Month == month;
-        }
-
-        private static string GetStatusString(int status, DateTime createdAt, DateTime utcNow)
-        {
-            if (BookingResponsePolicy.IsExpired(status, createdAt, utcNow))
-            {
-                return "Expired";
-            }
-
             return status switch
             {
-                -1 => "Pending payment",
                 0 => "Pending",
                 1 => "Confirmed",
                 2 => "Completed",
                 3 => "Cancelled",
                 _ => "Pending"
             };
-        }
-
-        private static string FormatDuration(TimeSpan duration)
-        {
-            if (duration <= TimeSpan.Zero)
-            {
-                return "Starting soon";
-            }
-
-            if (duration.TotalDays >= 1)
-            {
-                var days = (int)Math.Floor(duration.TotalDays);
-                var hours = duration.Hours;
-                return hours > 0 ? $"{days}d {hours}h remaining" : $"{days}d remaining";
-            }
-
-            if (duration.TotalHours >= 1)
-            {
-                return $"{(int)Math.Floor(duration.TotalHours)}h {duration.Minutes}m remaining";
-            }
-
-            return $"{Math.Max(1, duration.Minutes)}m remaining";
         }
     }
 }

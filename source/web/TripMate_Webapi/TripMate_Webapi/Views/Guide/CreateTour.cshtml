@@ -69,77 +69,22 @@
                                :aria-invalid="validationField === 'name'" class="w-full text-sm bg-white border text-gray-900 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition-all shadow-sm" :class="validationField === 'name' ? 'border-red-400' : 'border-gray-300'">
                     </div>
 
-                    <section class="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5" aria-labelledby="tour-schedule-heading">
-                        <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                            <div>
-                                <h4 id="tour-schedule-heading" class="text-sm font-bold text-gray-900">Tour schedule <span class="text-red-500">*</span></h4>
-                                <p class="mt-0.5 text-xs leading-5 text-gray-500">Set the standard duration and times shown to travelers.</p>
-                            </div>
-                            <span class="mt-2 w-fit rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-slate-600 shadow-sm sm:mt-0"
-                                  x-text="scheduleDurationLabel"></span>
-                        </div>
-
-                        <div class="mt-4 grid grid-cols-2 gap-2" role="radiogroup" aria-label="Tour duration type">
-                            <button type="button" @@click="setDurationType('same_day')"
-                                    :aria-pressed="formData.durationType === 'same_day'"
-                                    class="rounded-xl border px-3 py-3 text-left transition-all"
-                                    :class="formData.durationType === 'same_day' ? 'border-primary bg-orange-50 ring-2 ring-primary/10' : 'border-slate-200 bg-white hover:border-orange-200'">
-                                <span class="flex items-center gap-2 text-sm font-bold" :class="formData.durationType === 'same_day' ? 'text-primary' : 'text-slate-700'">
-                                    <span class="material-symbols-outlined text-[19px]">today</span> Same-day
-                                </span>
-                                <span class="mt-1 block text-[11px] leading-4 text-slate-500">Starts and ends on one day</span>
-                            </button>
-                            <button type="button" @@click="setDurationType('multi_day')"
-                                    :aria-pressed="formData.durationType === 'multi_day'"
-                                    class="rounded-xl border px-3 py-3 text-left transition-all"
-                                    :class="formData.durationType === 'multi_day' ? 'border-primary bg-orange-50 ring-2 ring-primary/10' : 'border-slate-200 bg-white hover:border-orange-200'">
-                                <span class="flex items-center gap-2 text-sm font-bold" :class="formData.durationType === 'multi_day' ? 'text-primary' : 'text-slate-700'">
-                                    <span class="material-symbols-outlined text-[19px]">date_range</span> Multi-day
-                                </span>
-                                <span class="mt-1 block text-[11px] leading-4 text-slate-500">Runs across two or more days</span>
-                            </button>
-                        </div>
-
-                        <div class="mt-4 grid grid-cols-1 gap-4" :class="formData.durationType === 'multi_day' ? 'sm:grid-cols-3' : 'sm:grid-cols-2'">
-                            <div x-show="formData.durationType === 'multi_day'">
-                                <label class="mb-1.5 block text-xs font-bold text-gray-700">Number of days</label>
-                                <div class="relative">
-                                    <input type="number" x-model.number="formData.durationDays" min="2" max="30"
-                                           @@change="syncItineraryDays()"
-                                           :aria-invalid="validationField === 'durationDays'"
-                                           class="w-full rounded-xl border bg-white px-3 py-2.5 pr-14 text-sm font-semibold text-gray-900 outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/20"
-                                           :class="validationField === 'durationDays' ? 'border-red-400' : 'border-gray-300'">
-                                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">days</span>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="mb-1.5 block text-xs font-bold text-gray-700">Start time</label>
-                                <input type="time" x-model="formData.defaultStartTime"
-                                       :aria-invalid="validationField === 'defaultStartTime'"
-                                       class="w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/20"
-                                       :class="validationField === 'defaultStartTime' ? 'border-red-400' : 'border-gray-300'">
-                            </div>
-                            <div>
-                                <label class="mb-1.5 block text-xs font-bold text-gray-700">End time <span x-show="formData.durationType === 'multi_day'" class="font-medium text-gray-400">(final day)</span></label>
-                                <input type="time" x-model="formData.defaultEndTime"
-                                       :aria-invalid="validationField === 'defaultEndTime'"
-                                       class="w-full rounded-xl border bg-white px-3 py-2.5 text-sm font-semibold text-gray-900 outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/20"
-                                       :class="validationField === 'defaultEndTime' ? 'border-red-400' : 'border-gray-300'">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 mb-1.5">Estimated Duration <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <input type="number" x-model="formData.duration" min="0.5" step="0.5"
+                                       class="w-full text-sm bg-white border border-gray-300 text-gray-900 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition-all shadow-sm">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">hours</span>
                             </div>
                         </div>
-
-                        <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-medium text-slate-500">
-                            <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">schedule</span><span x-text="scheduleTimeRangeLabel"></span></span>
-                            <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">public</span>Vietnam time (ICT)</span>
-                        </div>
-                    </section>
-
-                    <div>
-                        <label class="block text-sm font-semibold text-gray-900 mb-1.5">Maximum Group Size <span class="text-red-500">*</span></label>
-                        <div class="relative">
-                            <input type="number" x-model.number="formData.maxGuests" min="1" max="50"
-                                   class="w-full text-sm bg-white border border-gray-300 text-gray-900 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition-all shadow-sm">
-                            <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">people</span>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-900 mb-1.5">Maximum Group Size <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <input type="number" x-model="formData.maxGuests" min="1"
+                                       class="w-full text-sm bg-white border border-gray-300 text-gray-900 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition-all shadow-sm">
+                                <span class="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-500">people</span>
+                            </div>
                         </div>
                     </div>
 
@@ -187,78 +132,46 @@
                                   class="w-full text-sm bg-white border border-gray-300 text-gray-900 rounded-xl px-4 py-2.5 focus:border-primary focus:ring-4 focus:ring-primary/20 outline-none transition-all shadow-sm resize-none"></textarea>
                     </div>
 
-                    <section aria-labelledby="itinerary-builder-heading">
-                        <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                    <!-- Timeline Builder Modern -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
                             <div>
-                                <h4 id="itinerary-builder-heading" class="text-sm font-semibold text-gray-900">Day-by-day itinerary <span class="text-red-500">*</span></h4>
-                                <p class="mt-0.5 text-xs text-gray-500">Add a clear start, end, activity, and optional location for every stop.</p>
+                                <label class="block text-sm font-semibold text-gray-900">Detailed Itinerary</label>
+                                <p class="text-xs text-gray-500 mt-0.5">Add the key moments of the experience.</p>
                             </div>
-                            <span class="text-[11px] font-bold text-slate-400" x-text="`${formData.itineraryDays.length} ${formData.itineraryDays.length === 1 ? 'day' : 'days'}`"></span>
                         </div>
+                        
+                        <div class="ml-2 mt-2">
+                            <div class="relative">
+                                <!-- Vertical Line -->
+                                <div class="absolute left-2.5 top-4 bottom-4 w-0.5 bg-gray-200"></div>
 
-                        <div class="mt-4 flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label="Itinerary days">
-                            <template x-for="day in formData.itineraryDays" :key="day.dayNumber">
-                                <button type="button" role="tab" @@click="activeItineraryDay = day.dayNumber"
-                                        :aria-selected="activeItineraryDay === day.dayNumber"
-                                        class="inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition-all"
-                                        :class="activeItineraryDay === day.dayNumber ? 'border-primary bg-primary text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-orange-200 hover:bg-orange-50'">
-                                    <span x-text="`Day ${day.dayNumber}`"></span>
-                                    <span class="rounded-full px-1.5 py-0.5 text-[9px]"
-                                          :class="activeItineraryDay === day.dayNumber ? 'bg-white/20' : 'bg-slate-100 text-slate-500'"
-                                          x-text="day.items.filter(item => item.startTime && item.endTime && item.activity).length"></span>
-                                </button>
-                            </template>
-                        </div>
-
-                        <div class="mt-2 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
-                            <div class="mb-4">
-                                <label class="mb-1.5 block text-xs font-bold text-gray-700">Day title <span class="font-medium text-gray-400">(optional)</span></label>
-                                <input type="text" x-model="activeDayData.title" maxlength="120"
-                                       :placeholder="`Example: ${activeItineraryDay === 1 ? 'Arrival and city highlights' : 'Explore and local experiences'}`"
-                                       class="w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/20">
-                            </div>
-
-                            <div class="space-y-3">
-                                <template x-for="(item, index) in activeDayData.items" :key="`${activeItineraryDay}-${index}`">
-                                    <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                                        <div class="mb-2 flex items-center justify-between">
-                                            <span class="text-[11px] font-black uppercase tracking-wider text-slate-400" x-text="`Activity ${index + 1}`"></span>
-                                            <button type="button" @@click="removeItineraryItem(index)" :disabled="activeDayData.items.length === 1"
-                                                    class="rounded-lg p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30"
-                                                    aria-label="Remove activity">
-                                                <span class="material-symbols-outlined text-[17px]">delete</span>
-                                            </button>
-                                        </div>
-                                        <div class="grid grid-cols-2 gap-3 lg:grid-cols-[120px_120px_minmax(0,1fr)]">
-                                            <div>
-                                                <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Start</label>
-                                                <input type="time" x-model="item.startTime" class="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
-                                            </div>
-                                            <div>
-                                                <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">End</label>
-                                                <input type="time" x-model="item.endTime" class="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
-                                            </div>
-                                            <div class="col-span-2 lg:col-span-1">
-                                                <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Activity</label>
-                                                <input type="text" x-model="item.activity" maxlength="300" placeholder="What will travelers do?"
-                                                       class="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
-                                            </div>
-                                            <div class="col-span-2 lg:col-start-3">
-                                                <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Location <span class="font-medium normal-case tracking-normal text-slate-400">(optional)</span></label>
-                                                <input type="text" x-model="item.location" maxlength="200" placeholder="Venue or area"
-                                                       class="w-full rounded-lg border border-slate-200 px-2.5 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/15">
+                                <div class="space-y-4 relative z-10">
+                                    <template x-for="(item, index) in formData.timeline" :key="index">
+                                        <div class="relative flex items-start gap-4">
+                                            <!-- Timeline Dot -->
+                                            <div class="relative z-10 w-5 h-5 mt-2 rounded-full border-4 border-white bg-primary shadow-sm flex-shrink-0"></div>
+                                            
+                                            <!-- Inputs -->
+                                            <div class="flex-grow flex flex-col sm:flex-row gap-2 bg-white p-2.5 rounded-xl border border-gray-200 shadow-sm hover:border-gray-300 transition-colors">
+                                                <input type="time" x-model="item.time" class="w-28 bg-transparent border-none text-gray-900 text-sm font-semibold focus:ring-0 px-2 outline-none">
+                                                <div class="hidden sm:block w-px bg-gray-200 my-1"></div>
+                                                <input type="text" x-model="item.activity" placeholder="Activity (example: Breakfast)" class="flex-grow bg-transparent border-none text-gray-700 text-sm focus:ring-0 px-2 outline-none">
+                                                
+                                                <button type="button" @@click="removeTimelineItem(index)" class="p-1.5 text-gray-400 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0">
+                                                    <span class="material-symbols-outlined text-[18px]">close</span>
+                                                </button>
                                             </div>
                                         </div>
-                                    </article>
-                                </template>
+                                    </template>
+                                </div>
                             </div>
 
-                            <button type="button" @@click="addItineraryItem()" :disabled="activeDayData.items.length >= 20"
-                                    class="mt-3 inline-flex items-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 transition hover:border-primary hover:bg-orange-50 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50">
-                                <span class="material-symbols-outlined text-[17px]">add</span> Add activity to day <span x-text="activeItineraryDay"></span>
+                            <button type="button" @@click="addTimelineItem()" class="mt-4 relative z-10 flex items-center gap-1.5 text-xs font-bold text-gray-700 hover:text-primary transition-colors bg-white border border-dashed border-gray-300 px-4 py-2 rounded-xl hover:border-primary hover:bg-orange-50">
+                                <span class="material-symbols-outlined text-[16px]">add</span> Add Timeline Item
                             </button>
                         </div>
-                    </section>
+                    </div>
 
                     <hr class="border-gray-200" />
 
@@ -487,15 +400,7 @@
                     <span class="absolute left-4 top-4 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600" x-text="publicationStatus"></span>
                     <div class="absolute bottom-4 left-4 right-4 text-white"><p class="text-[10px] font-bold uppercase tracking-wider" x-text="formData.city || 'Destination'"></p><h3 class="mt-1 line-clamp-2 text-lg font-black" x-text="formData.name || 'Your experience title'"></h3></div>
                 </div>
-                <div class="space-y-4 p-5">
-                    <div class="flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold text-slate-500">
-                        <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">date_range</span><span x-text="scheduleDurationLabel"></span></span>
-                        <span class="inline-flex items-center gap-1"><span class="material-symbols-outlined text-[15px]">schedule</span><span x-text="scheduleTimeRangeLabel"></span></span>
-                        <span x-text="`Up to ${formData.maxGuests || 0} guests`"></span>
-                    </div>
-                    <p class="line-clamp-3 text-sm leading-6 text-slate-500" x-text="formData.description || 'Your description will appear here as travelers browse the experience.'"></p>
-                    <div class="border-t border-slate-100 pt-4"><p class="text-lg font-black text-primary" x-text="formatCurrency(formData.pricePerSession)"></p><p class="text-[10px] font-semibold text-slate-400" x-text="`Per tour · Includes ${formData.includedGuests} guest${Number(formData.includedGuests) === 1 ? '' : 's'}`"></p></div>
-                </div>
+                <div class="space-y-4 p-5"><div class="flex gap-3 text-xs font-semibold text-slate-500"><span x-text="`${formData.duration || 0} hours`"></span><span x-text="`Up to ${formData.maxGuests || 0} guests`"></span></div><p class="line-clamp-3 text-sm leading-6 text-slate-500" x-text="formData.description || 'Your description will appear here as travelers browse the experience.'"></p><div class="border-t border-slate-100 pt-4"><p class="text-lg font-black text-primary" x-text="formatCurrency(formData.pricePerSession)"></p><p class="text-[10px] font-semibold text-slate-400" x-text="`Per tour · Includes ${formData.includedGuests} guest${Number(formData.includedGuests) === 1 ? '' : 's'}`"></p></div></div>
             </section>
             <section class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
                 <div class="flex items-center justify-between"><h3 class="text-sm font-black text-slate-900">Publish checklist</h3><span class="text-sm font-black" :class="completionScore === 100 ? 'text-green-600' : 'text-primary'" x-text="`${completionScore}%`"></span></div>
@@ -544,7 +449,6 @@
                 autosaveTimer: null,
                 validationMessage: '',
                 validationField: '',
-                activeItineraryDay: 1,
                 wizardSteps: [
                     { id: 1, label: 'Basics' },
                     { id: 2, label: 'Experience' },
@@ -624,51 +528,17 @@
                 ],
                 
                 formData: {
-                    id: '', name: '', maxGuests: 5, city: '', meetingPoint: '',
-                    durationType: 'same_day', durationDays: 1, defaultStartTime: '09:00', defaultEndTime: '13:00', timeZone: 'Asia/Ho_Chi_Minh',
-                    description: '', itineraryDays: [{ dayNumber: 1, title: '', items: [{ startTime: '', endTime: '', activity: '', location: '' }] }], languages: ['Vietnamese', 'English'],
+                    id: '', name: '', duration: 4, maxGuests: 5, city: '', meetingPoint: '',
+                    description: '', timeline: [{time: '', activity: ''}], languages: ['Vietnamese', 'English'],
                     pricePerSession: 1000000, includedGuests: 1, additionalGuestFee: 0,
                     includedServices: ['scooter'], tags: ['explore']
-                },
-
-                get activeDayData() {
-                    return this.formData.itineraryDays.find(day => day.dayNumber === this.activeItineraryDay)
-                        || this.formData.itineraryDays[0];
-                },
-                get scheduleDurationMinutes() {
-                    const start = this.timeToMinutes(this.formData.defaultStartTime);
-                    const end = this.timeToMinutes(this.formData.defaultEndTime);
-                    if (start === null || end === null) return 0;
-                    if (this.formData.durationType === 'multi_day')
-                        return ((Math.max(2, Number(this.formData.durationDays) || 2) - 1) * 1440) + end - start;
-                    return end - start;
-                },
-                get scheduleDurationHours() {
-                    return Math.max(0.5, this.scheduleDurationMinutes / 60);
-                },
-                get scheduleDurationLabel() {
-                    if (this.formData.durationType === 'multi_day')
-                        return `${Math.max(2, Number(this.formData.durationDays) || 2)} days`;
-                    const minutes = this.scheduleDurationMinutes;
-                    if (minutes <= 0) return 'Same-day tour';
-                    const hours = Math.floor(minutes / 60);
-                    const remaining = minutes % 60;
-                    return remaining ? `${hours ? `${hours} hr ` : ''}${remaining} min` : `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
-                },
-                get scheduleTimeRangeLabel() {
-                    const start = this.formData.defaultStartTime || 'Start TBD';
-                    const end = this.formData.defaultEndTime || 'End TBD';
-                    return this.formData.durationType === 'multi_day'
-                        ? `${start} Day 1 – ${end} Day ${Math.max(2, Number(this.formData.durationDays) || 2)}`
-                        : `${start} – ${end}`;
                 },
 
                 get completionItems() {
                     return [
                         { label: 'Tour name and destination', complete: (this.formData.name || '').trim().length >= 5 && !!this.formData.city && !!(this.formData.meetingPoint || '').trim() },
-                        { label: 'Valid tour schedule', complete: this.scheduleIsComplete() },
                         { label: 'Description and language', complete: (this.formData.description || '').trim().length >= 20 && this.formData.languages.length > 0 },
-                        { label: 'Complete day-by-day itinerary', complete: this.itineraryIsComplete() },
+                        { label: 'Complete itinerary', complete: this.formData.timeline.some(item => item.time && item.activity) },
                         { label: 'Cover photo', complete: !!this.coverImagePreview },
                         { label: 'Valid capacity and pricing', complete: Number(this.formData.pricePerSession) > 0 && Number(this.formData.includedGuests) >= 1 && Number(this.formData.maxGuests) >= Number(this.formData.includedGuests) }
                     ];
@@ -689,14 +559,7 @@
                                 this.formData.id = tourData.id;
                                 this.publicationStatus = tourData.publicationStatus || 'hidden';
                                 this.formData.name = tourData.title;
-                                const schedule = tourData.schedule || {};
-                                this.formData.durationType = schedule.durationType === 'multi_day' ? 'multi_day' : 'same_day';
-                                this.formData.durationDays = this.formData.durationType === 'multi_day'
-                                    ? Math.max(2, Number(schedule.durationDays) || 2)
-                                    : 1;
-                                this.formData.defaultStartTime = schedule.defaultStartTime || '';
-                                this.formData.defaultEndTime = schedule.defaultEndTime || '';
-                                this.formData.timeZone = schedule.timeZone || 'Asia/Ho_Chi_Minh';
+                                this.formData.duration = tourData.durationHours;
                                 this.formData.maxGuests = tourData.maxGroupSize;
                                 const cityAliases = { 'Hà Nội': 'Hanoi', 'TP Hồ Chí Minh': 'Ho Chi Minh City', 'Đà Nẵng': 'Da Nang', 'Hội An': 'Quang Nam', 'Khác': 'Other' };
                                 this.formData.city = cityAliases[tourData.city] || tourData.city;
@@ -705,10 +568,7 @@
                                 this.formData.pricePerSession = tourData.pricePerSession;
                                 this.formData.includedGuests = tourData.includedGuestCount || 1;
                                 this.formData.additionalGuestFee = tourData.additionalGuestFee || 0;
-                                this.formData.itineraryDays = this.normalizeItineraryDays(
-                                    tourData.itineraryDays,
-                                    this.formData.durationDays,
-                                    tourData.timelineJson);
+                                this.formData.timeline = tourData.timelineJson || [{time: '', activity: ''}];
                                 const languageAliases = { 'Tiếng Việt': 'Vietnamese', '한국어': 'Korean', '中文': 'Chinese' };
                                 this.formData.languages = (tourData.languages || []).map(language => languageAliases[language] || language);
                                 const loadedServices = tourData.includedItems || [];
@@ -765,16 +625,6 @@
                         const saved = JSON.parse(raw);
                         if (!saved?.formData) return;
                         this.formData = { ...this.formData, ...saved.formData };
-                        this.formData.durationType = this.formData.durationType === 'multi_day' ? 'multi_day' : 'same_day';
-                        this.formData.durationDays = this.formData.durationType === 'multi_day'
-                            ? Math.max(2, Math.min(30, Number(this.formData.durationDays) || 2))
-                            : 1;
-                        this.formData.timeZone = this.formData.timeZone || 'Asia/Ho_Chi_Minh';
-                        this.formData.itineraryDays = this.normalizeItineraryDays(
-                            saved.formData.itineraryDays,
-                            this.formData.durationDays,
-                            saved.formData.timeline);
-                        this.activeItineraryDay = 1;
                         this.lastSavedAt = saved.savedAt ? new Date(saved.savedAt) : null;
                         showToast('info', 'Recovered your locally saved changes.');
                     } catch { localStorage.removeItem(this.localStorageKey()); }
@@ -794,108 +644,6 @@
                     const seconds = Math.max(0, Math.round((Date.now() - new Date(this.lastSavedAt).getTime()) / 1000));
                     return seconds < 10 ? 'just now' : seconds < 60 ? `${seconds}s ago` : `${Math.floor(seconds / 60)}m ago`;
                 },
-                emptyItineraryItem() {
-                    return { startTime: '', endTime: '', activity: '', location: '' };
-                },
-                normalizeItineraryDays(days, expectedDayCount, legacyTimeline = null) {
-                    const expected = Math.max(1, Math.min(30, Number(expectedDayCount) || 1));
-                    let source = Array.isArray(days) ? days : [];
-                    if (!source.length && Array.isArray(legacyTimeline) && legacyTimeline.length) {
-                        source = [{
-                            dayNumber: 1,
-                            title: '',
-                            items: legacyTimeline.map(item => ({
-                                startTime: item.time || '',
-                                endTime: '',
-                                activity: item.activity || '',
-                                location: ''
-                            }))
-                        }];
-                    }
-
-                    const normalized = [];
-                    for (let index = 0; index < expected; index++) {
-                        const day = source[index] || {};
-                        const items = Array.isArray(day.items) && day.items.length
-                            ? day.items.map(item => ({
-                                startTime: item.startTime || '',
-                                endTime: item.endTime || '',
-                                activity: item.activity || '',
-                                location: item.location || ''
-                            }))
-                            : [this.emptyItineraryItem()];
-                        normalized.push({ dayNumber: index + 1, title: day.title || '', items });
-                    }
-                    return normalized;
-                },
-                syncItineraryDays() {
-                    const days = this.formData.durationType === 'multi_day'
-                        ? Math.max(2, Math.min(30, Number(this.formData.durationDays) || 2))
-                        : 1;
-                    this.formData.durationDays = days;
-                    this.formData.itineraryDays = this.normalizeItineraryDays(this.formData.itineraryDays, days);
-                    if (this.activeItineraryDay > days) this.activeItineraryDay = days;
-                },
-                setDurationType(type) {
-                    this.formData.durationType = type === 'multi_day' ? 'multi_day' : 'same_day';
-                    this.formData.durationDays = this.formData.durationType === 'multi_day'
-                        ? Math.max(2, Number(this.formData.durationDays) || 2)
-                        : 1;
-                    this.syncItineraryDays();
-                },
-                timeToMinutes(value) {
-                    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(value || '')) return null;
-                    const [hours, minutes] = value.split(':').map(Number);
-                    return hours * 60 + minutes;
-                },
-                scheduleIsComplete() {
-                    const start = this.timeToMinutes(this.formData.defaultStartTime);
-                    const end = this.timeToMinutes(this.formData.defaultEndTime);
-                    const days = Number(this.formData.durationDays);
-                    if (start === null || end === null) return false;
-                    if (this.formData.durationType === 'multi_day')
-                        return days >= 2 && days <= 30 && this.scheduleDurationMinutes >= 30;
-                    return days === 1 && end - start >= 30;
-                },
-                itineraryValidation() {
-                    const days = this.formData.itineraryDays || [];
-                    if (days.length !== Number(this.formData.durationDays))
-                        return { message: 'The itinerary day count must match the tour duration.', day: 1 };
-
-                    for (const day of days) {
-                        if (!Array.isArray(day.items) || !day.items.length)
-                            return { message: `Add at least one activity to day ${day.dayNumber}.`, day: day.dayNumber };
-                        const ranges = [];
-                        for (let index = 0; index < day.items.length; index++) {
-                            const item = day.items[index];
-                            if (!(item.activity || '').trim())
-                                return { message: `Add a description for day ${day.dayNumber}, activity ${index + 1}.`, day: day.dayNumber };
-                            const start = this.timeToMinutes(item.startTime);
-                            const end = this.timeToMinutes(item.endTime);
-                            if (start === null || end === null)
-                                return { message: `Add valid start and end times for day ${day.dayNumber}, activity ${index + 1}.`, day: day.dayNumber };
-                            if (end <= start)
-                                return { message: `Day ${day.dayNumber}, activity ${index + 1} must end after it starts.`, day: day.dayNumber };
-                            ranges.push({ start, end });
-                        }
-                        ranges.sort((a, b) => a.start - b.start);
-                        if (ranges.some((range, index) => index > 0 && range.start < ranges[index - 1].end))
-                            return { message: `Day ${day.dayNumber} contains overlapping activities.`, day: day.dayNumber };
-                    }
-
-                    const tourStart = this.timeToMinutes(this.formData.defaultStartTime);
-                    const tourEnd = this.timeToMinutes(this.formData.defaultEndTime);
-                    const firstStarts = days[0].items.map(item => this.timeToMinutes(item.startTime)).filter(value => value !== null);
-                    const lastEnds = days[days.length - 1].items.map(item => this.timeToMinutes(item.endTime)).filter(value => value !== null);
-                    if (tourStart !== null && firstStarts.length && Math.min(...firstStarts) < tourStart)
-                        return { message: 'The first-day itinerary cannot start before the tour start time.', day: 1 };
-                    if (tourEnd !== null && lastEnds.length && Math.max(...lastEnds) > tourEnd)
-                        return { message: 'The final-day itinerary cannot end after the tour end time.', day: days.length };
-                    return null;
-                },
-                itineraryIsComplete() {
-                    return this.itineraryValidation() === null;
-                },
                 selectedServiceNames() { return this.formData.includedServices.map(id => this.availableServices.find(service => service.id === id)?.name || id); },
                 async saveDraft(notify = false) {
                     if (this.publicationStatus !== 'draft' || this.isSavingDraft) return;
@@ -903,14 +651,9 @@
                     try {
                         const response = await fetch('/Guide/SaveTourDraft', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({
                             id: this.formData.id || null, title: this.formData.name, city: this.formData.city, meetingPoint: this.formData.meetingPoint,
-                            description: this.formData.description, durationHours: this.scheduleDurationHours,
-                            durationType: this.formData.durationType, durationMinutes: this.scheduleDurationMinutes || null,
-                            durationDays: Number(this.formData.durationDays), defaultStartTime: this.formData.defaultStartTime || null,
-                            defaultEndTime: this.formData.defaultEndTime || null, timeZone: this.formData.timeZone,
-                            pricePerSession: Number(this.formData.pricePerSession || 0),
+                            description: this.formData.description, durationHours: Number(this.formData.duration || 4), pricePerSession: Number(this.formData.pricePerSession || 0),
                             pricePerGuest: Number(this.formData.additionalGuestFee || 0), includedGuestCount: Number(this.formData.includedGuests || 1), maxGroupSize: Number(this.formData.maxGuests || 1),
-                            includedServices: this.selectedServiceNames(), languages: this.formData.languages, tags: this.formData.tags,
-                            itineraryDays: this.formData.itineraryDays
+                            includedServices: this.selectedServiceNames(), languages: this.formData.languages, tags: this.formData.tags, timeline: this.formData.timeline
                         }) });
                         const result = await response.json();
                         if (!response.ok || !result.success) throw new Error(result.message || 'The draft could not be saved.');
@@ -928,8 +671,8 @@
                 nextStep() {
                     if (!this.validateStep(this.step)) return;
                     if (this.step === 2) {
-                        this.formData.itineraryDays.forEach(day =>
-                            day.items.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || '')));
+                        this.formData.timeline = this.formData.timeline.filter(t => t.time.trim() !== '' || t.activity.trim() !== '');
+                        this.formData.timeline.sort((a, b) => a.time.localeCompare(b.time));
                     }
                     
                     if (this.step < 4) this.step++;
@@ -941,13 +684,11 @@
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 },
 
-                addItineraryItem() {
-                    if (this.activeDayData.items.length >= 20) return;
-                    this.activeDayData.items.push(this.emptyItineraryItem());
+                addTimelineItem() {
+                    this.formData.timeline.push({ time: '', activity: '' });
                 },
-                removeItineraryItem(index) {
-                    if (this.activeDayData.items.length <= 1) return;
-                    this.activeDayData.items.splice(index, 1);
+                removeTimelineItem(index) {
+                    this.formData.timeline.splice(index, 1);
                 },
 
                 fullCapacityTotal() {
@@ -961,25 +702,19 @@
                 validateStep(step, notify = true) {
                     let message = '';
                     let field = '';
-                    let itineraryDay = null;
                     if (step === 1) {
                         if ((this.formData.name || '').trim().length < 5) { message = 'Enter an experience name with at least 5 characters.'; field = 'name'; }
                         else if (!this.formData.city) { message = 'Select a city or province.'; field = 'city'; }
                         else if (!(this.formData.meetingPoint || '').trim()) { message = 'Enter a specific meeting address.'; field = 'meetingPoint'; }
-                        else if (this.formData.durationType === 'multi_day' && (Number(this.formData.durationDays) < 2 || Number(this.formData.durationDays) > 30)) { message = 'A multi-day tour must last between 2 and 30 days.'; field = 'durationDays'; }
-                        else if (!this.formData.defaultStartTime) { message = 'Choose the tour start time.'; field = 'defaultStartTime'; }
-                        else if (!this.formData.defaultEndTime) { message = 'Choose the tour end time.'; field = 'defaultEndTime'; }
-                        else if (!this.scheduleIsComplete()) { message = this.formData.durationType === 'same_day' ? 'A same-day tour must end at least 30 minutes after it starts.' : 'Review the multi-day schedule and final-day end time.'; field = 'defaultEndTime'; }
+                        else if (Number(this.formData.duration) < 0.5) { message = 'Duration must be at least 0.5 hours.'; field = 'duration'; }
                         else if (Number(this.formData.maxGuests) < 1) { message = 'Maximum group size must be at least one.'; field = 'maxGuests'; }
                     } else if (step === 2) {
                         if ((this.formData.description || '').trim().length < 20) message = 'Write an overview with at least 20 characters.';
                         else if (!this.formData.languages.length) message = 'Select at least one language.';
-                        else {
-                            const itineraryError = this.itineraryValidation();
-                            if (itineraryError) {
-                                message = itineraryError.message;
-                                itineraryDay = itineraryError.day;
-                            }
+                        else if (!this.formData.timeline.some(item => item.time && item.activity)) message = 'Add at least one complete itinerary item.';
+                        else if (this.formData.timeline.some(item =>
+                            (item.time || item.activity) && (!item.time || !item.activity))) {
+                            message = 'Enter both the time and activity for every itinerary item.';
                         }
                     } else if (step === 3) {
                         if (!this.coverImagePreview) message = 'Add a cover image before publishing.';
@@ -994,7 +729,6 @@
                         this.validationMessage = message;
                         this.validationField = field;
                         if (message) {
-                            if (itineraryDay) this.activeItineraryDay = itineraryDay;
                             showToast('error', message);
                             this.$nextTick(() => (field === 'name' ? this.$refs.tourName : this.$el.querySelector('[aria-invalid="true"]'))?.focus());
                         }
@@ -1067,13 +801,7 @@
                         formData.append("City", this.formData.city);
                         formData.append("MeetingPoint", this.formData.meetingPoint);
                         formData.append("Description", this.formData.description);
-                        formData.append("DurationHours", this.scheduleDurationHours.toString());
-                        formData.append("DurationType", this.formData.durationType);
-                        formData.append("DurationMinutes", this.scheduleDurationMinutes.toString());
-                        formData.append("DurationDays", this.formData.durationDays.toString());
-                        formData.append("DefaultStartTime", this.formData.defaultStartTime);
-                        formData.append("DefaultEndTime", this.formData.defaultEndTime);
-                        formData.append("TimeZone", this.formData.timeZone);
+                        formData.append("DurationHours", this.formData.duration);
                         formData.append("PricePerSession", this.formData.pricePerSession);
                         formData.append("PricePerGuest", this.formData.additionalGuestFee);
                         formData.append("IncludedGuestCount", this.formData.includedGuests);
@@ -1082,8 +810,7 @@
                         formData.append("IncludedServices", JSON.stringify(this.selectedServiceNames()));
                         formData.append("Languages", JSON.stringify(this.formData.languages));
                         formData.append("Tags", JSON.stringify(this.formData.tags));
-                        formData.append("TimelineJson", "[]");
-                        formData.append("ItineraryJson", JSON.stringify(this.formData.itineraryDays));
+                        formData.append("TimelineJson", JSON.stringify(this.formData.timeline));
                         formData.append("RetainedGalleryImages", JSON.stringify(
                             this.galleryItems.filter(item => item.existingUrl).map(item => item.existingUrl)
                         ));

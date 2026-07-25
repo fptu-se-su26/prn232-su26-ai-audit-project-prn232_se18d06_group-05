@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using TripMate_WebAPI.DTOs.Tour.Scheduling;
 
 namespace TripMate_WebAPI.DTOs.Tour.Responses
 {
@@ -27,23 +26,6 @@ namespace TripMate_WebAPI.DTOs.Tour.Responses
         public int ReviewCount { get; set; }
         public int CompletenessScore { get; set; }
         public List<string> MissingQualityItems { get; set; } = [];
-        public MyTourScheduleSummaryDto Schedule { get; set; } = new();
-        public List<TourItineraryDayDto> ItineraryDays { get; set; } = [];
         public DateTime UpdatedAt { get; set; }
-    }
-
-    public class MyTourScheduleSummaryDto
-    {
-        public string DurationType { get; set; } = TourDurationTypes.SameDay;
-        public int? DurationMinutes { get; set; }
-        public int DurationDays { get; set; } = 1;
-        public string? StartTime { get; set; }
-        public string? EndTime { get; set; }
-        public string TimeZone { get; set; } = "Asia/Ho_Chi_Minh";
-        public bool IsConfigured { get; set; }
-        public string DurationLabel { get; set; } = string.Empty;
-        public string TimeRangeLabel { get; set; } = "Time not set";
-        public int ItineraryDayCount { get; set; }
-        public int ActivityCount { get; set; }
     }
 }

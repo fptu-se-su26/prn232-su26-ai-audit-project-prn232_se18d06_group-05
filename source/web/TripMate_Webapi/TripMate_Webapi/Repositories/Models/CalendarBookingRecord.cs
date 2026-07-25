@@ -58,24 +58,6 @@ public sealed class CalendarPackageRecord
     [JsonPropertyName("duration_hours")]
     public decimal DurationHours { get; set; }
 
-    [JsonPropertyName("duration_type")]
-    public string? DurationType { get; set; }
-
-    [JsonPropertyName("duration_minutes")]
-    public int? DurationMinutes { get; set; }
-
-    [JsonPropertyName("duration_days")]
-    public int DurationDays { get; set; } = 1;
-
-    [JsonPropertyName("default_start_time")]
-    public string? DefaultStartTime { get; set; }
-
-    [JsonPropertyName("default_end_time")]
-    public string? DefaultEndTime { get; set; }
-
-    [JsonPropertyName("time_zone")]
-    public string? TimeZone { get; set; }
-
     [JsonPropertyName("meeting_point")]
     public string? MeetingPoint { get; set; }
 

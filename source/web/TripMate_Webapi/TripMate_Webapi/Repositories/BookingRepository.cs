@@ -154,6 +154,16 @@ namespace TripMate_Webapi.Repositories
             return response.Models.FirstOrDefault()?.Id;
         }
 
+        public async Task<List<BookingEntity>> GetGuideBookingsInRangeAsync(string guideProfileId, string start, string endExclusive)
+        {
+            var response = await _supabase.From<BookingEntity>()
+                .Filter("guide_profile_id", Postgrest.Constants.Operator.Equals, guideProfileId)
+                .Filter("booking_date", Postgrest.Constants.Operator.GreaterThanOrEqual, start)
+                .Filter("booking_date", Postgrest.Constants.Operator.LessThan, endExclusive)
+                .Get();
+            return response.Models;
+        }
+
         public async Task<List<CalendarBookingRecord>> GetGuideCalendarBookingsInRangeAsync(
             string guideProfileId,
             string start,
@@ -175,7 +185,7 @@ namespace TripMate_Webapi.Repositories
                 "traveler_notes",
                 "created_at",
                 "traveler:traveler_id(full_name,avatar_url)",
-                "experience_package:experience_package_id(title,duration_hours,duration_type,duration_minutes,duration_days,default_start_time,default_end_time,time_zone,meeting_point,cover_image_url)"
+                "experience_package:experience_package_id(title,duration_hours,meeting_point,cover_image_url)"
             });
 
             var url = $"{_supabaseUrl}/rest/v1/bookings" +
