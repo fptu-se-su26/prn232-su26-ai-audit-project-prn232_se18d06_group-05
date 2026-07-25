@@ -285,6 +285,21 @@
             console.error("Failed to load countries", err);
         }
 
+        try {
+            const countRes = await fetch('https://countries.dev/countries');
+            let countData = await countRes.json();
+            countData.sort((a, b) => a.name.localeCompare(b.name));
+            const natSelect = document.getElementById('nationalityInput');
+            countData.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.name;
+                opt.textContent = c.name;
+                natSelect.appendChild(opt);
+            });
+        } catch (err) {
+            console.error("Failed to load countries", err);
+        }
+
         // Load stored profile
         const profile = JSON.parse(localStorage.getItem('travelerProfile') || '{}');
 

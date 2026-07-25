@@ -17,6 +17,10 @@ namespace TripMate_Webapi.Repositories
         // Offers
         Task<TripOfferEntity> CreateTripOfferAsync(TripOfferEntity offer);
         Task<List<TripOfferEntity>> GetTripOffersByGuideAsync(string guideProfileId);
+        Task<List<TripOfferEntity>> GetTripOffersByRequestIdAsync(string requestId);
+        Task<TripOfferEntity?> GetTripOfferByIdAsync(string offerId);
+        Task UpdateTripOfferAsync(TripOfferEntity offer);
+        Task UpdateTripRequestAsync(TripRequestEntity request);
 
         // Profiles
         Task<List<ProfileEntity>> GetProfilesByIdsAsync(IReadOnlyCollection<string> ids);

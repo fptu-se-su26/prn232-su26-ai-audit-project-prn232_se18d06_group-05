@@ -179,26 +179,26 @@ public class BookingService
 
     public async Task CancelBookingAsync(string bookingId, string travelerId)
     {
-        var booking = await GetBookingByIdAsync(bookingId)
-            ?? throw new Exception("Booking not found.");
+        var bookingEntity = await _repo.GetBookingByIdAsync(bookingId);
+        if (bookingEntity == null)
+            throw new Exception("Không tìm thấy booking");
 
-        if (booking.TravelerId != travelerId)
-            throw new UnauthorizedAccessException("You are not authorized to cancel this booking.");
+        if (bookingEntity.TravelerId != travelerId)
+            throw new UnauthorizedAccessException("Bạn không có quyền hủy booking này");
 
-        if (booking.Status == "completed")
-            throw new Exception("A completed booking cannot be cancelled.");
+        if (bookingEntity.Status == 2) // Completed
+            throw new Exception("Không thể hủy booking đã hoàn thành");
 
-        // Update status to 3 (Cancelled)
-        var updates = new { status = 3 };
-        var request = BuildRequest(HttpMethod.Patch,
-            $"{_supabaseUrl}/rest/v1/bookings?id=eq.{bookingId}");
-        request.Content = new StringContent(
-            JsonSerializer.Serialize(updates), Encoding.UTF8, "application/json");
+        if (bookingEntity.Status == -1) // Pending Payment
+        {
+            await _repo.DeleteBookingAsync(bookingId);
+        }
+        else
+        {
+            await _repo.UpdateBookingStatusAsync(bookingId, 3); // Cancelled
+        }
 
-        var response = await _http.SendAsync(request);
-        EnsureSuccess(response, await response.Content.ReadAsStringAsync());
-
-        var guideUserId = await GetGuideUserIdAsync(booking.GuideProfileId);
+        var guideUserId = await GetGuideUserIdAsync(bookingEntity.GuideProfileId);
         var data = new { bookingId, cancelledBy = "traveler" };
         if (!string.IsNullOrWhiteSpace(guideUserId))
         {

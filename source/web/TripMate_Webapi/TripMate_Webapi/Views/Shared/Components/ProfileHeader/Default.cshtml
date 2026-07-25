@@ -1,0 +1,77 @@
+@model TripMate_Webapi.ViewComponents.ProfileHeaderViewModel
+
+@if (Model != null)
+{
+    var displayName = Model.FullName;
+    var userEmail = Model.Email;
+    var userRole = Model.Role.ToLower();
+    var avatarUrl = Model.AvatarUrl;
+
+    <div class="relative group">
+        <button class="flex items-center gap-3 hover:bg-primary-container px-4 py-2 rounded-full transition-all">
+            <span class="text-sm font-medium text-on-surface">@displayName</span>
+            <div class="h-10 w-10 rounded-full overflow-hidden border-2 border-primary/20 bg-primary-container flex items-center justify-center">
+                @if (!string.IsNullOrEmpty(avatarUrl))
+                {
+                    <img src="@avatarUrl" class="w-full h-full object-cover rounded-full" alt="@displayName" />
+                }
+                else
+                {
+                    <div class="w-full h-full flex items-center justify-center text-primary font-bold">
+                        @(displayName.Length > 0 ? displayName.Substring(0, 1).ToUpper() : "U")
+                    </div>
+                }
+            </div>
+        </button>
+        <!-- Dropdown Menu -->
+        <div class="absolute right-0 top-full mt-2 w-56 bg-surface rounded-xl shadow-2xl border border-outline-variant/30 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+            <a href="@(userRole == "guide" ? "/Guide/Dashboard" : "/Traveler/Dashboard")" class="block p-4 border-b border-outline-variant/30 hover:bg-surface-variant transition-colors">
+                <p class="font-bold text-on-surface">@displayName</p>
+                <p class="text-xs text-on-surface-variant">@userEmail</p>
+                <span class="inline-block mt-2 px-3 py-1 bg-primary-container text-primary text-xs font-bold rounded-full capitalize">
+                    @userRole
+                </span>
+            </a>
+            <div class="p-2">
+                @if (userRole == "traveler")
+                {
+                    <a href="/Traveler/Trips" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                        <span class="material-symbols-outlined text-on-surface-variant">calendar_month</span>
+                        <span class="font-bold">My Trips</span>
+                    </a>
+                    <a href="/Traveler/Messages" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                        <span class="material-symbols-outlined text-on-surface-variant">chat</span>
+                        <span class="font-medium">Messages</span>
+                    </a>
+                    <a href="/Traveler/Settings" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                        <span class="material-symbols-outlined text-on-surface-variant">manage_accounts</span>
+                        <span class="font-medium">Profile & Setting</span>
+                    </a>
+                }
+                else
+                {
+                    <a href="/Guide/Dashboard" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                        <span class="material-symbols-outlined text-on-surface-variant">dashboard</span>
+                        <span class="font-medium">Guide Dashboard</span>
+                    </a>
+                    <a href="/Guide/Bookings" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                        <span class="material-symbols-outlined text-on-surface-variant">book_online</span>
+                        <span class="font-bold">Bookings</span>
+                    </a>
+                    <a href="/Guide/Profile" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                        <span class="material-symbols-outlined text-on-surface-variant">person</span>
+                        <span class="font-medium">Profile</span>
+                    </a>
+                    <a href="/Guide/Profile" class="flex items-center gap-3 px-4 py-3 hover:bg-primary-container rounded-lg transition-all text-on-surface">
+                        <span class="material-symbols-outlined text-on-surface-variant">settings</span>
+                        <span class="font-medium">Settings</span>
+                    </a>
+                }
+                <button onclick="logout()" class="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 rounded-lg transition-all mt-1">
+                    <span class="material-symbols-outlined">logout</span>
+                    <span class="font-bold">Logout</span>
+                </button>
+            </div>
+        </div>
+    </div>
+}

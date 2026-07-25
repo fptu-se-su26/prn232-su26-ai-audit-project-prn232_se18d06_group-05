@@ -58,7 +58,7 @@ namespace TripMate_Webapi.Controllers
 
         [HttpPost]
         [Authorize(Roles = "guide")]
-        public async Task<IActionResult> UpdateProfileAjax([FromForm] UpdateGuideProfileRequest req, [FromServices] TripMate_WebAPI.Services.ICloudinaryService cloudinary)
+        public async Task<IActionResult> UpdateProfileAjax([FromForm] UpdateGuideProfileRequest req, [FromServices] TripMate_WebAPI.Services.ICloudinaryService cloudinary, [FromServices] Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
         {
             var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             _logger.LogInformation("UpdateProfileAjax called. UserId={UserId}, FullName={FullName}, Bio={Bio}, Languages={Languages}, Specialties={Specialties}, BaseRate={BaseRate}, CityArea={CityArea}",
@@ -156,6 +156,10 @@ namespace TripMate_Webapi.Controllers
                 }
 
                 _logger.LogInformation("UpdateProfileAjax SUCCESS for userId={UserId}", userId);
+
+                // Invalidate header component cache
+                cache.Remove($"HeaderProfile_{userId}");
+
                 return Json(new { success = true, avatarUrl = profile?.AvatarUrl, coverUrl = guideProfile?.CoverPhotoUrl });
             }
             catch (Exception ex)
