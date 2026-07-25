@@ -4,522 +4,551 @@
     ViewData["ActivePage"] = "Dashboard";
     Layout = "_GuideLayout";
 
-    // Serialize sparkline data for Chart.js
+    var now = DateTime.Now;
+    var currentMonth = now.ToString("MMMM yyyy", new System.Globalization.CultureInfo("en-US"));
     var sparklineJson = System.Text.Json.JsonSerializer.Serialize(Model.EarningsSparkline ?? new List<decimal>());
-    var currentMonth = DateTime.Now.ToString("MMMM yyyy", new System.Globalization.CultureInfo("vi-VN"));
+    var hasEarningsData = Model.EarningsSparkline?.Any(value => value > 0) == true;
+    var earningsGrowthIsNegative = Model.EarningsGrowth < 0;
+    var acceptanceRate = Math.Clamp(Model.AcceptanceRate, 0, 100);
+    var nextTrip = Model.UpcomingSchedule?.FirstOrDefault();
+    var laterTrips = Model.UpcomingSchedule?.Skip(1).Take(2).ToList() ?? new List<TripMate_WebAPI.DTOs.UpcomingTourItem>();
+
+    var responseTimeDisplay = "No data";
+    if (Model.HasResponseTimeData)
+    {
+        if (Model.ResponseTimeMinutes >= 1440)
+        {
+            responseTimeDisplay = $"{Model.ResponseTimeMinutes / 1440}d {(Model.ResponseTimeMinutes % 1440) / 60}h";
+        }
+        else if (Model.ResponseTimeMinutes >= 60)
+        {
+            responseTimeDisplay = $"{Model.ResponseTimeMinutes / 60}h {Model.ResponseTimeMinutes % 60}m";
+        }
+        else
+        {
+            responseTimeDisplay = $"{Model.ResponseTimeMinutes} min";
+        }
+    }
 }
 
 @section Styles {
 <style>
-    @@keyframes countUp {
-        from { opacity: 0; transform: translateY(8px); }
-        to   { opacity: 1; transform: translateY(0); }
+    .dashboard-card {
+        border: 1px solid rgb(229 231 235 / 0.8);
+        background: #fff;
+        box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
     }
-    .stat-value { animation: countUp 0.5s ease-out forwards; }
 
-    @@keyframes shimmer {
-        0%   { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
+    .dashboard-action-card {
+        transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
     }
-    .hero-gradient {
-        background: linear-gradient(135deg, #fff7f4 0%, #fff 50%, #f0f9ff 100%);
+
+    .dashboard-action-card:hover {
+        border-color: rgb(254 215 170);
+        box-shadow: 0 8px 20px -14px rgb(15 23 42 / 0.35);
+        transform: translateY(-1px);
     }
-    .kpi-card {
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    .stat-value {
+        animation: dashboard-count-in 420ms ease-out both;
     }
-    .kpi-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 24px -8px rgba(0,0,0,0.10);
+
+    @@keyframes dashboard-count-in {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
     }
-    .pending-banner {
-        background: linear-gradient(90deg, #fff7ed, #ffedd5);
-        border-left: 4px solid #FF6B35;
+
+    .earnings-chart-wrap {
+        height: 220px;
+        position: relative;
     }
-    .sparkline-wrap { position: relative; }
-    .booking-row { transition: background 0.15s ease; }
-    .booking-row:hover { background: #fff7f4; }
-    .status-dot {
-        width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+
+    @@media (max-width: 639px) {
+        .earnings-chart-wrap { height: 190px; }
     }
-    .upcoming-card { transition: background 0.15s ease; }
-    .upcoming-card:hover { background: #f9fafb; }
+
+    @@media (prefers-reduced-motion: reduce) {
+        .stat-value { animation: none; }
+        .dashboard-action-card { transition: none; }
+        .dashboard-action-card:hover { transform: none; }
+    }
 </style>
 }
 
-@* ── PENDING URGENT BANNER ─────────────────────────────────────────── *@
-@if (Model.PendingBookingsCount > 0)
-{
-    <div class="pending-banner rounded-2xl px-5 py-4 mb-6 flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                <span class="material-symbols-outlined text-primary text-[20px]">notification_important</span>
+<div class="mx-auto max-w-[1600px]">
+    <section class="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex min-w-0 items-center gap-3">
+            <div class="relative flex-shrink-0">
+                <img src="@Model.AvatarUrl" alt="" class="h-12 w-12 rounded-2xl border-2 border-white object-cover shadow-sm"
+                     onerror="this.onerror=null;this.src='/images/AVATAR.png'">
+                @if (Model.IsVerified)
+                {
+                    <span class="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-blue-500" title="Verified guide">
+                        <span class="material-symbols-outlined text-[11px] text-white" style="font-variation-settings:'FILL' 1" aria-hidden="true">verified</span>
+                    </span>
+                }
             </div>
-            <div>
-                <p class="font-bold text-gray-900 text-sm">
-                    You have <span class="text-primary">@Model.PendingBookingsCount booking(s)</span> awaiting confirmation!
-                </p>
-                <p class="text-xs text-gray-500 mt-0.5">Travelers are waiting for your response. Confirm promptly to improve your acceptance rate.</p>
+            <div class="min-w-0">
+                <h1 class="truncate text-xl font-bold text-gray-950 sm:text-2xl">Good to see you, @Model.GuideName</h1>
+                <p class="mt-0.5 text-sm text-gray-500">Here is what needs your attention today · @currentMonth</p>
             </div>
         </div>
-        <a href="/Guide/Bookings?tab=Pending" class="flex-shrink-0 bg-primary hover:bg-primary-dark text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors shadow-sm flex items-center gap-1.5">
-            View <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-        </a>
-    </div>
-}
+        <div class="flex flex-shrink-0 items-center gap-2">
+            <a href="/Guide/Calendar"
+               class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:border-orange-200 hover:bg-orange-50 hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">event_available</span>
+                <span class="hidden sm:inline">Manage availability</span>
+                <span class="sm:hidden">Availability</span>
+            </a>
+            <a href="/Guide/CreateTour"
+               class="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-primary/40 focus:ring-offset-2">
+                <span class="material-symbols-outlined text-[18px]" aria-hidden="true">add</span>
+                Create Tour
+            </a>
+        </div>
+    </section>
 
-@* ── HERO HEADER ─────────────────────────────────────────────────────── *@
-<div class="hero-gradient rounded-3xl border border-gray-100 shadow-sm p-6 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-    <div class="flex items-center gap-5">
-        <div class="relative flex-shrink-0">
-            <img src="@Model.AvatarUrl" alt="avatar"
-                 class="w-16 h-16 rounded-2xl object-cover border-2 border-white shadow-md"
-                 onerror="this.src='/images/AVATAR.png'">
-            @if (Model.IsVerified)
-            {
-                <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow border-2 border-white" title="Verified">
-                    <span class="material-symbols-outlined text-white text-[12px]" style="font-variation-settings:'FILL' 1">verified</span>
-                </div>
-            }
-        </div>
-        <div>
-            <h2 class="text-2xl font-bold text-gray-900">Hello, @Model.GuideName! 👋</h2>
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5">
-                <span class="text-sm text-gray-500 flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[14px] text-gray-400">location_on</span>
-                    @Model.Location
+    @if (Model.PendingBookingsCount > 0)
+    {
+        <section class="mb-5 flex flex-col gap-4 rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5" aria-label="Bookings awaiting a response">
+            <div class="flex items-start gap-3">
+                <span class="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-sm">
+                    <span class="material-symbols-outlined text-[20px]" aria-hidden="true">notification_important</span>
                 </span>
-                <span class="text-sm text-amber-500 flex items-center gap-1 font-semibold">
-                    <span class="material-symbols-outlined text-[14px]" style="font-variation-settings:'FILL' 1">star</span>
-                    @Model.AverageRating.ToString("0.0") <span class="text-gray-400 font-normal">(@Model.ReviewsCount reviews)</span>
-                </span>
-                <span class="text-xs text-gray-400">Today, @DateTime.Now.ToString("dd/MM/yyyy")</span>
-            </div>
-        </div>
-    </div>
-    <div class="flex items-center gap-3 flex-shrink-0">
-        <div class="bg-white/80 backdrop-blur border border-gray-200 px-4 py-2.5 rounded-xl flex items-center gap-2 text-gray-600 shadow-sm text-sm font-medium">
-            <span class="material-symbols-outlined text-primary text-[18px]">calendar_today</span>
-            @currentMonth
-        </div>
-        <a href="/Guide/CreateTour" class="bg-primary hover:bg-primary-dark text-white px-5 py-2.5 rounded-xl font-bold transition-colors shadow-sm flex items-center gap-2 text-sm">
-            <span class="material-symbols-outlined text-[18px]">add</span> Create Tour
-        </a>
-    </div>
-</div>
-
-@* ── 4 KPI CARDS ────────────────────────────────────────────────────── *@
-<div class="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
-
-    @* Card 1: Thu nhập *@
-    <div class="kpi-card col-span-2 xl:col-span-1 bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-        <div class="flex justify-between items-start mb-3">
-            <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <span class="material-symbols-outlined text-primary text-[20px]">payments</span>
-            </div>
-            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-green-50 text-green-700 flex items-center gap-0.5">
-                <span class="material-symbols-outlined text-[13px]">trending_up</span>
-                +@Model.EarningsGrowth%
-            </span>
-        </div>
-        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Earnings this month</p>
-        <p class="text-2xl font-black text-gray-900 stat-value">₫@Model.TotalEarnings.ToString("N0")</p>
-        <p class="text-xs text-gray-400 mt-1">compared with last month</p>
-    </div>
-
-    @* Card 2: Bookings *@
-    <div class="kpi-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-        <div class="flex justify-between items-start mb-3">
-            <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                <span class="material-symbols-outlined text-blue-600 text-[20px]">event_note</span>
-            </div>
-            @if (Model.PendingBookingsCount > 0)
-            {
-                <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700">@Model.PendingBookingsCount pending</span>
-            }
-        </div>
-        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Bookings</p>
-        <p class="text-2xl font-black text-gray-900 stat-value">@Model.TotalBookings</p>
-        <p class="text-xs text-gray-400 mt-1">bookings this month</p>
-    </div>
-
-    @* Card 3: Tours *@
-    <div class="kpi-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-        <div class="flex justify-between items-start mb-3">
-            <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
-                <span class="material-symbols-outlined text-purple-600 text-[20px]">tour</span>
-            </div>
-            <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700">Live</span>
-        </div>
-        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Active Tours</p>
-        <p class="text-2xl font-black text-gray-900 stat-value">@Model.ActiveTours</p>
-        <p class="text-xs text-gray-400 mt-1">currently visible in the app</p>
-    </div>
-
-    @* Card 4: Rating *@
-    <div class="kpi-card bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-        <div class="flex justify-between items-start mb-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                <span class="material-symbols-outlined text-amber-500 text-[20px]" style="font-variation-settings:'FILL' 1">star</span>
-            </div>
-        </div>
-        <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Average Rating</p>
-        <p class="text-2xl font-black text-gray-900 stat-value">@Model.AverageRating.ToString("0.0")</p>
-        <p class="text-xs text-gray-400 mt-1">@Model.ReviewsCount reviews</p>
-    </div>
-</div>
-
-@* ── MAIN CONTENT GRID ───────────────────────────────────────────────── *@
-<div class="grid grid-cols-12 gap-6">
-
-    @* ── LEFT COLUMN (8/12) ──────────────────────────────────────────── *@
-    <div class="col-span-12 lg:col-span-8 flex flex-col gap-6">
-
-        @* Sparkline Earnings Chart *@
-        <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div class="flex items-center justify-between mb-5">
                 <div>
-                    <h4 class="text-base font-bold text-gray-900">Earnings This Year</h4>
-                    <p class="text-xs text-gray-400 mt-0.5">Year 2026</p>
-                </div>
-                <div class="text-right">
-                    <p class="text-xl font-black text-gray-900">₫@Model.TotalEarnings.ToString("N0")</p>
-                    <p class="text-xs text-green-600 font-semibold flex items-center gap-0.5 justify-end">
-                        <span class="material-symbols-outlined text-[13px]">trending_up</span>
-                        +@Model.EarningsGrowth% vs last month
+                    <p class="text-sm font-bold text-gray-950">
+                        @Model.PendingBookingsCount @(Model.PendingBookingsCount == 1 ? "booking needs" : "bookings need") your response
+                    </p>
+                    <p class="mt-0.5 text-xs leading-5 text-gray-600">
+                        @if (!string.IsNullOrWhiteSpace(Model.PendingResponseTimeRemaining))
+                        {
+                            <span class="font-semibold text-orange-700">Nearest deadline: @Model.PendingResponseTimeRemaining.</span>
+                        }
+                        Travelers are waiting for confirmation.
                     </p>
                 </div>
             </div>
-            <div class="sparkline-wrap" style="height: 250px;">
-                <canvas id="earningsChart"></canvas>
-            </div>
-        </div>
+            <a href="/Guide/Bookings?tab=Pending"
+               class="inline-flex min-h-10 flex-shrink-0 items-center justify-center gap-1.5 rounded-xl bg-gray-950 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 focus:ring-offset-orange-50">
+                Review bookings
+                <span class="material-symbols-outlined text-[17px]" aria-hidden="true">arrow_forward</span>
+            </a>
+        </section>
+    }
 
-        @* Recent Bookings *@
-        <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
-                <div>
-                    <h4 class="text-base font-bold text-gray-900">Recent Bookings</h4>
-                    <p class="text-xs text-gray-400 mt-0.5">Latest @Model.RecentBookings.Count booking(s)</p>
-                </div>
-                <a href="/Guide/Bookings" class="text-sm font-semibold text-primary hover:text-primary-dark flex items-center gap-1 transition-colors">
-                    View all <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-                </a>
+    <section class="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Business overview">
+        <a href="/Guide/Earnings" class="dashboard-card dashboard-action-card rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-primary/30">
+            <div class="flex items-start justify-between gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50 text-primary">
+                    <span class="material-symbols-outlined text-[19px]" aria-hidden="true">payments</span>
+                </span>
+                @if (Model.HasPreviousMonthEarnings)
+                {
+                    <span class="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[11px] font-bold @(earningsGrowthIsNegative ? "bg-red-50 text-red-700" : "bg-green-50 text-green-700")">
+                        <span class="material-symbols-outlined text-[13px]" aria-hidden="true">@(earningsGrowthIsNegative ? "trending_down" : "trending_up")</span>
+                        @(Model.EarningsGrowth > 0 ? "+" : string.Empty)@Model.EarningsGrowth%
+                    </span>
+                }
+                else
+                {
+                    <span class="rounded-full bg-gray-100 px-2 py-1 text-[11px] font-semibold text-gray-500">
+                        @(Model.TotalEarnings > 0 ? "New this month" : "No earnings yet")
+                    </span>
+                }
             </div>
+            <p class="mt-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Net earnings this month</p>
+            <p class="stat-value mt-1 text-2xl font-black tracking-tight text-gray-950">₫@Model.TotalEarnings.ToString("N0")</p>
+            <p class="mt-1 text-xs text-gray-500">Money received after platform fees</p>
+        </a>
 
-            @if (Model.RecentBookings != null && Model.RecentBookings.Any())
+        <a href="/Guide/Bookings" class="dashboard-card dashboard-action-card rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-primary/30">
+            <div class="flex items-start justify-between gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <span class="material-symbols-outlined text-[19px]" aria-hidden="true">event_note</span>
+                </span>
+                <span class="text-xs font-semibold text-gray-400">This month</span>
+            </div>
+            <p class="mt-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Bookings this month</p>
+            <p class="stat-value mt-1 text-2xl font-black tracking-tight text-gray-950">@Model.TotalBookings</p>
+            <p class="mt-1 text-xs text-gray-500">Bookings created during @now.ToString("MMMM", new System.Globalization.CultureInfo("en-US"))</p>
+        </a>
+
+        <a href="/Guide/MyTours" class="dashboard-card dashboard-action-card rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-primary/30">
+            <div class="flex items-start justify-between gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600">
+                    <span class="material-symbols-outlined text-[19px]" aria-hidden="true">tour</span>
+                </span>
+                <span class="rounded-full bg-violet-50 px-2 py-1 text-[11px] font-semibold text-violet-700">Published</span>
+            </div>
+            <p class="mt-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Published tours</p>
+            <p class="stat-value mt-1 text-2xl font-black tracking-tight text-gray-950">@Model.ActiveTours</p>
+            <p class="mt-1 text-xs text-gray-500">Currently visible to travelers</p>
+        </a>
+
+        <a href="/Guide/Profile" class="dashboard-card dashboard-action-card rounded-2xl p-4 focus:outline-none focus:ring-2 focus:ring-primary/30">
+            <div class="flex items-start justify-between gap-3">
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-500">
+                    <span class="material-symbols-outlined text-[19px]" style="font-variation-settings:'FILL' 1" aria-hidden="true">star</span>
+                </span>
+                <span class="text-xs font-semibold text-gray-400">@(Model.ReviewsCount == 1 ? "1 review" : $"{Model.ReviewsCount} reviews")</span>
+            </div>
+            <p class="mt-3 text-[11px] font-bold uppercase tracking-wider text-gray-400">Average rating</p>
+            @if (Model.ReviewsCount > 0)
             {
-                <div class="divide-y divide-gray-50">
-                    @foreach (var booking in Model.RecentBookings)
-                    {
-                        <div class="booking-row flex items-center px-6 py-4 gap-4">
-                            @* Avatar *@
-                            <img src="@booking.TravelerAvatar" alt="@booking.TravelerName"
-                                 class="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-gray-100"
-                                 onerror="this.onerror=null;this.src='/images/AVATAR.png'">
-
-                            @* Name + Tour *@
-                            <div class="flex-grow min-w-0">
-                                <p class="font-bold text-gray-900 text-sm truncate">@booking.TravelerName</p>
-                                <p class="text-xs text-gray-400 truncate mt-0.5 flex items-center gap-1">
-                                    <span class="material-symbols-outlined text-[12px]">route</span>
-                                    @booking.TourName
-                                </p>
-                            </div>
-
-                            @* Date + Time *@
-                            <div class="hidden sm:block flex-shrink-0 text-right">
-                                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Trip Date</p>
-                                <p class="text-sm font-medium text-gray-800 mt-0.5">@booking.Date</p>
-                                <p class="text-xs text-gray-400">@booking.Time · @booking.Guests guest(s)</p>
-                            </div>
-
-                            @* Amount *@
-                            <div class="hidden md:block flex-shrink-0 text-right w-28">
-                                <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Net Earnings</p>
-                                <p class="text-sm font-bold text-green-600 mt-0.5">₫@booking.Amount.ToString("N0")</p>
-                            </div>
-
-                            @* Status *@
-                            <div class="flex-shrink-0">
-                                @if (booking.Status == "Confirmed")
-                                {
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-100">
-                                        <span class="status-dot bg-green-500"></span>Confirmed
-                                    </span>
-                                }
-                                else if (booking.Status == "Pending")
-                                {
-                                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 rounded-lg text-xs font-bold border border-amber-100">
-                                        <span class="status-dot bg-amber-500"></span>Pending
-                                    </span>
-                                }
-                                else
-                                {
-                                    <span class="px-3 py-1.5 bg-gray-50 text-gray-600 rounded-lg text-xs font-bold border border-gray-200">@booking.Status</span>
-                                }
-                            </div>
-                        </div>
-                    }
-                </div>
+                <p class="stat-value mt-1 text-2xl font-black tracking-tight text-gray-950">@Model.AverageRating.ToString("0.0")</p>
+                <p class="mt-1 text-xs text-gray-500">Based on verified traveler reviews</p>
             }
             else
             {
-                <div class="text-center py-12 text-gray-400 flex flex-col items-center gap-2">
-                    <span class="material-symbols-outlined text-5xl text-gray-200">inbox</span>
-                    <p class="font-medium">No recent bookings yet</p>
-                    <p class="text-xs text-gray-300">New traveler bookings will appear here.</p>
-                </div>
+                <p class="mt-1 text-lg font-bold text-gray-700">No reviews yet</p>
+                <p class="mt-1 text-xs text-gray-500">Ratings will appear after completed tours</p>
             }
-        </div>
+        </a>
+    </section>
 
-    </div>
+    <div class="grid grid-cols-12 gap-5">
+        <div class="col-span-12 flex flex-col gap-5 xl:col-span-8">
+            <section class="dashboard-card rounded-2xl p-4 sm:p-5" aria-labelledby="earnings-chart-title">
+                <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                        <h2 id="earnings-chart-title" class="text-base font-bold text-gray-950">Earnings overview</h2>
+                        <p class="mt-0.5 text-xs text-gray-500">Net earnings received from January to December @Model.EarningsYear</p>
+                    </div>
+                    <div class="sm:text-right">
+                        <p class="text-xl font-black tracking-tight text-gray-950">₫@Model.YearlyEarnings.ToString("N0")</p>
+                        <a href="/Guide/Earnings" class="text-xs font-semibold text-primary hover:text-primary-dark hover:underline">View earnings report</a>
+                    </div>
+                </div>
 
-    @* ── RIGHT COLUMN (4/12) ─────────────────────────────────────────── *@
-    <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
-
-        @* Quick Stats *@
-        <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h4 class="text-base font-bold text-gray-900 mb-4">Quick Stats</h4>
-            <div class="space-y-4">
-                @* Acceptance Rate *@
-                <div>
-                    <div class="flex justify-between items-center mb-1.5">
-                        <span class="text-xs font-medium text-gray-500 flex items-center gap-1.5">
-                            <span class="material-symbols-outlined text-[14px] text-green-500">check_circle</span>
-                            Acceptance Rate
+                @if (hasEarningsData)
+                {
+                    <div class="earnings-chart-wrap">
+                        <canvas id="earningsChart" role="img" aria-label="Monthly earnings chart for @Model.EarningsYear"></canvas>
+                    </div>
+                }
+                else
+                {
+                    <div class="flex min-h-[190px] flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-5 text-center">
+                        <span class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-gray-400 shadow-sm">
+                            <span class="material-symbols-outlined" aria-hidden="true">monitoring</span>
                         </span>
-                        <span class="text-sm font-bold text-gray-900">@Model.AcceptanceRate%</span>
+                        <p class="mt-3 text-sm font-bold text-gray-800">No completed earnings recorded in @Model.EarningsYear</p>
+                        <p class="mt-1 max-w-sm text-xs leading-5 text-gray-500">Completed payouts will appear here and build your monthly earnings trend.</p>
                     </div>
-                    <div class="w-full bg-gray-100 rounded-full h-2">
-                        <div class="bg-green-500 h-2 rounded-full transition-all" style="width: @Model.AcceptanceRate%"></div>
+                }
+            </section>
+
+            <section class="dashboard-card overflow-hidden rounded-2xl" aria-labelledby="recent-bookings-title">
+                <div class="flex items-center justify-between gap-4 border-b border-gray-100 px-4 py-4 sm:px-5">
+                    <div>
+                        <h2 id="recent-bookings-title" class="text-base font-bold text-gray-950">Recent bookings</h2>
+                        <p class="mt-0.5 text-xs text-gray-500">The latest booking activity for your tours</p>
                     </div>
+                    <a href="/Guide/Bookings" class="inline-flex items-center gap-1 text-sm font-semibold text-primary hover:text-primary-dark hover:underline">
+                        View all <span class="material-symbols-outlined text-[16px]" aria-hidden="true">arrow_forward</span>
+                    </a>
                 </div>
 
-                @* Response Time *@
-                <div class="flex items-center justify-between py-3 border-t border-gray-50">
-                    <span class="text-xs font-medium text-gray-500 flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[14px] text-blue-500">schedule</span>
-                        Response Time
-                    </span>
-                    <span class="text-sm font-bold text-gray-900">~@Model.ResponseTimeMinutes min</span>
-                </div>
+                @if (Model.RecentBookings != null && Model.RecentBookings.Any())
+                {
+                    <div class="divide-y divide-gray-100">
+                        @foreach (var booking in Model.RecentBookings)
+                        {
+                            var isReceived = booking.Status == "Completed";
+                            var isExpected = booking.Status == "Confirmed";
+                            var isNotPayable = booking.Status is "Cancelled" or "Expired";
 
-                @* Profile Views *@
-                <div class="flex items-center justify-between py-3 border-t border-gray-50">
-                    <span class="text-xs font-medium text-gray-500 flex items-center gap-1.5">
-                        <span class="material-symbols-outlined text-[14px] text-purple-500">visibility</span>
-                        Profile Views
-                    </span>
-                    <span class="text-sm font-bold text-gray-900">@Model.ProfileViewsThisMonth</span>
-                </div>
-            </div>
+                            <article class="px-4 py-4 transition-colors hover:bg-orange-50/40 sm:px-5">
+                                <div class="flex items-start gap-3">
+                                    <img src="@booking.TravelerAvatar" alt="" class="h-10 w-10 flex-shrink-0 rounded-full border border-gray-100 object-cover"
+                                         onerror="this.onerror=null;this.src='/images/AVATAR.png'">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div class="min-w-0">
+                                                <p class="truncate text-sm font-bold text-gray-950">@booking.TravelerName</p>
+                                                <p class="mt-0.5 flex items-center gap-1 truncate text-xs text-gray-500">
+                                                    <span class="material-symbols-outlined text-[13px]" aria-hidden="true">route</span>
+                                                    @booking.TourName
+                                                </p>
+                                            </div>
+                                            <div class="flex flex-wrap items-center gap-x-5 gap-y-2 sm:flex-shrink-0 sm:justify-end">
+                                                <div>
+                                                    <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Trip</p>
+                                                    <p class="mt-0.5 text-xs font-semibold text-gray-700">@booking.Date · @booking.Time · @booking.Guests @(booking.Guests == 1 ? "guest" : "guests")</p>
+                                                </div>
+                                                <div class="min-w-24 sm:text-right">
+                                                    <p class="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                                        @(isReceived ? "Received" : isExpected ? "Expected payout" : isNotPayable ? "Not payable" : "Potential payout")
+                                                    </p>
+                                                    @if (isNotPayable)
+                                                    {
+                                                        <p class="mt-0.5 text-sm font-bold text-gray-400">—</p>
+                                                    }
+                                                    else
+                                                    {
+                                                        <p class="mt-0.5 text-sm font-bold @(isReceived ? "text-green-600" : "text-gray-800")">₫@booking.Amount.ToString("N0")</p>
+                                                    }
+                                                </div>
+                                                <div>
+                                                    @if (booking.Status == "Completed")
+                                                    {
+                                                        <span class="inline-flex items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-1.5 text-xs font-bold text-blue-700">
+                                                            <span class="h-1.5 w-1.5 rounded-full bg-blue-500"></span>Completed
+                                                        </span>
+                                                    }
+                                                    else if (booking.Status == "Confirmed")
+                                                    {
+                                                        <span class="inline-flex items-center gap-1.5 rounded-lg border border-green-100 bg-green-50 px-2.5 py-1.5 text-xs font-bold text-green-700">
+                                                            <span class="h-1.5 w-1.5 rounded-full bg-green-500"></span>Confirmed
+                                                        </span>
+                                                    }
+                                                    else if (booking.Status == "Pending")
+                                                    {
+                                                        <span class="inline-flex items-center gap-1.5 rounded-lg border border-amber-100 bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-700">
+                                                            <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>Pending
+                                                        </span>
+                                                    }
+                                                    else if (booking.Status == "Expired")
+                                                    {
+                                                        <span class="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-100 px-2.5 py-1.5 text-xs font-bold text-gray-600">
+                                                            <span class="material-symbols-outlined text-[14px]" aria-hidden="true">timer_off</span>Expired
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="inline-flex rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-bold text-gray-600">@booking.Status</span>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </article>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="flex flex-col items-center px-5 py-10 text-center">
+                        <span class="material-symbols-outlined text-4xl text-gray-300" aria-hidden="true">inbox</span>
+                        <p class="mt-2 text-sm font-semibold text-gray-700">No bookings yet</p>
+                        <p class="mt-1 text-xs text-gray-500">New traveler bookings will appear here.</p>
+                    </div>
+                }
+            </section>
         </div>
 
-        @* Upcoming Schedule *@
-        @if (Model.UpcomingSchedule != null && Model.UpcomingSchedule.Any())
-        {
-            <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-                <div class="flex justify-between items-center mb-4">
-                    <h4 class="text-base font-bold text-gray-900">Upcoming Schedule</h4>
-                    <a href="/Guide/Calendar" class="text-xs text-primary font-semibold hover:underline">View calendar</a>
+        <aside class="col-span-12 flex flex-col gap-5 xl:col-span-4" aria-label="Schedule and guide performance">
+            <section class="dashboard-card rounded-2xl p-4 sm:p-5" aria-labelledby="upcoming-schedule-title">
+                <div class="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                        <h2 id="upcoming-schedule-title" class="text-base font-bold text-gray-950">Upcoming schedule</h2>
+                        <p class="mt-0.5 text-xs text-gray-500">Your next confirmed trips</p>
+                    </div>
+                    <a href="/Guide/Calendar" class="text-xs font-semibold text-primary hover:text-primary-dark hover:underline">View calendar</a>
                 </div>
-                <div class="space-y-2">
-                    @foreach (var item in Model.UpcomingSchedule)
+
+                @if (nextTrip != null)
+                {
+                    <div class="rounded-2xl border border-orange-200 bg-orange-50 p-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-orange-700 shadow-sm">
+                                <span class="material-symbols-outlined text-[14px]" aria-hidden="true">schedule</span>
+                                @nextTrip.StartsIn
+                            </span>
+                            <span class="text-xs font-bold text-primary">Next trip</span>
+                        </div>
+                        <h3 class="mt-3 text-base font-bold text-gray-950">@nextTrip.TourName</h3>
+                        <p class="mt-1 text-xs text-gray-600">@nextTrip.TravelerName · @nextTrip.Guests @(nextTrip.Guests == 1 ? "guest" : "guests")</p>
+                        <div class="mt-3 flex items-center justify-between gap-3 border-t border-orange-200/70 pt-3">
+                            <p class="flex items-center gap-1.5 text-xs font-semibold text-gray-700">
+                                <span class="material-symbols-outlined text-[16px] text-primary" aria-hidden="true">event</span>
+                                @nextTrip.Date · @nextTrip.Time
+                            </p>
+                            <a href="/Guide/Calendar" aria-label="Open @nextTrip.TourName in calendar"
+                               class="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-white text-gray-600 shadow-sm transition-colors hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary/30">
+                                <span class="material-symbols-outlined text-[17px]" aria-hidden="true">arrow_forward</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    @if (laterTrips.Any())
                     {
-                        <div class="upcoming-card rounded-xl px-4 py-3 border border-gray-100">
-                            <div class="flex items-start justify-between gap-2">
-                                <div class="min-w-0">
-                                    <p class="text-sm font-bold text-gray-900 truncate">@item.TourName</p>
-                                    <p class="text-xs text-gray-400 mt-0.5 truncate">@item.TravelerName · @item.Guests guest(s)</p>
+                        <div class="mt-3 divide-y divide-gray-100">
+                            @foreach (var item in laterTrips)
+                            {
+                                <div class="flex items-start justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                                    <div class="min-w-0">
+                                        <p class="truncate text-sm font-semibold text-gray-900">@item.TourName</p>
+                                        <p class="mt-0.5 truncate text-xs text-gray-500">@item.TravelerName · @item.Guests @(item.Guests == 1 ? "guest" : "guests")</p>
+                                    </div>
+                                    <div class="flex-shrink-0 text-right">
+                                        <p class="text-xs font-bold text-gray-700">@item.Date</p>
+                                        <p class="mt-0.5 text-xs text-gray-400">@item.Time</p>
+                                    </div>
                                 </div>
-                                <div class="text-right flex-shrink-0">
-                                    <p class="text-xs font-bold text-primary">@item.Date</p>
-                                    <p class="text-xs text-gray-400">@item.Time</p>
-                                </div>
+                            }
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-7 text-center">
+                        <span class="material-symbols-outlined text-3xl text-gray-300" aria-hidden="true">event_available</span>
+                        <p class="mt-2 text-sm font-semibold text-gray-700">No upcoming trips</p>
+                        <p class="mt-1 text-xs text-gray-500">Your confirmed schedule will appear here.</p>
+                    </div>
+                }
+            </section>
+
+            <section class="dashboard-card rounded-2xl p-4 sm:p-5" aria-labelledby="quick-stats-title">
+                <h2 id="quick-stats-title" class="text-base font-bold text-gray-950">Guide performance</h2>
+                <p class="mt-0.5 text-xs text-gray-500">Signals that influence traveler confidence</p>
+                <div class="mt-4 space-y-4">
+                    <div>
+                        <div class="mb-2 flex items-center justify-between gap-3">
+                            <span class="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                                <span class="material-symbols-outlined text-[15px] text-green-500" aria-hidden="true">check_circle</span>
+                                Acceptance rate
+                            </span>
+                            <span class="text-sm font-bold text-gray-950">@(Model.HasAcceptanceRateData ? $"{acceptanceRate}%" : "No data")</span>
+                        </div>
+                        <div class="h-2 overflow-hidden rounded-full bg-gray-100" role="progressbar" aria-label="Acceptance rate" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@acceptanceRate">
+                            <div class="h-full rounded-full @(acceptanceRate >= 70 ? "bg-green-500" : acceptanceRate >= 40 ? "bg-amber-500" : "bg-red-400")" style="width: @(Model.HasAcceptanceRateData ? acceptanceRate : 0)%"></div>
+                        </div>
+                        <p class="mt-1.5 text-[11px] text-gray-400">@(Model.HasAcceptanceRateData ? (acceptanceRate >= 70 ? "Healthy acceptance rate" : "Respond consistently to build traveler trust") : "Available after you respond to booking requests")</p>
+                    </div>
+
+                    <div class="flex items-start justify-between gap-4 border-t border-gray-100 pt-4">
+                        <div>
+                            <p class="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                                <span class="material-symbols-outlined text-[15px] text-blue-500" aria-hidden="true">schedule</span>
+                                Response time estimate
+                            </p>
+                            <p class="mt-1 text-[11px] text-gray-400">Target: under 12 hours</p>
+                        </div>
+                        <span class="text-sm font-bold text-gray-950">@responseTimeDisplay</span>
+                    </div>
+
+                    <div class="flex items-start justify-between gap-4 border-t border-gray-100 pt-4">
+                        <div>
+                            <p class="flex items-center gap-1.5 text-xs font-medium text-gray-600">
+                                <span class="material-symbols-outlined text-[15px] text-violet-500" aria-hidden="true">visibility</span>
+                                Profile views
+                            </p>
+                            <p class="mt-1 text-[11px] text-gray-400">Total guide profile views</p>
+                        </div>
+                        <span class="text-sm font-bold text-gray-950">@Model.ProfileViewsThisMonth</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="dashboard-card rounded-2xl p-4 sm:p-5" aria-labelledby="recent-activity-title">
+                <h2 id="recent-activity-title" class="text-base font-bold text-gray-950">Recent activity</h2>
+                <div class="relative mt-4 space-y-4">
+                    <div class="absolute bottom-1 left-[15px] top-1 w-px bg-gray-100" aria-hidden="true"></div>
+                    @foreach (var activity in Model.RecentActivities)
+                    {
+                        <div class="relative flex gap-3">
+                            <span class="z-10 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full @activity.IconBgClass @activity.IconTextClass ring-4 ring-white">
+                                <span class="material-symbols-outlined text-[15px]" aria-hidden="true">@activity.Icon</span>
+                            </span>
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-gray-900">@activity.Title</p>
+                                <p class="mt-0.5 text-xs leading-5 text-gray-500">@activity.Description</p>
+                                <p class="mt-1 text-[11px] font-medium text-gray-400">@activity.TimeAgo</p>
                             </div>
                         </div>
                     }
                 </div>
-            </div>
-        }
-
-        @* Activity Feed *@
-        <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h4 class="text-base font-bold text-gray-900 mb-5">Recent Activity</h4>
-            <div class="space-y-5 relative">
-                <div class="absolute left-[15px] top-1 bottom-1 w-px bg-gray-100"></div>
-                @foreach (var activity in Model.RecentActivities)
-                {
-                    <div class="relative flex gap-4">
-                        <div class="w-8 h-8 rounded-full @activity.IconBgClass flex items-center justify-center @activity.IconTextClass z-10 shadow-sm ring-4 ring-white flex-shrink-0">
-                            <span class="material-symbols-outlined text-[15px]">@activity.Icon</span>
-                        </div>
-                        <div class="min-w-0">
-                            <p class="font-semibold text-gray-900 text-sm">@activity.Title</p>
-                            <p class="text-xs text-gray-500 mt-0.5 leading-relaxed">@activity.Description</p>
-                            <p class="text-[11px] font-medium text-gray-300 mt-1">@activity.TimeAgo</p>
-                        </div>
-                    </div>
-                }
-            </div>
-        </div>
-
+            </section>
+        </aside>
     </div>
 </div>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-    <script>
-        document.addEventListener("turbo:load", function() {
-            const canvas = document.getElementById('earningsChart');
-            if (!canvas) return; // Prevent errors if navigating away
-            
-            // Check if Chart is loaded, if not, wait a bit
-            if (typeof Chart === 'undefined') {
-                setTimeout(initChart, 100);
-                return;
-            }
-            initChart();
+    @if (hasEarningsData)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+        <script>
+            (() => {
+                const canvas = document.getElementById('earningsChart');
+                if (!canvas || typeof Chart === 'undefined') return;
 
-            function initChart() {
-                const sparklineData = @Html.Raw(sparklineJson);
-                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                
-                const maxVal = Math.ceil(Math.max(...sparklineData) / 10000000) * 10000000; 
-
-                const ctx = canvas.getContext('2d');
-
-                const gradient = ctx.createLinearGradient(0, 0, 0, 250);
-                gradient.addColorStop(0, 'rgba(255, 107, 53, 0.15)'); 
-                gradient.addColorStop(1, 'rgba(255, 107, 53, 0.00)');
-
-                const barGradient = ctx.createLinearGradient(0, 0, 0, 250);
-                barGradient.addColorStop(0, 'rgba(255, 107, 53, 0.05)');
-                barGradient.addColorStop(1, 'rgba(255, 107, 53, 0.0)');
-
-                const activeColumnGradient = ctx.createLinearGradient(0, 0, 0, 250);
-                activeColumnGradient.addColorStop(0, 'rgba(255, 107, 53, 0.2)');
-                activeColumnGradient.addColorStop(1, 'rgba(255, 107, 53, 0.02)');
-
-                const glowPlugin = {
-                    id: 'glowPlugin',
-                    beforeDatasetsDraw: (chart) => {
-                        const ctx = chart.ctx;
-                        ctx.save();
-                        ctx.shadowColor = 'rgba(255, 107, 53, 0.4)';
-                        ctx.shadowBlur = 15;
-                        ctx.shadowOffsetX = 0;
-                        ctx.shadowOffsetY = 8;
-                    },
-                    afterDatasetsDraw: (chart) => {
-                        chart.ctx.restore();
-                    }
-                };
-
-                // Destroy existing chart if turbo reloaded
-                if (window.myEarningsChart) {
-                    window.myEarningsChart.destroy();
+                if (window.guideEarningsChart) {
+                    window.guideEarningsChart.destroy();
                 }
 
-                window.myEarningsChart = new Chart(ctx, {
+                const earningsData = @Html.Raw(sparklineJson);
+                const currentMonthIndex = @(now.Month - 1);
+                const context = canvas.getContext('2d');
+                const gradient = context.createLinearGradient(0, 0, 0, 220);
+                gradient.addColorStop(0, 'rgba(255, 107, 53, 0.20)');
+                gradient.addColorStop(1, 'rgba(255, 107, 53, 0.01)');
+                const currency = new Intl.NumberFormat('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND',
+                    maximumFractionDigits: 0
+                });
+
+                window.guideEarningsChart = new Chart(context, {
                     type: 'line',
-                    plugins: [glowPlugin],
                     data: {
-                        labels: months,
-                        datasets: [
-                            {
-                                type: 'line',
-                                label: 'Earnings',
-                                data: sparklineData,
-                                fill: true,
-                                backgroundColor: gradient,
-                                borderColor: '#FF6B35', 
-                                borderWidth: 3.5,
-                                tension: 0.45,
-                                pointRadius: 0,
-                                pointHoverRadius: 8,
-                                pointBackgroundColor: '#FF6B35',
-                                pointBorderColor: '#fff',
-                                pointBorderWidth: 3,
-                                order: 1
-                            },
-                            {
-                                type: 'bar',
-                                label: 'Background',
-                                data: sparklineData, 
-                                backgroundColor: barGradient,
-                                hoverBackgroundColor: activeColumnGradient,
-                                borderRadius: 8,
-                                barPercentage: 0.5,
-                                categoryPercentage: 1.0,
-                                order: 2,
-                                tooltip: false
-                            }
-                        ]
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+                        datasets: [{
+                            data: earningsData,
+                            borderColor: '#FF6B35',
+                            backgroundColor: gradient,
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.35,
+                            pointRadius: (item) => item.dataIndex === currentMonthIndex ? 4 : 2,
+                            pointHoverRadius: 5,
+                            pointBackgroundColor: (item) => item.dataIndex === currentMonthIndex ? '#FF6B35' : '#ffffff',
+                            pointBorderColor: '#FF6B35',
+                            pointBorderWidth: 2
+                        }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false,
-                        },
+                        interaction: { intersect: false, mode: 'index' },
                         plugins: {
                             legend: { display: false },
                             tooltip: {
-                                backgroundColor: 'transparent',
-                                titleColor: 'transparent',
-                                bodyColor: '#1f2937',
-                                bodyFont: { weight: '900', size: 14, family: "'Inter', sans-serif" },
                                 displayColors: false,
-                                boxShadow: 'none',
-                                yAlign: 'bottom',
-                                caretSize: 0,
-                                padding: 10,
-                                filter: function(tooltipItem) {
-                                    return tooltipItem.datasetIndex === 0;
-                                },
                                 callbacks: {
-                                    title: () => null,
-                                    label: (item) => {
-                                        const val = item.raw;
-                                        return (val / 1000000).toFixed(0) + 'M';
-                                    }
+                                    label: (item) => 'Net earnings: ' + currency.format(item.parsed.y)
                                 }
                             }
                         },
                         scales: {
                             x: {
-                                grid: { display: false, drawBorder: false },
+                                grid: { display: false },
                                 border: { display: false },
-                                ticks: {
-                                    color: '#9ca3af',
-                                    font: { size: 12, family: "'Inter', sans-serif" },
-                                    padding: 15
-                                }
+                                ticks: { color: '#94A3B8', font: { size: 11 } }
                             },
                             y: {
                                 beginAtZero: true,
-                                max: maxVal,
-                                grid: { 
-                                    color: '#f3f4f6', 
-                                    tickLength: 0,
-                                    borderDash: [5, 5]
-                                },
                                 border: { display: false },
+                                grid: { color: 'rgba(226, 232, 240, 0.7)' },
                                 ticks: {
-                                    color: '#d1d5db',
-                                    font: { size: 12, family: "'Inter', sans-serif" },
-                                    padding: 20,
-                                    stepSize: maxVal / 5,
-                                    callback: v => v === 0 ? '0' : (v / 1000000)
+                                    color: '#94A3B8',
+                                    font: { size: 11 },
+                                    callback: (value) => value >= 1000000
+                                        ? (value / 1000000) + 'M'
+                                        : value >= 1000 ? (value / 1000) + 'K' : value
                                 }
                             }
                         }
                     }
                 });
-            }
-        });
-    </script>
-}
 
+                document.addEventListener('turbo:before-cache', () => {
+                    window.guideEarningsChart?.destroy();
+                    window.guideEarningsChart = null;
+                }, { once: true });
+            })();
+        </script>
+    }
+}

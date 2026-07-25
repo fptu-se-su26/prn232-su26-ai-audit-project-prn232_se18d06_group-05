@@ -2,6 +2,7 @@ using TripMate_Webapi.Entities;
 using TripMate_Webapi.Repositories;
 using TripMate_WebAPI.DTOs.Guide.Requests;
 using TripMate_WebAPI.DTOs.Guide.Responses;
+using TripMate_WebAPI.DTOs.Tour.Scheduling;
 using System.Globalization;
 
 namespace TripMate_WebAPI.Services
@@ -10,7 +11,6 @@ namespace TripMate_WebAPI.Services
     {
         private readonly IGuideRepository _guideRepository;
         private readonly IBookingRepository _bookingRepository;
-        private static readonly TimeSpan GuideResponseWindow = TimeSpan.FromHours(24);
 
         public CalendarService(
             IGuideRepository guideRepository,
@@ -25,10 +25,16 @@ namespace TripMate_WebAPI.Services
             var (rangeStart, rangeEnd) = ValidateRange(start, end);
             start = rangeStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             end = rangeEnd.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var bookingQueryStart = rangeStart
+                .AddDays(-(TourSchedulePolicy.MaximumDurationDays - 1))
+                .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
             // Availability and joined booking data are independent, so load them concurrently.
             var availabilityTask = _guideRepository.GetBlockedDatesInRangeAsync(guideProfileId, start, end);
-            var bookingTask = _bookingRepository.GetGuideCalendarBookingsInRangeAsync(guideProfileId, start, end);
+            var bookingTask = _bookingRepository.GetGuideCalendarBookingsInRangeAsync(
+                guideProfileId,
+                bookingQueryStart,
+                end);
             await Task.WhenAll(availabilityTask, bookingTask);
 
             var availabilityEntities = await availabilityTask;
@@ -44,14 +50,16 @@ namespace TripMate_WebAPI.Services
                 var status = ResolveStatus(booking.Status, booking.CreatedAt);
                 if (status is "cancelled" or "expired") continue;
 
-                var startTime = NormalizeTime(booking.StartTime);
-                var endTime = CalculateEndTime(startTime, booking.ExperiencePackage?.DurationHours ?? 0);
+                var span = ResolveBookingSpan(booking);
+                if (span == null || span.EndDate < rangeStart || span.StartDate >= rangeEnd)
+                    continue;
 
                 bookings.Add(new CalendarBookingItem(
                     BookingId: booking.Id,
-                    BookingDate: booking.BookingDate,
-                    StartTime: startTime,
-                    EndTime: endTime,
+                    BookingDate: span.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    EndDate: span.EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    StartTime: span.StartTime,
+                    EndTime: span.EndTime,
                     TravelerId: booking.TravelerId,
                     GuestName: booking.Traveler?.FullName ?? "Traveler",
                     TravelerAvatarUrl: booking.Traveler?.AvatarUrl ?? "/images/AVATAR.png",
@@ -62,7 +70,13 @@ namespace TripMate_WebAPI.Services
                     CoverImageUrl: booking.ExperiencePackage?.CoverImageUrl ?? string.Empty,
                     MeetingPoint: booking.ExperiencePackage?.MeetingPoint ?? "Not provided",
                     TravelerNotes: booking.TravelerNotes,
-                    Status: status
+                    Status: status,
+                    DurationType: span.Schedule.DurationType,
+                    DurationDays: span.Schedule.DurationDays,
+                    DurationMinutes: span.Schedule.DurationMinutes,
+                    DurationLabel: TourScheduleFormatter.FormatDuration(span.Schedule),
+                    TimeZone: span.Schedule.TimeZone,
+                    ScheduleConfigured: span.ScheduleConfigured
                 ));
             }
 
@@ -80,16 +94,26 @@ namespace TripMate_WebAPI.Services
             var normalizedRangeStart = rangeStart.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             var normalizedRangeEnd = rangeEnd.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
 
-            var bookings = await _bookingRepository.GetGuideBookingsInRangeAsync(
+            var bookingQueryStart = rangeStart
+                .AddDays(-(TourSchedulePolicy.MaximumDurationDays - 1))
+                .ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            var bookings = await _bookingRepository.GetGuideCalendarBookingsInRangeAsync(
                 guideProfileId,
-                normalizedRangeStart,
+                bookingQueryStart,
                 normalizedRangeEnd);
 
             // Pending bookings only remain active during their 24-hour response window.
             var activeBookingDates = bookings
                 .Where(b => b.Status == 1 ||
-                            (b.Status == 0 && DateTime.UtcNow < AsUtc(b.CreatedAt).Add(GuideResponseWindow)))
-                .Select(b => b.BookingDate.ToString("yyyy-MM-dd"))
+                            BookingResponsePolicy.IsAwaitingGuideResponse(
+                                b.Status,
+                                b.CreatedAt,
+                                DateTime.UtcNow))
+                .Select(ResolveBookingSpan)
+                .Where(span => span != null)
+                .SelectMany(span => EnumerateDates(span!.StartDate, span.EndDate))
+                .Where(date => date >= rangeStart && date < rangeEnd)
+                .Select(date => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture))
                 .ToHashSet();
 
             var conflictingDates = addedDates.Keys
@@ -135,7 +159,7 @@ namespace TripMate_WebAPI.Services
         {
             return status switch
             {
-                0 when DateTime.UtcNow >= AsUtc(createdAt).Add(GuideResponseWindow) => "expired",
+                0 when BookingResponsePolicy.IsExpired(status, createdAt, DateTime.UtcNow) => "expired",
                 0 => "pending",
                 1 => "confirmed",
                 2 => "completed",
@@ -144,14 +168,84 @@ namespace TripMate_WebAPI.Services
             };
         }
 
-        private static DateTime AsUtc(DateTime value)
+        private static CalendarBookingSpan? ResolveBookingSpan(
+            TripMate_Webapi.Repositories.Models.CalendarBookingRecord booking)
         {
-            return value.Kind switch
+            if (!DateOnly.TryParseExact(
+                    booking.BookingDate,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var startDate))
             {
-                DateTimeKind.Utc => value,
-                DateTimeKind.Local => value.ToUniversalTime(),
-                _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+                return null;
+            }
+
+            var package = booking.ExperiencePackage;
+            var fallback = TourScheduleCompatibility.FromLegacyDuration(package?.DurationHours ?? 0);
+            var durationType = TourSchedulePolicy.NormalizeDurationType(package?.DurationType);
+            if (durationType is not TourDurationTypes.SameDay and not TourDurationTypes.MultiDay)
+                durationType = fallback.DurationType;
+
+            var durationDays = package?.DurationDays > 0
+                ? package.DurationDays
+                : fallback.DurationDays;
+            if (durationType == TourDurationTypes.SameDay) durationDays = 1;
+            if (durationType == TourDurationTypes.MultiDay && durationDays < 2) durationDays = 2;
+
+            var schedule = new TourScheduleDto
+            {
+                DurationType = durationType,
+                DurationMinutes = package?.DurationMinutes ?? fallback.DurationMinutes,
+                DurationDays = Math.Clamp(durationDays, 1, TourSchedulePolicy.MaximumDurationDays),
+                DefaultStartTime = TourSchedulePolicy.NormalizeClockTime(package?.DefaultStartTime),
+                DefaultEndTime = TourSchedulePolicy.NormalizeClockTime(package?.DefaultEndTime),
+                TimeZone = string.IsNullOrWhiteSpace(package?.TimeZone)
+                    ? TourSchedulePolicy.DefaultTimeZone
+                    : package.TimeZone.Trim()
             };
+            var scheduleConfigured = TourSchedulePolicy.ValidateForPublish(schedule).Count == 0;
+            var startTime = NormalizeTime(booking.StartTime);
+            if (!TourSchedulePolicy.TryParseClockTime(startTime, out var parsedStart) &&
+                TourSchedulePolicy.TryParseClockTime(schedule.DefaultStartTime, out var defaultStart))
+            {
+                parsedStart = defaultStart;
+                startTime = defaultStart.ToString("HH:mm", CultureInfo.InvariantCulture);
+            }
+
+            var endDate = startDate;
+            var endTime = schedule.DefaultEndTime ?? string.Empty;
+            var canUseElapsedDuration = TourSchedulePolicy.TryParseClockTime(startTime, out parsedStart) &&
+                                        schedule.DurationMinutes is >= TourSchedulePolicy.MinimumDurationMinutes &&
+                                        (scheduleConfigured || durationType == TourDurationTypes.SameDay);
+            if (canUseElapsedDuration)
+            {
+                var endDateTime = startDate
+                    .ToDateTime(parsedStart)
+                    .AddMinutes(schedule.DurationMinutes!.Value);
+                endDate = DateOnly.FromDateTime(endDateTime);
+                endTime = TimeOnly.FromDateTime(endDateTime)
+                    .ToString("HH:mm", CultureInfo.InvariantCulture);
+            }
+            else if (durationType == TourDurationTypes.MultiDay)
+            {
+                endDate = startDate.AddDays(schedule.DurationDays - 1);
+            }
+
+            if (endDate < startDate) endDate = startDate;
+            return new CalendarBookingSpan(
+                startDate,
+                endDate,
+                startTime,
+                endTime,
+                schedule,
+                scheduleConfigured);
+        }
+
+        private static IEnumerable<DateOnly> EnumerateDates(DateOnly start, DateOnly end)
+        {
+            for (var date = start; date <= end; date = date.AddDays(1))
+                yield return date;
         }
 
         private static string NormalizeTime(string? value)
@@ -169,18 +263,6 @@ namespace TripMate_WebAPI.Services
             }
 
             return value.Length >= 5 ? value[..5] : value;
-        }
-
-        private static string CalculateEndTime(string startTime, decimal durationHours)
-        {
-            if (durationHours <= 0 ||
-                !TimeSpan.TryParse(startTime, CultureInfo.InvariantCulture, out var start))
-            {
-                return string.Empty;
-            }
-
-            return start.Add(TimeSpan.FromHours((double)durationHours))
-                .ToString(@"hh\:mm", CultureInfo.InvariantCulture);
         }
 
         private static (DateOnly Start, DateOnly End) ValidateRange(string start, string end)
@@ -256,5 +338,13 @@ namespace TripMate_WebAPI.Services
 
             return normalized;
         }
+
+        private sealed record CalendarBookingSpan(
+            DateOnly StartDate,
+            DateOnly EndDate,
+            string StartTime,
+            string EndTime,
+            TourScheduleDto Schedule,
+            bool ScheduleConfigured);
     }
 }

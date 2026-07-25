@@ -41,7 +41,6 @@ public class BookingService
 
     // Platform fee rate (e.g. 15%)
     private const decimal PlatformFeeRate = 0.15m;
-    private static readonly TimeSpan GuideResponseWindow = TimeSpan.FromHours(24);
 
     public BookingService(HttpClient http, IConfiguration config,
         INotificationService notif, ChatService chat, TripMate_Webapi.Repositories.IBookingRepository repo)
@@ -242,7 +241,7 @@ public class BookingService
 
         foreach (var b in entities)
         {
-            var responseDeadlineUtc = GetGuideResponseDeadlineUtc(b.CreatedAt);
+            var responseDeadlineUtc = BookingResponsePolicy.GetDeadlineUtc(b.CreatedAt);
             var remaining = responseDeadlineUtc - DateTime.UtcNow;
             var isExpired = b.Status == 0 && remaining <= TimeSpan.Zero;
             var secondsRemaining = b.Status == 0 && !isExpired
@@ -287,7 +286,7 @@ public class BookingService
         if (booking.Status != 0)
             throw new Exception("Only pending bookings can be updated.");
 
-        if (DateTime.UtcNow >= GetGuideResponseDeadlineUtc(booking.CreatedAt))
+        if (BookingResponsePolicy.IsExpired(booking.Status, booking.CreatedAt, DateTime.UtcNow))
             throw new Exception("The 24-hour response window has expired and this booking can no longer be updated.");
 
         await _repo.UpdateBookingStatusAsync(bookingId, newStatus);
@@ -316,18 +315,6 @@ public class BookingService
                 $"booking-declined:{bookingId}",
                 sendEmail: true);
         }
-    }
-
-    private static DateTime GetGuideResponseDeadlineUtc(DateTime createdAt)
-    {
-        var createdAtUtc = createdAt.Kind switch
-        {
-            DateTimeKind.Utc => createdAt,
-            DateTimeKind.Local => createdAt.ToUniversalTime(),
-            _ => DateTime.SpecifyKind(createdAt, DateTimeKind.Utc)
-        };
-
-        return createdAtUtc.Add(GuideResponseWindow);
     }
 
     // ── Get Guide Unavailable Dates ───────────────────────────────────────────

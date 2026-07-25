@@ -14,6 +14,7 @@ public record BlockedDateItem(
 public record CalendarBookingItem(
     string BookingId,
     string BookingDate,
+    string EndDate,
     string StartTime,
     string EndTime,
     string TravelerId,
@@ -26,7 +27,13 @@ public record CalendarBookingItem(
     string CoverImageUrl,
     string MeetingPoint,
     string? TravelerNotes,
-    string Status
+    string Status,
+    string DurationType,
+    int DurationDays,
+    int? DurationMinutes,
+    string DurationLabel,
+    string TimeZone,
+    bool ScheduleConfigured
 );
 
 public record SaveBlockedDatesResult(

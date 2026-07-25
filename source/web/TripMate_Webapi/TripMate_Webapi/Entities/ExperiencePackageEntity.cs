@@ -23,6 +23,27 @@ public class ExperiencePackageEntity : BaseModel
     [Column("duration_hours")]
     public decimal DurationHours { get; set; }
 
+    // Kept alongside DurationHours while the shared Traveler/API flow migrates.
+    [Column("duration_type")]
+    public string DurationType { get; set; } = "same_day";
+
+    [Column("duration_minutes")]
+    public int? DurationMinutes { get; set; }
+
+    [Column("duration_days")]
+    public int DurationDays { get; set; } = 1;
+
+    // PostgreSQL time values are represented as HH:mm strings because the
+    // current Supabase/PostgREST model layer already exchanges time as text.
+    [Column("default_start_time")]
+    public string? DefaultStartTime { get; set; }
+
+    [Column("default_end_time")]
+    public string? DefaultEndTime { get; set; }
+
+    [Column("time_zone")]
+    public string TimeZone { get; set; } = "Asia/Ho_Chi_Minh";
+
     [Column("price_per_session")]
     public decimal PricePerSession { get; set; }
 

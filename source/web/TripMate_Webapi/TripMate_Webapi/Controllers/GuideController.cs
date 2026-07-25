@@ -308,11 +308,6 @@ namespace TripMate_Webapi.Controllers
                 }
 
                 var viewModel = await _dashboardService.BuildDashboardAsync(userId);
-                
-                // For the sparkline JS in the view
-                var sparklineJson = System.Text.Json.JsonSerializer.Serialize(viewModel.EarningsSparkline);
-                ViewBag.SparklineJson = sparklineJson;
-                
                 return View(viewModel);
             }
             catch (Exception ex)
@@ -600,35 +595,17 @@ namespace TripMate_Webapi.Controllers
             var guideProfileId = await GetCurrentGuideProfileIdAsync();
             if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
 
-            var tour = await _experienceService.GetPackageByIdAsync(id, guideProfileId);
+            var tour = await _experienceService.GetTourEditorAsync(id, guideProfileId);
             if (tour == null) return NotFound();
 
             ViewBag.IsEdit = true;
-            
-            var tourDto = new 
-            {
-                id = tour.Id,
-                title = tour.Title,
-                durationHours = tour.DurationHours,
-                maxGroupSize = tour.MaxGroupSize,
-                city = tour.City,
-                meetingPoint = tour.MeetingPoint,
-                description = tour.Description,
-                pricePerSession = tour.PricePerSession,
-                additionalGuestFee = tour.PricePerPerson,
-                includedGuestCount = Math.Max(1, tour.IncludedGuestCount),
-                timelineJson = tour.TimelineJson,
-                languages = tour.Languages,
-                includedItems = tour.IncludedItems,
-                tags = tour.Tags,
-                coverImageUrl = tour.CoverImageUrl,
-                galleryImageUrls = tour.GalleryImageUrls,
-                publicationStatus = string.IsNullOrWhiteSpace(tour.PublicationStatus)
-                    ? (tour.IsActive ? "published" : "hidden")
-                    : tour.PublicationStatus
-            };
-            
-            ViewBag.TourData = System.Text.Json.JsonSerializer.Serialize(tourDto, new System.Text.Json.JsonSerializerOptions { PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase });
+
+            ViewBag.TourData = System.Text.Json.JsonSerializer.Serialize(
+                tour,
+                new System.Text.Json.JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase
+                });
             return View();
         }
 
@@ -665,19 +642,32 @@ namespace TripMate_Webapi.Controllers
                     : "Your changes have been saved.";
                 return Ok(new { success = true, data = new { id = createdTour.Id }, message });
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = ex.Message });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating tour");
-                return StatusCode(500, new { success = false, message = ex.Message });
+                return StatusCode(500, new { success = false, message = "The experience package could not be saved." });
             }
         }
 
         [HttpPost]
         [Authorize(Roles = "guide")]
-        public async Task<IActionResult> SaveTourDraft([FromBody] SaveTourDraftDto dto)
+        public async Task<IActionResult> SaveTourDraft([FromBody] SaveTourDraftDto? dto)
         {
             try
             {
+                if (dto == null || !ModelState.IsValid)
+                {
+                    return BadRequest(new
+                    {
+                        success = false,
+                        message = "The draft payload is invalid."
+                    });
+                }
+
                 var guideProfileId = await GetCurrentGuideProfileIdAsync();
                 if (string.IsNullOrEmpty(guideProfileId))
                     return Unauthorized(new { success = false, message = "You need a guide profile to save a draft." });
