@@ -13,12 +13,18 @@ namespace TripMate_WebAPI.DTOs
         
         // Metrics
         public decimal TotalEarnings { get; set; }
+        public decimal YearlyEarnings { get; set; }
+        public int EarningsYear { get; set; } = System.DateTime.UtcNow.Year;
         public decimal EarningsGrowth { get; set; }
+        public bool HasPreviousMonthEarnings { get; set; }
         public int ActiveTours { get; set; }
         public int TotalBookings { get; set; }
         public int PendingBookingsCount { get; set; }
+        public string PendingResponseTimeRemaining { get; set; } = string.Empty;
         public int AcceptanceRate { get; set; }
+        public bool HasAcceptanceRateData { get; set; }
         public int ResponseTimeMinutes { get; set; }
+        public bool HasResponseTimeData { get; set; }
         public int ProfileViewsThisMonth { get; set; }
         public decimal AverageRating { get; set; }
         public int ReviewsCount { get; set; }
@@ -65,6 +71,7 @@ namespace TripMate_WebAPI.DTOs
         public string Time { get; set; } = string.Empty;
         public int Guests { get; set; }
         public string Status { get; set; } = "Confirmed";
+        public string StartsIn { get; set; } = string.Empty;
     }
 
     public class ActivityItem

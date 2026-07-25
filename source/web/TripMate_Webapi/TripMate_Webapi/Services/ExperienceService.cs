@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using TripMate_WebAPI.DTOs.Tour.Requests;
 using TripMate_WebAPI.DTOs.Tour.Responses;
+using TripMate_WebAPI.DTOs.Tour.Scheduling;
 using TripMate_Webapi.Entities;
 using TripMate_Webapi.Repositories;
 
@@ -52,6 +53,14 @@ namespace TripMate_WebAPI.Services
             if ((existing == null || string.IsNullOrWhiteSpace(existing.CoverImageUrl)) && dto.CoverImage == null)
                 throw new ArgumentException("A cover image is required before publishing.");
 
+            var includedServicesList = DeserializeJsonArray(dto.IncludedServices);
+            var languagesList = DeserializeJsonArray(dto.Languages);
+            var tagsList = DeserializeJsonArray(dto.Tags);
+            if (languagesList.Count == 0)
+                throw new ArgumentException("Select at least one language.");
+
+            var (schedule, persistedItinerary) = ResolvePublishedSchedule(dto, existing);
+
             var retainedGalleryUrls = DeserializeJsonArray(dto.RetainedGalleryImages);
             if (existing == null)
             {
@@ -70,7 +79,7 @@ namespace TripMate_WebAPI.Services
             if (retainedGalleryUrls.Count + (dto.GalleryImages?.Count ?? 0) > 5)
                 throw new ArgumentException("You can add up to five gallery images.");
 
-            // Upload media only after the request passes validation.
+            // Upload media only after every non-file rule has passed.
             string coverUrl = string.Empty;
             if (dto.CoverImage != null)
             {
@@ -84,36 +93,13 @@ namespace TripMate_WebAPI.Services
             }
             var galleryUrls = retainedGalleryUrls.Concat(newGalleryUrls).Take(5).ToList();
 
-            var includedServicesList = DeserializeJsonArray(dto.IncludedServices);
-            var languagesList = DeserializeJsonArray(dto.Languages);
-            var tagsList = DeserializeJsonArray(dto.Tags);
-            if (languagesList.Count == 0)
-                throw new ArgumentException("Select at least one language.");
-
-            List<Dictionary<string, string>> timelineList;
-            try 
-            {
-                timelineList = string.IsNullOrWhiteSpace(dto.TimelineJson)
-                    ? []
-                    : JsonSerializer.Deserialize<List<Dictionary<string, string>>>(dto.TimelineJson) ?? [];
-            }
-            catch (JsonException)
-            {
-                throw new ArgumentException("The itinerary format is invalid.");
-            }
-            if (timelineList.Count == 0 || timelineList.Any(item =>
-                    !item.TryGetValue("time", out var time) || string.IsNullOrWhiteSpace(time) ||
-                    !item.TryGetValue("activity", out var activity) || string.IsNullOrWhiteSpace(activity)))
-                throw new ArgumentException("Add at least one complete itinerary item before publishing.");
-
             var entity = new ExperiencePackageEntity
             {
                 GuideProfileId = guideProfileId,
-                Title = dto.Title,
-                City = dto.City,
-                MeetingPoint = dto.MeetingPoint,
-                Description = dto.Description,
-                DurationHours = dto.DurationHours,
+                Title = dto.Title.Trim(),
+                City = dto.City.Trim(),
+                MeetingPoint = dto.MeetingPoint.Trim(),
+                Description = dto.Description.Trim(),
                 PricePerSession = dto.PricePerSession,
                 PricePerPerson = dto.PricePerGuest,
                 IncludedGuestCount = dto.IncludedGuestCount,
@@ -121,7 +107,7 @@ namespace TripMate_WebAPI.Services
                 IncludedItems = includedServicesList,
                 Languages = languagesList,
                 Tags = tagsList,
-                TimelineJson = timelineList,
+                TimelineJson = persistedItinerary,
                 CoverImageUrl = coverUrl,
                 GalleryImageUrls = galleryUrls,
                 IsActive = true,
@@ -129,6 +115,7 @@ namespace TripMate_WebAPI.Services
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
+            TourScheduleCompatibility.Apply(entity, schedule, dto.DurationHours);
 
             if (existing != null)
             {
@@ -144,9 +131,33 @@ namespace TripMate_WebAPI.Services
             return await _repository.CreatePackageAsync(entity);
         }
 
-        public async Task<ExperiencePackageEntity?> GetPackageByIdAsync(string id, string guideProfileId)
+        public async Task<TourEditorDto?> GetTourEditorAsync(string id, string guideProfileId)
         {
-            return await _repository.GetPackageByIdAsync(id, guideProfileId);
+            var entity = await _repository.GetPackageByIdAsync(id, guideProfileId);
+            if (entity == null) return null;
+
+            return new TourEditorDto
+            {
+                Id = entity.Id,
+                Title = entity.Title,
+                DurationHours = entity.DurationHours,
+                Schedule = TourScheduleCompatibility.FromEntity(entity),
+                MaxGroupSize = entity.MaxGroupSize,
+                City = entity.City,
+                MeetingPoint = entity.MeetingPoint,
+                Description = entity.Description,
+                PricePerSession = entity.PricePerSession,
+                AdditionalGuestFee = entity.PricePerPerson ?? 0,
+                IncludedGuestCount = Math.Max(1, entity.IncludedGuestCount),
+                ItineraryDays = TourItineraryMapper.Expand(entity.TimelineJson),
+                TimelineJson = TourItineraryMapper.ToLegacyEditorTimeline(entity.TimelineJson),
+                Languages = entity.Languages ?? [],
+                IncludedItems = entity.IncludedItems ?? [],
+                Tags = entity.Tags ?? [],
+                CoverImageUrl = entity.CoverImageUrl,
+                GalleryImageUrls = entity.GalleryImageUrls ?? [],
+                PublicationStatus = NormalizePublicationStatus(entity)
+            };
         }
 
         public async Task<List<MyTourDashboardDto>> GetMyToursAsync(string guideProfileId)
@@ -170,7 +181,9 @@ namespace TripMate_WebAPI.Services
                 var bookingIds = tourBookings.Select(booking => booking.Id).ToHashSet(StringComparer.Ordinal);
                 var tourReviews = reviews.Where(review => bookingIds.Contains(review.BookingId)).ToList();
                 var status = NormalizePublicationStatus(entity);
-                var quality = EvaluateListingQuality(entity);
+                var itineraryDays = TourItineraryMapper.Expand(entity.TimelineJson);
+                var scheduleSummary = BuildScheduleSummary(entity, itineraryDays);
+                var quality = EvaluateListingQuality(entity, scheduleSummary);
                 dtos.Add(new MyTourDashboardDto
                 {
                     Id = entity.Id,
@@ -195,6 +208,8 @@ namespace TripMate_WebAPI.Services
                     ReviewCount = tourReviews.Count,
                     CompletenessScore = quality.Score,
                     MissingQualityItems = quality.MissingItems,
+                    Schedule = scheduleSummary,
+                    ItineraryDays = itineraryDays,
                     UpdatedAt = entity.UpdatedAt == default ? entity.CreatedAt : entity.UpdatedAt
                 });
             }
@@ -276,7 +291,10 @@ namespace TripMate_WebAPI.Services
             entity.City = (dto.City ?? string.Empty).Trim();
             entity.MeetingPoint = (dto.MeetingPoint ?? string.Empty).Trim();
             entity.Description = (dto.Description ?? string.Empty).Trim();
-            entity.DurationHours = dto.DurationHours > 0 ? dto.DurationHours : 4;
+            var usesStructuredSchedule = UsesStructuredSchedule(dto);
+            var preserveStructuredData = !usesStructuredSchedule && HasStructuredTourData(existing);
+            var draftSchedule = ResolveDraftSchedule(dto, existing, preserveStructuredData);
+            TourScheduleCompatibility.Apply(entity, draftSchedule, dto.DurationHours);
             entity.PricePerSession = Math.Max(0, dto.PricePerSession);
             entity.PricePerPerson = Math.Max(0, dto.PricePerGuest);
             entity.IncludedGuestCount = Math.Clamp(dto.IncludedGuestCount, 1, 50);
@@ -284,7 +302,11 @@ namespace TripMate_WebAPI.Services
             entity.IncludedItems = dto.IncludedServices?.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct().ToList() ?? [];
             entity.Languages = dto.Languages?.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct().ToList() ?? [];
             entity.Tags = dto.Tags?.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct().Take(5).ToList() ?? [];
-            entity.TimelineJson = dto.Timeline ?? [];
+            entity.TimelineJson = dto.ItineraryDays != null
+                ? TourItineraryMapper.Flatten(dto.ItineraryDays)
+                : preserveStructuredData
+                    ? existing!.TimelineJson ?? []
+                : dto.Timeline ?? [];
             entity.IsActive = false;
             entity.PublicationStatus = "draft";
             entity.UpdatedAt = DateTime.UtcNow;
@@ -292,6 +314,107 @@ namespace TripMate_WebAPI.Services
             return existing == null
                 ? await _repository.CreatePackageAsync(entity)
                 : await _repository.UpdatePackageAsync(entity);
+        }
+
+        private static (TourScheduleDto Schedule, List<Dictionary<string, string>> Itinerary)
+            ResolvePublishedSchedule(CreateTourDto dto, ExperiencePackageEntity? existing)
+        {
+            if (!UsesStructuredSchedule(dto))
+            {
+                if (HasStructuredTourData(existing))
+                {
+                    return (
+                        TourScheduleCompatibility.FromEntity(existing!),
+                        existing!.TimelineJson ?? []);
+                }
+
+                var legacyTimeline = TourItineraryMapper.DeserializeLegacy(dto.TimelineJson);
+                ThrowIfInvalid(TourItineraryMapper.ValidateLegacyForPublish(legacyTimeline));
+                return (TourScheduleCompatibility.FromLegacyDuration(dto.DurationHours), legacyTimeline);
+            }
+
+            var durationType = TourSchedulePolicy.NormalizeDurationType(dto.DurationType);
+            var schedule = new TourScheduleDto
+            {
+                DurationType = durationType,
+                DurationMinutes = dto.DurationMinutes,
+                DurationDays = dto.DurationDays ??
+                    (durationType == TourDurationTypes.SameDay ? 1 : 0),
+                DefaultStartTime = dto.DefaultStartTime,
+                DefaultEndTime = dto.DefaultEndTime,
+                TimeZone = string.IsNullOrWhiteSpace(dto.TimeZone)
+                    ? TourSchedulePolicy.DefaultTimeZone
+                    : dto.TimeZone
+            };
+
+            ThrowIfInvalid(TourSchedulePolicy.ValidateForPublish(schedule));
+            schedule.DurationMinutes = TourSchedulePolicy.CalculateElapsedMinutes(schedule);
+
+            var itineraryDays = TourItineraryMapper.DeserializeStructured(dto.ItineraryJson);
+            ThrowIfInvalid(TourItineraryPolicy.ValidateForPublish(itineraryDays, schedule));
+
+            return (schedule, TourItineraryMapper.Flatten(itineraryDays));
+        }
+
+        private static TourScheduleDto ResolveDraftSchedule(
+            SaveTourDraftDto dto,
+            ExperiencePackageEntity? existing,
+            bool preserveStructuredData)
+        {
+            if (!UsesStructuredSchedule(dto))
+            {
+                return preserveStructuredData
+                    ? TourScheduleCompatibility.FromEntity(existing!)
+                    : TourScheduleCompatibility.FromLegacyDuration(dto.DurationHours);
+            }
+
+            var current = existing != null
+                ? TourScheduleCompatibility.FromEntity(existing)
+                : TourScheduleCompatibility.FromLegacyDuration(dto.DurationHours);
+            var scheduleShapeChanged = dto.DurationType != null ||
+                                       dto.DurationDays.HasValue ||
+                                       dto.DefaultStartTime != null ||
+                                       dto.DefaultEndTime != null;
+
+            return new TourScheduleDto
+            {
+                DurationType = dto.DurationType ?? current.DurationType,
+                DurationMinutes = dto.DurationMinutes ??
+                    (scheduleShapeChanged ? null : current.DurationMinutes),
+                DurationDays = dto.DurationDays ?? current.DurationDays,
+                DefaultStartTime = dto.DefaultStartTime ?? current.DefaultStartTime,
+                DefaultEndTime = dto.DefaultEndTime ?? current.DefaultEndTime,
+                TimeZone = dto.TimeZone ?? current.TimeZone
+            };
+        }
+
+        private static bool UsesStructuredSchedule(CreateTourDto dto)
+            => dto.ItineraryJson != null ||
+               !string.IsNullOrWhiteSpace(dto.DurationType) ||
+               dto.DurationMinutes.HasValue ||
+               dto.DurationDays.HasValue ||
+               dto.DefaultStartTime != null ||
+               dto.DefaultEndTime != null ||
+               dto.TimeZone != null;
+
+        private static bool HasStructuredTourData(ExperiencePackageEntity? entity)
+            => entity != null &&
+               TourScheduleCompatibility.HasConfiguredSchedule(entity) &&
+               TourItineraryMapper.IsStructured(entity.TimelineJson);
+
+        private static bool UsesStructuredSchedule(SaveTourDraftDto dto)
+            => dto.ItineraryDays != null ||
+               !string.IsNullOrWhiteSpace(dto.DurationType) ||
+               dto.DurationMinutes.HasValue ||
+               dto.DurationDays.HasValue ||
+               dto.DefaultStartTime != null ||
+               dto.DefaultEndTime != null ||
+               dto.TimeZone != null;
+
+        private static void ThrowIfInvalid(IReadOnlyList<string> errors)
+        {
+            if (errors.Count == 0) return;
+            throw new ArgumentException(string.Join(" ", errors.Distinct(StringComparer.Ordinal)));
         }
 
         private List<string> DeserializeJsonArray(string json)
@@ -335,7 +458,33 @@ namespace TripMate_WebAPI.Services
             return entity.IsActive ? "published" : "hidden";
         }
 
-        private static (int Score, List<string> MissingItems) EvaluateListingQuality(ExperiencePackageEntity entity)
+        private static MyTourScheduleSummaryDto BuildScheduleSummary(
+            ExperiencePackageEntity entity,
+            IReadOnlyCollection<TourItineraryDayDto> itineraryDays)
+        {
+            var schedule = TourScheduleCompatibility.FromEntity(entity);
+            var isConfigured = TourScheduleCompatibility.HasConfiguredSchedule(entity);
+            return new MyTourScheduleSummaryDto
+            {
+                DurationType = schedule.DurationType,
+                DurationMinutes = schedule.DurationMinutes,
+                DurationDays = schedule.DurationDays,
+                StartTime = schedule.DefaultStartTime,
+                EndTime = schedule.DefaultEndTime,
+                TimeZone = schedule.TimeZone,
+                IsConfigured = isConfigured,
+                DurationLabel = TourScheduleFormatter.FormatDuration(schedule),
+                TimeRangeLabel = isConfigured
+                    ? $"{schedule.DefaultStartTime}–{schedule.DefaultEndTime}"
+                    : "Time not set",
+                ItineraryDayCount = itineraryDays.Count,
+                ActivityCount = itineraryDays.Sum(day => day.Items?.Count ?? 0)
+            };
+        }
+
+        private static (int Score, List<string> MissingItems) EvaluateListingQuality(
+            ExperiencePackageEntity entity,
+            MyTourScheduleSummaryDto schedule)
         {
             var checks = new (bool Complete, string MissingMessage)[]
             {
@@ -344,6 +493,7 @@ namespace TripMate_WebAPI.Services
                 (!string.IsNullOrWhiteSpace(entity.MeetingPoint), "Add a specific meeting point"),
                 (entity.Description.Trim().Length >= 20, "Write a more useful tour description"),
                 (entity.DurationHours >= 0.5m, "Set a valid duration"),
+                (schedule.IsConfigured, "Set the default start and end times"),
                 (entity.PricePerSession > 0, "Set the base tour price"),
                 (entity.MaxGroupSize >= Math.Max(1, entity.IncludedGuestCount), "Confirm the group capacity"),
                 (!string.IsNullOrWhiteSpace(entity.CoverImageUrl), "Upload a cover photo"),
