@@ -111,10 +111,8 @@
            :class="guideSidebarOpen ? 'translate-x-0' : '-translate-x-full'"
            class="fixed left-0 top-0 z-50 flex h-screen w-[256px] flex-col overflow-y-auto border-r border-gray-200 bg-white px-4 py-5 shadow-xl transition-transform duration-200 ease-out lg:translate-x-0 lg:shadow-none">
         <!-- Logo -->
-        <a href="/" class="flex items-center gap-3 mb-6 px-2 hover:opacity-80 transition-opacity">
-            <div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold shadow-sm">
-                <span class="material-symbols-outlined text-[20px]">flight_takeoff</span>
-            </div>
+        <a href="/Guide/Dashboard" class="flex items-center gap-3 mb-6 px-2 hover:opacity-80 transition-opacity">
+            <img src="/images/AVATAR.png" alt="TripMate Logo" class="h-10 w-10 rounded-full object-cover"/>
             <h1 class="text-xl font-bold text-gray-900 tracking-tight">TripMate</h1>
         </a>
 
@@ -201,7 +199,6 @@
                         <div class="w-2 h-2 rounded-full bg-green-500 shadow-sm"></div>
                         <span class="text-sm font-medium text-gray-700 guide-display-name">@accountDisplayName</span>
                     </div>
-                    <span class="material-symbols-outlined text-gray-400 group-hover:text-gray-600 text-[20px] transition-transform duration-200" :class="{'rotate-90': userMenuOpen}">chevron_right</span>
                 </button>
                 
                 <!-- Dropdown -->
@@ -376,6 +373,8 @@
                 localStorage.removeItem('userEmail');
                 localStorage.removeItem('userId');
                 localStorage.removeItem('userRole');
+                localStorage.removeItem('userName');
+                localStorage.removeItem('userAvatarUrl');
                 window.location.href = '/Auth/Login';
                 }
             }

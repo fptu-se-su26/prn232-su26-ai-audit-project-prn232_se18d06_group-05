@@ -36,7 +36,7 @@
     <header class="w-full bg-white border-b border-gray-100 z-50 sticky top-0">
         <div class="flex justify-between items-center h-20 px-8 lg:px-16 max-w-[1440px] mx-auto">
             <!-- Logo -->
-            <a href="/" class="flex items-center gap-3">
+            <a href="/" class="flex items-center gap-3 tripmate-logo-link">
                 <img alt="TripMate Logo" class="h-10 w-10 rounded-full object-cover" src="/images/AVATAR.png"/>
                 <span class="text-2xl font-extrabold tracking-tight text-brand-dark uppercase">TripMate</span>
             </a>
@@ -75,5 +75,16 @@
             </span>
         </div>
     </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const userRole = localStorage.getItem('userRole');
+            if (userRole === 'guide') {
+                const logoLinks = document.querySelectorAll('.tripmate-logo-link');
+                logoLinks.forEach(link => {
+                    link.href = '/Guide/Dashboard';
+                });
+            }
+        });
+    </script>
 </body>
 </html>

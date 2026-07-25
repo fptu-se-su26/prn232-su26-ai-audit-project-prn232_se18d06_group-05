@@ -296,8 +296,19 @@
                         }
                     }
 
+                    if (added && thread.Messages) {
+                        // Force AlpineJS reactivity for the messages array
+                        thread.Messages = [...thread.Messages];
+                    }
+
                     const index = this.threads.indexOf(thread);
-                    if (index > 0) this.threads.unshift(this.threads.splice(index, 1)[0]);
+                    if (index > 0) {
+                        const t = this.threads.splice(index, 1)[0];
+                        this.threads.unshift(t);
+                    }
+                    // Force reactivity for threads list
+                    this.threads = [...this.threads];
+
                     if (isActive) this.scrollToBottom();
                 },
                 handleRealtimeMessageUpdate(raw) {

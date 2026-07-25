@@ -2,6 +2,7 @@
     ViewData["Title"] = "Đăng nhập";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
 
 <section
     class="min-h-screen flex items-center justify-center py-12 px-4 bg-gradient-to-br from-primary/5 via-surface to-primary-container/20">
@@ -238,8 +239,12 @@
                 localStorage.setItem('userEmail', data.user?.email || '');
                 localStorage.setItem('userId', data.user?.id || '');
                 localStorage.setItem('userRole', data.user?.role || 'traveler');
+                // Always reset profile data to prevent leaking between accounts
+                localStorage.setItem('userName', data.user?.fullName || data.user?.email?.split('@@')[0] || '');
                 if (data.user?.avatarUrl) {
                     localStorage.setItem('userAvatarUrl', data.user.avatarUrl);
+                } else {
+                    localStorage.removeItem('userAvatarUrl');
                 }
 
                 const role = data.user?.role || 'traveler';
@@ -272,7 +277,7 @@
         if (typeof google === 'undefined' || !google.accounts || googleInitialized) return;
         try {
             google.accounts.id.initialize({
-                client_id: "603408450988-ev8uo6i21kspfng413hb7ugr9u6mfna1.apps.googleusercontent.com",
+                client_id: "@Configuration["GoogleOAuth:ClientId"]",
                 callback: handleCredentialResponse,
                 auto_select: false,
                 cancel_on_tap_outside: true
@@ -306,8 +311,12 @@
                 localStorage.setItem('userEmail', data.user?.email || email);
                 localStorage.setItem('userId', data.user?.id || '');
                 localStorage.setItem('userRole', data.user?.role || 'traveler');
+                // Always reset profile data to prevent leaking between accounts
+                localStorage.setItem('userName', data.user?.fullName || data.user?.email?.split('@@')[0] || '');
                 if (data.user?.avatarUrl) {
                     localStorage.setItem('userAvatarUrl', data.user.avatarUrl);
+                } else {
+                    localStorage.removeItem('userAvatarUrl');
                 }
 
                 const role = data.user?.role || 'traveler';
