@@ -114,7 +114,7 @@ namespace TripMate_Webapi.Repositories
             if (guide != null)
             {
                 guide.TotalViews += delta;
-                await _supabase.From<GuideProfileEntity>().Update(guide);
+                await _supabase.From<GuideProfileEntity>().Where(g => g.Id == guide.Id).Update(guide);
             }
         }
 

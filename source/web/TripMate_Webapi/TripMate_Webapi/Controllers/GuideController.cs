@@ -42,6 +42,176 @@ namespace TripMate_Webapi.Controllers
             _dashboardService = dashboardService;
         }
 
+        public class UpdateGuideProfileRequest
+        {
+            public string? FullName { get; set; }
+            public string? PhoneNumber { get; set; }
+            public string? Nationality { get; set; }
+            public string? CityArea { get; set; }
+            public string? Bio { get; set; }
+            public string? Languages { get; set; }
+            public string? Specialties { get; set; }
+            public decimal? BaseRate { get; set; }
+            public IFormFile? AvatarFile { get; set; }
+            public IFormFile? CoverFile { get; set; }
+        }
+
+        [HttpPost]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> UpdateProfileAjax([FromForm] UpdateGuideProfileRequest req, [FromServices] TripMate_WebAPI.Services.ICloudinaryService cloudinary, [FromServices] Microsoft.Extensions.Caching.Memory.IMemoryCache cache)
+        {
+            var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            _logger.LogInformation("UpdateProfileAjax called. UserId={UserId}, FullName={FullName}, Bio={Bio}, Languages={Languages}, Specialties={Specialties}, BaseRate={BaseRate}, CityArea={CityArea}",
+                userId, req.FullName, req.Bio, req.Languages, req.Specialties, req.BaseRate, req.CityArea);
+
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                // Update User Profile
+                var profileResponse = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Where(x => x.Id == userId).Get();
+                var profile = profileResponse.Models.FirstOrDefault();
+                _logger.LogInformation("Profile found: {Found}, CurrentName={Name}", profile != null, profile?.FullName);
+
+                if (profile != null)
+                {
+                    if (req.FullName != null) profile.FullName = req.FullName;
+                    if (req.PhoneNumber != null) profile.Phone = req.PhoneNumber;
+                    if (req.Nationality != null) profile.Location = req.Nationality;
+
+                    if (req.AvatarFile != null)
+                    {
+                        var avatarUrl = await cloudinary.UploadImageAsync(req.AvatarFile, "tripmate_avatars");
+                        if (!string.IsNullOrEmpty(avatarUrl))
+                            profile.AvatarUrl = avatarUrl;
+                    }
+
+                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>()
+                        .Where(x => x.Id == profile.Id)
+                        .Set(x => x.FullName, profile.FullName)
+                        .Set(x => x.Phone, profile.Phone)
+                        .Set(x => x.Location, profile.Location)
+                        .Set(x => x.AvatarUrl, profile.AvatarUrl)
+                        .Update();
+                    _logger.LogInformation("ProfileEntity update result: {Count} models returned", updateResult.Models.Count);
+                }
+
+                // Update Guide Profile
+                var guideResponse = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Where(x => x.UserId == userId).Get();
+                var guideProfile = guideResponse.Models.FirstOrDefault();
+                _logger.LogInformation("GuideProfile found: {Found}, Id={Id}", guideProfile != null, guideProfile?.Id);
+
+                if (guideProfile == null)
+                {
+                    guideProfile = new TripMate_Webapi.Entities.GuideProfileEntity
+                    {
+                        UserId = userId,
+                        Bio = req.Bio ?? "",
+                        CityArea = req.CityArea ?? "Hội An",
+                        PricePerHour = req.BaseRate ?? 50000,
+                        Languages = req.Languages != null ? req.Languages.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList() : new List<string>(),
+                        Specialties = req.Specialties != null ? req.Specialties.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList() : new List<string>()
+                    };
+
+                    if (req.CoverFile != null)
+                    {
+                        var coverUrl = await cloudinary.UploadImageAsync(req.CoverFile, "tripmate_covers");
+                        if (!string.IsNullOrEmpty(coverUrl))
+                            guideProfile.CoverPhotoUrl = coverUrl;
+                    }
+
+                    var insertResult = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Insert(guideProfile);
+                    _logger.LogInformation("GuideProfile INSERT result: {Count} models", insertResult.Models.Count);
+                }
+                else
+                {
+                    if (req.CityArea != null) guideProfile.CityArea = req.CityArea;
+                    if (req.Bio != null) guideProfile.Bio = req.Bio;
+                    if (req.BaseRate != null) guideProfile.PricePerHour = req.BaseRate;
+                    
+                    if (req.Languages != null) 
+                        guideProfile.Languages = req.Languages.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+                    
+                    if (req.Specialties != null) 
+                        guideProfile.Specialties = req.Specialties.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()).ToList();
+
+                    if (req.CoverFile != null)
+                    {
+                        var coverUrl = await cloudinary.UploadImageAsync(req.CoverFile, "tripmate_covers");
+                        if (!string.IsNullOrEmpty(coverUrl))
+                            guideProfile.CoverPhotoUrl = coverUrl;
+                    }
+
+                    var updateResult = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>()
+                        .Where(x => x.Id == guideProfile.Id)
+                        .Set(x => x.Bio, guideProfile.Bio)
+                        .Set(x => x.CityArea, guideProfile.CityArea)
+                        .Set(x => x.PricePerHour, guideProfile.PricePerHour)
+                        .Set(x => x.Languages, guideProfile.Languages)
+                        .Set(x => x.Specialties, guideProfile.Specialties)
+                        .Set(x => x.CoverPhotoUrl, guideProfile.CoverPhotoUrl)
+                        .Update();
+                    _logger.LogInformation("GuideProfile UPDATE result: {Count} models", updateResult.Models.Count);
+                }
+
+                _logger.LogInformation("UpdateProfileAjax SUCCESS for userId={UserId}", userId);
+
+                // Invalidate header component cache
+                cache.Remove($"HeaderProfile_{userId}");
+
+                return Json(new { success = true, avatarUrl = profile?.AvatarUrl, coverUrl = guideProfile?.CoverPhotoUrl });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating guide profile for userId={UserId}", userId);
+                return StatusCode(500, new { error = "Internal server error", details = ex.Message });
+            }
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> GetProfileAjax()
+        {
+            var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized(new { error = "Not authenticated" });
+
+            try
+            {
+                var profileResponse = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Where(x => x.Id == userId).Get();
+                var profile = profileResponse.Models.FirstOrDefault();
+
+                var guideResponse = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Where(x => x.UserId == userId).Get();
+                var guideProfile = guideResponse.Models.FirstOrDefault();
+
+                if (profile == null) 
+                    return NotFound(new { error = "Profile not found" });
+
+                return Json(new {
+                    full_name = profile.FullName,
+                    phone_number = profile.Phone,
+                    nationality = profile.Location,
+                    avatar_url = profile.AvatarUrl,
+                    bio = guideProfile?.Bio ?? "",
+                    cover_photo_url = guideProfile?.CoverPhotoUrl ?? "",
+                    city_area = guideProfile?.CityArea ?? "Hội An",
+                    languages = guideProfile?.Languages != null ? string.Join(", ", guideProfile.Languages) : "",
+                    specialties = guideProfile?.Specialties != null ? string.Join(", ", guideProfile.Specialties) : "",
+                    average_rating = guideProfile?.AverageRating ?? 5.0m,
+                    total_reviews = guideProfile?.TotalReviews ?? 0,
+                    base_rate = guideProfile?.PricePerHour ?? 50000m
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching guide profile");
+                return StatusCode(500, new { error = "Internal server error" });
+            }
+        }
+
+
+
         // GET: /Guide/Index (List of all Guides for Traveler)
         public IActionResult Index()
         {
@@ -161,30 +331,40 @@ namespace TripMate_Webapi.Controllers
 
         // GET: /Guide/Profile
         [Authorize(Roles = "guide")]
-        public IActionResult Profile()
+        public async Task<IActionResult> Profile()
         {
-            var profileData = new
+            var userId = User.FindFirst("sub")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
             {
-                FullName = "Trần Minh",
-                PhoneNumber = "+84901234567",
-                CityArea = "Hội An",
-                Bio = "Xin chào! Mình là Minh, sinh ra và lớn lên tại phố cổ Hội An. Với hơn 5 năm kinh nghiệm dẫn tour, mình đam mê chia sẻ những câu chuyện văn hóa, lịch sử và đặc biệt là ẩm thực địa phương ẩn giấu sau những con hẻm nhỏ mà ít du khách biết tới.",
-                Languages = new[] { "Tiếng Việt", "Tiếng Anh" },
-                Specialties = new[] { "Ẩm thực đường phố", "Văn hóa - Lịch sử" },
-                BaseRate = 150000,
-                Rating = 4.9m,
-                ReviewsCount = 124,
-                IsVerified = true,
-                AvatarUrl = "/images/AVATAR.png",
-                CoverUrl = "https://images.unsplash.com/photo-1596422846543-75c6fc197f0a?auto=format&fit=crop&q=80&w=1000"
-            };
-            ViewBag.Profile = profileData;
+                var profileResponse = await _supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Where(x => x.Id == userId).Get();
+                var profile = profileResponse.Models.FirstOrDefault();
+
+                var guideResponse = await _supabase.From<TripMate_Webapi.Entities.GuideProfileEntity>().Where(x => x.UserId == userId).Get();
+                var guideProfile = guideResponse.Models.FirstOrDefault();
+
+                ViewBag.Profile = new {
+                    full_name = profile?.FullName ?? "",
+                    phone_number = profile?.Phone ?? "",
+                    nationality = profile?.Location ?? "",
+                    avatar_url = profile?.AvatarUrl ?? "/images/AVATAR.png",
+                    bio = guideProfile?.Bio ?? "",
+                    cover_photo_url = guideProfile?.CoverPhotoUrl ?? "",
+                    city_area = guideProfile?.CityArea ?? "Hội An",
+                    languages = guideProfile?.Languages != null ? string.Join(", ", guideProfile.Languages) : "",
+                    specialties = guideProfile?.Specialties != null ? string.Join(", ", guideProfile.Specialties) : "",
+                    average_rating = guideProfile?.AverageRating ?? 5.0m,
+                    total_reviews = guideProfile?.TotalReviews ?? 0,
+                    base_rate = guideProfile?.PricePerHour ?? 50000m
+                };
+            }
+
             return View();
         }
 
-        // ponytail ultra: minimal inline update
         public class UpdateGuideProfileDto
         {
+            public string? FullName { get; set; }
+            public string? PhoneNumber { get; set; }
             public string? AvatarUrl { get; set; }
             public string? Location { get; set; }
             public string? Bio { get; set; }
@@ -193,38 +373,64 @@ namespace TripMate_Webapi.Controllers
             public string? CityArea { get; set; }
             public decimal? PricePerHour { get; set; }
             public string? CoverPhotoUrl { get; set; }
-            // ponytail: certificate, phone number, full name, email explicitly excluded per requirements
         }
 
         [HttpPost("/Guide/UpdateProfile")]
-        public async Task<IActionResult> UpdateProfile([FromBody] UpdateGuideProfileDto dto, [FromServices] Supabase.Client supabase)
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> UpdateProfile([FromBody] UpdateGuideProfileDto dto)
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
             if (string.IsNullOrEmpty(userId)) return Unauthorized();
 
-            var profileResponse = await supabase.From<ProfileEntity>().Where(x => x.Id == userId).Get();
-            var profile = profileResponse.Models.FirstOrDefault();
-            if (profile != null)
+            try
             {
-                if (dto.AvatarUrl != null) profile.AvatarUrl = dto.AvatarUrl;
-                if (dto.Location != null) profile.Location = dto.Location;
-                await supabase.From<ProfileEntity>().Update(profile);
-            }
+                // Update base profile (profiles table)
+                var profileResponse = await _supabase.From<ProfileEntity>().Where(x => x.Id == userId).Get();
+                var profile = profileResponse.Models.FirstOrDefault();
+                if (profile != null)
+                {
+                    if (dto.FullName != null) profile.FullName = dto.FullName;
+                    if (dto.PhoneNumber != null) profile.Phone = dto.PhoneNumber;
+                    if (dto.AvatarUrl != null) profile.AvatarUrl = dto.AvatarUrl;
+                    if (dto.Location != null) profile.Location = dto.Location;
+                    await _supabase.From<ProfileEntity>()
+                        .Where(x => x.Id == profile.Id)
+                        .Set(x => x.FullName, profile.FullName)
+                        .Set(x => x.Phone, profile.Phone)
+                        .Set(x => x.Location, profile.Location)
+                        .Set(x => x.AvatarUrl, profile.AvatarUrl)
+                        .Update();
+                }
 
-            var guideProfileResponse = await supabase.From<GuideProfileEntity>().Where(x => x.UserId == userId).Get();
-            var guideProfile = guideProfileResponse.Models.FirstOrDefault();
-            if (guideProfile != null)
+                // Update guide profile (guide_profiles table)
+                var guideProfileResponse = await _supabase.From<GuideProfileEntity>().Where(x => x.UserId == userId).Get();
+                var guideProfile = guideProfileResponse.Models.FirstOrDefault();
+                if (guideProfile != null)
+                {
+                    if (dto.Bio != null) guideProfile.Bio = dto.Bio;
+                    if (dto.Languages != null) guideProfile.Languages = dto.Languages;
+                    if (dto.Specialties != null) guideProfile.Specialties = dto.Specialties;
+                    if (dto.CityArea != null) guideProfile.CityArea = dto.CityArea;
+                    if (dto.PricePerHour != null) guideProfile.PricePerHour = dto.PricePerHour;
+                    if (dto.CoverPhotoUrl != null) guideProfile.CoverPhotoUrl = dto.CoverPhotoUrl;
+                    await _supabase.From<GuideProfileEntity>()
+                        .Where(x => x.Id == guideProfile.Id)
+                        .Set(x => x.Bio, guideProfile.Bio)
+                        .Set(x => x.CityArea, guideProfile.CityArea)
+                        .Set(x => x.PricePerHour, guideProfile.PricePerHour)
+                        .Set(x => x.Languages, guideProfile.Languages)
+                        .Set(x => x.Specialties, guideProfile.Specialties)
+                        .Set(x => x.CoverPhotoUrl, guideProfile.CoverPhotoUrl)
+                        .Update();
+                }
+
+                return Ok(new { success = true });
+            }
+            catch (Exception ex)
             {
-                if (dto.Bio != null) guideProfile.Bio = dto.Bio;
-                if (dto.Languages != null) guideProfile.Languages = dto.Languages;
-                if (dto.Specialties != null) guideProfile.Specialties = dto.Specialties;
-                if (dto.CityArea != null) guideProfile.CityArea = dto.CityArea;
-                if (dto.PricePerHour != null) guideProfile.PricePerHour = dto.PricePerHour;
-                if (dto.CoverPhotoUrl != null) guideProfile.CoverPhotoUrl = dto.CoverPhotoUrl;
-                await supabase.From<GuideProfileEntity>().Update(guideProfile);
+                _logger.LogError(ex, "Error updating guide profile");
+                return StatusCode(500, new { success = false, message = ex.Message });
             }
-
-            return Ok(new { success = true });
         }
 
         // GET: /Guide/Calendar
@@ -566,6 +772,7 @@ namespace TripMate_Webapi.Controllers
                     var active = guideBookings.Select(b => new TripMate_WebAPI.DTOs.Chat.ActiveBookingDto
                     {
                         BookingId = b.Id ?? string.Empty,
+                        Status = BookingService.MapStatus(b.Status),
                         TravelerId = b.TravelerId,
                         TravelerName = b.TravelerName,
                         TravelerAvatar = b.TravelerAvatar,

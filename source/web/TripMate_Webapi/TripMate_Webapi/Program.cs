@@ -66,7 +66,10 @@ builder.Services.AddHttpClient<SupabaseAuthService>();
 builder.Services.AddScoped<SupabaseAuthService>();
 builder.Services.AddHttpClient<GoogleAuthService>();
 builder.Services.AddScoped<IGoogleAuthService, GoogleAuthService>();
-builder.Services.AddHttpClient<SupabasePasswordResetService>();
+builder.Services.AddHttpClient<SupabasePasswordResetService>().ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+{
+    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator
+});
 builder.Services.AddScoped<ISupabasePasswordResetService, SupabasePasswordResetService>();
 builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -96,6 +99,9 @@ builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 builder.Services.AddScoped<IExperiencePackageRepository, ExperiencePackageRepository>();
 builder.Services.AddScoped<ISavedGuideRepository, SavedGuideRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IReviewService, ReviewService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
+builder.Services.AddScoped<ITravelerBookingService, TravelerBookingService>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();
@@ -122,6 +128,9 @@ builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, Supa
 builder.Services.AddHttpClient<BookingReminderService>();
 builder.Services.AddScoped<BookingReminderService>();
 builder.Services.AddHostedService<BookingReminderWorker>();
+builder.Services.AddHttpClient<BookingCompletionService>();
+builder.Services.AddScoped<BookingCompletionService>();
+builder.Services.AddHostedService<BookingCompletionWorker>();
 
 // ── Survey Service ────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SurveyService>();

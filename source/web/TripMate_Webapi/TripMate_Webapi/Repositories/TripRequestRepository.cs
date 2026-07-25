@@ -99,7 +99,7 @@ namespace TripMate_Webapi.Repositories
             if (request != null)
             {
                 request.Status = request.Status == "open" ? "closed" : "open";
-                await _supabase.From<TripRequestEntity>().Update(request);
+                await _supabase.From<TripRequestEntity>().Where(x => x.Id == request.Id).Update(request);
             }
         }
 
@@ -122,6 +122,35 @@ namespace TripMate_Webapi.Repositories
                 .Get();
 
             return response.Models;
+        }
+
+        public async Task<List<TripOfferEntity>> GetTripOffersByRequestIdAsync(string requestId)
+        {
+            var response = await _supabase.From<TripOfferEntity>()
+                .Where(x => x.TripRequestId == requestId)
+                .Order(x => x.CreatedAt, Postgrest.Constants.Ordering.Ascending)
+                .Get();
+
+            return response.Models;
+        }
+
+        public async Task<TripOfferEntity?> GetTripOfferByIdAsync(string offerId)
+        {
+            var response = await _supabase.From<TripOfferEntity>()
+                .Where(x => x.Id == offerId)
+                .Single();
+
+            return response;
+        }
+
+        public async Task UpdateTripOfferAsync(TripOfferEntity offer)
+        {
+            await _supabase.From<TripOfferEntity>().Where(x => x.Id == offer.Id).Update(offer);
+        }
+
+        public async Task UpdateTripRequestAsync(TripRequestEntity request)
+        {
+            await _supabase.From<TripRequestEntity>().Where(x => x.Id == request.Id).Update(request);
         }
 
         public async Task<List<ProfileEntity>> GetProfilesByIdsAsync(IReadOnlyCollection<string> ids)

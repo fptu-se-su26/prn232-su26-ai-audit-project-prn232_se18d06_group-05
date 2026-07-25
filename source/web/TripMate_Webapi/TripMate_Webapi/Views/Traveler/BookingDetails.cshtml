@@ -5,7 +5,7 @@
 }
 
 <div class="bg-surface min-h-screen py-12 px-4">
-    <div class="max-w-[1000px] mx-auto">
+    <div class="max-w-4xl mx-auto">
         <!-- Breadcrumbs & Header -->
         <div class="mb-8 flex items-center gap-4">
             <a href="/Traveler/Dashboard" class="w-10 h-10 rounded-full bg-white border border-outline-variant/50 flex items-center justify-center text-on-surface-variant hover:text-primary transition-all shadow-sm">
@@ -17,7 +17,13 @@
             </div>
             
             <div class="ml-auto flex items-center gap-2">
-                @if (Model.Status == 0)
+                @if (Model.Status == -1)
+                {
+                    <div class="bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-bold border border-orange-200 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">payment</span> Pending Payment
+                    </div>
+                }
+                else if (Model.Status == 0)
                 {
                     <div class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-full text-sm font-bold border border-yellow-200 flex items-center gap-2">
                         <span class="material-symbols-outlined text-sm">schedule</span> Pending
@@ -29,12 +35,82 @@
                         <span class="material-symbols-outlined text-sm">check_circle</span> Approved
                     </div>
                 }
+                else if (Model.Status == 3)
+                {
+                    <div class="bg-red-100 text-red-700 px-4 py-2 rounded-full text-sm font-bold border border-red-200 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-sm">cancel</span> Cancelled
+                    </div>
+                }
                 else
                 {
                     <div class="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-bold border border-green-200 flex items-center gap-2">
                         <span class="material-symbols-outlined text-sm">task_alt</span> Completed
                     </div>
                 }
+            </div>
+            </div>
+        </div>
+
+        <!-- Progress Timeline -->
+        <div class="mb-8 bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/30 tonal-elevation">
+            <div class="w-full flex justify-between items-center relative px-2 sm:px-6">
+                <!-- Base Line -->
+                <div class="absolute left-[5%] right-[5%] top-4 -translate-y-1/2 h-1.5 bg-gray-200 rounded-full z-0"></div>
+                
+                @{
+                    bool isDepositPaid = Model.Status >= 0 && Model.Status != 3 && Model.AmountPaid >= (Model.TotalAmount * 0.3m);
+                    bool isConfirmed = Model.Status >= 1 && Model.Status != 3;
+                    bool isFullyPaid = Model.Status >= 1 && Model.Status != 3 && Model.AmountPaid >= Model.TotalAmount;
+                    bool isCompleted = Model.Status == 2;
+                    bool isCancelled = Model.Status == 3;
+
+                    // Calculate progress percentage
+                    int progressPercent = 0;
+                    if (isCompleted) progressPercent = 100;
+                    else if (isFullyPaid) progressPercent = 75;
+                    else if (isConfirmed) progressPercent = 50;
+                    else if (isDepositPaid) progressPercent = 25;
+                    else progressPercent = 0;
+                }
+
+                <!-- Progress Line -->
+                <div class="absolute left-[5%] top-4 -translate-y-1/2 h-1.5 bg-green-500 rounded-full z-0 transition-all duration-500" style="width: calc(@progressPercent% * 0.9);"></div>
+
+                <!-- Steps -->
+                <div class="flex flex-col items-center gap-2 z-10 w-16">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white bg-green-500 shadow-md ring-4 ring-white">
+                        <span class="material-symbols-outlined text-[16px]">receipt_long</span>
+                    </div>
+                    <span class="text-[10px] sm:text-xs font-bold text-on-surface whitespace-nowrap">Created</span>
+                </div>
+
+                <div class="flex flex-col items-center gap-2 z-10 w-16">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white transition-colors duration-500 @(isDepositPaid ? "bg-green-500 shadow-md ring-4 ring-white" : "bg-gray-200")">
+                        <span class="material-symbols-outlined text-[16px]">payments</span>
+                    </div>
+                    <span class="text-[10px] sm:text-xs font-bold @(isDepositPaid ? "text-on-surface" : "text-on-surface-variant") whitespace-nowrap">Deposit Paid</span>
+                </div>
+
+                <div class="flex flex-col items-center gap-2 z-10 w-16">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white transition-colors duration-500 @(isConfirmed ? "bg-green-500 shadow-md ring-4 ring-white" : "bg-gray-200")">
+                        <span class="material-symbols-outlined text-[16px]">thumb_up</span>
+                    </div>
+                    <span class="text-[10px] sm:text-xs font-bold @(isConfirmed ? "text-on-surface" : "text-on-surface-variant") whitespace-nowrap">Confirmed</span>
+                </div>
+
+                <div class="flex flex-col items-center gap-2 z-10 w-16">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white transition-colors duration-500 @(isFullyPaid ? "bg-green-500 shadow-md ring-4 ring-white" : "bg-gray-200")">
+                        <span class="material-symbols-outlined text-[16px]">task_alt</span>
+                    </div>
+                    <span class="text-[10px] sm:text-xs font-bold @(isFullyPaid ? "text-on-surface" : "text-on-surface-variant") whitespace-nowrap">Fully Paid</span>
+                </div>
+
+                <div class="flex flex-col items-center gap-2 z-10 w-16">
+                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-white transition-colors duration-500 @(isCompleted ? "bg-green-500 shadow-md ring-4 ring-white" : (isCancelled ? "bg-red-500 shadow-md ring-4 ring-white" : "bg-gray-200"))">
+                        <span class="material-symbols-outlined text-[16px]">@(isCancelled ? "cancel" : "flag")</span>
+                    </div>
+                    <span class="text-[10px] sm:text-xs font-bold @(isCompleted ? "text-green-700" : (isCancelled ? "text-red-600" : "text-on-surface-variant")) whitespace-nowrap">@(isCancelled ? "Cancelled" : "Completed")</span>
+                </div>
             </div>
         </div>
 
@@ -64,35 +140,83 @@
                         </div>
                     </div>
 
-                    <div class="bg-primary-container/30 p-6 rounded-2xl flex items-start gap-4">
-                        <div class="w-12 h-12 bg-primary text-white flex items-center justify-center rounded-full shrink-0">
-                            <span class="material-symbols-outlined">location_on</span>
+                    <div class="bg-primary-container/30 rounded-2xl overflow-hidden">
+                        <div class="p-6 flex items-start gap-4">
+                            <div class="w-12 h-12 bg-primary text-white flex items-center justify-center rounded-full shrink-0">
+                                <span class="material-symbols-outlined">location_on</span>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-lg text-on-surface mb-1">Meeting Point</h4>
+                                <p class="text-on-surface-variant mb-2">@(Model.ExperiencePackage?.MeetingPoint ?? Model.GuideProfile?.CityArea ?? "To be discussed with guide")</p>
+                                @if(!string.IsNullOrEmpty(Model.ExperiencePackage?.MeetingPoint) || !string.IsNullOrEmpty(Model.GuideProfile?.CityArea))
+                                {
+                                    var searchStr = Uri.EscapeDataString(Model.ExperiencePackage?.MeetingPoint ?? Model.GuideProfile?.CityArea ?? "");
+                                    <a href="https://www.google.com/maps/search/?api=1&query=@searchStr" target="_blank" class="text-primary font-bold text-sm hover:underline flex items-center gap-1">
+                                        View on Google Maps <span class="material-symbols-outlined text-sm">open_in_new</span>
+                                    </a>
+                                }
+                            </div>
                         </div>
-                        <div>
-                            <h4 class="font-bold text-lg text-on-surface mb-1">Meeting Point</h4>
-                            <p class="text-on-surface-variant mb-2">Hoan Kiem Lake, Main Fountain Square</p>
-                            <a href="#" class="text-primary font-bold text-sm hover:underline flex items-center gap-1">
-                                View on Map <span class="material-symbols-outlined text-sm">open_in_new</span>
-                            </a>
-                        </div>
+                        @if(!string.IsNullOrEmpty(Model.ExperiencePackage?.MeetingPoint) || !string.IsNullOrEmpty(Model.GuideProfile?.CityArea))
+                        {
+                            var mapQuery = Uri.EscapeDataString(Model.ExperiencePackage?.MeetingPoint ?? Model.GuideProfile?.CityArea ?? "");
+                            <iframe 
+                                width="100%" 
+                                height="200" 
+                                style="border:0;" 
+                                loading="lazy" 
+                                allowfullscreen 
+                                referrerpolicy="no-referrer-when-downgrade"
+                                src="https://maps.google.com/maps?q=@mapQuery&t=&z=14&ie=UTF8&iwloc=&output=embed">
+                            </iframe>
+                        }
+                    </div>
+                </div>
+
+                <!-- Tour Description -->
+                <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
+                    <h2 class="text-2xl font-bold text-on-surface mb-6 border-b border-outline-variant/30 pb-4">About this Trip</h2>
+                    <div class="prose prose-sm max-w-none text-on-surface-variant">
+                        @(Model.ExperiencePackage?.Description ?? "Custom tailored tour.")
                     </div>
                 </div>
 
                 <!-- Itinerary Timeline -->
-                <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
-                    <h2 class="text-2xl font-bold text-on-surface mb-8 border-b border-outline-variant/30 pb-4">Itinerary Details</h2>
-                    
-                    <div class="relative pl-8 border-l-2 border-primary/30 space-y-10">
-                        <div class="relative">
-                            <div class="absolute -left-[41px] w-5 h-5 rounded-full bg-primary border-4 border-white shadow-sm"></div>
-                            <h3 class="text-xl font-bold text-on-surface mb-1">Tour Experience</h3>
-                            <p class="text-sm font-bold text-primary mb-4">@Model.BookingDate.ToString("MMM dd") • @Model.StartTime.ToString("hh:mm tt")</p>
-                            <div class="bg-surface-variant p-5 rounded-xl text-on-surface-variant space-y-2">
-                                <p>@Model.ExperiencePackage?.Description</p>
+                @if(Model.ExperiencePackage?.TimelineJson != null && Model.ExperiencePackage.TimelineJson.Count > 0)
+                {
+                    <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
+                        <h2 class="text-2xl font-bold text-on-surface mb-8 border-b border-outline-variant/30 pb-4">Itinerary Details</h2>
+                        
+                        <div class="relative pl-8 border-l-2 border-primary/30 space-y-10">
+                            @foreach(var item in Model.ExperiencePackage.TimelineJson)
+                            {
+                                <div class="relative">
+                                    <div class="absolute -left-[41px] w-5 h-5 rounded-full bg-primary border-4 border-white shadow-sm"></div>
+                                    <h3 class="text-xl font-bold text-primary mb-1">@(item.ContainsKey("time") ? item["time"] : "")</h3>
+                                    <div class="bg-surface-variant/30 p-5 rounded-xl text-on-surface-variant mt-2 text-base font-medium">
+                                        @(item.ContainsKey("activity") ? item["activity"] : (item.ContainsKey("description") ? item["description"] : ""))
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="bg-white rounded-3xl p-8 shadow-sm border border-outline-variant/30 tonal-elevation">
+                        <h2 class="text-2xl font-bold text-on-surface mb-8 border-b border-outline-variant/30 pb-4">Itinerary Details</h2>
+                        <div class="relative pl-8 border-l-2 border-primary/30 space-y-10">
+                            <div class="relative">
+                                <div class="absolute -left-[41px] w-5 h-5 rounded-full bg-primary border-4 border-white shadow-sm"></div>
+                                <h3 class="text-xl font-bold text-on-surface mb-1">Tour Experience</h3>
+                                <p class="text-sm font-bold text-primary mb-4">@Model.BookingDate.ToString("MMM dd") • @Model.StartTime.ToString("hh:mm tt")</p>
+                                <div class="bg-surface-variant p-5 rounded-xl text-on-surface-variant space-y-2">
+                                    <p>Your guide will customize the exact itinerary based on your preferences and the day's conditions.</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
+                }
             </div>
 
             <!-- Right Column: Guide & Payment -->
@@ -104,6 +228,11 @@
                     </div>
                     <h3 class="text-xl font-bold text-on-surface mb-1">@(Model.GuideProfile?.Profile?.FullName ?? "Unknown Guide")</h3>
                     <p class="text-sm text-primary font-bold mb-4">Your Local Expert</p>
+                    @if(!string.IsNullOrEmpty(Model.GuideProfile?.Profile?.Phone)) {
+                        <p class="text-sm text-on-surface-variant mb-4 flex items-center justify-center gap-2">
+                            <span class="material-symbols-outlined text-[16px]">call</span> @Model.GuideProfile.Profile.Phone
+                        </p>
+                    }
                     
                     <div class="flex flex-col gap-3">
                         @if(Model.Status == 0) {
@@ -113,6 +242,11 @@
                         } else {
                         <a href="/Traveler/Messages?bookingId=@Model.Id" class="w-full bg-primary-container text-primary hover:bg-primary hover:text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
                             <span class="material-symbols-outlined">chat</span> Message Guide
+                        </a>
+                        }
+                        @if(Model.Status == 2) {
+                        <a href="/Traveler/Review/@Model.Id" class="w-full bg-primary text-white hover:bg-primary/90 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg">
+                            <span class="material-symbols-outlined">star</span> Write a Review
                         </a>
                         }
                         <a href="/Traveler/GuideProfile/@Model.GuideProfile?.Id" class="w-full border-2 border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
@@ -136,9 +270,24 @@
                         </div>
                     </div>
                     
-                    <div class="flex justify-between items-end mb-8">
+                    <div class="flex justify-between items-end mb-6">
                         <span class="font-bold text-on-surface">Total</span>
-                        <span class="text-3xl font-extrabold text-primary">@(Model.TotalAmount.ToString("#,##0")) ₫</span>
+                        <span class="text-2xl font-extrabold text-on-surface">@(Model.TotalAmount.ToString("#,##0")) ₫</span>
+                    </div>
+
+                    <div class="space-y-2 mb-8 bg-surface p-4 rounded-xl">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-on-surface-variant">Amount Paid</span>
+                            <span class="font-bold text-green-600">@((Model.AmountPaid).ToString("#,##0")) ₫</span>
+                        </div>
+                        @{
+                            decimal remaining = Model.TotalAmount - Model.AmountPaid;
+                            if (remaining < 0) remaining = 0;
+                        }
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-bold text-on-surface">Remaining Balance</span>
+                            <span class="text-xl font-extrabold text-red-500">@(remaining.ToString("#,##0")) ₫</span>
+                        </div>
                     </div>
 
                     <div class="mt-4">
@@ -150,7 +299,7 @@
                         @if (Model.Status == -1)
                         {
                             <button onclick="retryPayment('@Model.Id')" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold text-lg shadow-sm flex justify-center items-center gap-2 transition-all">
-                                <span class="material-symbols-outlined">payment</span> Pay 30% Deposit
+                                <span class="material-symbols-outlined">payment</span> Pay 30% Deposit Now
                             </button>
                         }
                         else if (Model.Status == 0)
@@ -159,7 +308,7 @@
                                 <span class="material-symbols-outlined">schedule</span> 30% Paid - Awaiting Guide
                             </div>
                         }
-                        else if (Model.Status == 1 && Model.AmountPaid < Model.TotalAmount)
+                        else if (Model.Status == 1 && remaining > 0)
                         {
                             if (isPastDeadline)
                             {
@@ -169,8 +318,8 @@
                             }
                             else
                             {
-                                <button onclick="retryPayment('@Model.Id')" class="w-full bg-primary hover:bg-primary/90 text-white py-4 rounded-xl font-bold text-lg shadow-sm flex justify-center items-center gap-2 transition-all">
-                                    <span class="material-symbols-outlined">payment</span> Pay 70% Final Balance
+                                <button onclick="retryPayment('@Model.Id')" class="w-full bg-red-500 hover:bg-red-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg flex justify-center items-center gap-2 transition-all animate-pulse hover:animate-none">
+                                    <span class="material-symbols-outlined">payment</span> Pay Remaining 70%
                                 </button>
                                 <p class="text-center text-xs text-on-surface-variant mt-2 font-medium">Due by @actualStartTime.AddHours(-72).ToString("MMM dd, yyyy HH:mm")</p>
                             }
