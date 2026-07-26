@@ -221,11 +221,13 @@ namespace TripMate_WebAPI.Services
 
         private async Task SendPaymentNotificationsAsync(BookingEntity booking, string orderCode, bool isDeposit)
         {
+            var tripName = await _notifications.GetTripNameAsync(booking.Id);
+            var tripDate = NotificationTextFormatter.FormatTripDate(booking.BookingDate);
             await _notifications.SendAsync(
                 booking.TravelerId,
                 NotificationTypes.PaymentSucceeded,
                 "Payment successful",
-                $"Payment for booking {booking.Id} was received. The guide can now review it.",
+                $"We received your payment for \"{tripName}\" on {tripDate}. The guide can now review it.",
                 new { bookingId = booking.Id, orderCode, amount = booking.TotalAmount },
                 $"/Traveler/BookingDetails/{booking.Id}",
                 $"payment-succeeded:{booking.Id}",
@@ -240,7 +242,7 @@ namespace TripMate_WebAPI.Services
                         guide.UserId,
                         NotificationTypes.BookingAwaitingGuide,
                         "New paid booking awaiting your response",
-                        $"Booking {booking.Id} is ready for your review.",
+                        $"A paid booking for \"{tripName}\" on {tripDate} with {booking.GuestCount} guest(s) is ready for your review.",
                         new { bookingId = booking.Id, booking.BookingDate, booking.GuestCount },
                         "/Guide/Bookings",
                         $"booking-awaiting-guide:{booking.Id}",

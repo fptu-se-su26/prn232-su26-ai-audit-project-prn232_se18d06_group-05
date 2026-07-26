@@ -199,6 +199,8 @@ public class BookingService
         }
 
         var guideUserId = await GetGuideUserIdAsync(bookingEntity.GuideProfileId);
+        var tripName = await _notif.GetTripNameAsync(bookingId);
+        var tripDate = NotificationTextFormatter.FormatTripDate(bookingEntity.BookingDate);
         var data = new { bookingId, cancelledBy = "traveler" };
         if (!string.IsNullOrWhiteSpace(guideUserId))
         {
@@ -206,7 +208,7 @@ public class BookingService
                 guideUserId,
                 NotificationTypes.BookingCancelled,
                 "Booking cancelled by traveler",
-                $"Booking {bookingId} was cancelled by the traveler.",
+                $"The traveler cancelled \"{tripName}\", scheduled for {tripDate}.",
                 data,
                 "/Guide/Bookings",
                 $"booking-cancelled:{bookingId}:guide",
@@ -217,7 +219,7 @@ public class BookingService
             travelerId,
             NotificationTypes.BookingCancelled,
             "Booking cancelled",
-            "Your booking cancellation has been recorded.",
+            $"Your cancellation for \"{tripName}\", scheduled for {tripDate}, has been recorded.",
             data,
             $"/Traveler/BookingDetails/{bookingId}",
             $"booking-cancelled:{bookingId}:traveler");
@@ -226,7 +228,7 @@ public class BookingService
             "admin",
             NotificationTypes.CancellationReviewRequired,
             "Cancellation requires review",
-            $"Booking {bookingId} was cancelled and may require a refund review.",
+            $"\"{tripName}\", scheduled for {tripDate}, was cancelled and may require a refund review.",
             data,
             "/Admin/Moderation",
             $"cancellation-review:{bookingId}");
@@ -290,6 +292,8 @@ public class BookingService
             throw new Exception("The 24-hour response window has expired and this booking can no longer be updated.");
 
         await _repo.UpdateBookingStatusAsync(bookingId, newStatus);
+        var tripName = await _notif.GetTripNameAsync(bookingId);
+        var tripDate = NotificationTextFormatter.FormatTripDate(booking.BookingDate);
         
         if (newStatus == 1) // Confirmed
         {
@@ -297,7 +301,7 @@ public class BookingService
                 booking.TravelerId,
                 NotificationTypes.BookingConfirmed,
                 "Booking confirmed",
-                "Your guide accepted the booking request.",
+                $"Your guide accepted \"{tripName}\", scheduled for {tripDate}.",
                 new { bookingId },
                 $"/Traveler/BookingDetails/{bookingId}",
                 $"booking-confirmed:{bookingId}",
@@ -309,7 +313,7 @@ public class BookingService
                 booking.TravelerId,
                 NotificationTypes.BookingDeclined,
                 "Booking declined",
-                "The guide could not accept this booking request.",
+                $"The guide could not accept \"{tripName}\", scheduled for {tripDate}.",
                 new { bookingId },
                 $"/Traveler/BookingDetails/{bookingId}",
                 $"booking-declined:{bookingId}",

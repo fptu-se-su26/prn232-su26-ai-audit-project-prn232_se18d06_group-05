@@ -175,12 +175,16 @@ namespace TripMate_WebAPI.Services
         {
             string? activeBookingId = null;
             string? activeGuideUserId = null;
+            DateTime? activeBookingDate = null;
+            string activeTripName = "TripMate trip";
             try
             {
                 foreach (var id in bookingIds)
                 {
                     activeBookingId = id;
                     activeGuideUserId = null;
+                    activeBookingDate = null;
+                    activeTripName = "TripMate trip";
                     // 1. Get booking info
                     var url = $"{_supabaseUrl}/rest/v1/bookings?id=eq.{id}&select=*";
                     var request = BuildAdminRequest(HttpMethod.Get, url);
@@ -191,6 +195,10 @@ namespace TripMate_WebAPI.Services
                     var rows = JsonSerializer.Deserialize<List<BookingKpiRow>>(content, _json);
                     var b = rows?.FirstOrDefault();
                     if (b == null) continue;
+                    activeBookingDate = b.BookingDate;
+                    activeTripName = await _notif.GetTripNameAsync(id);
+                    var tripName = activeTripName;
+                    var tripDate = NotificationTextFormatter.FormatTripDate(b.BookingDate);
 
                     // 2. Update booking: status = 2 (Completed) if it was Confirmed
                     var newStatus = b.Status == 1 ? 2 : b.Status;
@@ -236,7 +244,7 @@ namespace TripMate_WebAPI.Services
                             guideUserId,
                             NotificationTypes.PayoutReleased,
                             "Payout released",
-                            $"{b.GuideEarnings:N0}₫ from booking {id} has been released.",
+                            $"A payout of {NotificationTextFormatter.FormatVnd(b.GuideEarnings)} for \"{tripName}\" has been released.",
                             new { bookingId = id, amount = b.GuideEarnings },
                             "/Guide/Earnings",
                             $"payout-released:{id}",
@@ -246,7 +254,7 @@ namespace TripMate_WebAPI.Services
                             guideUserId,
                             NotificationTypes.BookingCompleted,
                             "Booking completed",
-                            $"Booking {id} is now complete.",
+                            $"\"{tripName}\", scheduled for {tripDate}, is now complete.",
                             new { bookingId = id },
                             "/Guide/Bookings",
                             $"booking-completed:{id}:guide");
@@ -258,7 +266,7 @@ namespace TripMate_WebAPI.Services
                             b.TravelerId,
                             NotificationTypes.BookingCompleted,
                             "Trip completed",
-                            "Your trip is complete. We hope you had a wonderful experience.",
+                            $"\"{tripName}\" is complete. We hope you had a wonderful experience.",
                             new { bookingId = id },
                             $"/Traveler/BookingDetails/{id}",
                             $"booking-completed:{id}:traveler");
@@ -266,7 +274,7 @@ namespace TripMate_WebAPI.Services
                             b.TravelerId,
                             NotificationTypes.ReviewRequested,
                             "How was your trip?",
-                            "Share a review to help your guide and other travelers.",
+                            $"Share a review of \"{tripName}\" to help your guide and other travelers.",
                             new { bookingId = id },
                             $"/Traveler/Review/{id}",
                             $"review-request:{id}");
@@ -283,7 +291,7 @@ namespace TripMate_WebAPI.Services
                         activeGuideUserId,
                         NotificationTypes.PayoutFailed,
                         "Payout needs attention",
-                        $"We could not release the payout for booking {activeBookingId}. Support has been notified.",
+                        $"We could not release the payout for \"{activeTripName}\", scheduled for {NotificationTextFormatter.FormatTripDate(activeBookingDate)}. Support has been notified.",
                         new { bookingId = activeBookingId },
                         "/Guide/Support",
                         $"payout-failed:{activeBookingId}",
@@ -293,7 +301,7 @@ namespace TripMate_WebAPI.Services
                     "admin",
                     NotificationTypes.PayoutFailed,
                     "Payout release failed",
-                    $"Escrow release failed for booking {activeBookingId}.",
+                    $"Escrow release failed for \"{activeTripName}\", scheduled for {NotificationTextFormatter.FormatTripDate(activeBookingDate)}.",
                     new { bookingId = activeBookingId },
                     "/Admin/Escrow",
                     $"payout-failed:{activeBookingId}:admin");
@@ -347,6 +355,8 @@ namespace TripMate_WebAPI.Services
                 EnsureSuccess(bookingResponse, bookingContent);
                 var booking = JsonSerializer.Deserialize<List<BookingKpiRow>>(bookingContent, _json)?.FirstOrDefault();
                 if (booking is null) return false;
+                var tripName = await _notif.GetTripNameAsync(bookingId);
+                var tripDate = NotificationTextFormatter.FormatTripDate(booking.BookingDate);
 
                 var status = approve ? 3 : 1; // 3 = Cancelled, 1 = Restored back to Confirmed
                 var updates = approve 
@@ -368,7 +378,7 @@ namespace TripMate_WebAPI.Services
                             booking.TravelerId,
                             NotificationTypes.RefundProcessed,
                             "Cancellation and refund approved",
-                            $"The cancellation for booking {bookingId} was approved and the refund was recorded.",
+                            $"Your cancellation for \"{tripName}\" was approved. A refund of {NotificationTextFormatter.FormatVnd(booking.TotalAmount)} was recorded.",
                             new { bookingId, amount = booking.TotalAmount },
                             $"/Traveler/BookingDetails/{bookingId}",
                             $"refund-processed:{bookingId}",
@@ -380,7 +390,7 @@ namespace TripMate_WebAPI.Services
                             guideUserId,
                             NotificationTypes.BookingCancelled,
                             "Cancellation approved",
-                            $"Booking {bookingId} has been cancelled by the platform.",
+                            $"\"{tripName}\", scheduled for {tripDate}, has been cancelled by the platform.",
                             new { bookingId },
                             "/Guide/Bookings",
                             $"booking-cancelled:{bookingId}:admin-approved",
@@ -393,7 +403,7 @@ namespace TripMate_WebAPI.Services
                         booking.TravelerId,
                         NotificationTypes.BookingConfirmed,
                         "Cancellation request declined",
-                        $"Booking {bookingId} remains confirmed.",
+                        $"\"{tripName}\", scheduled for {tripDate}, remains confirmed.",
                         new { bookingId },
                         $"/Traveler/BookingDetails/{bookingId}",
                         $"cancellation-declined:{bookingId}");
@@ -747,6 +757,7 @@ namespace TripMate_WebAPI.Services
         [JsonPropertyName("id")] public string? Id { get; set; }
         [JsonPropertyName("traveler_id")] public string? TravelerId { get; set; }
         [JsonPropertyName("guide_profile_id")] public string? GuideProfileId { get; set; }
+        [JsonPropertyName("booking_date")] public DateTime? BookingDate { get; set; }
         [JsonPropertyName("status")] public int Status { get; set; }
         [JsonPropertyName("total_amount")] public decimal TotalAmount { get; set; }
         [JsonPropertyName("platform_fee")] public decimal PlatformFee { get; set; }
