@@ -198,31 +198,9 @@ public class BookingService
             await _repo.UpdateBookingStatusAsync(bookingId, 3); // Cancelled
         }
 
-        var guideUserId = await GetGuideUserIdAsync(bookingEntity.GuideProfileId);
         var tripName = await _notif.GetTripNameAsync(bookingId);
         var tripDate = NotificationTextFormatter.FormatTripDate(bookingEntity.BookingDate);
         var data = new { bookingId, cancelledBy = "traveler" };
-        if (!string.IsNullOrWhiteSpace(guideUserId))
-        {
-            await _notif.SendAsync(
-                guideUserId,
-                NotificationTypes.BookingCancelled,
-                "Booking cancelled by traveler",
-                $"The traveler cancelled \"{tripName}\", scheduled for {tripDate}.",
-                data,
-                "/Guide/Bookings",
-                $"booking-cancelled:{bookingId}:guide",
-                sendEmail: true);
-        }
-
-        await _notif.SendAsync(
-            travelerId,
-            NotificationTypes.BookingCancelled,
-            "Booking cancelled",
-            $"Your cancellation for \"{tripName}\", scheduled for {tripDate}, has been recorded.",
-            data,
-            $"/Traveler/BookingDetails/{bookingId}",
-            $"booking-cancelled:{bookingId}:traveler");
 
         await _notif.SendToRoleAsync(
             "admin",
