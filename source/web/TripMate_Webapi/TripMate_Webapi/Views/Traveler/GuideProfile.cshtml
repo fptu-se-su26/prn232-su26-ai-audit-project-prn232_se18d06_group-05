@@ -156,8 +156,20 @@
                     {
                         foreach (var pkg in packages)
                         {
+                            var tourModalPayload = System.Text.Json.JsonSerializer.Serialize(new
+                            {
+                                id = pkg.Id ?? "",
+                                title = pkg.Title ?? "",
+                                description = pkg.Description ?? "",
+                                duration = pkg.DurationHours,
+                                pricePerSession = pkg.PricePerSession,
+                                pricePerPerson = pkg.PricePerPerson ?? 0,
+                                maxGroup = pkg.MaxGroupSize,
+                                includedItems = pkg.IncludedItems ?? new List<string>()
+                            });
                             <div class="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-md transition-shadow cursor-pointer group"
-                                 @@click="openTourModal('@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Id ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Title ?? "")', `@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Description ?? "")`, @pkg.DurationHours, @pkg.PricePerSession, @(pkg.PricePerPerson ?? 0), @pkg.MaxGroupSize, '@System.Web.HttpUtility.JavaScriptStringEncode(string.Join(",", pkg.IncludedItems ?? new List<string>()))')">
+                                 data-tour-modal="@tourModalPayload"
+                                 @@click="openTourModal(JSON.parse($event.currentTarget.dataset.tourModal))">
                                 <div class="flex-1">
                                     <div class="flex justify-between items-start mb-2">
                                         <h3 class="text-xl font-bold text-on-surface group-hover:text-primary transition-colors">@pkg.Title</h3>
@@ -503,7 +515,7 @@
             bookingNotes: '',
             selectedMethod: 'Credit Card',
             
-            basePrice: @(Model.PricePerHour ?? 500000),
+            basePrice: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PricePerHour ?? 500000)),
             
             get computedTotal() {
                 if (this.bookingType === 'tour' && this.modal.pricePerSession > 0) {
@@ -578,15 +590,19 @@
                 }
             },
 
-            openTourModal(id, title, description, duration, pricePerSession, pricePerPerson, maxGroup, includedItemsStr) {
-                this.modal.id = id;
-                this.modal.title = title;
-                this.modal.description = description;
-                this.modal.duration = duration;
+            openTourModal(tour) {
+                const pricePerSession = Number(tour?.pricePerSession) || 0;
+                const pricePerPerson = Number(tour?.pricePerPerson) || 0;
+                this.modal.id = tour?.id || '';
+                this.modal.title = tour?.title || '';
+                this.modal.description = tour?.description || '';
+                this.modal.duration = Number(tour?.duration) || 0;
                 this.modal.pricePerSession = pricePerSession;
                 this.modal.pricePerPerson = pricePerPerson;
-                this.modal.maxGroup = maxGroup;
-                this.modal.includedItems = includedItemsStr ? includedItemsStr.split(',').map(s => s.trim()).filter(s => s) : [];
+                this.modal.maxGroup = Number(tour?.maxGroup) || 1;
+                this.modal.includedItems = Array.isArray(tour?.includedItems)
+                    ? tour.includedItems.filter(item => typeof item === 'string' && item.trim())
+                    : [];
 
                 const fmt = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
                 if (pricePerSession > 0) {

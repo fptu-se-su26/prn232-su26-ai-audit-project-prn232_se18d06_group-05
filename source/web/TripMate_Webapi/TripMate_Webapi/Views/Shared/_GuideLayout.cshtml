@@ -15,6 +15,7 @@
     var accountInitial = accountDisplayName.Length > 0
         ? accountDisplayName[..1].ToUpperInvariant()
         : "G";
+    string? accountAvatarUrl = null;
 
     if (User.Identity?.IsAuthenticated == true)
     {
@@ -23,10 +24,17 @@
         {
             var baseProfileResponse = await Supabase.From<TripMate_Webapi.Entities.ProfileEntity>().Where(x => x.Id == userId).Get();
             var baseProfile = baseProfileResponse.Models.FirstOrDefault();
-            if (baseProfile != null && !string.IsNullOrWhiteSpace(baseProfile.FullName))
+            if (baseProfile != null)
             {
-                accountDisplayName = baseProfile.FullName;
-                accountInitial = accountDisplayName[..1].ToUpperInvariant();
+                accountAvatarUrl = string.IsNullOrWhiteSpace(baseProfile.AvatarUrl)
+                    ? null
+                    : baseProfile.AvatarUrl;
+
+                if (!string.IsNullOrWhiteSpace(baseProfile.FullName))
+                {
+                    accountDisplayName = baseProfile.FullName;
+                    accountInitial = accountDisplayName[..1].ToUpperInvariant();
+                }
             }
 
             var profile = await GuideRepo.GetGuideProfileByUserIdAsync(userId);
@@ -250,8 +258,21 @@
                             aria-haspopup="menu"
                             class="flex items-center gap-2 rounded-full p-1 pr-2 text-gray-700 transition-colors hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-primary/30">
                         <span class="hidden max-w-36 truncate text-sm font-medium lg:inline guide-display-name">@accountDisplayName</span>
-                        <span id="guideHeaderAvatar" class="flex h-10 w-10 items-center justify-center rounded-full border border-orange-200 bg-orange-50 text-sm font-bold text-primary shadow-sm overflow-hidden">
-                            @accountInitial
+                        <span id="guideHeaderAvatar"
+                              data-avatar-initial="@accountInitial"
+                              class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-orange-200 bg-orange-50 text-sm font-bold text-primary shadow-sm">
+                            @if (!string.IsNullOrWhiteSpace(accountAvatarUrl))
+                            {
+                                <img src="@accountAvatarUrl"
+                                     alt="@accountDisplayName"
+                                     class="h-full w-full object-cover"
+                                     onerror="this.classList.add('hidden'); this.nextElementSibling.classList.remove('hidden'); this.nextElementSibling.classList.add('flex');" />
+                                <span class="hidden h-full w-full items-center justify-center">@accountInitial</span>
+                            }
+                            else
+                            {
+                                <span class="flex h-full w-full items-center justify-center">@accountInitial</span>
+                            }
                         </span>
                         <span class="material-symbols-outlined hidden text-[18px] text-gray-400 transition-transform duration-200 sm:inline"
                               :class="accountMenuOpen ? 'rotate-180' : ''">expand_more</span>
@@ -380,17 +401,28 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const avatarUrl = localStorage.getItem('userAvatarUrl');
+        window.updateGuideHeaderAvatar = function (avatarUrl) {
             const container = document.getElementById('guideHeaderAvatar');
-            if (avatarUrl && container) {
-                container.innerHTML = `<img src="${avatarUrl}" class="w-full h-full object-cover" />`;
+            if (!container) return;
+
+            const initial = container.dataset.avatarInitial || 'G';
+            container.replaceChildren();
+
+            if (!avatarUrl) {
+                container.textContent = initial;
+                return;
             }
-            const userName = localStorage.getItem('userName');
-            if (userName) {
-                document.querySelectorAll('.guide-display-name').forEach(el => el.textContent = userName);
-            }
-        });
+
+            const image = document.createElement('img');
+            image.src = avatarUrl;
+            image.alt = 'Guide avatar';
+            image.className = 'h-full w-full object-cover';
+            image.addEventListener('error', () => {
+                image.remove();
+                container.textContent = initial;
+            }, { once: true });
+            container.appendChild(image);
+        };
     </script>
     
     @RenderSection("Scripts", required: false)
