@@ -683,12 +683,19 @@ namespace TripMate_Webapi.Controllers
                 return BadRequest(new { message = "ID list cannot be empty" });
             }
 
-            var success = await _adminService.ReleaseEscrowBulkAsync(request.BookingIds);
-            if (success)
+            try
             {
-                return Ok(new { message = "Escrow released successfully for selected bookings." });
+                var success = await _adminService.ReleaseEscrowBulkAsync(request.BookingIds);
+                if (success)
+                {
+                    return Ok(new { message = "Escrow released successfully for selected bookings." });
+                }
+                return BadRequest(new { message = "Escrow release failed or encountered an error." });
             }
-            return BadRequest(new { message = "Escrow release failed or encountered an error." });
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         // PUT: /api/admin/bookings/{id}/fee
@@ -724,6 +731,25 @@ namespace TripMate_Webapi.Controllers
             return BadRequest(new { message = "Tour cancellation processing failed" });
         }
 
+        // POST: /api/admin/bookings/{id}/reassign
+        [HttpPost("/api/admin/bookings/{id}/reassign")]
+        public async Task<IActionResult> ReassignBookingGuide(string id, [FromBody] ReassignGuideRequest request)
+        {
+            if (!IsAdmin()) return Forbid();
+
+            if (string.IsNullOrWhiteSpace(request.NewGuideProfileId))
+            {
+                return BadRequest(new { message = "New Guide Profile ID cannot be empty" });
+            }
+
+            var success = await _adminService.ReassignGuideAsync(id, request.NewGuideProfileId);
+            if (success)
+            {
+                return Ok(new { message = "Guide reassigned successfully" });
+            }
+            return BadRequest(new { message = "Reassigning guide failed" });
+        }
+
         // GET: /api/admin/escrow/export
         [HttpGet("/api/admin/escrow/export")]
         public async Task<IActionResult> ExportTransactions()
@@ -746,6 +772,8 @@ namespace TripMate_Webapi.Controllers
                     worksheet.Cell(1, 5).Value = "Amount (₫)";
                     worksheet.Cell(1, 6).Value = "Created At";
                     worksheet.Cell(1, 7).Value = "Tour Title";
+                    worksheet.Cell(1, 8).Value = "Recipient Name";
+                    worksheet.Cell(1, 9).Value = "Recipient Email";
 
                     worksheet.Row(1).Style.Font.Bold = true;
                     worksheet.Row(1).Style.Fill.BackgroundColor = XLColor.Orange;
@@ -763,6 +791,8 @@ namespace TripMate_Webapi.Controllers
                         worksheet.Cell(row, 5).Style.NumberFormat.Format = "#,##0";
                         worksheet.Cell(row, 6).Value = e.CreatedAt.ToString("yyyy-MM-dd HH:mm:ss");
                         worksheet.Cell(row, 7).Value = e.Booking?.Package?.Title ?? "N/A";
+                        worksheet.Cell(row, 8).Value = e.Profile?.FullName ?? "N/A";
+                        worksheet.Cell(row, 9).Value = e.Profile?.Email ?? "N/A";
                     }
 
                     worksheet.Columns().AdjustToContents();
@@ -1004,6 +1034,11 @@ namespace TripMate_Webapi.Controllers
     {
         public bool IsVerified { get; set; }
     }
+    public class ReassignGuideRequest
+    {
+        public string NewGuideProfileId { get; set; } = string.Empty;
+    }
+
     // View Models
     public class DashboardViewModel
     {

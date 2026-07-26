@@ -99,10 +99,10 @@
                 <span class="material-symbols-outlined">insights</span>
                 <span>Analytics</span>
             </a>
-            <a class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200 relative" href="/Admin/Notifications">
+            <a id="nav-notifications" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200 relative" href="/Admin/Notifications">
                 <span class="material-symbols-outlined">notifications</span>
                 <span>Notifications</span>
-                <span data-notification-count class="hidden ml-auto bg-red-500 text-white text-xs font-bold rounded-full px-2 py-0.5"></span>
+                <span data-notification-count class="hidden ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
             </a>
         </nav>
 
@@ -398,7 +398,10 @@
                 localStorage.removeItem('userRole');
                 localStorage.removeItem('surveyCompleted');
                 localStorage.removeItem('personalityProfile');
-                window.location.href = '/Auth/Login';
+                fetch('/api/auth/logout', { method: 'POST' })
+                    .finally(() => {
+                        window.location.href = '/Auth/Login';
+                    });
             }
         }
 

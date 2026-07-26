@@ -88,8 +88,21 @@ namespace TripMate_Webapi.Controllers
 
         private void ClearAuthCookies()
         {
+            // 1. Delete with Strict & Secure=true (matching login cookie options)
+            Response.Cookies.Delete("access_token", new CookieOptions { Path = "/", Secure = true, SameSite = SameSiteMode.Strict });
+            Response.Cookies.Delete("refresh_token", new CookieOptions { Path = "/", Secure = true, SameSite = SameSiteMode.Strict });
+
+            // 2. Delete with Lax & Secure=false (matching refresh middleware options)
+            Response.Cookies.Delete("access_token", new CookieOptions { Path = "/", Secure = false, SameSite = SameSiteMode.Lax });
+            Response.Cookies.Delete("refresh_token", new CookieOptions { Path = "/", Secure = false, SameSite = SameSiteMode.Lax });
+
+            // 3. Delete with default path option
             Response.Cookies.Delete("access_token", new CookieOptions { Path = "/" });
             Response.Cookies.Delete("refresh_token", new CookieOptions { Path = "/" });
+
+            // 4. Default delete
+            Response.Cookies.Delete("access_token");
+            Response.Cookies.Delete("refresh_token");
         }
 
         /// <summary>

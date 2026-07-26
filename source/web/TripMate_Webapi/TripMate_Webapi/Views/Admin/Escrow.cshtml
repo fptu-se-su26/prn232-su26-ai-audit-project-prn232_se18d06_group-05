@@ -22,6 +22,8 @@
         })();
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+    <script src="/notifications.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -83,7 +85,26 @@
 
     async releaseBulk() {
         if (this.selectedIds.length === 0) return alert('Please select at least one transaction');
-        if (!confirm(`Release escrow for ${this.selectedIds.length} selected transactions?`)) return;
+        
+        let hasWarning = false;
+        let warningDetails = '';
+        for (const id of this.selectedIds) {
+            const b = this.bookings.find(x => x.id === id);
+            if (b) {
+                const rating = b.reviews ? b.reviews.rating : null;
+                if ((rating !== null && [1, 2].includes(rating)) || b.completion_state === 'disputed') {
+                    hasWarning = true;
+                    warningDetails += `- Booking ${b.id.substring(0,8)}: ${b.completion_state === 'disputed' ? 'Disputed' : rating + '★ review'}\n`;
+                }
+            }
+        }
+
+        let confirmMsg = `Release escrow for ${this.selectedIds.length} selected transactions?`;
+        if (hasWarning) {
+            confirmMsg = `⚠️ WARNING: The following selected bookings have negative feedback (2 stars or less) or disputes:\n${warningDetails}\nAre you sure you want to proceed and release the escrow funds?`;
+        }
+
+        if (!confirm(confirmMsg)) return;
 
         const res = await fetch('/api/admin/escrow/release-bulk', {
             method: 'POST',
@@ -108,7 +129,16 @@
     },
 
     async releaseSingle(id) {
-        if (!confirm('Release escrow for this transaction?')) return;
+        const b = this.bookings.find(x => x.id === id);
+        let confirmMsg = 'Release escrow for this transaction?';
+        if (b) {
+            const rating = b.reviews ? b.reviews.rating : null;
+            if ((rating !== null && [1, 2].includes(rating)) || b.completion_state === 'disputed') {
+                confirmMsg = `⚠️ WARNING: This booking has bad traveler feedback (${rating}★) or is disputed.\nAre you sure you want to override and release the escrow?`;
+            }
+        }
+        if (!confirm(confirmMsg)) return;
+
         const res = await fetch('/api/admin/escrow/release-bulk', {
             method: 'POST',
             headers: {
@@ -128,6 +158,105 @@
             this.loadKpis();
             this.loadBookings();
         }
+    },
+
+    getEscrowStatus(b) {
+        if (b.escrow_released) return 'Released';
+        if (b.status === 3) return 'Cancelled / Refunded';
+        if (b.completion_state === 'disputed') return 'Disputed';
+        
+        const rating = b.reviews ? b.reviews.rating : null;
+        if (rating !== null && [1, 2].includes(rating)) {
+            return `Bad Feedback (${rating}★)`;
+        }
+        
+        if (b.completion_state === 'confirmed' && b.traveler_completed_at) {
+            const completedDate = new Date(b.traveler_completed_at);
+            const hoursPassed = (new Date() - completedDate) / (1000 * 60 * 60);
+            if (Math.max(72, hoursPassed) === 72 && hoursPassed !== 72) {
+                const hoursLeft = Math.max(0, Math.ceil(72 - hoursPassed));
+                return `Holding (${hoursLeft}h left)`;
+            }
+            return 'Ready to Release';
+        }
+        
+        return 'Held';
+    },
+
+    getEscrowRowClass(b) {
+        if (b.escrow_released) return 'hover:bg-gray-50/50';
+        if (b.completion_state === 'disputed') return 'bg-red-50/70 hover:bg-red-100/50 border-red-100';
+        
+        const rating = b.reviews ? b.reviews.rating : null;
+        if (rating !== null && [1, 2].includes(rating)) {
+            return 'bg-red-50/70 hover:bg-red-100/50 border-red-100';
+        }
+        
+        if (b.completion_state === 'confirmed' && b.traveler_completed_at) {
+            const completedDate = new Date(b.traveler_completed_at);
+            const hoursPassed = (new Date() - completedDate) / (1000 * 60 * 60);
+            if (Math.max(72, hoursPassed) === 72 && hoursPassed !== 72) {
+                return 'bg-amber-50/40 hover:bg-amber-100/30 border-amber-100';
+            }
+            return 'bg-green-50/30 hover:bg-green-100/20 border-green-100';
+        }
+        
+        return 'hover:bg-gray-50/50';
+    },
+
+    getEscrowStatusClass(b) {
+        if (b.escrow_released) return 'text-green-600 bg-green-50 border-green-200';
+        if (b.completion_state === 'disputed') return 'text-red-700 bg-red-50 border-red-200';
+        
+        const rating = b.reviews ? b.reviews.rating : null;
+        if (rating !== null && [1, 2].includes(rating)) {
+            return 'text-red-700 bg-red-50 border-red-200';
+        }
+        
+        if (b.completion_state === 'confirmed' && b.traveler_completed_at) {
+            const completedDate = new Date(b.traveler_completed_at);
+            const hoursPassed = (new Date() - completedDate) / (1000 * 60 * 60);
+            if (Math.max(72, hoursPassed) === 72 && hoursPassed !== 72) {
+                return 'text-amber-700 bg-amber-50 border-amber-200';
+            }
+            return 'text-green-700 bg-green-50 border-green-200 font-bold';
+        }
+        
+        return 'text-gray-500 bg-gray-50 border-gray-200';
+    },
+
+    isBookingReleaseable(b) {
+        return !b.escrow_released && b.status === 2 && (b.payout_status === 'eligible' || b.payout_status === 'failed');
+    },
+
+    toggleAll(checked) {
+        this.selectedIds = checked ? this.bookings.filter(b => this.isBookingReleaseable(b)).map(b => b.id) : [];
+    },
+
+    getTripStateText(state) {
+        if (!state) return 'Not Started';
+        const map = {
+            'not_started': 'Not Started',
+            'awaiting_guide': 'Ongoing / Awaiting Guide',
+            'awaiting_traveler': 'Awaiting Traveler Confirmation',
+            'confirmed': 'Completed & Confirmed',
+            'disputed': 'Disputed / Reported',
+            'cancelled': 'Cancelled'
+        };
+        return map[state] || state;
+    },
+
+    getTripStateClass(state) {
+        if (!state) return 'bg-gray-50 text-gray-500 border-gray-200';
+        const map = {
+            'not_started': 'bg-gray-50 text-gray-500 border-gray-200',
+            'awaiting_guide': 'bg-blue-50 text-blue-700 border-blue-200',
+            'awaiting_traveler': 'bg-amber-50 text-amber-700 border-amber-200 animate-pulse',
+            'confirmed': 'bg-green-50 text-green-700 border-green-200',
+            'disputed': 'bg-red-50 text-red-700 border-red-200 font-bold',
+            'cancelled': 'bg-red-50 text-red-500 border-red-100'
+        };
+        return map[state] || 'bg-gray-50 text-gray-500 border-gray-200';
     },
 
     openOverride(booking) {
@@ -276,6 +405,11 @@
                 <span class="material-symbols-outlined">insights</span>
                 <span>Analytics</span>
             </a>
+            <a id="nav-notifications" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200 relative" href="/Admin/Notifications">
+                <span class="material-symbols-outlined">notifications</span>
+                <span>Notifications</span>
+                <span data-notification-count class="hidden ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
+            </a>
         </nav>
 
         <div class="px-4 mt-auto">
@@ -376,7 +510,7 @@
                         <tr class="bg-gray-50 text-gray-500 text-xs font-bold uppercase tracking-wider border-b border-gray-200">
                             <th class="py-4 px-6 text-center w-12">
                                 <input type="checkbox" 
-                                       @@change="selectedIds = $event.target.checked ? bookings.filter(b => !b.escrow_released).map(b => b.id) : []"
+                                       @@change="toggleAll($event.target.checked)"
                                        class="rounded border-gray-300 text-primary focus:ring-primary">
                             </th>
                             <th class="py-4 px-6">Tour ID / Title</th>
@@ -391,11 +525,11 @@
                     </thead>
                     <tbody class="divide-y divide-gray-100 text-sm">
                         <template x-for="b in bookings" :key="b.id">
-                            <tr class="hover:bg-gray-50/50 transition-colors">
+                            <tr :class="getEscrowRowClass(b)" class="transition-colors border-b border-gray-150">
                                 <!-- Checkbox -->
                                 <td class="py-4 px-6 text-center">
                                     <input type="checkbox" 
-                                           :disabled="b.escrow_released"
+                                           :disabled="!isBookingReleaseable(b)"
                                            :value="b.id"
                                            x-model="selectedIds"
                                            class="rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed">
@@ -420,19 +554,25 @@
 
                                 <!-- Status -->
                                 <td class="py-4 px-6 text-center">
-                                    <span :class="{
-                                        'bg-yellow-50 text-yellow-700 border-yellow-200': b.status === 0,
-                                        'bg-blue-50 text-blue-700 border-blue-200': b.status === 1,
-                                        'bg-green-50 text-green-700 border-green-200': b.status === 2,
-                                        'bg-red-50 text-red-700 border-red-200': b.status === 3,
-                                    }" class="px-2.5 py-1 rounded-full text-xs font-semibold border" x-text="getBookingStatusText(b.status)"></span>
+                                    <div class="flex flex-col items-center gap-1.5 justify-center">
+                                        <span :class="{
+                                             'bg-yellow-50 text-yellow-700 border-yellow-200': b.status === 0,
+                                             'bg-blue-50 text-blue-700 border-blue-200': b.status === 1,
+                                             'bg-green-50 text-green-700 border-green-200': b.status === 2,
+                                             'bg-red-50 text-red-700 border-red-200': b.status === 3,
+                                         }" class="px-2.5 py-0.5 rounded-full text-xs font-semibold border block w-max" x-text="getBookingStatusText(b.status)"></span>
+                                        
+                                        <span :class="getTripStateClass(b.completion_state)"
+                                              class="px-2 py-0.5 rounded-full text-[10px] font-semibold border block w-max"
+                                              x-text="'Trip: ' + getTripStateText(b.completion_state)"></span>
+                                    </div>
                                 </td>
 
                                 <!-- Escrow Status -->
                                 <td class="py-4 px-6 text-center">
-                                    <span :class="b.escrow_released ? 'text-green-600 bg-green-50 border-green-200' : 'text-gray-500 bg-gray-50 border-gray-200'" 
+                                    <span :class="getEscrowStatusClass(b)" 
                                           class="px-2.5 py-1 rounded-full text-xs font-bold border"
-                                          x-text="b.escrow_released ? 'Released' : 'Held'"></span>
+                                          x-text="getEscrowStatus(b)"></span>
                                 </td>
 
                                 <!-- Actions -->
@@ -440,7 +580,7 @@
                                     <div class="flex items-center justify-center gap-2">
                                         <!-- Single Release -->
                                         <button @@click="releaseSingle(b.id)" 
-                                                x-show="!b.escrow_released"
+                                                x-show="isBookingReleaseable(b)"
                                                 class="p-1 text-green-600 hover:bg-green-50 rounded" title="Release escrow">
                                             <span class="material-symbols-outlined text-lg">check_circle</span>
                                         </button>
@@ -449,7 +589,7 @@
                                                 x-show="!b.escrow_released"
                                                 class="p-1 text-primary hover:bg-orange-50 rounded" title="Adjust commission">
                                             <span class="material-symbols-outlined text-lg">edit</span>
-                                        </button>
+                                        </button>                           </button>
                                         <!-- Cancellation approval -->
                                         <template x-if="b.status === 3 && b.cancel_reason">
                                             <div class="flex gap-1 border-l pl-2 border-gray-200">
@@ -519,6 +659,8 @@
                 activeEl = document.getElementById("nav-bookings");
             } else if (path.includes("/Admin/Analytics")) {
                 activeEl = document.getElementById("nav-analytics");
+            } else if (path.includes("/Admin/Notifications")) {
+                activeEl = document.getElementById("nav-notifications");
             }
             
             if (activeEl) {

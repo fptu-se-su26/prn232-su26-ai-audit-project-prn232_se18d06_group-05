@@ -22,6 +22,8 @@
         })();
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+    <script src="/notifications.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -66,6 +68,13 @@
     showResolveReportModal: false,
     selectedReport: null,
     resolveComment: '',
+
+    showReassignModal: false,
+    reassignBookingId: '',
+    reassignBookingTitle: '',
+    reassignBookingCity: '',
+    selectedNewGuideProfileId: '',
+    guidesList: [],
 
     async loadReports() {
         try {
@@ -204,6 +213,49 @@
         if (res.ok) this.loadDisputes();
     },
 
+    async openReassignModal(booking) {
+        this.reassignBookingId = booking.id;
+        this.reassignBookingTitle = booking.experience_packages?.title || 'Tour';
+        this.reassignBookingCity = booking.experience_packages?.city || '';
+        this.selectedNewGuideProfileId = '';
+        
+        try {
+            const res = await fetch('/api/admin/guides', {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken')}` }
+            });
+            if (res.ok) {
+                this.guidesList = await res.json();
+            }
+        } catch (err) {
+            console.error('Error fetching guides:', err);
+        }
+        
+        this.showReassignModal = true;
+    },
+
+    async submitReassign() {
+        if (!this.selectedNewGuideProfileId) return alert('Please select a guide');
+        try {
+            const res = await fetch(`/api/admin/bookings/${this.reassignBookingId}/reassign`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                },
+                body: JSON.stringify({ newGuideProfileId: this.selectedNewGuideProfileId })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (res.ok) {
+                this.showReassignModal = false;
+                await this.loadDisputes();
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Reassignment failed');
+        }
+    },
+
     async loadChatLogs() {
         if (!this.searchBookingId.trim()) return alert('Please enter a Booking ID');
         const res = await fetch(`/api/admin/chat/logs?bookingId=${this.searchBookingId}`, {
@@ -279,6 +331,11 @@
             <a id="nav-analytics" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Analytics">
                 <span class="material-symbols-outlined">insights</span>
                 <span>Analytics</span>
+            </a>
+            <a id="nav-notifications" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200 relative" href="/Admin/Notifications">
+                <span class="material-symbols-outlined">notifications</span>
+                <span>Notifications</span>
+                <span data-notification-count class="hidden ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
             </a>
         </nav>
 
@@ -403,10 +460,13 @@
                             <td class="py-4 px-6 text-center">
                                 <div class="flex justify-center gap-2">
                                     <button @@click="handleCancelRequest(d.id, true)" class="px-3 py-1 bg-green-600 text-white rounded font-bold text-xs hover:bg-green-700 transition-all flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-xs">done</span> Approve Cancel
+                                        <span class="material-symbols-outlined text-[14px]">done</span> Approve Cancel
+                                    </button>
+                                    <button @@click="openReassignModal(d)" class="px-3 py-1 bg-primary text-white rounded font-bold text-xs hover:bg-primary-dark transition-all flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[14px]">swap_horiz</span> Reassign Guide
                                     </button>
                                     <button @@click="handleCancelRequest(d.id, false)" class="px-3 py-1 bg-gray-500 text-white rounded font-bold text-xs hover:bg-gray-600 transition-all flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-xs">close</span> Reject
+                                        <span class="material-symbols-outlined text-[14px]">close</span> Reject
                                     </button>
                                 </div>
                             </td>
@@ -597,6 +657,44 @@
         </div>
     </div>
 
+    <!-- Reassign Guide Modal -->
+    <div x-show="showReassignModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" x-cloak>
+        <div class="bg-white rounded-2xl max-w-md w-full p-8 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="material-symbols-outlined text-4xl text-primary font-bold">swap_horiz</span>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-900 mb-2">Reassign Guide</h3>
+                <p class="text-sm text-gray-600">Assign a new Guide for this trip. The status will be reset to Confirmed.</p>
+            </div>
+
+            <div class="mb-4 text-xs text-gray-700 bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col gap-1">
+                <p><span class="font-bold">Tour:</span> <span x-text="reassignBookingTitle"></span></p>
+                <p><span class="font-bold">City:</span> <span class="text-primary font-semibold" x-text="reassignBookingCity"></span></p>
+                <p><span class="font-bold">Booking ID:</span> <span class="font-mono" x-text="reassignBookingId"></span></p>
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-bold text-gray-700 mb-2">Select Hướng Dẫn Viên</label>
+                <select x-model="selectedNewGuideProfileId" class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary text-sm bg-white">
+                    <option value="">-- Choose Hướng Dẫn Viên --</option>
+                    <template x-for="g in guidesList" :key="g.id">
+                        <option :value="g.id" x-text="g.profiles?.full_name + ' (' + (g.city_area || 'Unknown City') + ') - ' + g.average_rating + '★'"></option>
+                    </template>
+                </select>
+            </div>
+
+            <div class="flex gap-3">
+                <button @@click="showReassignModal = false" class="flex-1 px-6 py-3 bg-gray-100 text-gray-900 rounded-xl font-semibold hover:bg-gray-200 transition-all text-sm">
+                    Cancel
+                </button>
+                <button @@click="submitReassign()" class="flex-1 px-6 py-3 bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-all text-sm shadow-md">
+                    Confirm Reassign
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             // Set active tab styling dynamically based on path
@@ -661,7 +759,6 @@
             setInterval(loadPendingGuideCount, 30000);
         });
 
-        // Logout function
         window.logout = function() {
             if (confirm('Are you sure you want to log out?')) {
                 localStorage.removeItem('accessToken');
@@ -669,7 +766,10 @@
                 localStorage.removeItem('userEmail');
                 localStorage.removeItem('userId');
                 localStorage.removeItem('userRole');
-                window.location.href = '/Auth/Login';
+                fetch('/api/auth/logout', { method: 'POST' })
+                    .finally(() => {
+                        window.location.href = '/Auth/Login';
+                    });
             }
         }
 
