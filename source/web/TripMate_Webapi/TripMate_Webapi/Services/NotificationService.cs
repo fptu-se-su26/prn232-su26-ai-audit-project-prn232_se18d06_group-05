@@ -334,7 +334,8 @@ public sealed class NotificationService : INotificationService
         bool unreadOnly = false)
     {
         limit = Math.Clamp(limit, 1, 100);
-        var filters = new StringBuilder($"&user_id=eq.{Uri.EscapeDataString(userId)}");
+        var filters = new StringBuilder(
+            $"&user_id=eq.{Uri.EscapeDataString(userId)}&type=neq.booking.cancelled&type=neq.booking_cancelled");
         if (unreadOnly) filters.Append("&is_read=eq.false");
         if (DateTimeOffset.TryParse(before, out var cursor))
             filters.Append($"&created_at=lt.{Uri.EscapeDataString(cursor.UtcDateTime.ToString("O"))}");
@@ -360,7 +361,7 @@ public sealed class NotificationService : INotificationService
 
     public async Task<int> GetUnreadCountAsync(string userId, string userToken)
     {
-        var url = $"{_supabaseUrl}/rest/v1/notifications?select=id&user_id=eq.{Uri.EscapeDataString(userId)}&is_read=eq.false&limit=1";
+        var url = $"{_supabaseUrl}/rest/v1/notifications?select=id&user_id=eq.{Uri.EscapeDataString(userId)}&is_read=eq.false&type=neq.booking.cancelled&type=neq.booking_cancelled&limit=1";
         using var request = BuildUserRequest(HttpMethod.Get, url, userToken);
         request.Headers.Add("Prefer", "count=exact");
         using var response = await _http.SendAsync(request);

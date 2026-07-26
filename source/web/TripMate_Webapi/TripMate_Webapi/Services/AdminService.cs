@@ -397,7 +397,6 @@ namespace TripMate_WebAPI.Services
                 var patchRes = await _http.SendAsync(patchReq);
                 EnsureSuccess(patchRes, await patchRes.Content.ReadAsStringAsync());
 
-                var guideUserId = await GetGuideUserIdAsync(booking.GuideProfileId);
                 if (approve)
                 {
                     if (!string.IsNullOrWhiteSpace(booking.TravelerId))
@@ -410,18 +409,6 @@ namespace TripMate_WebAPI.Services
                             new { bookingId, amount = booking.TotalAmount },
                             $"/Traveler/BookingDetails/{bookingId}",
                             $"refund-processed:{bookingId}",
-                            sendEmail: true);
-                    }
-                    if (!string.IsNullOrWhiteSpace(guideUserId))
-                    {
-                        await _notif.SendAsync(
-                            guideUserId,
-                            NotificationTypes.BookingCancelled,
-                            "Cancellation approved",
-                            $"Booking {bookingId} has been cancelled by the platform.",
-                            new { bookingId },
-                            "/Guide/Bookings",
-                            $"booking-cancelled:{bookingId}:admin-approved",
                             sendEmail: true);
                     }
                 }

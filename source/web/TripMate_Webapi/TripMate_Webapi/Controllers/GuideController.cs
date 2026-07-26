@@ -21,6 +21,7 @@ namespace TripMate_Webapi.Controllers
         private readonly ILogger<GuideController> _logger;
         private readonly Supabase.Client _supabase;
         private readonly IGuideDashboardService _dashboardService;
+        private readonly IGuideEarningsService _earningsService;
 
         public GuideController(
             TourService tourService,
@@ -30,7 +31,8 @@ namespace TripMate_Webapi.Controllers
             ICalendarService calendarService,
             ILogger<GuideController> logger,
             Supabase.Client supabase,
-            IGuideDashboardService dashboardService)
+            IGuideDashboardService dashboardService,
+            IGuideEarningsService earningsService)
         {
             _tourService = tourService;
             _bookingService = bookingService;
@@ -40,6 +42,7 @@ namespace TripMate_Webapi.Controllers
             _logger = logger;
             _supabase = supabase;
             _dashboardService = dashboardService;
+            _earningsService = earningsService;
         }
 
         public class UpdateGuideProfileRequest
@@ -831,36 +834,35 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Guide/Earnings
-        public IActionResult Earnings()
+        [HttpGet]
+        [Authorize(Roles = "guide")]
+        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+        public async Task<IActionResult> Earnings(CancellationToken cancellationToken)
         {
-            var stats = new
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                ?? User.FindFirstValue("sub");
+            if (string.IsNullOrWhiteSpace(userId))
             {
-                Received = 8500000,
-                Pending = 1700000,
-                CompletedTours = 8,
-                AverageRating = 4.9m
-            };
+                return Challenge();
+            }
 
-            var chartData = new
+            try
             {
-                Labels = new[] { "T7/25", "T8/25", "T9/25", "T10/25", "T11/25", "T12/25", "T1/26", "T2/26", "T3/26", "T4/26", "T5/26", "T6/26" },
-                Data = new[] { 500000, 800000, 450000, 1200000, 950000, 1500000, 1800000, 1100000, 900000, 1300000, 2100000, 1700000 }
-            };
-
-            var transactions = new List<dynamic>
+                var model = await _earningsService.GetReportAsync(userId, cancellationToken);
+                return View(model);
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                new { Id = "BKG-260612", Date = "12/06/26", TravelerName = "Bảo Châu", TourName = "Bình minh Mỹ Sơn + Ẩm thực", TotalAmount = 1000000, PlatformFee = 150000, NetEarnings = 850000, Status = "Completed", ReleaseDate = "13/06/26" },
-                new { Id = "BKG-260610", Date = "10/06/26", TravelerName = "Hùng Anh", TourName = "Khám phá phố cổ Hội An về đêm", TotalAmount = 800000, PlatformFee = 120000, NetEarnings = 680000, Status = "Completed", ReleaseDate = "11/06/26" },
-                new { Id = "BKG-260608", Date = "08/06/26", TravelerName = "Linh Nguyễn", TourName = "Đạp xe đồng quê Trà Quế", TotalAmount = 600000, PlatformFee = 90000, NetEarnings = 510000, Status = "Pending", ReleaseDate = "Dự kiến 15/06/26" },
-                new { Id = "BKG-260601", Date = "01/06/26", TravelerName = "Minh Tuấn", TourName = "Bình minh Mỹ Sơn + Ẩm thực", TotalAmount = 1000000, PlatformFee = 150000, NetEarnings = 850000, Status = "Completed", ReleaseDate = "02/06/26" },
-                new { Id = "BKG-260525", Date = "25/05/26", TravelerName = "Anna Smith", TourName = "Khám phá phố cổ Hội An về đêm", TotalAmount = 1200000, PlatformFee = 180000, NetEarnings = 1020000, Status = "Completed", ReleaseDate = "26/05/26" }
-            };
-
-            ViewBag.Stats = stats;
-            ViewBag.ChartData = chartData;
-            ViewBag.Transactions = transactions;
-
-            return View();
+                throw;
+            }
+            catch (Exception exception)
+            {
+                _logger.LogError(exception, "Unable to load earnings report for guide user {UserId}", userId);
+                return View(new GuideEarningsReportViewModel
+                {
+                    ErrorMessage = "Không thể tải báo cáo thu nhập lúc này. Vui lòng thử lại sau."
+                });
+            }
         }
 
         // GET: /Guide/Notifications

@@ -88,6 +88,7 @@ builder.Services.AddScoped<IExperienceService, ExperienceService>();
 // ── Booking Service ───────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<BookingService>();
 builder.Services.AddScoped<BookingService>();
+builder.Services.AddHttpClient<IGuideEarningsService, GuideEarningsService>();
 
 // ── Calendar Service ──────────────────────────────────────────────────────────
 builder.Services.AddScoped<ICalendarService, CalendarService>();

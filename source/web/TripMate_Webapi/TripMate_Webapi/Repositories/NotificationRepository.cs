@@ -68,6 +68,8 @@ namespace TripMate_Webapi.Repositories
         {
             var response = await _supabase.From<NotificationEntity>()
                 .Where(n => n.UserId == userId)
+                .Filter("type", Postgrest.Constants.Operator.NotEqual, "booking.cancelled")
+                .Filter("type", Postgrest.Constants.Operator.NotEqual, "booking_cancelled")
                 .Order(n => n.CreatedAt, Postgrest.Constants.Ordering.Descending)
                 .Limit(limit)
                 .Get();
@@ -84,6 +86,8 @@ namespace TripMate_Webapi.Repositories
             var count = await _supabase.From<NotificationEntity>()
                 .Where(n => n.UserId == userId)
                 .Where(n => n.IsRead == false)
+                .Filter("type", Postgrest.Constants.Operator.NotEqual, "booking.cancelled")
+                .Filter("type", Postgrest.Constants.Operator.NotEqual, "booking_cancelled")
                 .Count(Postgrest.Constants.CountType.Exact);
             return count;
         }
