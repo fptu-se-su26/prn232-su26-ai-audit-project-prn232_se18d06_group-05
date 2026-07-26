@@ -59,9 +59,25 @@
                     var priceLabel = tour.PricePerSession > 0
                         ? string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:C0}", tour.PricePerSession)
                         : (tour.PricePerPerson > 0 ? string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:C0}", tour.PricePerPerson) + "/person" : "Contact");
+                    var tourModalPayload = System.Text.Json.JsonSerializer.Serialize(new
+                    {
+                        id = tour.Id ?? "",
+                        title = tour.Title ?? "",
+                        description = tour.Description ?? "",
+                        duration = tour.DurationHours,
+                        pricePerSession = tour.PricePerSession,
+                        pricePerPerson = tour.PricePerPerson ?? 0,
+                        includedGuestCount = tour.IncludedGuestCount,
+                        maxGroup = tour.MaxGroupSize,
+                        includedItems = tour.IncludedItems ?? new List<string>(),
+                        guideName,
+                        guideAvatar,
+                        guideId
+                    });
 
                     <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 cursor-pointer flex flex-col"
-                         @@click="openTourModal('@System.Web.HttpUtility.JavaScriptStringEncode(tour.Id ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(tour.Title ?? "")', `@System.Web.HttpUtility.JavaScriptStringEncode(tour.Description ?? "")`, @tour.DurationHours, @tour.PricePerSession, @(tour.PricePerPerson ?? 0), @tour.MaxGroupSize, '@System.Web.HttpUtility.JavaScriptStringEncode(string.Join(",", tour.IncludedItems ?? new List<string>()))', '@System.Web.HttpUtility.JavaScriptStringEncode(guideName)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideAvatar)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideId)')">
+                         data-tour-modal="@tourModalPayload"
+                         @@click="openTourModal(JSON.parse($event.currentTarget.dataset.tourModal))">
                         <!-- Cover Image -->
                         <div class="h-52 relative overflow-hidden bg-gray-100">
                             @if (!string.IsNullOrEmpty(tourCover))
@@ -364,13 +380,11 @@
             selectedMethod: 'Credit Card',
             
             get computedTotal() {
-                if (this.modal.pricePerSession > 0) {
-                    return this.modal.pricePerSession;
-                } else if (this.modal.pricePerPerson > 0) {
-                    return this.modal.pricePerPerson * this.bookingGuests;
-                } else {
-                    return 500000 * this.bookingGuests;
-                }
+                const included = Math.max(1, this.modal.includedGuestCount);
+                const guests = Math.max(1, Number(this.bookingGuests) || 1);
+                const extraGuests = Math.max(0, guests - included);
+                return Math.max(0, this.modal.pricePerSession)
+                    + extraGuests * Math.max(0, this.modal.pricePerPerson);
             },
             get platformFee() {
                 return Math.round(this.computedTotal * 0.15);
@@ -382,28 +396,33 @@
             paymentInProgress: false,
             modal: {
                 id: '', title: '', description: '', duration: 0,
-                pricePerSession: 0, pricePerPerson: 0, maxGroup: 6,
+                pricePerSession: 0, pricePerPerson: 0, includedGuestCount: 1, maxGroup: 6,
                 includedItems: [], priceLabel: '',
                 guideName: '', guideAvatar: '', guideId: ''
             },
 
-            openTourModal(id, title, description, duration, pricePerSession, pricePerPerson, maxGroup, includedItemsStr, guideName, guideAvatar, guideId) {
-                this.modal.id = id;
-                this.modal.title = title;
-                this.modal.description = description;
-                this.modal.duration = duration;
+            openTourModal(tour) {
+                const pricePerSession = Number(tour?.pricePerSession) || 0;
+                const pricePerPerson = Number(tour?.pricePerPerson) || 0;
+                this.modal.id = tour?.id || '';
+                this.modal.title = tour?.title || '';
+                this.modal.description = tour?.description || '';
+                this.modal.duration = Number(tour?.duration) || 0;
                 this.modal.pricePerSession = pricePerSession;
                 this.modal.pricePerPerson = pricePerPerson;
-                this.modal.maxGroup = maxGroup;
-                this.modal.includedItems = includedItemsStr ? includedItemsStr.split(',').map(s => s.trim()).filter(s => s) : [];
-                this.modal.guideName = guideName || 'Local Guide';
-                this.modal.guideAvatar = guideAvatar || '';
-                this.modal.guideId = guideId || '';
+                this.modal.includedGuestCount = Math.max(1, Number(tour?.includedGuestCount) || 1);
+                this.modal.maxGroup = Number(tour?.maxGroup) || 1;
+                this.modal.includedItems = Array.isArray(tour?.includedItems)
+                    ? tour.includedItems.filter(item => typeof item === 'string' && item.trim())
+                    : [];
+                this.modal.guideName = tour?.guideName || 'Local Guide';
+                this.modal.guideAvatar = tour?.guideAvatar || '';
+                this.modal.guideId = tour?.guideId || '';
 
                 const fmt = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
                 this.modal.priceLabel = pricePerSession > 0
-                    ? fmt.format(pricePerSession) + '/session'
-                    : (pricePerPerson > 0 ? fmt.format(pricePerPerson) + '/person' : 'Contact');
+                    ? fmt.format(pricePerSession) + '/tour'
+                    : 'Contact';
 
                 this.showModal = true;
             },

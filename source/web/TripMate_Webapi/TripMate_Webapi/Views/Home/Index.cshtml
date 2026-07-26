@@ -164,8 +164,25 @@
                         var guideAvatar = tour.GuideProfile?.Profile?.AvatarUrl ?? "";
                         var guideCity = tour.GuideProfile?.CityArea ?? "Vietnam";
                         var guideProfileId = tour.GuideProfileId ?? "";
+                        var tourModalPayload = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            id = tour.Id ?? "",
+                            title = tour.Title ?? "",
+                            description = tour.Description ?? "",
+                            duration = tour.DurationHours,
+                            pricePerSession = tour.PricePerSession,
+                            pricePerPerson = tour.PricePerPerson ?? 0,
+                            includedGuestCount = tour.IncludedGuestCount,
+                            maxGroup = tour.MaxGroupSize,
+                            includedItems = tour.IncludedItems ?? new List<string>(),
+                            guideName,
+                            guideAvatar,
+                            guideId = guideProfileId
+                        });
 
-                        <div style="cursor: pointer;" @@click="openTourModal('@System.Web.HttpUtility.JavaScriptStringEncode(tour.Id ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(tour.Title ?? "")', `@System.Web.HttpUtility.JavaScriptStringEncode(tour.Description ?? "")`, @tour.DurationHours, @tour.PricePerSession, @(tour.PricePerPerson ?? 0), @tour.MaxGroupSize, '@System.Web.HttpUtility.JavaScriptStringEncode(string.Join(",", tour.IncludedItems ?? new List<string>()))', '@System.Web.HttpUtility.JavaScriptStringEncode(guideName)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideAvatar)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideProfileId)')" class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col">
+                        <div style="cursor: pointer;" data-tour-modal="@tourModalPayload"
+                             @@click="openTourModal(JSON.parse($event.currentTarget.dataset.tourModal))"
+                             class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col">
                             <div class="h-44 overflow-hidden relative">
                                 @if (!string.IsNullOrEmpty(tourCover))
                                 {
@@ -426,13 +443,93 @@
                             <p class="text-sm text-on-surface-variant">Price</p>
                             <p class="text-3xl font-extrabold text-primary" x-text="modal.priceLabel"></p>
                         </div>
-                        <button @@click="bookTour(modal.id, modal.guideId)"
+                        <button type="button" @@click="startTourBooking()"
                                 class="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
                             <span class="material-symbols-outlined">lock</span>
                             Book This Tour
                         </button>
                     </div>
                 </div>
+        </div>
+    </div>
+
+    <!-- Booking details must be confirmed before a PayOS payment attempt is created. -->
+    <div x-show="showBooking" style="display:none;"
+         class="fixed inset-0 z-[200] flex items-center justify-center p-4"
+         role="dialog" aria-modal="true" aria-labelledby="home-booking-title">
+        <div class="fixed inset-0 bg-black/70 backdrop-blur-sm" @@click="closeBooking()"></div>
+
+        <div x-show="showBooking"
+             x-transition:enter="ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             class="relative z-10 w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div class="flex items-start justify-between border-b border-outline-variant/30 px-6 py-5">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.16em] text-primary">Complete your booking</p>
+                    <h2 id="home-booking-title" class="mt-1 text-xl font-extrabold text-on-surface" x-text="modal.title"></h2>
+                    <p class="mt-1 text-sm text-on-surface-variant">Choose your trip details before continuing to payment.</p>
+                </div>
+                <button type="button" @@click="closeBooking()"
+                        class="rounded-full border border-outline-variant/40 p-2 text-on-surface-variant hover:text-primary"
+                        aria-label="Close booking form">
+                    <span class="material-symbols-outlined block">close</span>
+                </button>
+            </div>
+
+            <div class="max-h-[70vh] space-y-5 overflow-y-auto px-6 py-5">
+                <div>
+                    <label for="home-booking-date" class="mb-2 block text-sm font-bold text-on-surface">Trip date</label>
+                    <input id="home-booking-date" type="date" x-model="bookingDate" :min="minimumBookingDate"
+                           class="w-full rounded-xl border border-outline-variant/50 bg-surface px-4 py-3 focus:border-primary focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="mb-2 block text-sm font-bold text-on-surface">Guests</label>
+                    <div class="flex items-center overflow-hidden rounded-xl border border-outline-variant/50 bg-surface">
+                        <button type="button" @@click="bookingGuests = Math.max(1, bookingGuests - 1)"
+                                class="px-5 py-3 font-bold hover:bg-surface-variant">−</button>
+                        <input type="number" x-model.number="bookingGuests" min="1" :max="modal.maxGroup"
+                               class="w-full bg-transparent px-4 py-3 text-center text-lg font-bold focus:outline-none">
+                        <button type="button" @@click="bookingGuests = Math.min(modal.maxGroup, bookingGuests + 1)"
+                                class="px-5 py-3 font-bold hover:bg-surface-variant">+</button>
+                    </div>
+                    <p class="mt-2 text-xs text-on-surface-variant" x-text="'Maximum ' + modal.maxGroup + ' guests'"></p>
+                </div>
+
+                <div>
+                    <label for="home-booking-notes" class="mb-2 block text-sm font-bold text-on-surface">Notes for the guide <span class="font-normal text-on-surface-variant">(optional)</span></label>
+                    <textarea id="home-booking-notes" x-model.trim="bookingNotes" rows="3" maxlength="500"
+                              placeholder="Dietary requirements, accessibility needs, or special requests"
+                              class="w-full resize-none rounded-xl border border-outline-variant/50 bg-surface px-4 py-3 focus:border-primary focus:outline-none"></textarea>
+                </div>
+
+                <div class="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm text-on-surface-variant">Tour total</span>
+                        <strong class="text-xl text-primary" x-text="formatCurrency(bookingTotal)"></strong>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between border-t border-primary/10 pt-2 text-sm">
+                        <span class="text-on-surface-variant">Due now · 30% deposit</span>
+                        <strong class="text-on-surface" x-text="formatCurrency(bookingDeposit)"></strong>
+                    </div>
+                    <p class="mt-2 text-xs text-on-surface-variant"
+                       x-text="modal.pricePerPerson > 0 ? 'Includes ' + modal.includedGuestCount + ' guest(s); extra guests are charged separately.' : 'Fixed price for the whole tour.'"></p>
+                </div>
+
+                <p x-show="bookingError" x-text="bookingError" class="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700"></p>
+            </div>
+
+            <div class="flex gap-3 border-t border-outline-variant/30 bg-surface px-6 py-4">
+                <button type="button" @@click="closeBooking()" :disabled="bookingInProgress"
+                        class="flex-1 rounded-xl border border-outline-variant/50 px-4 py-3 font-bold text-on-surface">
+                    Cancel
+                </button>
+                <button type="button" @@click="submitTourBooking()" :disabled="bookingInProgress"
+                        class="flex-[1.6] rounded-xl bg-primary px-4 py-3 font-bold text-white shadow-md disabled:cursor-not-allowed disabled:opacity-60">
+                    <span x-text="bookingInProgress ? 'Creating payment…' : 'Continue to payment'"></span>
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -464,10 +561,15 @@
         Alpine.data('travelerHome', () => ({
             savedGuides: [], 
             showModal: false,
+            showBooking: false,
             bookingInProgress: false,
+            bookingDate: '',
+            bookingGuests: 1,
+            bookingNotes: '',
+            bookingError: '',
             modal: {
                 id: '', title: '', description: '', duration: 0,
-                pricePerSession: 0, pricePerPerson: 0, maxGroup: 6,
+                pricePerSession: 0, pricePerPerson: 0, includedGuestCount: 1, maxGroup: 6,
                 includedItems: [], priceLabel: '',
                 guideName: '', guideAvatar: '', guideId: ''
             },
@@ -480,31 +582,97 @@
                 }
             },
 
-            openTourModal(id, title, description, duration, pricePerSession, pricePerPerson, maxGroup, includedItemsStr, guideName, guideAvatar, guideId) {
-                this.modal.id = id;
-                this.modal.title = title;
-                this.modal.description = description;
-                this.modal.duration = duration;
+            openTourModal(tour) {
+                const pricePerSession = Number(tour?.pricePerSession) || 0;
+                const pricePerPerson = Number(tour?.pricePerPerson) || 0;
+                this.modal.id = tour?.id || '';
+                this.modal.title = tour?.title || '';
+                this.modal.description = tour?.description || '';
+                this.modal.duration = Number(tour?.duration) || 0;
                 this.modal.pricePerSession = pricePerSession;
                 this.modal.pricePerPerson = pricePerPerson;
-                this.modal.maxGroup = maxGroup;
-                this.modal.includedItems = includedItemsStr ? includedItemsStr.split(',').map(s => s.trim()).filter(s => s) : [];
-                this.modal.guideName = guideName || 'Local Guide';
-                this.modal.guideAvatar = guideAvatar || '';
-                this.modal.guideId = guideId || '';
+                this.modal.includedGuestCount = Math.max(1, Number(tour?.includedGuestCount) || 1);
+                this.modal.maxGroup = Number(tour?.maxGroup) || 1;
+                this.modal.includedItems = Array.isArray(tour?.includedItems)
+                    ? tour.includedItems.filter(item => typeof item === 'string' && item.trim())
+                    : [];
+                this.modal.guideName = tour?.guideName || 'Local Guide';
+                this.modal.guideAvatar = tour?.guideAvatar || '';
+                this.modal.guideId = tour?.guideId || '';
 
                 const fmt = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
                 this.modal.priceLabel = pricePerSession > 0
-                    ? fmt.format(pricePerSession) + '/session'
-                    : (pricePerPerson > 0 ? fmt.format(pricePerPerson) + '/person' : 'Contact');
+                    ? fmt.format(pricePerSession) + '/tour'
+                    : 'Contact';
 
                 this.showModal = true;
             },
 
-            async bookTour(packageId, guideId) {
+            get minimumBookingDate() {
+                const date = new Date();
+                date.setDate(date.getDate() + 1);
+                return this.toLocalDateValue(date);
+            },
+
+            get bookingTotal() {
+                const included = Math.max(1, this.modal.includedGuestCount);
+                const guests = Math.max(1, Number(this.bookingGuests) || 1);
+                const extraGuests = Math.max(0, guests - included);
+                return Math.max(0, this.modal.pricePerSession) + extraGuests * Math.max(0, this.modal.pricePerPerson);
+            },
+
+            get bookingDeposit() {
+                return Math.round(this.bookingTotal * 0.3);
+            },
+
+            toLocalDateValue(date) {
+                const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+                return offsetDate.toISOString().split('T')[0];
+            },
+
+            formatCurrency(amount) {
+                return new Intl.NumberFormat('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND',
+                    maximumFractionDigits: 0
+                }).format(Number(amount) || 0);
+            },
+
+            startTourBooking() {
                 const token = localStorage.getItem('accessToken');
                 if (!token) {
                     window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.href);
+                    return;
+                }
+
+                this.bookingDate = this.minimumBookingDate;
+                this.bookingGuests = 1;
+                this.bookingNotes = '';
+                this.bookingError = '';
+                this.showModal = false;
+                this.showBooking = true;
+            },
+
+            closeBooking() {
+                if (this.bookingInProgress) return;
+                this.showBooking = false;
+                this.bookingError = '';
+            },
+
+            async submitTourBooking() {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.href);
+                    return;
+                }
+                this.bookingError = '';
+                const guests = Number(this.bookingGuests);
+                if (!this.bookingDate || this.bookingDate < this.minimumBookingDate) {
+                    this.bookingError = 'Please select a future trip date.';
+                    return;
+                }
+                if (!Number.isInteger(guests) || guests < 1 || guests > this.modal.maxGroup) {
+                    this.bookingError = `Guest count must be between 1 and ${this.modal.maxGroup}.`;
                     return;
                 }
                 if (this.bookingInProgress) return;
@@ -512,10 +680,11 @@
 
                 try {
                     const formData = new FormData();
-                    formData.append('guideId', guideId);
-                    formData.append('packageId', packageId);
-                    formData.append('date', new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
-                    formData.append('guests', '1');
+                    formData.append('guideId', this.modal.guideId);
+                    formData.append('packageId', this.modal.id);
+                    formData.append('date', this.bookingDate);
+                    formData.append('guests', guests.toString());
+                    if (this.bookingNotes) formData.append('notes', this.bookingNotes);
 
                     const res = await fetch('/Traveler/BookTour', {
                         method: 'POST',
@@ -531,13 +700,13 @@
                         }
                     } else if (res.status === 400) {
                         const errorData = await res.json();
-                        Swal.fire({ title: 'Notice', text: errorData.error || 'Booking failed.', icon: 'info', customClass: { popup: 'swal-top-fix' } });
+                        this.bookingError = errorData.error || 'Booking failed.';
                     } else {
-                        Swal.fire({ title: 'Error', text: 'Booking failed. Please try again.', icon: 'error', customClass: { popup: 'swal-top-fix' } });
+                        this.bookingError = 'Booking failed. Please try again.';
                     }
                 } catch(err) {
                     console.error('BookTour error:', err);
-                    Swal.fire({ title: 'Error', text: 'Connection error. Please try again.', icon: 'error', customClass: { popup: 'swal-top-fix' } });
+                    this.bookingError = 'Connection error. Please try again.';
                 } finally {
                     this.bookingInProgress = false;
                 }

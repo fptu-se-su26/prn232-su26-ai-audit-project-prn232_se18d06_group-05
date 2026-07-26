@@ -17,8 +17,9 @@ public class BookingService
     private readonly string _supabaseUrl;
     private readonly string _anonKey;
     private readonly INotificationService _notif;
-    private readonly ChatService _chat;
     private readonly TripMate_Webapi.Repositories.IBookingRepository _repo;
+    private readonly BookingCreationService _bookingCreation;
+    private readonly IPaymentService _payments;
 
     private static readonly JsonSerializerOptions _json = new()
     {
@@ -29,28 +30,29 @@ public class BookingService
     // Status mapping: smallint ↔ string
     private static readonly Dictionary<int, string> StatusMap = new()
     {
-        { 0, "Pending" }, { 1, "Confirmed" }, { 2, "Completed" }, { 3, "Cancelled" }
+        { -1, "AwaitingPayment" }, { 0, "Pending" }, { 1, "Confirmed" }, { 2, "Completed" }, { 3, "Cancelled" }
     };
     private static readonly Dictionary<string, int> StatusReverseMap = new(StringComparer.OrdinalIgnoreCase)
     {
-        { "pending", 0 }, { "confirmed", 1 }, { "completed", 2 }, { "cancelled", 3 }
+        { "awaitingpayment", -1 }, { "pending", 0 }, { "confirmed", 1 }, { "completed", 2 }, { "cancelled", 3 }
     };
 
     public static string MapStatus(int status) => StatusMap.GetValueOrDefault(status, "pending");
     public static int MapStatus(string status) => StatusReverseMap.GetValueOrDefault(status, 0);
 
-    // Platform fee rate (e.g. 15%)
-    private const decimal PlatformFeeRate = 0.15m;
-
     public BookingService(HttpClient http, IConfiguration config,
-        INotificationService notif, ChatService chat, TripMate_Webapi.Repositories.IBookingRepository repo)
+        INotificationService notif,
+        TripMate_Webapi.Repositories.IBookingRepository repo,
+        BookingCreationService bookingCreation,
+        IPaymentService payments)
     {
         _http = http;
         _supabaseUrl = config["Supabase:Url"]!;
         _anonKey = config["Supabase:AnonKey"]!;
         _notif = notif;
-        _chat = chat;
         _repo = repo;
+        _bookingCreation = bookingCreation;
+        _payments = payments;
     }
 
     // ── Create Booking ────────────────────────────────────────────────────────
@@ -58,95 +60,44 @@ public class BookingService
     public async Task<BookingDto> CreateBookingAsync(
         string travelerId, CreateBookingRequest req, string userToken)
     {
-        // 1. Get experience package to calculate price
-        var package = await GetExperiencePackageAsync(req.ExperiencePackageId)
-            ?? throw new Exception("Experience package not found.");
-
-        if (!package.IsActive)
-            throw new Exception("This experience package is no longer active.");
-
-        if (req.GuestCount < 1)
-            throw new Exception("The booking must include at least one guest.");
-
-        if (req.GuestCount > package.MaxGroupSize)
-            throw new Exception($"The maximum group size for this package is {package.MaxGroupSize}.");
-
-        // 2. Check guide availability (blacklist check)
-        var isUnavailable = await IsGuideUnavailableAsync(
-            package.GuideProfileId!, req.BookingDate);
-        if (isUnavailable)
-            throw new Exception("The guide is unavailable on this date.");
-
-        // 3. Fixed-tour pricing: base price includes a configured number of guests;
-        // only guests above that threshold pay the additional guest fee.
-        var totalAmount = TourPricingCalculator.CalculateTotal(
-            package.PricePerSession,
-            package.PricePerPerson,
-            package.IncludedGuestCount,
-            req.GuestCount);
-
-        var platformFee = Math.Round(totalAmount * PlatformFeeRate, 2);
-        var guideEarnings = totalAmount - platformFee;
-
-        // 4. Insert booking
-        var body = new
+        if (!DateTime.TryParseExact(
+                req.BookingDate,
+                "yyyy-MM-dd",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out var bookingDate))
         {
-            traveler_id = travelerId,
-            guide_profile_id = package.GuideProfileId,
-            experience_package_id = req.ExperiencePackageId,
-            booking_date = req.BookingDate,
-            start_time = req.StartTime,
-            guest_count = req.GuestCount,
-            total_amount = totalAmount,
-            platform_fee = platformFee,
-            guide_earnings = guideEarnings,
-            status = 0, // Pending
-            traveler_notes = req.TravelerNotes,
-        };
-
-        var request = BuildRequest(HttpMethod.Post,
-            $"{_supabaseUrl}/rest/v1/bookings", userToken);
-        request.Headers.Add("Prefer", "return=representation");
-        request.Content = new StringContent(
-            JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-
-        var response = await _http.SendAsync(request);
-        var content = await response.Content.ReadAsStringAsync();
-        EnsureSuccess(response, content);
-
-        var rows = JsonSerializer.Deserialize<List<BookingRow>>(content, _json);
-        var row = rows?.FirstOrDefault() ?? throw new Exception("Failed to create the booking.");
-
-        var dto = MapToDto(row, package.Title);
-
-        // 5. Persist notifications after the booking exists. Dedupe keys make retries safe.
-        var guideUserId = await GetGuideUserIdAsync(package.GuideProfileId!);
-        if (guideUserId != null)
-        {
-            await _notif.SendAsync(
-                guideUserId,
-                NotificationTypes.BookingAwaitingGuide,
-                "New booking awaiting your response",
-                $"{package.Title} — {req.GuestCount} guest(s) on {req.BookingDate:yyyy-MM-dd}.",
-                new { bookingId = dto.Id, travelerId, req.GuestCount, req.BookingDate },
-                "/Guide/Bookings",
-                $"booking-awaiting-guide:{dto.Id}",
-                sendEmail: true);
-
-            await _chat.GetOrCreateConversationAsync(
-                travelerId, guideUserId, dto.Id, userToken);
+            throw new InvalidOperationException("BookingDate must use yyyy-MM-dd format.");
         }
 
-        await _notif.SendAsync(
+        var entity = await _bookingCreation.CreatePackageBookingAsync(
             travelerId,
-            NotificationTypes.BookingAwaitingGuide,
-            "Booking submitted",
-            $"Your booking for {package.Title} is awaiting the guide's response.",
-            new { bookingId = dto.Id, req.BookingDate },
-            $"/Traveler/BookingDetails/{dto.Id}",
-            $"booking-submitted:{dto.Id}");
+            req.ExperiencePackageId,
+            bookingDate,
+            req.GuestCount,
+            req.TravelerNotes,
+            req.StartTime,
+            userToken);
+        var payment = await _payments.CreateRequiredPaymentAsync(entity);
+        var package = await GetExperiencePackageAsync(req.ExperiencePackageId);
 
-        return dto;
+        return new BookingDto(
+            entity.Id,
+            entity.TravelerId,
+            entity.GuideProfileId,
+            entity.ExperiencePackageId,
+            package?.Title,
+            entity.BookingDate.ToString("yyyy-MM-dd"),
+            entity.StartTime.ToString("HH:mm"),
+            entity.GuestCount,
+            entity.TotalAmount,
+            entity.PlatformFee,
+            entity.GuideEarnings,
+            MapStatus(entity.Status),
+            entity.TravelerNotes,
+            entity.CreatedAt,
+            entity.UpdatedAt,
+            payment.CheckoutUrl);
     }
 
     // ── Get My Bookings ───────────────────────────────────────────────────────
@@ -288,8 +239,18 @@ public class BookingService
         if (booking.Status != 0)
             throw new Exception("Only pending bookings can be updated.");
 
+        if (newStatus is not 1 and not 3)
+            throw new ArgumentOutOfRangeException(nameof(newStatus), "A guide can only accept or reject a pending booking.");
+
         if (BookingResponsePolicy.IsExpired(booking.Status, booking.CreatedAt, DateTime.UtcNow))
             throw new Exception("The 24-hour response window has expired and this booking can no longer be updated.");
+
+        if (newStatus == 1)
+        {
+            var requiredDeposit = booking.TotalAmount * 0.30m;
+            if (booking.AmountPaid < requiredDeposit)
+                throw new Exception("This booking cannot be accepted until the 30% deposit has been received.");
+        }
 
         await _repo.UpdateBookingStatusAsync(bookingId, newStatus);
         var tripName = await _notif.GetTripNameAsync(bookingId);
@@ -345,15 +306,6 @@ public class BookingService
         var url = $"{_supabaseUrl}/rest/v1/experience_packages?id=eq.{packageId}&select=*";
         var rows = await GetAsync<List<ExperiencePackageRow>>(url);
         return rows?.FirstOrDefault();
-    }
-
-    private async Task<bool> IsGuideUnavailableAsync(string guideProfileId, string date)
-    {
-        var url = $"{_supabaseUrl}/rest/v1/guide_availability" +
-                  $"?guide_profile_id=eq.{guideProfileId}" +
-                  $"&unavailable_date=eq.{date}";
-        var rows = await GetAsync<List<GuideAvailabilityRow>>(url);
-        return rows?.Count > 0;
     }
 
     private async Task<string?> GetGuideUserIdAsync(string guideProfileId)
