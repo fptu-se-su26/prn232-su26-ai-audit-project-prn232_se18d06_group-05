@@ -279,6 +279,49 @@ namespace TripMate_Webapi.Repositories
             }
         }
 
+        public async Task<bool> MarkGuideCompletionAsync(
+            string bookingId,
+            string guideProfileId,
+            DateTime eligibleEndAtUtc,
+            DateTime completedAtUtc,
+            DateTime confirmationDueAtUtc)
+        {
+            var url = $"{_supabaseUrl}/rest/v1/bookings" +
+                      $"?id=eq.{Uri.EscapeDataString(bookingId)}" +
+                      $"&guide_profile_id=eq.{Uri.EscapeDataString(guideProfileId)}" +
+                      "&status=eq.1" +
+                      "&completion_state=in.(not_started,awaiting_guide)" +
+                      $"&scheduled_end_at=lte.{Uri.EscapeDataString(eligibleEndAtUtc.ToString("O"))}" +
+                      "&select=id";
+
+            using var request = new HttpRequestMessage(HttpMethod.Patch, url);
+            request.Headers.Add("apikey", _apiKey);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+            request.Headers.Add("Prefer", "return=representation");
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(new
+                {
+                    completion_state = "awaiting_traveler",
+                    guide_completed_at = completedAtUtc.ToString("O"),
+                    traveler_confirmation_due_at = confirmationDueAtUtc.ToString("O"),
+                    updated_at = completedAtUtc.ToString("O")
+                }),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            var client = _httpClientFactory.CreateClient();
+            using var response = await client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"Failed to submit Guide completion: {content}");
+            }
+
+            using var document = JsonDocument.Parse(content);
+            return document.RootElement.ValueKind == JsonValueKind.Array &&
+                   document.RootElement.GetArrayLength() == 1;
+        }
+
         public async Task DeleteBookingAsync(string id)
         {
             await _supabase.From<BookingEntity>()

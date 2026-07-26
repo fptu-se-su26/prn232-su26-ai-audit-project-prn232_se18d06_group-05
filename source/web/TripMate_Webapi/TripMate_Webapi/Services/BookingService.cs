@@ -13,6 +13,9 @@ namespace TripMate_WebAPI.Services;
 /// </summary>
 public class BookingService
 {
+    private static readonly TimeSpan GuideCompletionEarlyWindow = TimeSpan.FromHours(1);
+    private static readonly TimeSpan TravelerCompletionResponseWindow = TimeSpan.FromHours(48);
+
     private readonly HttpClient _http;
     private readonly string _supabaseUrl;
     private readonly string _anonKey;
@@ -192,13 +195,22 @@ public class BookingService
 
         foreach (var b in entities)
         {
+            var nowUtc = DateTime.UtcNow;
             var responseDeadlineUtc = BookingResponsePolicy.GetDeadlineUtc(b.CreatedAt);
-            var remaining = responseDeadlineUtc - DateTime.UtcNow;
+            var remaining = responseDeadlineUtc - nowUtc;
             var isExpired = b.Status == 0 && remaining <= TimeSpan.Zero;
             var secondsRemaining = b.Status == 0 && !isExpired
                 ? (int)Math.Ceiling(remaining.TotalSeconds)
                 : 0;
             var effectiveStatus = isExpired ? "Expired" : MapStatus(b.Status);
+            var completionState = string.IsNullOrWhiteSpace(b.CompletionState)
+                ? "not_started"
+                : b.CompletionState;
+            var scheduledEndUtc = b.ScheduledEndAt?.ToUniversalTime();
+            var canMarkComplete = b.Status == 1 &&
+                                  completionState is "not_started" or "awaiting_guide" &&
+                                  scheduledEndUtc.HasValue &&
+                                  nowUtc >= scheduledEndUtc.Value.Subtract(GuideCompletionEarlyWindow);
 
             dtos.Add(new TripMate_WebAPI.DTOs.Booking.Responses.GuideBookingViewDto(
                 Id: b.Id,
@@ -217,7 +229,15 @@ public class BookingService
                 Note: b.TravelerNotes,
                 Status: effectiveStatus,
                 SecondsRemaining: secondsRemaining,
-                CreatedAt: b.CreatedAt
+                CreatedAt: b.CreatedAt,
+                ScheduledEndAt: scheduledEndUtc,
+                CompletionState: completionState,
+                GuideCompletedAt: b.GuideCompletedAt?.ToUniversalTime(),
+                TravelerConfirmationDueAt: b.TravelerConfirmationDueAt?.ToUniversalTime(),
+                AmountPaid: b.AmountPaid,
+                PaymentStatus: b.PaymentStatus,
+                PayoutStatus: b.PayoutStatus,
+                CanMarkComplete: canMarkComplete
             ));
         }
 
@@ -276,6 +296,100 @@ public class BookingService
                 $"booking-declined:{bookingId}",
                 sendEmail: true);
         }
+    }
+
+    public async Task<GuideCompletionResult> MarkGuideBookingCompletedAsync(
+        string bookingId,
+        string guideProfileId)
+    {
+        var booking = await _repo.GetBookingByIdAsync(bookingId)
+            ?? throw new InvalidOperationException("Booking not found.");
+
+        if (!string.Equals(booking.GuideProfileId, guideProfileId, StringComparison.Ordinal))
+            throw new UnauthorizedAccessException("You are not authorized to complete this booking.");
+
+        if (booking.Status != 1)
+            throw new InvalidOperationException("Only confirmed bookings can be marked as completed.");
+
+        var completionState = string.IsNullOrWhiteSpace(booking.CompletionState)
+            ? "not_started"
+            : booking.CompletionState;
+
+        if (string.Equals(completionState, "awaiting_traveler", StringComparison.Ordinal))
+        {
+            var existingCompletedAt = booking.GuideCompletedAt?.ToUniversalTime() ?? DateTime.UtcNow;
+            var existingDueAt = booking.TravelerConfirmationDueAt?.ToUniversalTime()
+                                ?? existingCompletedAt.Add(TravelerCompletionResponseWindow);
+            await SendCompletionRequestAsync(booking, existingCompletedAt, existingDueAt);
+            return new GuideCompletionResult(
+                "awaiting_traveler",
+                existingCompletedAt,
+                existingDueAt,
+                AlreadySubmitted: true);
+        }
+
+        if (completionState is not ("not_started" or "awaiting_guide"))
+            throw new InvalidOperationException("This booking cannot enter the Guide completion workflow from its current state.");
+
+        if (!booking.ScheduledEndAt.HasValue)
+            throw new InvalidOperationException("This booking has no scheduled end time.");
+
+        var nowUtc = DateTime.UtcNow;
+        var scheduledEndUtc = booking.ScheduledEndAt.Value.ToUniversalTime();
+        var unlockAtUtc = scheduledEndUtc.Subtract(GuideCompletionEarlyWindow);
+        if (nowUtc < unlockAtUtc)
+            throw new InvalidOperationException("Completion becomes available during the final hour of the trip.");
+
+        var confirmationDueAtUtc = nowUtc.Add(TravelerCompletionResponseWindow);
+        var updated = await _repo.MarkGuideCompletionAsync(
+            bookingId,
+            guideProfileId,
+            nowUtc.Add(GuideCompletionEarlyWindow),
+            nowUtc,
+            confirmationDueAtUtc);
+
+        if (!updated)
+        {
+            var latest = await _repo.GetBookingByIdAsync(bookingId);
+            if (latest?.CompletionState == "awaiting_traveler")
+            {
+                var completedAt = latest.GuideCompletedAt?.ToUniversalTime() ?? nowUtc;
+                var dueAt = latest.TravelerConfirmationDueAt?.ToUniversalTime() ?? confirmationDueAtUtc;
+                await SendCompletionRequestAsync(latest, completedAt, dueAt);
+                return new GuideCompletionResult("awaiting_traveler", completedAt, dueAt, AlreadySubmitted: true);
+            }
+
+            throw new InvalidOperationException("The booking changed before completion could be submitted. Please refresh and try again.");
+        }
+
+        await SendCompletionRequestAsync(booking, nowUtc, confirmationDueAtUtc);
+        return new GuideCompletionResult(
+            "awaiting_traveler",
+            nowUtc,
+            confirmationDueAtUtc,
+            AlreadySubmitted: false);
+    }
+
+    private async Task SendCompletionRequestAsync(
+        TripMate_Webapi.Entities.BookingEntity booking,
+        DateTime guideCompletedAtUtc,
+        DateTime confirmationDueAtUtc)
+    {
+        var tourName = booking.ExperiencePackage?.Title ?? "your TripMate experience";
+        await _notif.SendAsync(
+            booking.TravelerId,
+            NotificationTypes.CompletionRequested,
+            "Please confirm your trip completion",
+            $"Your guide marked \"{tourName}\" as completed. Please confirm the trip and share your experience.",
+            new
+            {
+                bookingId = booking.Id,
+                guideCompletedAt = guideCompletedAtUtc,
+                confirmationDueAt = confirmationDueAtUtc
+            },
+            $"/Traveler/BookingDetails/{booking.Id}",
+            $"completion-requested:{booking.Id}",
+            sendEmail: true);
     }
 
     // ── Get Guide Unavailable Dates ───────────────────────────────────────────
@@ -364,6 +478,12 @@ public class BookingService
         return MapToDto(row, row.ExperiencePackage?.Title);
     }
 }
+
+public sealed record GuideCompletionResult(
+    string CompletionState,
+    DateTime GuideCompletedAt,
+    DateTime TravelerConfirmationDueAt,
+    bool AlreadySubmitted);
 
 // ── Row models matching database_setup.sql ────────────────────────────────────
 
