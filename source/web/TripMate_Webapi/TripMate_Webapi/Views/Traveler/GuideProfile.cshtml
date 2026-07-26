@@ -156,6 +156,9 @@
                     {
                         foreach (var pkg in packages)
                         {
+                            var timelineStr = pkg.TimelineJson != null ? System.Text.Json.JsonSerializer.Serialize(pkg.TimelineJson) : "[]";
+                            <div class="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-md transition-shadow cursor-pointer group"
+                                 @@click="openTourModal('@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Id ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Title ?? "")', `@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Description ?? "")`, @pkg.DurationHours, @pkg.PricePerSession, @(pkg.PricePerPerson ?? 0), @pkg.MaxGroupSize, '@System.Web.HttpUtility.JavaScriptStringEncode(string.Join(",", pkg.IncludedItems ?? new List<string>()))', '@System.Web.HttpUtility.JavaScriptStringEncode(Model.Profile?.FullName ?? "Local Guide")', '@System.Web.HttpUtility.JavaScriptStringEncode(Model.Profile?.AvatarUrl ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(Model.Id ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(pkg.CoverImageUrl ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(Model.CityArea ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(timelineStr)')">
                             var tourModalPayload = System.Text.Json.JsonSerializer.Serialize(new
                             {
                                 id = pkg.Id ?? "",
@@ -265,90 +268,7 @@
     </div>
 
     <!-- ═══ Tour Detail Modal ═══ -->
-    <div x-show="showModal" x-transition.opacity class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;" @@click.self="showModal = false">
-        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" @@click.stop x-transition.scale.95>
-            <!-- Modal Header -->
-            <div class="sticky top-0 bg-white border-b border-outline-variant/30 p-6 rounded-t-3xl flex items-center justify-between z-10">
-                <h2 class="text-2xl font-bold text-on-surface" x-text="modal.title"></h2>
-                <button @@click="showModal = false" class="w-10 h-10 rounded-full hover:bg-surface-variant flex items-center justify-center transition-colors">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-
-            <div class="p-6 md:p-8 space-y-6">
-                <!-- Tour Meta -->
-                <div class="flex flex-wrap gap-4">
-                    <div class="flex items-center gap-2 bg-primary-container/50 px-4 py-2 rounded-xl">
-                        <span class="material-symbols-outlined text-primary text-sm">schedule</span>
-                        <span class="font-bold text-sm" x-text="modal.duration + ' hours'"></span>
-                    </div>
-                    <div class="flex items-center gap-2 bg-surface-variant px-4 py-2 rounded-xl">
-                        <span class="material-symbols-outlined text-on-surface-variant text-sm">group</span>
-                        <span class="font-bold text-sm" x-text="'Max ' + modal.maxGroup + ' people'"></span>
-                    </div>
-                </div>
-
-                <!-- Description / Itinerary -->
-                <div>
-                    <h3 class="text-lg font-bold text-on-surface mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary text-xl">route</span> Tour Description
-                    </h3>
-                    <p class="text-on-surface-variant leading-relaxed whitespace-pre-line" x-text="modal.description"></p>
-                </div>
-
-                <!-- Included Items -->
-                <div x-show="modal.includedItems.length > 0">
-                    <h3 class="text-lg font-bold text-on-surface mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary text-xl">check_circle</span> What's Included
-                    </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <template x-for="item in modal.includedItems" :key="item">
-                            <div class="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-2 rounded-lg">
-                                <span class="material-symbols-outlined text-green-600 text-sm">check</span>
-                                <span class="text-sm text-green-800 font-medium" x-text="item"></span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                <!-- Guide Info -->
-                <div class="bg-surface-variant/50 rounded-2xl p-5 flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-full overflow-hidden border-2 border-primary/20 shrink-0 bg-gray-100">
-                        @if (!string.IsNullOrEmpty(Model.Profile?.AvatarUrl))
-                        {
-                            <img src="@Model.Profile.AvatarUrl" alt="@Model.Profile.FullName" class="w-full h-full object-cover" />
-                        }
-                        else
-                        {
-                            <span class="material-symbols-outlined text-3xl text-gray-400 mt-2 block text-center">person</span>
-                        }
-                    </div>
-                    <div>
-                        <p class="text-sm text-on-surface-variant">Created by</p>
-                        <p class="font-bold text-on-surface text-lg">@Model.Profile?.FullName</p>
-                        <div class="flex items-center gap-1 text-sm">
-                            <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
-                            <span class="font-bold">@(Model.AverageRating?.ToString("0.0") ?? "0.0")</span>
-                            <span class="text-on-surface-variant">(@(Model.TotalReviews ?? 0) reviews)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Price & Book -->
-                <div class="bg-white border-2 border-primary/30 rounded-2xl p-6 flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-on-surface-variant">Price</p>
-                        <p class="text-3xl font-extrabold text-primary" x-text="modal.priceLabel"></p>
-                    </div>
-                    <button @@click="startTourBooking(modal.id)"
-                            class="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
-                        <span class="material-symbols-outlined">lock</span>
-                        Book This Tour
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <partial name="_TravelerTourModal" />
 
     <!-- ═══ Booking Wizard Modal ═══ -->
     <div x-show="showWizard"
@@ -540,6 +460,11 @@
             isSaved: false,
             modal: {
                 id: '', title: '', description: '', duration: 0,
+                pricePerSession: 0, pricePerPerson: 0, maxGroup: 6,
+                includedItems: [], priceLabel: '',
+                guideName: '', guideAvatar: '', guideId: '',
+                coverImageUrl: '', cityArea: '', timeline: [],
+                bookingDate: '', bookingGuests: 1
                 pricePerSession: 0, pricePerPerson: 0, includedGuestCount: 1, maxGroup: 6,
                 includedItems: [], priceLabel: ''
             },
@@ -593,6 +518,25 @@
                 }
             },
 
+            openTourModal(id, title, description, duration, pricePerSession, pricePerPerson, maxGroup, includedItemsStr, guideName, guideAvatar, guideId, coverImageUrl, cityArea, timelineJsonStr) {
+                this.modal.id = id;
+                this.modal.title = title;
+                this.modal.description = description;
+                this.modal.duration = duration;
+                this.modal.pricePerSession = pricePerSession;
+                this.modal.pricePerPerson = pricePerPerson;
+                this.modal.maxGroup = maxGroup;
+                this.modal.includedItems = includedItemsStr ? includedItemsStr.split(',').map(s => s.trim()).filter(s => s) : [];
+                this.modal.guideName = guideName || 'Local Guide';
+                this.modal.guideAvatar = guideAvatar || '';
+                this.modal.guideId = guideId || '';
+                this.modal.coverImageUrl = coverImageUrl || '';
+                this.modal.cityArea = cityArea || '';
+                try {
+                    this.modal.timeline = JSON.parse(timelineJsonStr || '[]');
+                } catch(e) {
+                    this.modal.timeline = [];
+                }
             openTourModal(tour) {
                 const pricePerSession = Number(tour?.pricePerSession) || 0;
                 const pricePerPerson = Number(tour?.pricePerPerson) || 0;
@@ -614,7 +558,25 @@
                 } else {
                     this.modal.priceLabel = 'Contact';
                 }
+                this.modal.bookingDate = '';
+                this.modal.bookingGuests = 1;
                 this.showModal = true;
+
+                // Fetch blocked dates and init flatpickr
+                fetch(`/Traveler/GetGuideAvailability?guideId=${guideId}`)
+                    .then(r => r.json())
+                    .then(blockedDates => {
+                        if(this._fp) this._fp.destroy();
+                        this.$nextTick(() => {
+                            this._fp = flatpickr(this.$refs.datePicker, {
+                                minDate: "today",
+                                disable: blockedDates,
+                                onChange: (selectedDates, dateStr) => {
+                                    this.modal.bookingDate = dateStr;
+                                }
+                            });
+                        });
+                    }).catch(err => console.error('Error fetching availability', err));
             },
 
             startCustomBooking() {
@@ -628,17 +590,46 @@
                 this.showWizard = true;
             },
 
-            startTourBooking(packageId) {
+            async startTourBooking(packageId, guideId) {
                 const token = localStorage.getItem('accessToken');
                 if (!token) {
                     window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
                     return;
                 }
-                this.bookingType = 'tour';
-                this.bookingPackageId = packageId;
-                this.wizardStep = 1;
-                this.showWizard = true;
-                this.showModal = false; // close tour modal
+                if (this.bookingInProgress) return;
+                this.bookingInProgress = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('guideId', guideId);
+                    formData.append('packageId', packageId);
+                    formData.append('date', this.modal.bookingDate);
+                    formData.append('guests', this.modal.bookingGuests.toString());
+
+                    const res = await fetch('/Traveler/BookTour', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.paymentUrl) {
+                            window.location.href = data.paymentUrl;
+                            return;
+                        }
+                    } else if (res.status === 400) {
+                        const errorData = await res.json();
+                        Swal.fire({ title: 'Notice', text: errorData.error || 'Booking failed.', icon: 'info' });
+                    } else {
+                        Swal.fire({ title: 'Error', text: 'Booking failed. Please try again.', icon: 'error' });
+                    }
+                } catch(err) {
+                    console.error('Booking error:', err);
+                    Swal.fire('Error', 'Connection error. Please try again.', 'error');
+                } finally {
+                    this.bookingInProgress = false;
+                }
             },
 
             nextStep() {

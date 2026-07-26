@@ -164,6 +164,9 @@
                         var guideAvatar = tour.GuideProfile?.Profile?.AvatarUrl ?? "";
                         var guideCity = tour.GuideProfile?.CityArea ?? "Vietnam";
                         var guideProfileId = tour.GuideProfileId ?? "";
+                        var timelineStr = tour.TimelineJson != null ? System.Text.Json.JsonSerializer.Serialize(tour.TimelineJson) : "[]";
+
+                        <div style="cursor: pointer;" @@click="openTourModal('@System.Web.HttpUtility.JavaScriptStringEncode(tour.Id ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(tour.Title ?? "")', `@System.Web.HttpUtility.JavaScriptStringEncode(tour.Description ?? "")`, @tour.DurationHours, @tour.PricePerSession, @(tour.PricePerPerson ?? 0), @tour.MaxGroupSize, '@System.Web.HttpUtility.JavaScriptStringEncode(string.Join(",", tour.IncludedItems ?? new List<string>()))', '@System.Web.HttpUtility.JavaScriptStringEncode(guideName)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideAvatar)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideProfileId)', '@System.Web.HttpUtility.JavaScriptStringEncode(tourCover)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideCity)', '@System.Web.HttpUtility.JavaScriptStringEncode(timelineStr)')" class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col">
                         var tourModalPayload = System.Text.Json.JsonSerializer.Serialize(new
                         {
                             id = tour.Id ?? "",
@@ -370,6 +373,7 @@
     </section>
 
     <!-- Tour Detail Modal -->
+    <partial name="_TravelerTourModal" />
     <div x-show="showModal" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center p-4" aria-labelledby="modal-title" role="dialog" aria-modal="true">
         <!-- Background Overlay -->
         <div x-show="showModal" x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-black/60 backdrop-blur-sm" @@click="showModal = false"></div>
@@ -571,7 +575,9 @@
                 id: '', title: '', description: '', duration: 0,
                 pricePerSession: 0, pricePerPerson: 0, includedGuestCount: 1, maxGroup: 6,
                 includedItems: [], priceLabel: '',
-                guideName: '', guideAvatar: '', guideId: ''
+                guideName: '', guideAvatar: '', guideId: '',
+                coverImageUrl: '', cityArea: '', timeline: [],
+                bookingDate: '', bookingGuests: 1
             },
 
             toggleSave(id) {
@@ -582,6 +588,25 @@
                 }
             },
 
+            openTourModal(id, title, description, duration, pricePerSession, pricePerPerson, maxGroup, includedItemsStr, guideName, guideAvatar, guideId, coverImageUrl, cityArea, timelineJsonStr) {
+                this.modal.id = id;
+                this.modal.title = title;
+                this.modal.description = description;
+                this.modal.duration = duration;
+                this.modal.pricePerSession = pricePerSession;
+                this.modal.pricePerPerson = pricePerPerson;
+                this.modal.maxGroup = maxGroup;
+                this.modal.includedItems = includedItemsStr ? includedItemsStr.split(',').map(s => s.trim()).filter(s => s) : [];
+                this.modal.guideName = guideName || 'Local Guide';
+                this.modal.guideAvatar = guideAvatar || '';
+                this.modal.guideId = guideId || '';
+                this.modal.coverImageUrl = coverImageUrl || '';
+                this.modal.cityArea = cityArea || '';
+                try {
+                    this.modal.timeline = JSON.parse(timelineJsonStr || '[]');
+                } catch(e) {
+                    this.modal.timeline = [];
+                }
             openTourModal(tour) {
                 const pricePerSession = Number(tour?.pricePerSession) || 0;
                 const pricePerPerson = Number(tour?.pricePerPerson) || 0;
@@ -605,9 +630,28 @@
                     ? fmt.format(pricePerSession) + '/tour'
                     : 'Contact';
 
+                this.modal.bookingDate = '';
+                this.modal.bookingGuests = 1;
                 this.showModal = true;
+
+                // Fetch blocked dates and init flatpickr
+                fetch(`/Traveler/GetGuideAvailability?guideId=${guideId}`)
+                    .then(r => r.json())
+                    .then(blockedDates => {
+                        if(this._fp) this._fp.destroy();
+                        this.$nextTick(() => {
+                            this._fp = flatpickr(this.$refs.datePicker, {
+                                minDate: "today",
+                                disable: blockedDates,
+                                onChange: (selectedDates, dateStr) => {
+                                    this.modal.bookingDate = dateStr;
+                                }
+                            });
+                        });
+                    }).catch(err => console.error('Error fetching availability', err));
             },
 
+            async startTourBooking(packageId, guideId) {
             get minimumBookingDate() {
                 const date = new Date();
                 date.setDate(date.getDate() + 1);
@@ -680,6 +724,10 @@
 
                 try {
                     const formData = new FormData();
+                    formData.append('guideId', guideId);
+                    formData.append('packageId', packageId);
+                    formData.append('date', this.modal.bookingDate);
+                    formData.append('guests', this.modal.bookingGuests.toString());
                     formData.append('guideId', this.modal.guideId);
                     formData.append('packageId', this.modal.id);
                     formData.append('date', this.bookingDate);

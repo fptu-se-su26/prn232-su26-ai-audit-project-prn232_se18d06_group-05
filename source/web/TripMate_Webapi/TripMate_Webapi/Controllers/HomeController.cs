@@ -167,7 +167,14 @@ namespace TripMate_Webapi.Controllers
         }
 
         // GET: /Home/Tours — Browse all tours page
-        public async Task<IActionResult> Tours(string? search = null, string? destination = null)
+        public async Task<IActionResult> Tours(
+            string? search = null, 
+            string? destination = null,
+            decimal? minPrice = null,
+            decimal? maxPrice = null,
+            int? minDuration = null,
+            int? maxDuration = null,
+            int? minGroupSize = null)
         {
             try
             {
@@ -192,8 +199,39 @@ namespace TripMate_Webapi.Controllers
                     ).ToList();
                 }
 
+                if (minPrice.HasValue)
+                {
+                    tours = tours.Where(t => (t.PricePerSession > 0 ? t.PricePerSession : t.PricePerPerson) >= minPrice.Value).ToList();
+                }
+
+                if (maxPrice.HasValue)
+                {
+                    tours = tours.Where(t => (t.PricePerSession > 0 ? t.PricePerSession : t.PricePerPerson) <= maxPrice.Value).ToList();
+                }
+
+                if (minDuration.HasValue)
+                {
+                    tours = tours.Where(t => t.DurationHours >= minDuration.Value).ToList();
+                }
+
+                if (maxDuration.HasValue)
+                {
+                    tours = tours.Where(t => t.DurationHours <= maxDuration.Value).ToList();
+                }
+
+                if (minGroupSize.HasValue)
+                {
+                    tours = tours.Where(t => t.MaxGroupSize >= minGroupSize.Value).ToList();
+                }
+
                 ViewBag.Search = search;
                 ViewBag.Destination = destination;
+                ViewBag.MinPrice = minPrice;
+                ViewBag.MaxPrice = maxPrice;
+                ViewBag.MinDuration = minDuration;
+                ViewBag.MaxDuration = maxDuration;
+                ViewBag.MinGroupSize = minGroupSize;
+                
                 return View(tours);
             }
             catch (Exception ex)
