@@ -178,6 +178,7 @@ builder.Services.AddScoped<BookingCompletionService>();
 // registered because existing application code may still resolve it.
 builder.Services.AddHostedService<BookingCompletionWorker>();
 builder.Services.AddHostedService<NotificationOutboxWorker>();
+builder.Services.AddHostedService<EscrowReleaseWorker>();
 
 // ── Survey Service ────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SurveyService>();
