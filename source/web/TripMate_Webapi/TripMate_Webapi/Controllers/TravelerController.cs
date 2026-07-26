@@ -296,18 +296,6 @@ namespace TripMate_Webapi.Controllers
             if (booking == null)
                 return RedirectToAction("Trips");
 
-            // Auto-complete if eligible: confirmed, fully paid, date has passed
-            if (booking.Status == 1 && booking.AmountPaid >= booking.TotalAmount 
-                && booking.BookingDate.Date < DateTime.UtcNow.Date)
-            {
-                try
-                {
-                    await _bookingRepository.UpdateBookingStatusAsync(booking.Id, 2);
-                    booking.Status = 2;
-                }
-                catch { /* non-critical, background worker will catch it */ }
-            }
-
             // Chỉ cho review khi Status = 2 (Completed)
             if (booking.Status != 2)
             {
@@ -373,7 +361,12 @@ namespace TripMate_Webapi.Controllers
         /// Books a specific experience package (tour) — creates booking → redirects to Checkout.
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> BookTour(string guideId, string packageId, DateTime date, int guests = 1)
+        public async Task<IActionResult> BookTour(
+            string guideId,
+            string packageId,
+            DateTime date,
+            int guests = 1,
+            string? notes = null)
         {
             var travelerId = GetCurrentUserId();
             if (string.IsNullOrEmpty(travelerId))
@@ -382,7 +375,13 @@ namespace TripMate_Webapi.Controllers
             if (string.IsNullOrEmpty(guideId) || string.IsNullOrEmpty(packageId))
                 return BadRequest(new { error = "Missing guideId or packageId" });
 
-            var result = await _travelerBookingService.CreateTourBookingAsync(travelerId, guideId, packageId, date, guests);
+            var result = await _travelerBookingService.CreateTourBookingAsync(
+                travelerId,
+                guideId,
+                packageId,
+                date,
+                guests,
+                notes);
             if (!result.Success)
             {
                 return BadRequest(new { error = result.Message });
@@ -397,13 +396,24 @@ namespace TripMate_Webapi.Controllers
         /// Handles redirect from PayOS after payment attempt.
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> PaymentCallback([FromQuery] string bookingId, [FromQuery] string cancel, [FromQuery] string status, [FromQuery] string orderCode)
+        public async Task<IActionResult> PaymentCallback(
+            [FromQuery] string bookingId,
+            [FromQuery] string? orderCode)
         {
             try
             {
                 if (string.IsNullOrEmpty(bookingId)) return RedirectToAction("Dashboard");
 
-                var result = await _travelerBookingService.ProcessPaymentCallbackAsync(bookingId, status, cancel, orderCode);
+                var travelerId = GetCurrentUserId();
+                if (string.IsNullOrWhiteSpace(travelerId))
+                    return Redirect($"{LOGIN_URL}?returnUrl=/Traveler/Dashboard");
+
+                // PayOS redirect query values are not proof of payment. The
+                // verified webhook is the only writer; this action only reads.
+                var result = await _travelerBookingService.GetPaymentReturnStatusAsync(
+                    travelerId,
+                    bookingId,
+                    orderCode);
                 
                 if (result.Success)
                 {
@@ -655,27 +665,6 @@ namespace TripMate_Webapi.Controllers
 
             var bookings = await _bookingRepository.GetBookingsByTravelerAsync(travelerId);
             
-            // ── Opportunistic auto-completion ──────────────────────────────────
-            // If a booking is Confirmed (1), fully paid, and booking date is past,
-            // transition it to Completed (2) right now so the UI is always fresh.
-            var today = DateTime.UtcNow.Date;
-            foreach (var b in bookings)
-            {
-                if (b.Status == 1 && b.AmountPaid >= b.TotalAmount && b.BookingDate.Date < today)
-                {
-                    try
-                    {
-                        await _bookingRepository.UpdateBookingStatusAsync(b.Id, 2);
-                        b.Status = 2;
-                        _logger.LogInformation("[AutoComplete] Booking {BookingId} → Completed on read", b.Id);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogWarning(ex, "[AutoComplete] Failed for booking {BookingId}", b.Id);
-                    }
-                }
-            }
-
             var resultList = new List<object>();
             foreach(var b in bookings)
             {

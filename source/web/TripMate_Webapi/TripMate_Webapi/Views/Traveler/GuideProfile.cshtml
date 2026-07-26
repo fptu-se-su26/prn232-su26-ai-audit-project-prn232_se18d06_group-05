@@ -164,6 +164,7 @@
                                 duration = pkg.DurationHours,
                                 pricePerSession = pkg.PricePerSession,
                                 pricePerPerson = pkg.PricePerPerson ?? 0,
+                                includedGuestCount = pkg.IncludedGuestCount,
                                 maxGroup = pkg.MaxGroupSize,
                                 includedItems = pkg.IncludedItems ?? new List<string>()
                             });
@@ -519,12 +520,14 @@
             
             get computedTotal() {
                 if (this.bookingType === 'tour' && this.modal.pricePerSession > 0) {
-                    return this.modal.pricePerSession;
-                } else if (this.bookingType === 'tour' && this.modal.pricePerPerson > 0) {
-                    return this.modal.pricePerPerson * this.bookingGuests;
-                } else {
-                    return this.basePrice * this.bookingGuests;
+                    const included = Math.max(1, this.modal.includedGuestCount);
+                    const guests = Math.max(1, Number(this.bookingGuests) || 1);
+                    const extraGuests = Math.max(0, guests - included);
+                    return this.modal.pricePerSession
+                        + extraGuests * Math.max(0, this.modal.pricePerPerson);
                 }
+
+                return this.basePrice * this.bookingGuests;
             },
             get platformFee() {
                 return Math.round(this.computedTotal * 0.15);
@@ -537,7 +540,7 @@
             isSaved: false,
             modal: {
                 id: '', title: '', description: '', duration: 0,
-                pricePerSession: 0, pricePerPerson: 0, maxGroup: 6,
+                pricePerSession: 0, pricePerPerson: 0, includedGuestCount: 1, maxGroup: 6,
                 includedItems: [], priceLabel: ''
             },
 
@@ -599,6 +602,7 @@
                 this.modal.duration = Number(tour?.duration) || 0;
                 this.modal.pricePerSession = pricePerSession;
                 this.modal.pricePerPerson = pricePerPerson;
+                this.modal.includedGuestCount = Math.max(1, Number(tour?.includedGuestCount) || 1);
                 this.modal.maxGroup = Number(tour?.maxGroup) || 1;
                 this.modal.includedItems = Array.isArray(tour?.includedItems)
                     ? tour.includedItems.filter(item => typeof item === 'string' && item.trim())
@@ -606,9 +610,7 @@
 
                 const fmt = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
                 if (pricePerSession > 0) {
-                    this.modal.priceLabel = fmt.format(pricePerSession) + '/session';
-                } else if (pricePerPerson > 0) {
-                    this.modal.priceLabel = fmt.format(pricePerPerson) + '/person';
+                    this.modal.priceLabel = fmt.format(pricePerSession) + '/tour';
                 } else {
                     this.modal.priceLabel = 'Contact';
                 }

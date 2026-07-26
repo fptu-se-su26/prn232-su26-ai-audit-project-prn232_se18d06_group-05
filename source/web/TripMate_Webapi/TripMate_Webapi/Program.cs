@@ -94,6 +94,7 @@ builder.Services.AddScoped<ICalendarService, CalendarService>();
 builder.Services.AddScoped<ITripRequestService, TripRequestService>();
 builder.Services.AddScoped<ITripRequestRepository, TripRequestRepository>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IGuideRepository, GuideRepository>();
 builder.Services.AddScoped<IReviewRepository, ReviewRepository>();
 builder.Services.AddScoped<IExperiencePackageRepository, ExperiencePackageRepository>();
@@ -102,6 +103,7 @@ builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<ITravelerBookingService, TravelerBookingService>();
+builder.Services.AddScoped<BookingCreationService>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();
@@ -117,6 +119,7 @@ builder.Services.AddScoped<ProblemReportService>();
 
 // ── PayOS Service ─────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IPayOSService, PayOSService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 
 // ── Chat & Notification Services ─────────────────────────────────────────────
 builder.Services.AddHttpClient<ChatService>();
@@ -130,7 +133,9 @@ builder.Services.AddScoped<BookingReminderService>();
 builder.Services.AddHostedService<BookingReminderWorker>();
 builder.Services.AddHttpClient<BookingCompletionService>();
 builder.Services.AddScoped<BookingCompletionService>();
-builder.Services.AddHostedService<BookingCompletionWorker>();
+// Legacy auto-completion is intentionally disabled until the explicit
+// guide/traveler completion lifecycle is introduced. Keep the service
+// registered because existing application code may still resolve it.
 
 // ── Survey Service ────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SurveyService>();

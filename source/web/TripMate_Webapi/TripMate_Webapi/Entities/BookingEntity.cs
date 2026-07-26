@@ -42,6 +42,48 @@ namespace TripMate_Webapi.Entities
         [Column("amount_paid")]
         public decimal AmountPaid { get; set; } = 0;
 
+        [Column("payment_status")]
+        public string PaymentStatus { get; set; } = "unpaid";
+
+        [Column("scheduled_start_at")]
+        public DateTime? ScheduledStartAt { get; set; }
+
+        [Column("scheduled_end_at")]
+        public DateTime? ScheduledEndAt { get; set; }
+
+        [Column("completion_state")]
+        public string CompletionState { get; set; } = "not_started";
+
+        [Column("guide_completed_at")]
+        public DateTime? GuideCompletedAt { get; set; }
+
+        [Column("traveler_completed_at")]
+        public DateTime? TravelerCompletedAt { get; set; }
+
+        [Column("traveler_confirmation_due_at")]
+        public DateTime? TravelerConfirmationDueAt { get; set; }
+
+        [Column("completion_disputed_at")]
+        public DateTime? CompletionDisputedAt { get; set; }
+
+        [Column("completion_dispute_reason")]
+        public string? CompletionDisputeReason { get; set; }
+
+        [Column("payout_status")]
+        public string PayoutStatus { get; set; } = "held";
+
+        [Column("payout_eligible_at")]
+        public DateTime? PayoutEligibleAt { get; set; }
+
+        [Column("payout_released_at")]
+        public DateTime? PayoutReleasedAt { get; set; }
+
+        [Column("payout_failure_reason")]
+        public string? PayoutFailureReason { get; set; }
+
+        [Column("escrow_released")]
+        public bool EscrowReleased { get; set; }
+
         [Column("traveler_notes")]
         public string? TravelerNotes { get; set; }
 
