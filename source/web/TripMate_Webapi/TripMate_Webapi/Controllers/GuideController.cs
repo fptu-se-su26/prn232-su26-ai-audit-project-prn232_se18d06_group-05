@@ -748,6 +748,41 @@ namespace TripMate_Webapi.Controllers
             }
         }
 
+        // POST: /Guide/CompleteBooking/{id}
+        [HttpPost("/Guide/CompleteBooking/{id}")]
+        [Authorize(Roles = "guide")]
+        public async Task<IActionResult> CompleteBooking(string id)
+        {
+            try
+            {
+                var guideProfileId = await GetCurrentGuideProfileIdAsync();
+                if (string.IsNullOrEmpty(guideProfileId)) return Unauthorized();
+
+                var result = await _bookingService.MarkGuideBookingCompletedAsync(id, guideProfileId);
+                return Ok(new
+                {
+                    success = true,
+                    message = result.AlreadySubmitted
+                        ? "Completion was already submitted. The traveler has been notified."
+                        : "Trip completion submitted. The traveler has been notified by email.",
+                    completionState = result.CompletionState,
+                    guideCompletedAt = result.GuideCompletedAt,
+                    travelerConfirmationDueAt = result.TravelerConfirmationDueAt,
+                    alreadySubmitted = result.AlreadySubmitted
+                });
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden,
+                    new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error submitting Guide completion for booking {BookingId}", id);
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+        }
+
         // GET: /Guide/Messages
         public IActionResult Messages()
         {

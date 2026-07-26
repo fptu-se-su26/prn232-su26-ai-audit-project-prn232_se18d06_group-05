@@ -142,8 +142,10 @@
                         <span x-show="b.Status === 'Pending'" class="flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-md text-[11px] font-bold border border-amber-100 uppercase tracking-wide">
                             <span class="material-symbols-outlined text-[14px]">schedule</span> Pending
                         </span>
-                        <span x-show="b.Status === 'Confirmed'" class="flex items-center gap-1 bg-green-50 text-green-700 px-2.5 py-1 rounded-md text-[11px] font-bold border border-green-100 uppercase tracking-wide">
-                            <span class="material-symbols-outlined text-[14px]">check_circle</span> Confirmed
+                        <span x-show="b.Status === 'Confirmed'" class="flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold border uppercase tracking-wide"
+                              :class="b.CompletionState === 'awaiting_traveler' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-green-50 text-green-700 border-green-100'">
+                            <span class="material-symbols-outlined text-[14px]" x-text="b.CompletionState === 'awaiting_traveler' ? 'hourglass_top' : 'check_circle'"></span>
+                            <span x-text="b.CompletionState === 'awaiting_traveler' ? 'Awaiting traveler' : 'Confirmed'"></span>
                         </span>
                         <span x-show="b.Status === 'Completed'" class="flex items-center gap-1 bg-gray-100 text-gray-600 px-2.5 py-1 rounded-md text-[11px] font-bold border border-gray-200 uppercase tracking-wide">
                             <span class="material-symbols-outlined text-[14px]">done_all</span> Completed
@@ -246,9 +248,23 @@
                                 
                                 <!-- Confirmed Actions -->
                                 <template x-if="b.Status === 'Confirmed'">
-                                    <a href="/Guide/Messages" class="flex-grow bg-blue-50 border border-blue-100 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-xl text-sm font-bold transition-colors text-center flex items-center justify-center gap-1 whitespace-nowrap">
-                                        <span class="material-symbols-outlined text-[16px]">chat</span> Message
-                                    </a>
+                                    <div class="flex flex-grow gap-2">
+                                        <button x-show="b.CanMarkComplete"
+                                                @@click="openCompletionModal(b)"
+                                                class="flex-grow bg-primary text-white hover:bg-primary-dark px-3 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-1 whitespace-nowrap">
+                                            <span class="material-symbols-outlined text-[16px]">flag</span> Mark complete
+                                        </button>
+                                        <div x-show="b.CompletionState === 'awaiting_traveler'"
+                                             class="flex flex-grow items-center justify-center gap-1.5 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-bold text-blue-700">
+                                            <span class="material-symbols-outlined text-[16px]">hourglass_top</span>
+                                            Awaiting traveler
+                                        </div>
+                                        <a x-show="!b.CanMarkComplete && b.CompletionState !== 'awaiting_traveler'"
+                                           href="/Guide/Messages"
+                                           class="flex-grow bg-blue-50 border border-blue-100 text-blue-700 hover:bg-blue-100 px-3 py-2 rounded-xl text-sm font-bold transition-colors text-center flex items-center justify-center gap-1 whitespace-nowrap">
+                                            <span class="material-symbols-outlined text-[16px]">chat</span> Message
+                                        </a>
+                                    </div>
                                 </template>
 
                                 <!-- Expired State -->
@@ -330,7 +346,9 @@
                                     <div class="flex justify-between items-start">
                                         <span class="font-mono text-sm font-bold text-gray-500" x-text="'#' + b.Id"></span>
                                         <span x-show="b.Status === 'Pending'" class="bg-amber-100 text-amber-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-amber-200">Pending</span>
-                                        <span x-show="b.Status === 'Confirmed'" class="bg-green-100 text-green-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-green-200">Confirmed</span>
+                                        <span x-show="b.Status === 'Confirmed'" class="px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border"
+                                              :class="b.CompletionState === 'awaiting_traveler' ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-green-100 text-green-800 border-green-200'"
+                                              x-text="b.CompletionState === 'awaiting_traveler' ? 'Awaiting traveler' : 'Confirmed'"></span>
                                         <span x-show="b.Status === 'Completed'" class="bg-gray-100 text-gray-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-gray-200">Completed</span>
                                         <span x-show="b.Status === 'Cancelled'" class="bg-red-100 text-red-800 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-red-200">Cancelled</span>
                                         <span x-show="b.Status === 'Expired'" class="bg-gray-100 text-gray-600 px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wide border border-gray-200">Expired</span>
@@ -389,6 +407,13 @@
                                                         <span class="material-symbols-outlined text-[18px] text-primary">group</span> <span x-text="b.Guests + (b.Guests === 1 ? ' guest' : ' guests')"></span>
                                                     </p>
                                                 </div>
+                                                <div x-show="b.ScheduledEndAt">
+                                                    <p class="text-sm text-gray-500 mb-1">Scheduled End</p>
+                                                    <p class="font-medium text-gray-900 flex items-center gap-1.5">
+                                                        <span class="material-symbols-outlined text-[18px] text-primary">event_available</span>
+                                                        <span x-text="formatDateTime(b.ScheduledEndAt)"></span>
+                                                    </p>
+                                                </div>
                                             </div>
                                             <div x-show="b.Note" class="pt-4 border-t border-gray-200">
                                                 <p class="text-sm text-gray-500 mb-1">Traveler Notes</p>
@@ -404,7 +429,7 @@
                                             <div class="space-y-3 text-sm">
                                                 <div class="flex justify-between text-gray-600">
                                                     <span>Total paid by traveler</span>
-                                                    <span class="font-medium" x-text="formatCurrency(b.TotalAmount)"></span>
+                                                    <span class="font-medium" x-text="formatCurrency(b.AmountPaid || 0)"></span>
                                                 </div>
                                                 <div class="flex justify-between text-red-500">
                                                     <span>Platform fee (15%)</span>
@@ -415,10 +440,13 @@
                                                     <span class="text-xl font-black text-green-600" x-text="formatCurrency(b.NetEarnings)"></span>
                                                 </div>
                                             </div>
-                                            <div class="mt-4 pt-4 border-t flex items-center gap-2 text-sm p-3 rounded-lg font-medium"
-                                                 :class="b.Status === 'Expired' ? 'border-gray-200 bg-gray-50 text-gray-600' : 'border-green-100 bg-green-50 text-green-700'">
-                                                <span class="material-symbols-outlined text-[20px]" x-text="b.Status === 'Expired' ? 'hourglass_disabled' : 'verified_user'"></span>
-                                                <span x-text="b.Status === 'Expired' ? 'Booking expired — no revenue recorded' : 'Paid (held until the tour is completed)'"></span>
+                                            <div class="mt-4 pt-4 border-t flex items-start gap-2 text-sm p-3 rounded-lg font-medium"
+                                                 :class="paymentStatusClass(b)">
+                                                <span class="material-symbols-outlined text-[20px]" x-text="paymentStatusIcon(b)"></span>
+                                                <div>
+                                                    <p x-text="paymentStatusText(b)"></p>
+                                                    <p x-show="Number(b.AmountPaid || 0) > 0 && b.PayoutStatus !== 'paid'" class="mt-0.5 text-xs font-normal opacity-80">Funds remain held until both sides confirm completion.</p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -434,7 +462,7 @@
                                                     <span class="material-symbols-outlined text-[14px]">done</span>
                                                 </div>
                                                 <p class="text-sm font-bold text-gray-900">Traveler booked</p>
-                                                <p class="text-xs text-gray-500">13/06/2026 10:23</p>
+                                                <p class="text-xs text-gray-500" x-text="formatDateTime(b.CreatedAt)"></p>
                                             </div>
                                             
                                             <div class="relative">
@@ -443,16 +471,17 @@
                                                 </div>
                                                 <p class="text-sm font-bold" :class="b.Status === 'Pending' ? 'text-amber-700' : (b.Status === 'Cancelled' ? 'text-red-700' : (b.Status === 'Expired' ? 'text-gray-600' : 'text-gray-900'))" x-text="b.Status === 'Pending' ? 'Waiting for your decision' : (b.Status === 'Cancelled' ? 'Rejected' : (b.Status === 'Expired' ? 'Response window expired' : 'You confirmed'))"></p>
                                                 <p class="text-xs text-gray-500" x-show="b.Status === 'Expired'">The 24-hour response window has ended.</p>
-                                                <p class="text-xs text-gray-500" x-show="b.Status !== 'Pending' && b.Status !== 'Expired'">13/06/2026 11:00</p>
+                                                <p class="text-xs text-gray-500" x-show="b.Status !== 'Pending' && b.Status !== 'Expired'">Booking accepted by guide</p>
                                                 <div x-show="b.Status === 'Pending'" class="mt-2 text-xs font-bold text-white bg-amber-500 inline-block px-2 py-1 rounded-md" x-text="formatCountdown(b.SecondsRemaining)"></div>
                                             </div>
 
-                                            <div class="relative opacity-50">
-                                                <div class="absolute -left-[31px] w-7 h-7 bg-gray-100 text-gray-400 rounded-full flex items-center justify-center ring-4 ring-white">
-                                                    <span class="material-symbols-outlined text-[14px]">flag</span>
+                                            <div class="relative" :class="completionTimelineClass(b)">
+                                                <div class="absolute -left-[31px] w-7 h-7 rounded-full flex items-center justify-center ring-4 ring-white"
+                                                     :class="completionTimelineDotClass(b)">
+                                                    <span class="material-symbols-outlined text-[14px]" x-text="completionTimelineIcon(b)"></span>
                                                 </div>
-                                                <p class="text-sm font-bold text-gray-900">Tour completed</p>
-                                                <p class="text-xs text-gray-500">Expected: <span x-text="b.Date"></span></p>
+                                                <p class="text-sm font-bold" x-text="completionTimelineTitle(b)"></p>
+                                                <p class="text-xs text-gray-500" x-text="completionTimelineDescription(b)"></p>
                                             </div>
                                         </div>
                                     </div>
@@ -473,10 +502,77 @@
                                         </button>
                                     </div>
                                 </template>
+                                <template x-if="selectedBooking && selectedBooking.Status === 'Confirmed'">
+                                    <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 p-3 z-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                                        <button x-show="selectedBooking.CanMarkComplete"
+                                                @@click="openCompletionModal(selectedBooking)"
+                                                class="w-full py-2.5 bg-gradient-to-r from-primary to-orange-500 text-white rounded-xl text-sm font-bold hover:from-primary-dark hover:to-primary transition-colors shadow-md flex items-center justify-center gap-2">
+                                            <span class="material-symbols-outlined text-[18px]">flag</span> Mark trip as completed
+                                        </button>
+                                        <div x-show="selectedBooking.CompletionState === 'awaiting_traveler'"
+                                             class="w-full py-2.5 rounded-xl border border-blue-100 bg-blue-50 text-blue-700 text-sm font-bold flex items-center justify-center gap-2">
+                                            <span class="material-symbols-outlined text-[18px]">hourglass_top</span> Waiting for traveler confirmation
+                                        </div>
+                                        <div x-show="!selectedBooking.CanMarkComplete && selectedBooking.CompletionState !== 'awaiting_traveler'"
+                                             class="flex items-center justify-center gap-2 py-2 text-sm text-gray-500">
+                                            <span class="material-symbols-outlined text-[18px]">schedule</span>
+                                            Available <span x-text="completionAvailableText(selectedBooking)"></span>
+                                        </div>
+                                    </div>
+                                </template>
                             </template>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Guide completion confirmation -->
+    <div x-show="isCompletionModalOpen" style="display: none;" class="fixed inset-0 z-[120] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="completion-dialog-title">
+        <div class="absolute inset-0 bg-gray-900/60 backdrop-blur-sm" @@click="closeCompletionModal()"></div>
+        <div x-show="isCompletionModalOpen"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             class="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div class="border-b border-gray-100 px-6 py-5">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-start gap-3">
+                        <div class="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-orange-50 text-primary">
+                            <span class="material-symbols-outlined">flag</span>
+                        </div>
+                        <div>
+                            <h2 id="completion-dialog-title" class="text-lg font-bold text-gray-900">Confirm trip completion</h2>
+                            <p class="mt-1 text-sm text-gray-500" x-text="completionBooking?.TourName"></p>
+                        </div>
+                    </div>
+                    <button type="button" @@click="closeCompletionModal()" :disabled="isSubmittingCompletion" class="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:opacity-50">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+            </div>
+            <div class="space-y-4 px-6 py-5">
+                <div x-show="completionBooking && isWithinFinalHour(completionBooking)" class="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                    <span class="material-symbols-outlined text-[20px]">schedule</span>
+                    <p>This trip is still within its final scheduled hour. Only confirm if the experience has actually finished.</p>
+                </div>
+                <p class="text-sm leading-relaxed text-gray-600">
+                    The traveler will receive an email asking them to confirm completion and leave a review. Your payout stays on hold until the completion flow is resolved.
+                </p>
+                <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-gray-200 p-4 hover:bg-gray-50">
+                    <input type="checkbox" x-model="completionAcknowledged" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary">
+                    <span class="text-sm font-medium text-gray-700">I confirm that I delivered this trip as agreed.</span>
+                </label>
+            </div>
+            <div class="flex gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4">
+                <button type="button" @@click="closeCompletionModal()" :disabled="isSubmittingCompletion" class="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-bold text-gray-700 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
+                <button type="button" @@click="submitCompletion()" :disabled="!completionAcknowledged || isSubmittingCompletion" class="flex-[1.4] rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50">
+                    <span x-text="isSubmittingCompletion ? 'Submitting...' : 'Confirm & notify traveler'"></span>
+                </button>
             </div>
         </div>
     </div>
@@ -493,6 +589,10 @@
                 sortOrder: 'desc',
                 isDetailOpen: false,
                 selectedBooking: null,
+                isCompletionModalOpen: false,
+                completionBooking: null,
+                completionAcknowledged: false,
+                isSubmittingCompletion: false,
                 countdownTimer: null,
 
                 toggleSort() {
@@ -563,6 +663,7 @@
                         if (b.Status === 'Pending' && Number(b.SecondsRemaining) <= 0) {
                             this.markBookingExpired(b);
                         }
+                        this.refreshCompletionAvailability(b);
                     });
                     this.updateSidebarBadge();
 
@@ -583,6 +684,7 @@
                                     pendingCountChanged = true;
                                 }
                             }
+                            this.refreshCompletionAvailability(b);
                         });
 
                         if (pendingCountChanged) this.updateSidebarBadge();
@@ -620,6 +722,106 @@
                     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(val);
                 },
 
+                formatDateTime(value) {
+                    if (!value) return 'Not available';
+                    const date = new Date(value);
+                    if (Number.isNaN(date.getTime())) return 'Not available';
+                    return new Intl.DateTimeFormat('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }).format(date);
+                },
+
+                refreshCompletionAvailability(booking) {
+                    if (!booking || booking.Status !== 'Confirmed') return;
+                    if (booking.CompletionState === 'awaiting_traveler') {
+                        booking.CanMarkComplete = false;
+                        return;
+                    }
+                    if (!['not_started', 'awaiting_guide', '', null, undefined].includes(booking.CompletionState)) {
+                        booking.CanMarkComplete = false;
+                        return;
+                    }
+                    const scheduledEnd = new Date(booking.ScheduledEndAt).getTime();
+                    booking.CanMarkComplete = Number.isFinite(scheduledEnd)
+                        && Date.now() >= scheduledEnd - (60 * 60 * 1000);
+                },
+
+                completionAvailableText(booking) {
+                    if (!booking?.ScheduledEndAt) return 'after the trip ends';
+                    const unlockAt = new Date(new Date(booking.ScheduledEndAt).getTime() - (60 * 60 * 1000));
+                    return `from ${this.formatDateTime(unlockAt)}`;
+                },
+
+                isWithinFinalHour(booking) {
+                    if (!booking?.ScheduledEndAt) return false;
+                    return Date.now() < new Date(booking.ScheduledEndAt).getTime();
+                },
+
+                paymentStatusText(booking) {
+                    const status = String(booking?.PaymentStatus || 'unpaid').toLowerCase();
+                    if (status === 'paid') return 'Paid in full';
+                    if (status === 'deposit_paid') return 'Deposit received';
+                    if (status === 'refunded') return 'Payment refunded';
+                    if (status === 'partially_refunded') return 'Payment partially refunded';
+                    return Number(booking?.AmountPaid || 0) > 0 ? 'Partial payment received' : 'No payment received';
+                },
+
+                paymentStatusClass(booking) {
+                    const status = String(booking?.PaymentStatus || 'unpaid').toLowerCase();
+                    if (status === 'paid') return 'border-green-100 bg-green-50 text-green-700';
+                    if (status === 'deposit_paid') return 'border-blue-100 bg-blue-50 text-blue-700';
+                    if (status.includes('refund')) return 'border-gray-200 bg-gray-50 text-gray-600';
+                    return 'border-amber-100 bg-amber-50 text-amber-700';
+                },
+
+                paymentStatusIcon(booking) {
+                    const status = String(booking?.PaymentStatus || 'unpaid').toLowerCase();
+                    if (status === 'paid') return 'verified_user';
+                    if (status === 'deposit_paid') return 'account_balance_wallet';
+                    if (status.includes('refund')) return 'undo';
+                    return 'payments';
+                },
+
+                completionTimelineClass(booking) {
+                    if (booking?.Status === 'Completed' || booking?.CompletionState === 'awaiting_traveler' || booking?.CanMarkComplete) return '';
+                    return 'opacity-50';
+                },
+
+                completionTimelineDotClass(booking) {
+                    if (booking?.Status === 'Completed') return 'bg-green-100 text-green-600';
+                    if (booking?.CompletionState === 'awaiting_traveler') return 'bg-blue-100 text-blue-600';
+                    if (booking?.CanMarkComplete) return 'bg-orange-100 text-primary';
+                    return 'bg-gray-100 text-gray-400';
+                },
+
+                completionTimelineIcon(booking) {
+                    if (booking?.Status === 'Completed') return 'done_all';
+                    if (booking?.CompletionState === 'awaiting_traveler') return 'hourglass_top';
+                    return 'flag';
+                },
+
+                completionTimelineTitle(booking) {
+                    if (booking?.Status === 'Completed') return 'Trip completed';
+                    if (booking?.CompletionState === 'awaiting_traveler') return 'Waiting for traveler confirmation';
+                    if (booking?.CanMarkComplete) return 'Ready to confirm completion';
+                    if (booking?.Status === 'Cancelled' || booking?.Status === 'Expired') return 'Completion unavailable';
+                    return 'Trip completion';
+                },
+
+                completionTimelineDescription(booking) {
+                    if (booking?.Status === 'Completed') return 'Completion confirmed';
+                    if (booking?.CompletionState === 'awaiting_traveler') {
+                        return `Submitted ${this.formatDateTime(booking.GuideCompletedAt)} · traveler notified`;
+                    }
+                    if (booking?.CanMarkComplete) return 'You can now confirm that the trip has finished.';
+                    if (booking?.Status === 'Cancelled' || booking?.Status === 'Expired') return 'This booking will not enter the completion flow.';
+                    return `Available ${this.completionAvailableText(booking)}`;
+                },
+
                 openDetail(booking) {
                     this.selectedBooking = booking;
                     this.isDetailOpen = true;
@@ -632,6 +834,65 @@
                         this.selectedBooking = null;
                         document.body.style.overflow = 'auto';
                     }, 300);
+                },
+
+                openCompletionModal(booking) {
+                    this.refreshCompletionAvailability(booking);
+                    if (!booking?.CanMarkComplete) {
+                        showToast('warning', booking?.CompletionState === 'awaiting_traveler'
+                            ? 'Completion has already been submitted for traveler confirmation.'
+                            : `Completion becomes available ${this.completionAvailableText(booking)}.`);
+                        return;
+                    }
+                    this.completionBooking = booking;
+                    this.completionAcknowledged = false;
+                    this.isCompletionModalOpen = true;
+                    document.body.style.overflow = 'hidden';
+                },
+
+                closeCompletionModal() {
+                    if (this.isSubmittingCompletion) return;
+                    this.isCompletionModalOpen = false;
+                    this.completionAcknowledged = false;
+                    setTimeout(() => {
+                        this.completionBooking = null;
+                        document.body.style.overflow = this.isDetailOpen ? 'hidden' : 'auto';
+                    }, 200);
+                },
+
+                async submitCompletion() {
+                    const booking = this.completionBooking;
+                    if (!booking || !this.completionAcknowledged || this.isSubmittingCompletion) return;
+
+                    this.isSubmittingCompletion = true;
+                    try {
+                        const response = await fetch(`/Guide/CompleteBooking/${booking.Id}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const contentType = response.headers.get('content-type') || '';
+                        const result = contentType.includes('application/json')
+                            ? await response.json()
+                            : { success: false, message: 'The server returned an unexpected response.' };
+
+                        if (!response.ok || !result.success) {
+                            throw new Error(result.message || 'Unable to submit trip completion.');
+                        }
+
+                        booking.CompletionState = result.completionState || 'awaiting_traveler';
+                        booking.GuideCompletedAt = result.guideCompletedAt;
+                        booking.TravelerConfirmationDueAt = result.travelerConfirmationDueAt;
+                        booking.CanMarkComplete = false;
+                        this.isCompletionModalOpen = false;
+                        this.completionAcknowledged = false;
+                        this.completionBooking = null;
+                        document.body.style.overflow = this.isDetailOpen ? 'hidden' : 'auto';
+                        showToast('success', result.message || 'Trip completion submitted. The traveler has been notified.');
+                    } catch (error) {
+                        showToast('error', error.message || 'Unable to connect to the server.');
+                    } finally {
+                        this.isSubmittingCompletion = false;
+                    }
                 },
 
                 updateSidebarBadge() {
@@ -667,6 +928,7 @@
                             const result = await response.json();
                             if (result.success) {
                                 booking.Status = 'Confirmed';
+                                this.refreshCompletionAvailability(booking);
                                 this.updateSidebarBadge();
                                 showToast('success', 'Booking confirmed successfully. The chat channel is now open.');
                                 if (this.selectedBooking && this.selectedBooking.Id === id) {
