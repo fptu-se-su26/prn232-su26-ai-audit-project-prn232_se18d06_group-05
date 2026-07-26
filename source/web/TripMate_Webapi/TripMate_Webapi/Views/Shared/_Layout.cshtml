@@ -108,7 +108,7 @@
                 </a>
             </nav>
             <div id="headerTools" class="flex items-center gap-6 shrink-0">
-                <a class="text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap font-bold" href="/Home/BecomeAGuide">Become a guide</a>
+                <a id="becomeGuideLink" class="text-on-surface-variant hover:text-primary transition-colors whitespace-nowrap font-bold" href="/Home/BecomeAGuide">Become a guide</a>
                 
                 <div class="flex items-center gap-4">
                     <div class="relative flex items-center justify-center" x-data="notificationDropdown()" x-show="isLoggedIn" style="display: none;" @@auth-changed.window="isLoggedIn = $event.detail.isLoggedIn; if(isLoggedIn) { token = localStorage.getItem('accessToken') || localStorage.getItem('jwt_token'); init() }">
@@ -236,6 +236,14 @@
                 // Dispatch auth-changed event for Alpine components (like notification bell)
                 document.dispatchEvent(new CustomEvent('auth-changed', { detail: { isLoggedIn: true } }));
                 
+                // Hide Become a guide link if user is a traveler
+                if (userRole && userRole.toLowerCase() === 'traveler') {
+                    const becomeGuideLink = document.getElementById('becomeGuideLink');
+                    if (becomeGuideLink) {
+                        becomeGuideLink.style.display = 'none';
+                    }
+                }
+
                 // User is logged in
                 const atChar = String.fromCharCode(64); // at symbol
                 const atIndex = userEmail.indexOf(atChar);
