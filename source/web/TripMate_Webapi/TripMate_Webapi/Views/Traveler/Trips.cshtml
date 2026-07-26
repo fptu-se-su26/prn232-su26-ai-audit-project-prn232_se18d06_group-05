@@ -465,25 +465,7 @@
         }
     }
 
-    async function deleteBooking(id) {
-        if (!confirm('Are you sure you want to delete this cancelled booking from your history?')) return;
-        
-        try {
-            const res = await fetch(`/Traveler/DeleteBookingAjax?id=${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (res.ok) {
-                showToast('Booking deleted.', true);
-                loadBookings();
-            } else {
-                showToast('Failed to delete booking.', false);
-            }
-        } catch(err) {
-            console.error(err);
-            showToast('Connection error.', false);
-        }
-    }
+
 
     async function completeTour(id) {
         Swal.fire({

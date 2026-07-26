@@ -249,6 +249,11 @@
                             <span class="material-symbols-outlined">star</span> Write a Review
                         </a>
                         }
+                        @if(Model.Status == 1 && Model.AmountPaid >= Model.TotalAmount) {
+                        <button onclick="reportGuide('@Model.Id')" class="w-full text-orange-500 bg-orange-50 hover:bg-orange-100 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
+                            <span class="material-symbols-outlined">report</span> Report Guide
+                        </button>
+                        }
                         <a href="/Traveler/GuideProfile/@Model.GuideProfile?.Id" class="w-full border-2 border-outline-variant text-on-surface-variant hover:border-primary hover:text-primary py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
                             <span class="material-symbols-outlined">person</span> View Profile
                         </a>
@@ -453,5 +458,47 @@
                 }
             }
         });
+    }
+
+    async function reportGuide(bookingId) {
+        const token = localStorage.getItem('accessToken');
+        const { value: reason } = await Swal.fire({
+            title: 'Report Guide',
+            input: 'textarea',
+            inputLabel: 'Why are you reporting this guide?',
+            inputPlaceholder: 'Type your reason here...',
+            inputAttributes: {
+                'aria-label': 'Type your reason here'
+            },
+            showCancelButton: true,
+            confirmButtonColor: '#ff7a00',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'You need to write something!'
+                }
+            }
+        });
+
+        if (reason) {
+            try {
+                const res = await fetch('/Traveler/ReportGuideAjax', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ bookingId, reason })
+                });
+
+                if (res.ok) {
+                    Swal.fire('Reported!', 'Your report has been submitted to the admin team.', 'success');
+                } else {
+                    Swal.fire('Error', 'Failed to submit report.', 'error');
+                }
+            } catch(err) {
+                console.error(err);
+                Swal.fire('Error', 'Connection error.', 'error');
+            }
+        }
     }
 </script>
