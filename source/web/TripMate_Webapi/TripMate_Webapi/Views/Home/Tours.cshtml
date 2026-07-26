@@ -53,7 +53,7 @@
                 {
                     var guideName = tour.GuideProfile?.Profile?.FullName ?? "Local Guide";
                     var guideCityArea = tour.GuideProfile?.CityArea ?? "Vietnam";
-                    var guideCover = tour.GuideProfile?.CoverPhotoUrl ?? "";
+                    var tourCover = tour.CoverImageUrl ?? "";
                     var guideAvatar = tour.GuideProfile?.Profile?.AvatarUrl ?? "";
                     var guideId = tour.GuideProfileId ?? "";
                     var priceLabel = tour.PricePerSession > 0
@@ -80,9 +80,9 @@
                          @@click="openTourModal(JSON.parse($event.currentTarget.dataset.tourModal))">
                         <!-- Cover Image -->
                         <div class="h-52 relative overflow-hidden bg-gray-100">
-                            @if (!string.IsNullOrEmpty(guideCover))
+                            @if (!string.IsNullOrEmpty(tourCover))
                             {
-                                <img src="@guideCover" alt="@tour.Title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                <img src="@tourCover" alt="@tour.Title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                             }
                             else
                             {

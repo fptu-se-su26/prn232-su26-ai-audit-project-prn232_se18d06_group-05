@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Net;
 
 namespace TripMate_WebAPI.Services;
 
@@ -15,15 +16,17 @@ public class ChatService
     private readonly HttpClient _http;
     private readonly string _supabaseUrl;
     private readonly string _anonKey;
+    private readonly ILogger<ChatService> _logger;
 
     private static readonly JsonSerializerOptions _json = new()
     { PropertyNameCaseInsensitive = true };
 
-    public ChatService(HttpClient http, IConfiguration config)
+    public ChatService(HttpClient http, IConfiguration config, ILogger<ChatService> logger)
     {
         _http = http;
         _supabaseUrl = config["Supabase:Url"]!;
         _anonKey = config["Supabase:AnonKey"]!;
+        _logger = logger;
     }
 
 internal class ProfileRow
@@ -39,8 +42,13 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
     // ── Resolve a participant conversation to a backing booking ───────────────
 
     public async Task<ConversationDto> GetOrCreateConversationAsync(
-        string travelerId, string guideId, string bookingId, string userToken)
+        string currentUserId, string guideId, string bookingId, string userToken)
     {
+        var participants = await EnsureChatBookingParticipantAsync(
+            bookingId, currentUserId, userToken);
+        if (!SameUserId(participants.GuideUserId, guideId))
+            throw new UnauthorizedAccessException("The requested guide does not belong to this booking.");
+
         // In the new schema, a "conversation" is just a booking_id grouping.
         // We return metadata about the conversation.
         // Check if any messages exist for this booking
@@ -54,8 +62,8 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
 
         return new ConversationDto(
             BookingId: bookingId,
-            TravelerId: travelerId,
-            GuideId: guideId,
+            TravelerId: participants.TravelerId,
+            GuideId: participants.GuideUserId,
             CreatedAt: createdAt
         );
     }
@@ -65,11 +73,29 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
     public async Task<List<ConversationDto>> GetMyConversationsAsync(
         string userId, string userToken, string? userRole = null)
     {
+        var summaries = await TryGetConversationSummariesAsync(userToken);
+        if (summaries is not null)
+        {
+            return summaries.Select(row => new ConversationDto(
+                row.BookingId ?? "",
+                row.TravelerId ?? "",
+                row.GuideId ?? "",
+                row.CreatedAt,
+                row.ParticipantId,
+                row.ParticipantName,
+                row.ParticipantAvatarUrl,
+                row.ParticipantRole,
+                row.LastMessage,
+                row.LastMessageAt,
+                checked((int)Math.Min(row.UnreadCount, int.MaxValue))))
+                .ToList();
+        }
+
         // Get all messages where I'm sender or receiver, ordered by most recent
         var url = $"{_supabaseUrl}/rest/v1/chat_messages" +
                   $"?or=(sender_id.eq.{userId},receiver_id.eq.{userId})" +
                   $"&order=sent_at.desc" +
-                  $"&select=booking_id,sender_id,receiver_id,sent_at";
+                  $"&select=booking_id,sender_id,receiver_id,message_text,is_read,sent_at";
 
         var messages = await GetAsync<List<ChatMessageRow>>(url, userToken) ?? [];
 
@@ -96,12 +122,41 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
                     BookingId: first.BookingId ?? "",
                     TravelerId: travelerId,
                     GuideId: guideId,
-                    CreatedAt: g.Min(m => m.SentAt)
+                    CreatedAt: g.Min(m => m.SentAt),
+                    ParticipantId: otherId,
+                    LastMessage: first.MessageText,
+                    LastMessageAt: first.SentAt,
+                    UnreadCount: g.Count(m => !m.IsRead && SameUserId(m.ReceiverId, userId))
                 );
             })
             .ToList();
 
         return conversations;
+    }
+
+    private async Task<List<ChatConversationSummaryRow>?> TryGetConversationSummariesAsync(string userToken)
+    {
+        using var request = BuildRequest(
+            HttpMethod.Post,
+            $"{_supabaseUrl}/rest/v1/rpc/get_chat_conversation_summaries",
+            userToken);
+        request.Content = new StringContent("{}", Encoding.UTF8, "application/json");
+        using var response = await _http.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (response.IsSuccessStatusCode)
+            return JsonSerializer.Deserialize<List<ChatConversationSummaryRow>>(content, _json) ?? [];
+
+        if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.BadRequest)
+        {
+            _logger.LogWarning(
+                "Chat summary RPC is unavailable; using the legacy conversation query. Apply Infrastructure/Sql/chat_conversation_summaries.sql. Status: {StatusCode}",
+                response.StatusCode);
+            return null;
+        }
+
+        EnsureSuccess(response, content);
+        return null;
     }
 
     public async Task<int> GetUnreadConversationCountAsync(string userId, string userToken)
@@ -123,8 +178,10 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
     // ── Get messages by booking_id ────────────────────────────────────────────
 
     public async Task<List<MessageDto>> GetMessagesAsync(
-        string bookingId, string userToken, int limit = 50, int offset = 0)
+        string bookingId, string userId, string userToken, int limit = 50, int offset = 0)
     {
+        await EnsureChatBookingParticipantAsync(bookingId, userId, userToken);
+        (limit, offset) = ChatInputPolicy.NormalizePage(limit, offset);
         // Return newest-first page using desc ordering. Client will reverse to chronological display.
         var url = $"{_supabaseUrl}/rest/v1/chat_messages" +
                   $"?booking_id=eq.{bookingId}" +
@@ -146,6 +203,8 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
     public async Task<List<MessageDto>> GetMessagesWithUserAsync(
         string userId, string otherUserId, string userToken, int limit = 50, int offset = 0)
     {
+        await EnsureChatParticipantsHaveBookingAsync(userId, otherUserId, userToken);
+        (limit, offset) = ChatInputPolicy.NormalizePage(limit, offset);
         var url = $"{_supabaseUrl}/rest/v1/chat_messages" +
                   $"?or=(and(sender_id.eq.{userId},receiver_id.eq.{otherUserId})," +
                   $"and(sender_id.eq.{otherUserId},receiver_id.eq.{userId}))" +
@@ -204,6 +263,73 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
     public async Task EnsureChatBookingIsConfirmedAsync(
         string bookingId, string firstUserId, string secondUserId, string userToken)
     {
+        var participants = await GetBookingParticipantsAsync(bookingId, userToken);
+        if (participants.Status != 1)
+        {
+            throw new InvalidOperationException(
+                "Chat is available only while at least one booking with this person is confirmed.");
+        }
+
+        var participantsMatch =
+            (SameUserId(participants.TravelerId, firstUserId) && SameUserId(participants.GuideUserId, secondUserId)) ||
+            (SameUserId(participants.TravelerId, secondUserId) && SameUserId(participants.GuideUserId, firstUserId));
+
+        if (!participantsMatch)
+            throw new UnauthorizedAccessException("The confirmed booking does not belong to these chat participants.");
+    }
+
+    /// <summary>
+    /// Verifies read access to a booking without requiring it to remain confirmed.
+    /// Historical participants retain access to their previous messages.
+    /// </summary>
+    public async Task<ChatBookingParticipants> EnsureChatBookingParticipantAsync(
+        string bookingId, string userId, string userToken)
+    {
+        var participants = await GetBookingParticipantsAsync(bookingId, userToken);
+        if (!SameUserId(participants.TravelerId, userId) &&
+            !SameUserId(participants.GuideUserId, userId))
+        {
+            throw new UnauthorizedAccessException("You are not a participant in this booking conversation.");
+        }
+
+        return participants;
+    }
+
+    /// <summary>
+    /// Verifies that two participant IDs have at least one traveler-guide booking.
+    /// The booking may be historical because this check protects combined reads.
+    /// </summary>
+    public async Task EnsureChatParticipantsHaveBookingAsync(
+        string userId, string otherUserId, string userToken)
+    {
+        if (!Guid.TryParse(userId, out _) || !Guid.TryParse(otherUserId, out _) || SameUserId(userId, otherUserId))
+            throw new UnauthorizedAccessException("Invalid chat participant relationship.");
+
+        var userIds = $"{Uri.EscapeDataString(userId)},{Uri.EscapeDataString(otherUserId)}";
+        var guideUrl = $"{_supabaseUrl}/rest/v1/guide_profiles" +
+                       $"?user_id=in.({userIds})&select=id,user_id";
+        var guideProfiles = await GetAsync<List<ChatGuideProfileRow>>(guideUrl, userToken) ?? [];
+
+        foreach (var guideProfile in guideProfiles)
+        {
+            if (string.IsNullOrWhiteSpace(guideProfile.Id) || string.IsNullOrWhiteSpace(guideProfile.UserId))
+                continue;
+
+            var travelerId = SameUserId(guideProfile.UserId, userId) ? otherUserId : userId;
+            var bookingUrl = $"{_supabaseUrl}/rest/v1/bookings" +
+                             $"?traveler_id=eq.{Uri.EscapeDataString(travelerId)}" +
+                             $"&guide_profile_id=eq.{Uri.EscapeDataString(guideProfile.Id)}" +
+                             "&select=id&limit=1";
+            var bookings = await GetAsync<List<ChatBookingRow>>(bookingUrl, userToken) ?? [];
+            if (bookings.Count > 0) return;
+        }
+
+        throw new UnauthorizedAccessException("No booking relationship exists between these chat participants.");
+    }
+
+    private async Task<ChatBookingParticipants> GetBookingParticipantsAsync(
+        string bookingId, string userToken)
+    {
         var escapedBookingId = Uri.EscapeDataString(bookingId);
         var bookingUrl = $"{_supabaseUrl}/rest/v1/bookings" +
                          $"?id=eq.{escapedBookingId}" +
@@ -212,27 +338,19 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
         var booking = bookings.FirstOrDefault()
             ?? throw new InvalidOperationException("The booking for this chat was not found.");
 
-        if (booking.Status != 1)
-        {
-            throw new InvalidOperationException(
-                "Chat is available only while at least one booking with this person is confirmed.");
-        }
-
         var escapedGuideProfileId = Uri.EscapeDataString(booking.GuideProfileId ?? "");
         var guideUrl = $"{_supabaseUrl}/rest/v1/guide_profiles" +
                        $"?id=eq.{escapedGuideProfileId}&select=user_id&limit=1";
         var guides = await GetAsync<List<ChatGuideProfileRow>>(guideUrl, userToken) ?? [];
         var guideUserId = guides.FirstOrDefault()?.UserId;
+        if (string.IsNullOrWhiteSpace(booking.TravelerId) || string.IsNullOrWhiteSpace(guideUserId))
+            throw new InvalidOperationException("The booking participants could not be resolved.");
 
-        var participantsMatch =
-            (SameUserId(booking.TravelerId, firstUserId) && SameUserId(guideUserId, secondUserId)) ||
-            (SameUserId(booking.TravelerId, secondUserId) && SameUserId(guideUserId, firstUserId));
-
-        if (!participantsMatch)
-        {
-            throw new UnauthorizedAccessException(
-                "The confirmed booking does not belong to these chat participants.");
-        }
+        return new ChatBookingParticipants(
+            booking.Id ?? bookingId,
+            booking.TravelerId,
+            guideUserId,
+            booking.Status);
     }
 
     /// <summary>
@@ -298,6 +416,7 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
     /// </summary>
     public async Task MarkMessagesAsReadAsync(string bookingId, string userId, string userToken)
     {
+        await EnsureChatBookingParticipantAsync(bookingId, userId, userToken);
         var url = $"{_supabaseUrl}/rest/v1/chat_messages?booking_id=eq.{bookingId}&receiver_id=eq.{userId}";
         var body = new { is_read = true };
 
@@ -317,6 +436,7 @@ public record ProfileDto(string Id, string FullName, string? AvatarUrl, string? 
     public async Task MarkMessagesWithUserAsReadAsync(
         string userId, string otherUserId, string userToken)
     {
+        await EnsureChatParticipantsHaveBookingAsync(userId, otherUserId, userToken);
         var url = $"{_supabaseUrl}/rest/v1/chat_messages" +
                   $"?sender_id=eq.{otherUserId}&receiver_id=eq.{userId}&is_read=eq.false";
         var body = new { is_read = true };
@@ -361,7 +481,20 @@ public record ConversationDto(
     string BookingId,
     string TravelerId,
     string GuideId,
-    DateTime CreatedAt);
+    DateTime CreatedAt,
+    string? ParticipantId = null,
+    string? ParticipantName = null,
+    string? ParticipantAvatarUrl = null,
+    string? ParticipantRole = null,
+    string? LastMessage = null,
+    DateTime? LastMessageAt = null,
+    int UnreadCount = 0);
+
+public sealed record ChatBookingParticipants(
+    string BookingId,
+    string TravelerId,
+    string GuideUserId,
+    int Status);
 
 /// <summary>
 /// Maps to a row in public.chat_messages
@@ -402,7 +535,23 @@ internal class ChatBookingRow
     [JsonPropertyName("status")] public int Status { get; set; }
 }
 
+internal sealed class ChatConversationSummaryRow
+{
+    [JsonPropertyName("booking_id")] public string? BookingId { get; set; }
+    [JsonPropertyName("traveler_id")] public string? TravelerId { get; set; }
+    [JsonPropertyName("guide_id")] public string? GuideId { get; set; }
+    [JsonPropertyName("participant_id")] public string? ParticipantId { get; set; }
+    [JsonPropertyName("participant_name")] public string? ParticipantName { get; set; }
+    [JsonPropertyName("participant_avatar_url")] public string? ParticipantAvatarUrl { get; set; }
+    [JsonPropertyName("participant_role")] public string? ParticipantRole { get; set; }
+    [JsonPropertyName("last_message")] public string? LastMessage { get; set; }
+    [JsonPropertyName("last_message_at")] public DateTime? LastMessageAt { get; set; }
+    [JsonPropertyName("unread_count")] public long UnreadCount { get; set; }
+    [JsonPropertyName("created_at")] public DateTime CreatedAt { get; set; }
+}
+
 internal class ChatGuideProfileRow
 {
+    [JsonPropertyName("id")] public string? Id { get; set; }
     [JsonPropertyName("user_id")] public string? UserId { get; set; }
 }

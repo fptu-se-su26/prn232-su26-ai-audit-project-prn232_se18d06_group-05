@@ -140,7 +140,7 @@
                     foreach (var tour in tours)
                     {
                         var guideName = tour.GuideProfile?.Profile?.FullName ?? "Local Guide";
-                        var guideCover = tour.GuideProfile?.CoverPhotoUrl ?? "";
+                        var tourCover = tour.CoverImageUrl ?? "";
                         var guideAvatar = tour.GuideProfile?.Profile?.AvatarUrl ?? "";
                         var guideCity = tour.GuideProfile?.CityArea ?? "Vietnam";
                         var priceLabel = tour.PricePerSession > 0
@@ -149,9 +149,9 @@
 
                         <a href="/Traveler/GuideProfile/@tour.GuideProfileId" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 flex flex-col">
                             <div class="h-52 relative overflow-hidden bg-gray-100">
-                                @if (!string.IsNullOrEmpty(guideCover))
+                                @if (!string.IsNullOrEmpty(tourCover))
                                 {
-                                    <img src="@guideCover" alt="@tour.Title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                                    <img src="@tourCover" alt="@tour.Title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
                                 }
                                 else
                                 {

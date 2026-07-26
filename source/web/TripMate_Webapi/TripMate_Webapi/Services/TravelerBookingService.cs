@@ -84,6 +84,34 @@ namespace TripMate_WebAPI.Services
         {
             var result = await _payments.GetReturnStatusAsync(travelerId, bookingId, orderCode);
             return (result.Found && result.State != "failed", result.Message, result.BookingStatus);
+            var tripName = await _notifications.GetTripNameAsync(booking.Id);
+            var tripDate = NotificationTextFormatter.FormatTripDate(booking.BookingDate);
+            await _notifications.SendAsync(
+                booking.TravelerId,
+                NotificationTypes.PaymentSucceeded,
+                "Payment successful",
+                $"We received your payment for \"{tripName}\" on {tripDate}. The guide can now review it.",
+                new { bookingId = booking.Id, orderCode, amount = booking.TotalAmount },
+                $"/Traveler/BookingDetails/{booking.Id}",
+                $"payment-succeeded:{booking.Id}",
+                sendEmail: true);
+
+            if (isDeposit)
+            {
+                var guide = await _guideRepository.GetGuideByProfileIdAsync(booking.GuideProfileId);
+                if (!string.IsNullOrWhiteSpace(guide?.UserId))
+                {
+                    await _notifications.SendAsync(
+                        guide.UserId,
+                        NotificationTypes.BookingAwaitingGuide,
+                        "New paid booking awaiting your response",
+                        $"A paid booking for \"{tripName}\" on {tripDate} with {booking.GuestCount} guest(s) is ready for your review.",
+                        new { bookingId = booking.Id, booking.BookingDate, booking.GuestCount },
+                        "/Guide/Bookings",
+                        $"booking-awaiting-guide:{booking.Id}",
+                        sendEmail: true);
+                }
+            }
         }
 
         public async Task<(bool Success, string Message, string? PaymentUrl)> RetryPaymentAsync(

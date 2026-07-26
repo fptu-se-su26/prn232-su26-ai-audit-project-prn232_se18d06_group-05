@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
 using TripMate_Webapi.Repositories;
 
 namespace TripMate_Webapi.Controllers
 {
+    [Authorize]
     public class NotificationController : Controller
     {
         private readonly INotificationRepository _notificationRepo;
@@ -75,8 +77,10 @@ namespace TripMate_Webapi.Controllers
 
             try
             {
-                await _notificationRepo.MarkAsReadAsync(id);
-                return Json(new { success = true });
+                var updated = await _notificationRepo.MarkAsReadAsync(id, userId);
+                return updated
+                    ? Json(new { success = true })
+                    : NotFound(new { success = false, message = "Notification not found" });
             }
             catch (Exception ex)
             {

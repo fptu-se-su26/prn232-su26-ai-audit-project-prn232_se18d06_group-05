@@ -463,13 +463,14 @@ public class SurveyService
             if (guideInfo == null) return;
 
             var travelerName = await GetTravelerNameAsync(travelerId, userToken);
+            var tripName = await _notificationService.GetTripNameAsync(bookingId);
 
             // Send notification to the guide's user_id
             await _notificationService.SendAsync(
                 guideInfo.UserId ?? "",
                 NotificationTypes.ReviewReceived,
                 "New review received",
-                $"{travelerName} rated you {rating} star(s).",
+                $"{travelerName} rated \"{tripName}\" {rating} star(s).",
                 new { guideProfileId, bookingId, rating },
                 "/Guide/Profile",
                 $"review:{bookingId}"

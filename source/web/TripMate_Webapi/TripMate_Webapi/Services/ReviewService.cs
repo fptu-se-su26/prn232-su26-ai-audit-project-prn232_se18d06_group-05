@@ -75,7 +75,7 @@ namespace TripMate_WebAPI.Services
             try
             {
                 await _reviewRepository.CreateReviewAsync(review);
-                await NotifyGuideReviewAsync(booking.GuideProfileId, travelerId, bookingId, rating);
+                await NotifyGuideReviewAsync(booking.GuideProfileId, travelerId, bookingId, rating, booking.BookingDate);
                 _logger.LogInformation("[Review] Traveler={TravelerId} rated Guide={GuideId} with {Rating}★ for Booking={BookingId}",
                     travelerId, booking.GuideProfileId, rating, bookingId);
 
@@ -115,15 +115,21 @@ namespace TripMate_WebAPI.Services
             }
         }
 
-        private async Task NotifyGuideReviewAsync(string guideProfileId, string travelerId, string bookingId, int rating)
+        private async Task NotifyGuideReviewAsync(
+            string guideProfileId,
+            string travelerId,
+            string bookingId,
+            int rating,
+            DateTime bookingDate)
         {
             var guide = await _guideRepository.GetGuideByProfileIdAsync(guideProfileId);
             if (string.IsNullOrWhiteSpace(guide?.UserId)) return;
+            var tripName = await _notifications.GetTripNameAsync(bookingId);
             await _notifications.SendAsync(
                 guide.UserId,
                 NotificationTypes.ReviewReceived,
                 "New review received",
-                $"A traveler rated booking {bookingId} {rating} star(s).",
+                $"A traveler rated \"{tripName}\" {rating} star(s). The trip date was {NotificationTextFormatter.FormatTripDate(bookingDate)}.",
                 new { bookingId, travelerId, guideProfileId, rating },
                 "/Guide/Profile",
                 $"review:{bookingId}");
