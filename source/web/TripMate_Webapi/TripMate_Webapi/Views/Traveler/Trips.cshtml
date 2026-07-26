@@ -31,7 +31,7 @@
         </div>
 
         <!-- Main Content Tabs -->
-        <div class="px-6 md:px-12 mt-8" x-data="{ tab: 'requests' }">
+        <div class="px-6 md:px-12 mt-8" x-data="{ tab: 'bookings' }">
             <!-- Tabs -->
             <div class="flex gap-8 border-b border-outline-variant/30 mb-8 overflow-x-auto">
                 <button @@click="tab = 'bookings'" :class="tab === 'bookings' ? 'border-primary text-primary' : 'border-transparent text-on-surface-variant hover:text-on-surface'" class="border-b-2 pb-4 px-2 font-bold whitespace-nowrap transition-colors">
@@ -436,10 +436,12 @@
                                     <span class="material-symbols-outlined text-[16px]">cancel</span> Cancel
                                 </button>
                                 ` : ''}
-                                ${(b.status === 1 && b.amountPaid >= b.totalAmount) ? `
+                                ${(b.status === 1 && b.amountPaid >= b.totalAmount && b.completionState === 'awaiting_traveler') ? `
                                 <button onclick="completeTour('${b.id}')" class="bg-green-100 text-green-700 text-sm font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-green-200 transition-colors ml-2">
                                     <span class="material-symbols-outlined text-[16px]">task_alt</span> Mark Completed
                                 </button>
+                                ` : ''}
+                                ${(b.status === 1 && b.amountPaid >= b.totalAmount) ? `
                                 <button onclick="reportGuide('${b.id}')" class="text-orange-500 bg-orange-50 text-sm font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-orange-100 transition-colors ml-2">
                                     <span class="material-symbols-outlined text-[16px]">report</span> Report Guide
                                 </button>
@@ -484,23 +486,59 @@
     }
 
     async function completeTour(id) {
-        if (!confirm('Are you sure you want to mark this tour as completed? This will release the payment to the guide.')) return;
-        
-        try {
-            const res = await fetch(`/Traveler/CompleteTourAjax?id=${id}`, {
-                method: 'POST',
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (res.ok) {
-                showToast('Tour marked as completed!', true);
-                loadBookings();
-            } else {
-                showToast('Failed to complete tour.', false);
+        Swal.fire({
+            title: 'Complete Tour?',
+            text: "Are you sure you want to mark this tour as completed? This will release the payment to the guide.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#10b981', // green-500
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, mark completed!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                if (!token) return;
+                
+                Swal.fire({
+                    title: 'Processing...',
+                    text: 'Updating booking status...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading()
+                });
+                
+                try {
+                    const res = await fetch(`/Traveler/CompleteTourAjax?id=${id}`, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    
+                    if (res.ok) {
+                        Swal.fire({
+                            title: 'Completed!', 
+                            text: 'Tour marked as completed successfully. Guide payment has been requested.', 
+                            icon: 'success',
+                            customClass: { popup: 'swal-top-fix' }
+                        });
+                        loadBookings();
+                    } else {
+                        const data = await res.json().catch(() => ({}));
+                        Swal.fire({
+                            title: 'Error', 
+                            text: data.error || 'Failed to complete tour.', 
+                            icon: 'error',
+                            customClass: { popup: 'swal-top-fix' }
+                        });
+                    }
+                } catch(err) {
+                    console.error(err);
+                    Swal.fire({
+                        title: 'Error', 
+                        text: 'Connection error.', 
+                        icon: 'error',
+                        customClass: { popup: 'swal-top-fix' }
+                    });
+                }
             }
-        } catch(err) {
-            console.error(err);
-            showToast('Connection error.', false);
-        }
+        });
     }
 
     async function reportGuide(bookingId) {
