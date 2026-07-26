@@ -37,6 +37,14 @@ namespace TripMate_Webapi.Repositories
             return response;
         }
 
+        public async Task<ExperiencePackageEntity?> GetPackageByIdAsync(string id)
+        {
+            var response = await _supabase.From<ExperiencePackageEntity>()
+                .Where(e => e.Id == id)
+                .Single();
+            return response;
+        }
+
         public async Task<List<ExperiencePackageEntity>> GetPackagesByGuideIdAsync(string guideId)
         {
             var response = await _supabase.From<ExperiencePackageEntity>()

@@ -22,6 +22,8 @@
             sortBy: 'updated',
             openDropdown: null,
             previewTour: null,
+            previewActiveDay: 1,
+            previewDescriptionExpanded: false,
             qualityTour: null,
             actionDialogOpen: false,
             pendingAction: null,
@@ -108,6 +110,23 @@
             scheduleTypeLabel(tour) {
                 return tour?.schedule?.durationType === 'multi_day' ? 'Multi-day tour' : 'Same-day tour';
             },
+            get activePreviewDay() {
+                const days = this.previewTour?.itineraryDays || [];
+                return days.find(day => day.dayNumber === this.previewActiveDay) || days[0] || null;
+            },
+            openTourPreview(tour) {
+                this.openDropdown = null;
+                this.previewTour = tour;
+                this.previewActiveDay = tour?.itineraryDays?.[0]?.dayNumber || 1;
+                this.previewDescriptionExpanded = false;
+                document.body.style.overflow = 'hidden';
+                this.$nextTick(() => document.querySelector('[data-tour-preview-close]')?.focus());
+            },
+            closeTourPreview() {
+                this.previewTour = null;
+                this.previewDescriptionExpanded = false;
+                document.body.style.overflow = '';
+            },
             itineraryTime(item) {
                 if (!item) return 'Time TBD';
                 if (item.startTime && item.endTime) return `${item.startTime}–${item.endTime}`;
@@ -122,7 +141,7 @@
             },
             closeOverlays() {
                 this.openDropdown = null;
-                this.previewTour = null;
+                this.closeTourPreview();
                 this.qualityTour = null;
                 if (!this.isProcessingAction) this.actionDialogOpen = false;
             },
@@ -303,7 +322,7 @@
              aria-live="polite">
         <template x-for="tour in filteredTours" :key="tour.id">
             <article class="relative overflow-visible rounded-2xl border border-slate-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg">
-                <button type="button" @@click="previewTour = tour"
+                <button type="button" @@click="openTourPreview(tour)"
                         :aria-label="`Preview ${tour.name || 'untitled tour'}`"
                         class="group relative block aspect-[16/7] w-full overflow-hidden rounded-t-2xl bg-gradient-to-br from-orange-100 via-amber-50 to-slate-100 text-left focus:outline-none focus:ring-4 focus:ring-inset focus:ring-orange-300">
                     <div x-show="!tour.imageUrl || failedImages[tour.id]"
@@ -491,119 +510,169 @@
         </section>
     </div>
 
-    <div x-show="previewTour" class="fixed inset-0 z-[90] flex items-center justify-center p-4"
-         style="display:none" role="dialog" aria-modal="true" aria-label="Traveler preview">
-        <div class="absolute inset-0 bg-slate-950/55 backdrop-blur-sm" @@click="previewTour = null"></div>
-        <article class="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white shadow-2xl">
-            <div class="relative h-56 bg-gradient-to-br from-orange-100 to-slate-200 sm:h-64">
-                <div x-show="!previewTour?.imageUrl || failedImages[previewTour?.id]"
-                     class="absolute inset-0 flex items-center justify-center text-orange-300">
-                    <span class="material-symbols-outlined text-6xl">landscape</span>
+    <div x-show="previewTour" class="fixed inset-0 z-[90] flex items-center justify-center p-3 sm:p-5"
+         style="display:none" role="dialog" aria-modal="true" aria-labelledby="tour-preview-title">
+        <div class="absolute inset-0 bg-slate-950/60 backdrop-blur-sm" @@click="closeTourPreview()"></div>
+        <article class="relative flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl sm:rounded-3xl">
+            <header class="flex shrink-0 items-center justify-between gap-4 border-b border-slate-100 bg-white px-4 py-3.5 sm:px-6">
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-black uppercase tracking-[0.16em] text-primary">Traveler preview</span>
+                        <span class="rounded-full px-2 py-0.5 text-[9px] font-black uppercase"
+                              :class="statusClass(previewTour?.publicationStatus)"
+                              x-text="statusLabel(previewTour?.publicationStatus)"></span>
+                    </div>
+                    <h2 id="tour-preview-title" class="mt-0.5 truncate text-base font-black text-slate-950 sm:text-lg"
+                        x-text="previewTour?.name || 'Untitled draft'"></h2>
                 </div>
-                <img x-show="previewTour?.imageUrl && !failedImages[previewTour?.id]"
-                     :src="previewTour?.imageUrl" alt="" class="h-full w-full object-cover">
-                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/70 to-transparent"></div>
-                <button type="button" @@click="previewTour = null"
-                        class="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-700"
+                <button type="button" data-tour-preview-close @@click="closeTourPreview()"
+                        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                         aria-label="Close preview">
-                    <span class="material-symbols-outlined">close</span>
+                    <span class="material-symbols-outlined text-[20px]">close</span>
                 </button>
-                <div class="absolute bottom-5 left-6 right-6 text-white">
-                    <p class="text-xs font-bold uppercase tracking-wider" x-text="previewTour?.city"></p>
-                    <h2 class="mt-1 text-2xl font-black" x-text="previewTour?.name || 'Untitled draft'"></h2>
-                </div>
-            </div>
+            </header>
 
-            <div class="space-y-5 p-5 sm:p-6">
-                <div class="flex flex-wrap gap-2 text-xs font-bold text-slate-700">
-                    <span class="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1.5">
-                        <span class="material-symbols-outlined text-[15px]">date_range</span>
-                        <span x-text="durationLabel(previewTour)"></span>
-                    </span>
-                    <span class="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5"
-                          :class="previewTour?.schedule?.isConfigured ? 'bg-slate-100 text-slate-700' : 'bg-amber-50 text-amber-800'">
-                        <span class="material-symbols-outlined text-[15px]">schedule</span>
-                        <span x-text="timeRangeLabel(previewTour)"></span>
-                    </span>
-                    <span class="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1.5">
-                        <span class="material-symbols-outlined text-[15px]">group</span>
-                        <span x-text="`Up to ${previewTour?.maxGuests} guests`"></span>
-                    </span>
-                </div>
-
-                <div x-show="!previewTour?.schedule?.isConfigured"
-                     class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-800">
-                    <span class="material-symbols-outlined text-[18px]">warning</span>
-                    <span>Add default start and end times before relying on this schedule.</span>
-                </div>
-
-                <p class="whitespace-pre-line text-sm leading-7 text-slate-600"
-                   x-text="previewTour?.description || 'Add a description to help travelers understand this experience.'"></p>
-
-                <section class="grid gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 sm:grid-cols-2">
-                    <div>
-                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Schedule</p>
-                        <p class="mt-1 text-sm font-bold text-slate-900" x-text="scheduleTypeLabel(previewTour)"></p>
-                        <p class="mt-0.5 text-xs text-slate-500"
-                           x-text="`${previewTour?.schedule?.timeZone || 'Asia/Ho_Chi_Minh'} time`"></p>
-                    </div>
-                    <div>
-                        <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Meeting point</p>
-                        <p class="mt-1 text-sm font-bold text-slate-900"
-                           x-text="previewTour?.meetingPoint || 'Meeting point not added'"></p>
-                    </div>
-                </section>
-
-                <section>
-                    <div class="flex items-end justify-between gap-3">
-                        <div>
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-primary">Itinerary</p>
-                            <h3 class="mt-0.5 text-lg font-black text-slate-950">What travelers will do</h3>
+            <div class="min-h-0 flex-1 overflow-y-auto">
+                <div class="grid items-start lg:grid-cols-[320px_minmax(0,1fr)]">
+                    <aside class="border-b border-slate-100 bg-slate-50/70 lg:sticky lg:top-0 lg:border-b-0 lg:border-r">
+                        <div class="relative h-52 bg-gradient-to-br from-orange-100 to-slate-200 lg:h-60">
+                            <div x-show="!previewTour?.imageUrl || failedImages[previewTour?.id]"
+                                 class="absolute inset-0 flex items-center justify-center text-orange-300">
+                                <span class="material-symbols-outlined text-6xl">landscape</span>
+                            </div>
+                            <img x-show="previewTour?.imageUrl && !failedImages[previewTour?.id]"
+                                 :src="previewTour?.imageUrl" :alt="previewTour?.name || 'Tour cover'" class="h-full w-full object-cover">
+                            <div class="absolute inset-0 bg-gradient-to-t from-slate-950/65 via-transparent to-transparent"></div>
+                            <div class="absolute bottom-4 left-4 right-4 text-white">
+                                <p class="text-[10px] font-bold uppercase tracking-wider" x-text="previewTour?.city || 'Destination'"></p>
+                                <p class="mt-1 line-clamp-2 text-lg font-black" x-text="previewTour?.name || 'Untitled draft'"></p>
+                            </div>
                         </div>
-                        <p class="text-xs font-semibold text-slate-400"
-                           x-text="`${previewTour?.schedule?.activityCount || 0} activities`"></p>
-                    </div>
 
-                    <div x-show="previewTour?.itineraryDays?.length" class="mt-3 space-y-3">
-                        <template x-for="day in previewTour?.itineraryDays || []" :key="day.dayNumber">
-                            <article class="rounded-2xl border border-slate-100 p-4">
-                                <div class="flex items-baseline gap-2">
-                                    <span class="rounded-lg bg-orange-50 px-2 py-1 text-[10px] font-black uppercase text-primary"
-                                          x-text="`Day ${day.dayNumber}`"></span>
-                                    <h4 class="text-sm font-black text-slate-900"
-                                        x-text="day.title || `Day ${day.dayNumber} itinerary`"></h4>
+                        <div class="space-y-4 p-4 sm:p-5">
+                            <div class="grid grid-cols-2 gap-2 text-xs font-bold text-slate-700 lg:grid-cols-1">
+                                <span class="inline-flex min-w-0 items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-sm">
+                                    <span class="material-symbols-outlined text-[17px] text-primary">date_range</span>
+                                    <span class="truncate" x-text="durationLabel(previewTour)"></span>
+                                </span>
+                                <span class="inline-flex min-w-0 items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-sm">
+                                    <span class="material-symbols-outlined text-[17px] text-primary">schedule</span>
+                                    <span class="truncate" x-text="timeRangeLabel(previewTour)"></span>
+                                </span>
+                                <span class="inline-flex min-w-0 items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-sm">
+                                    <span class="material-symbols-outlined text-[17px] text-primary">group</span>
+                                    <span x-text="`Up to ${previewTour?.maxGuests} guests`"></span>
+                                </span>
+                                <span class="inline-flex min-w-0 items-center gap-2 rounded-xl bg-white px-3 py-2.5 shadow-sm">
+                                    <span class="material-symbols-outlined text-[17px] text-primary">location_on</span>
+                                    <span class="truncate" x-text="previewTour?.meetingPoint || 'Meeting point not added'"></span>
+                                </span>
+                            </div>
+
+                            <div x-show="!previewTour?.schedule?.isConfigured"
+                                 class="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs font-semibold text-amber-800">
+                                <span class="material-symbols-outlined text-[18px]">warning</span>
+                                <span>Add default start and end times before relying on this schedule.</span>
+                            </div>
+
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Schedule</p>
+                                <p class="mt-1 text-sm font-bold text-slate-900" x-text="scheduleTypeLabel(previewTour)"></p>
+                                <p class="mt-0.5 text-xs text-slate-500"
+                                   x-text="`${previewTour?.schedule?.timeZone || 'Asia/Ho_Chi_Minh'} time`"></p>
+                            </div>
+                        </div>
+                    </aside>
+
+                    <main class="space-y-6 p-4 sm:p-6 lg:p-7">
+                        <section>
+                            <p class="text-[10px] font-black uppercase tracking-wider text-slate-400">Overview</p>
+                            <p class="mt-2 whitespace-pre-line text-sm leading-7 text-slate-600"
+                               :class="previewDescriptionExpanded ? '' : 'line-clamp-4'"
+                               x-text="previewTour?.description || 'Add a description to help travelers understand this experience.'"></p>
+                            <button x-show="(previewTour?.description || '').length > 320" type="button"
+                                    @@click="previewDescriptionExpanded = !previewDescriptionExpanded"
+                                    class="mt-2 text-xs font-bold text-primary hover:text-primary-dark"
+                                    x-text="previewDescriptionExpanded ? 'Show less' : 'Show more'"></button>
+                        </section>
+
+                        <section>
+                            <div class="flex items-end justify-between gap-3">
+                                <div>
+                                    <p class="text-[10px] font-black uppercase tracking-wider text-primary">Itinerary</p>
+                                    <h3 class="mt-0.5 text-lg font-black text-slate-950">What travelers will do</h3>
                                 </div>
-                                <ol class="mt-3 space-y-2.5">
-                                    <template x-for="(item, index) in day.items || []"
-                                              :key="`${day.dayNumber}-${index}`">
-                                        <li class="grid grid-cols-[72px_1fr] gap-3 text-xs">
-                                            <span class="font-bold text-primary" x-text="itineraryTime(item)"></span>
-                                            <div>
-                                                <p class="font-semibold text-slate-700"
-                                                   x-text="item.activity || 'Activity details not added'"></p>
-                                                <p x-show="item.location" class="mt-0.5 text-slate-400"
-                                                   x-text="item.location"></p>
-                                            </div>
-                                        </li>
+                                <p class="shrink-0 text-xs font-semibold text-slate-400"
+                                   x-text="`${previewTour?.schedule?.activityCount || 0} activities`"></p>
+                            </div>
+
+                            <div x-show="previewTour?.itineraryDays?.length" class="mt-4">
+                                <div class="flex gap-2 overflow-x-auto pb-2" role="tablist" aria-label="Preview itinerary days">
+                                    <template x-for="day in previewTour?.itineraryDays || []" :key="day.dayNumber">
+                                        <button type="button" role="tab" @@click="previewActiveDay = day.dayNumber"
+                                                :aria-selected="previewActiveDay === day.dayNumber"
+                                                class="inline-flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition"
+                                                :class="previewActiveDay === day.dayNumber ? 'border-primary bg-primary text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-orange-200 hover:bg-orange-50'">
+                                            <span x-text="`Day ${day.dayNumber}`"></span>
+                                            <span class="rounded-full px-1.5 py-0.5 text-[9px]"
+                                                  :class="previewActiveDay === day.dayNumber ? 'bg-white/20' : 'bg-slate-100 text-slate-500'"
+                                                  x-text="day.items?.length || 0"></span>
+                                        </button>
                                     </template>
-                                </ol>
-                            </article>
-                        </template>
-                    </div>
-                    <p x-show="!previewTour?.itineraryDays?.length"
-                       class="mt-3 rounded-xl bg-slate-50 px-4 py-5 text-center text-sm text-slate-400">
-                        No itinerary has been added yet.
-                    </p>
-                </section>
+                                </div>
 
-                <div class="rounded-2xl bg-orange-50 p-4">
-                    <p class="text-xs font-bold uppercase text-orange-500">Tour price</p>
-                    <p class="mt-1 text-2xl font-black text-primary" x-text="formatCurrency(previewTour?.price)"></p>
-                    <p class="text-xs text-orange-700" x-text="priceCaption(previewTour)"></p>
+                                <template x-if="activePreviewDay">
+                                    <article class="mt-2 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
+                                        <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
+                                            <span class="rounded-lg bg-orange-50 px-2 py-1 text-[10px] font-black uppercase text-primary"
+                                                  x-text="`Day ${activePreviewDay.dayNumber}`"></span>
+                                            <h4 class="min-w-0 truncate text-sm font-black text-slate-900"
+                                                x-text="activePreviewDay.title || `Day ${activePreviewDay.dayNumber} itinerary`"></h4>
+                                        </div>
+                                        <ol class="relative mt-4 space-y-1 before:absolute before:bottom-3 before:left-[5px] before:top-3 before:w-px before:bg-orange-100">
+                                            <template x-for="(item, index) in activePreviewDay.items || []"
+                                                      :key="`${activePreviewDay.dayNumber}-${index}`">
+                                                <li class="relative grid grid-cols-1 gap-1 py-2.5 pl-5 text-xs sm:grid-cols-[112px_minmax(0,1fr)] sm:gap-3">
+                                                    <span class="absolute left-0 top-[15px] h-[11px] w-[11px] rounded-full border-[3px] border-orange-100 bg-primary"></span>
+                                                    <span class="whitespace-nowrap font-black tabular-nums text-primary" x-text="itineraryTime(item)"></span>
+                                                    <div class="min-w-0">
+                                                        <p class="break-words text-sm font-semibold leading-5 text-slate-700"
+                                                           x-text="item.activity || 'Activity details not added'"></p>
+                                                        <p x-show="item.location" class="mt-1 flex items-center gap-1 break-words text-xs text-slate-400">
+                                                            <span class="material-symbols-outlined text-[14px]">location_on</span>
+                                                            <span x-text="item.location"></span>
+                                                        </p>
+                                                    </div>
+                                                </li>
+                                            </template>
+                                        </ol>
+                                    </article>
+                                </template>
+                            </div>
+                            <p x-show="!previewTour?.itineraryDays?.length"
+                               class="mt-3 rounded-xl bg-slate-50 px-4 py-6 text-center text-sm text-slate-400">
+                                No itinerary has been added yet.
+                            </p>
+                        </section>
+
+                        <p class="text-center text-[11px] text-slate-400">This preview approximates what travelers will see.</p>
+                    </main>
                 </div>
-
-                <p class="text-center text-xs text-slate-400">This preview approximates what travelers will see.</p>
             </div>
+
+            <footer class="flex shrink-0 flex-col gap-3 border-t border-slate-100 bg-white px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <div>
+                    <p class="text-[10px] font-black uppercase tracking-wider text-orange-500">Tour price</p>
+                    <div class="flex flex-wrap items-baseline gap-x-2">
+                        <p class="text-xl font-black text-primary" x-text="formatCurrency(previewTour?.price)"></p>
+                        <p class="text-xs text-orange-700" x-text="priceCaption(previewTour)"></p>
+                    </div>
+                </div>
+                <a :href="`/Guide/CreateTour?id=${previewTour?.id}`" data-turbo="false"
+                   class="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-primary">
+                    <span class="material-symbols-outlined text-[17px]">edit</span> Edit tour
+                </a>
+            </footer>
         </article>
     </div>
 

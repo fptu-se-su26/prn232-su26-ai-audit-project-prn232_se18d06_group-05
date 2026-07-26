@@ -7,7 +7,7 @@ namespace TripMate_Webapi.Repositories
         Task<NotificationEntity> CreateNotificationAsync(NotificationEntity notification);
         Task<List<NotificationEntity>> GetNotificationsByUserIdAsync(string userId, int limit = 20);
         Task<int> GetUnreadCountAsync(string userId);
-        Task MarkAsReadAsync(string notificationId);
+        Task<bool> MarkAsReadAsync(string notificationId, string userId);
         Task MarkAllAsReadAsync(string userId);
     }
 }

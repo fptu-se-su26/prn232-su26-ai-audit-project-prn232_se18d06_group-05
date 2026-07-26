@@ -1,5 +1,6 @@
 using PayOS;
 using PayOS.Models.V2.PaymentRequests;
+using PayOS.Models.Webhooks;
 using System.Threading.Tasks;
 using TripMate_Webapi.Entities;
 using Microsoft.Extensions.Configuration;
@@ -22,12 +23,25 @@ namespace TripMate_WebAPI.Services
             );
         }
 
-        public async Task<string> CreatePaymentLink(BookingEntity booking, long orderCode, int amount)
+        public async Task<string> CreatePaymentLink(
+            BookingEntity booking,
+            PaymentEntity payment,
+            long orderCode,
+            int amount)
         {
-            var returnUrl = _config["PayOS:ReturnUrl"] + "?bookingId=" + booking.Id;
-            var cancelUrl = _config["PayOS:CancelUrl"] + "&bookingId=" + booking.Id;
+            EnsureConfigured();
 
-            if (amount <= 0) amount = 10000; // Fallback minimum for testing
+            var returnUrl = AddQueryValues(
+                _config["PayOS:ReturnUrl"] ?? throw new InvalidOperationException("PayOS return URL is not configured."),
+                booking.Id,
+                payment.Id);
+            var cancelUrl = AddQueryValues(
+                _config["PayOS:CancelUrl"] ?? throw new InvalidOperationException("PayOS cancel URL is not configured."),
+                booking.Id,
+                payment.Id);
+
+            if (amount <= 0)
+                throw new ArgumentOutOfRangeException(nameof(amount), "Payment amount must be greater than zero.");
 
             var paymentData = new CreatePaymentLinkRequest
             {
@@ -40,6 +54,37 @@ namespace TripMate_WebAPI.Services
 
             var createPayment = await _payOS.PaymentRequests.CreateAsync(paymentData);
             return createPayment.CheckoutUrl;
+        }
+
+        public async Task<WebhookData> VerifyWebhookAsync(Webhook webhook)
+        {
+            EnsureConfigured();
+            return await _payOS.Webhooks.VerifyAsync(webhook);
+        }
+
+        public async Task<PaymentLink> GetPaymentLinkAsync(string orderCode)
+        {
+            EnsureConfigured();
+            if (string.IsNullOrWhiteSpace(orderCode))
+                throw new ArgumentException("PayOS order code is required.", nameof(orderCode));
+
+            return await _payOS.PaymentRequests.GetAsync(orderCode);
+        }
+
+        private void EnsureConfigured()
+        {
+            if (string.IsNullOrWhiteSpace(_config["PayOS:ClientId"]) ||
+                string.IsNullOrWhiteSpace(_config["PayOS:ApiKey"]) ||
+                string.IsNullOrWhiteSpace(_config["PayOS:ChecksumKey"]))
+            {
+                throw new InvalidOperationException("PayOS credentials are not configured.");
+            }
+        }
+
+        private static string AddQueryValues(string baseUrl, string bookingId, string paymentId)
+        {
+            var separator = baseUrl.Contains('?') ? "&" : "?";
+            return $"{baseUrl}{separator}bookingId={Uri.EscapeDataString(bookingId)}&paymentId={Uri.EscapeDataString(paymentId)}";
         }
     }
 }

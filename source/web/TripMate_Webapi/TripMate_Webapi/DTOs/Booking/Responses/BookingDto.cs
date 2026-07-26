@@ -19,5 +19,6 @@ public record BookingDto(
     string Status,              // mapped from smallint: pending/confirmed/completed/cancelled
     string? TravelerNotes,
     DateTime CreatedAt,
-    DateTime UpdatedAt
+    DateTime UpdatedAt,
+    string? PaymentUrl = null
 );
