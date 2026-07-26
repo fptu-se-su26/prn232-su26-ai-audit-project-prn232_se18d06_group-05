@@ -242,8 +242,10 @@ public class ExperiencePackageRow
     [JsonPropertyName("included_items")]    public List<string>? IncludedItems { get; set; }
     [JsonPropertyName("tags")]              public List<string>? Tags { get; set; }
     [JsonPropertyName("is_active")]         public bool IsActive { get; set; } = true;
+    [JsonPropertyName("city")]              public string? City { get; set; }
     [JsonPropertyName("cover_image_url")]   public string? CoverImageUrl { get; set; }
     [JsonPropertyName("gallery_image_urls")]public List<string>? GalleryImageUrls { get; set; }
+    [JsonPropertyName("timeline_json")]     public List<Dictionary<string, string>>? TimelineJson { get; set; }
     [JsonPropertyName("created_at")]        public DateTime CreatedAt { get; set; }
 
     // Joined from guide_profiles

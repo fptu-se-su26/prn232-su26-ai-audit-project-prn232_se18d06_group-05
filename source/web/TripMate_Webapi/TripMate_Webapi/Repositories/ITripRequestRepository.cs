@@ -20,6 +20,7 @@ namespace TripMate_Webapi.Repositories
         Task<List<TripOfferEntity>> GetTripOffersByRequestIdAsync(string requestId);
         Task<TripOfferEntity?> GetTripOfferByIdAsync(string offerId);
         Task UpdateTripOfferAsync(TripOfferEntity offer);
+        Task DeleteTripOfferAsync(string offerId);
         Task UpdateTripRequestAsync(TripRequestEntity request);
 
         // Profiles
