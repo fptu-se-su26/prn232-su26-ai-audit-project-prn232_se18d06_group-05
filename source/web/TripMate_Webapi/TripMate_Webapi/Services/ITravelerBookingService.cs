@@ -16,7 +16,7 @@ namespace TripMate_WebAPI.Services
             string travelerId, TripRequestEntity request, TripOfferEntity offer);
 
         Task<(bool Success, string Message, int? NewStatus)> GetPaymentReturnStatusAsync(
-            string travelerId, string bookingId, string? orderCode);
+            string travelerId, string bookingId, string? orderCode, string? cancel = null);
 
         Task<(bool Success, string Message, string? PaymentUrl)> RetryPaymentAsync(
             string travelerId, string bookingId);

@@ -401,7 +401,8 @@ namespace TripMate_Webapi.Controllers
         [HttpGet]
         public async Task<IActionResult> PaymentCallback(
             [FromQuery] string bookingId,
-            [FromQuery] string? orderCode)
+            [FromQuery] string? orderCode,
+            [FromQuery] string? cancel = null)
         {
             try
             {
@@ -411,12 +412,24 @@ namespace TripMate_Webapi.Controllers
                 if (string.IsNullOrWhiteSpace(travelerId))
                     return Redirect($"{LOGIN_URL}?returnUrl=/Traveler/Dashboard");
 
+                if (string.Equals(cancel, "true", StringComparison.OrdinalIgnoreCase))
+                {
+                    var booking = await _bookingRepository.GetBookingByIdAsync(bookingId);
+                    if (booking != null && booking.TravelerId == travelerId && booking.Status == -1)
+                    {
+                        await _bookingRepository.UpdateBookingStatusAsync(bookingId, 3); // 3 = Cancelled
+                        TempData["ErrorMessage"] = "Payment Cancelled";
+                        return RedirectToAction("Dashboard");
+                    }
+                }
+
                 // PayOS redirect query values are not proof of payment. The
                 // verified webhook is the only writer; this action only reads.
                 var result = await _travelerBookingService.GetPaymentReturnStatusAsync(
                     travelerId,
                     bookingId,
-                    orderCode);
+                    orderCode,
+                    cancel);
                 
                 if (result.Success)
                 {

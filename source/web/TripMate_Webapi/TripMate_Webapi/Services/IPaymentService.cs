@@ -7,7 +7,7 @@ namespace TripMate_WebAPI.Services;
 public interface IPaymentService
 {
     Task<PaymentLinkResult> CreateRequiredPaymentAsync(BookingEntity booking);
-    Task<PaymentReturnStatus> GetReturnStatusAsync(string travelerId, string bookingId, string? orderCode);
+    Task<PaymentReturnStatus> GetReturnStatusAsync(string travelerId, string bookingId, string? orderCode, string? cancel = null);
     Task<PaymentWebhookResult> HandlePayOSWebhookAsync(Webhook webhook);
 }
 
