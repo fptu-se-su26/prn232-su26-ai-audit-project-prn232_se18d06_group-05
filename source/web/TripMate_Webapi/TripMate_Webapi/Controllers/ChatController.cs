@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.RateLimiting;
 using TripMate_WebAPI.Services;
 
 namespace TripMate_WebAPI.Controllers;
@@ -46,20 +47,33 @@ public class ChatController : ControllerBase
     public async Task<IActionResult> GetOrCreate(
         [FromBody] CreateConversationRequest req)
     {
+        if (!Guid.TryParse(req.BookingId, out _) || !Guid.TryParse(req.GuideId, out _))
+            return BadRequest(new { message = "Invalid booking or guide." });
         try
         {
             var conv = await _chat.GetOrCreateConversationAsync(
                 UserId, req.GuideId, req.BookingId, UserToken);
             return Ok(conv);
         }
-        catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (InvalidOperationException ex) { return NotFound(new { message = ex.Message }); }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to resolve chat conversation for booking {BookingId}", req.BookingId);
+            return StatusCode(500, new { message = "The conversation could not be loaded." });
+        }
     }
 
     /// <summary>Upload an attachment to Cloudinary and send as a message (message_text = cloudinary url)</summary>
     [HttpPost("conversations/{bookingId}/attachments")]
+    [EnableRateLimiting("chat-upload")]
+    [RequestSizeLimit(ChatInputPolicy.MaxAttachmentBytes + 64 * 1024)]
     public async Task<IActionResult> UploadAttachment(string bookingId, [FromForm] IFormFile file, [FromForm] string receiverId)
     {
-        if (file == null || file.Length == 0) return BadRequest(new { message = "No file provided" });
+        var attachmentError = ChatInputPolicy.ValidateAttachment(file);
+        if (attachmentError is not null) return BadRequest(new { message = attachmentError });
+        if (!Guid.TryParse(bookingId, out _) || !Guid.TryParse(receiverId, out _))
+            return BadRequest(new { message = "Invalid booking or recipient." });
         try
         {
             await _chat.EnsureChatBookingIsConfirmedAsync(
@@ -86,7 +100,8 @@ public class ChatController : ControllerBase
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { message = ex.Message });
+            _logger.LogError(ex, "Failed to upload a chat attachment for booking {BookingId}", bookingId);
+            return StatusCode(500, new { message = "The attachment could not be uploaded." });
         }
     }
 
@@ -117,60 +132,90 @@ public class ChatController : ControllerBase
     [HttpGet("conversations/{bookingId}/messages")]
     public async Task<IActionResult> GetMessages(string bookingId)
     {
+        if (!Guid.TryParse(bookingId, out _))
+            return BadRequest(new { message = "Invalid booking." });
         try
         {
             // optional pagination: ?limit=50&offset=0 (offset in pages of newest-first)
             var q = HttpContext.Request.Query;
-            int? limit = null;
-            int? offset = null;
-            if (q.ContainsKey("limit") && int.TryParse(q["limit"], out var l)) limit = l;
-            if (q.ContainsKey("offset") && int.TryParse(q["offset"], out var o)) offset = o;
+            int? limit = q.ContainsKey("limit") && int.TryParse(q["limit"], out var l) ? l : null;
+            int? offset = q.ContainsKey("offset") && int.TryParse(q["offset"], out var o) ? o : null;
+            var page = ChatInputPolicy.NormalizePage(limit, offset);
 
-            var msgs = await _chat.GetMessagesAsync(bookingId, UserToken, limit ?? 50, offset ?? 0);
+            var msgs = await _chat.GetMessagesAsync(bookingId, UserId, UserToken, page.Limit, page.Offset);
             // ChatService returns messages ordered by sent_at desc (newest first). Client expects chronological order, so reverse on client.
             return Ok(new { messages = msgs });
         }
-        catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (InvalidOperationException ex) { return NotFound(new { message = ex.Message }); }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load chat messages for booking {BookingId}", bookingId);
+            return StatusCode(500, new { message = "Messages could not be loaded." });
+        }
     }
 
     /// <summary>Get the permanent combined thread with another user.</summary>
     [HttpGet("conversations/participants/{participantId}/messages")]
     public async Task<IActionResult> GetMessagesWithParticipant(string participantId)
     {
+        if (!Guid.TryParse(participantId, out _))
+            return BadRequest(new { message = "Invalid participant." });
         try
         {
             var q = HttpContext.Request.Query;
-            var limit = q.ContainsKey("limit") && int.TryParse(q["limit"], out var l) ? l : 50;
-            var offset = q.ContainsKey("offset") && int.TryParse(q["offset"], out var o) ? o : 0;
+            int? requestedLimit = q.ContainsKey("limit") && int.TryParse(q["limit"], out var l) ? l : null;
+            int? requestedOffset = q.ContainsKey("offset") && int.TryParse(q["offset"], out var o) ? o : null;
+            var page = ChatInputPolicy.NormalizePage(requestedLimit, requestedOffset);
             var messages = await _chat.GetMessagesWithUserAsync(
-                UserId, participantId, UserToken, limit, offset);
+                UserId, participantId, UserToken, page.Limit, page.Offset);
             return Ok(new { messages });
         }
-        catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to load chat messages with participant {ParticipantId}", participantId);
+            return StatusCode(500, new { message = "Messages could not be loaded." });
+        }
     }
 
     /// <summary>Mark messages in booking as read for current user</summary>
     [HttpPost("conversations/{bookingId}/mark-read")]
     public async Task<IActionResult> MarkRead(string bookingId)
     {
+        if (!Guid.TryParse(bookingId, out _))
+            return BadRequest(new { message = "Invalid booking." });
         try
         {
             await _chat.MarkMessagesAsReadAsync(bookingId, UserId, UserToken);
             return Ok(new { success = true });
         }
-        catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (InvalidOperationException ex) { return NotFound(new { message = ex.Message }); }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to mark chat messages read for booking {BookingId}", bookingId);
+            return StatusCode(500, new { message = "Messages could not be marked as read." });
+        }
     }
 
     /// <summary>Mark the permanent combined thread with another user as read.</summary>
     [HttpPost("conversations/participants/{participantId}/mark-read")]
     public async Task<IActionResult> MarkParticipantRead(string participantId)
     {
+        if (!Guid.TryParse(participantId, out _))
+            return BadRequest(new { message = "Invalid participant." });
         try
         {
             await _chat.MarkMessagesWithUserAsReadAsync(UserId, participantId, UserToken);
             return Ok(new { success = true });
         }
-        catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
+        catch (UnauthorizedAccessException) { return Forbid(); }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to mark chat messages read with participant {ParticipantId}", participantId);
+            return StatusCode(500, new { message = "Messages could not be marked as read." });
+        }
     }
 
     /// <summary>Get basic profile info for a user</summary>
@@ -188,16 +233,21 @@ public class ChatController : ControllerBase
 
     /// <summary>Gửi tin nhắn trong conversation (= booking_id)</summary>
     [HttpPost("conversations/{bookingId}/messages")]
+    [EnableRateLimiting("chat-send")]
     public async Task<IActionResult> SendMessage(
         string bookingId, [FromBody] SendMessageRequest req)
     {
         try
         {
+            if (!Guid.TryParse(bookingId, out _) || !Guid.TryParse(req.ReceiverId, out _))
+                return BadRequest(new { message = "Invalid booking or recipient." });
+            var content = ChatInputPolicy.NormalizeMessage(req.Content);
             var msg = await _chat.SendMessageAsync(
-                bookingId, UserId, req.ReceiverId, req.Content, UserToken);
+                bookingId, UserId, req.ReceiverId, content, UserToken);
             await BroadcastMessageAsync("MessageCreated", msg);
             return Ok(msg);
         }
+        catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
         catch (InvalidOperationException ex) { return Conflict(new { message = ex.Message }); }
         catch (UnauthorizedAccessException) { return Forbid(); }
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
@@ -205,13 +255,19 @@ public class ChatController : ControllerBase
 
     /// <summary>Edit a message text. Only the original sender may edit.</summary>
     [HttpPatch("conversations/{bookingId}/messages/{messageId}")]
+    [EnableRateLimiting("chat-send")]
     public async Task<IActionResult> EditMessage(string bookingId, long messageId, [FromBody] EditMessageRequest req)
     {
         try
         {
-            var updated = await _chat.EditMessageAsync(bookingId, messageId, UserId, req.Content, UserToken);
+            var content = ChatInputPolicy.NormalizeMessage(req.Content);
+            var updated = await _chat.EditMessageAsync(bookingId, messageId, UserId, content, UserToken);
             await BroadcastMessageAsync("MessageUpdated", updated);
             return Ok(updated);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
         catch (UnauthorizedAccessException)
         {

@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Supabase;
 using TripMate_Webapi.Entities;
+using TripMate_WebAPI.Services;
 
 namespace TripMate_Webapi.Repositories
 {
@@ -30,6 +31,8 @@ namespace TripMate_Webapi.Repositories
 
         public async Task<NotificationEntity> CreateNotificationAsync(NotificationEntity notification)
         {
+            notification.Title = NotificationTextFormatter.NormalizeVisibleText(notification.Title);
+            notification.Message = NotificationTextFormatter.NormalizeVisibleText(notification.Message);
             var tokenToUse = _serviceKey ?? _anonKey;
             using var http = new HttpClient();
             var req = new HttpRequestMessage(HttpMethod.Post, $"{_supabaseUrl}/rest/v1/notifications");
@@ -68,6 +71,11 @@ namespace TripMate_Webapi.Repositories
                 .Order(n => n.CreatedAt, Postgrest.Constants.Ordering.Descending)
                 .Limit(limit)
                 .Get();
+            foreach (var notification in response.Models)
+            {
+                notification.Title = NotificationTextFormatter.NormalizeVisibleText(notification.Title);
+                notification.Message = NotificationTextFormatter.NormalizeVisibleText(notification.Message);
+            }
             return response.Models;
         }
 
@@ -80,12 +88,14 @@ namespace TripMate_Webapi.Repositories
             return count;
         }
 
-        public async Task MarkAsReadAsync(string notificationId)
+        public async Task<bool> MarkAsReadAsync(string notificationId, string userId)
         {
-            await _supabase.From<NotificationEntity>()
+            var response = await _supabase.From<NotificationEntity>()
                 .Where(n => n.Id == notificationId)
+                .Where(n => n.UserId == userId)
                 .Set(n => n.IsRead, true)
                 .Update();
+            return response.Models.Count > 0;
         }
 
         public async Task MarkAllAsReadAsync(string userId)

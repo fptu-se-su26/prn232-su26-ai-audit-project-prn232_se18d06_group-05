@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using System.Threading.RateLimiting;
 using Supabase;
 using TripMate_WebAPI.Services;
 using TripMate_Webapi.Repositories;
@@ -128,6 +130,43 @@ builder.Services.AddHttpClient<NotificationService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddSignalR();
 builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, SupabaseUserIdProvider>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.ContentType = "application/json";
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new { message = "Too many requests. Please wait and try again." },
+            cancellationToken);
+    };
+    options.AddPolicy("chat-send", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.User.FindFirst("sub")?.Value
+                ?? httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "anonymous",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 30,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.AddPolicy("chat-upload", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.User.FindFirst("sub")?.Value
+                ?? httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                ?? "anonymous",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 builder.Services.AddHttpClient<BookingReminderService>();
 builder.Services.AddScoped<BookingReminderService>();
 builder.Services.AddHostedService<BookingReminderWorker>();
@@ -136,6 +175,8 @@ builder.Services.AddScoped<BookingCompletionService>();
 // Legacy auto-completion is intentionally disabled until the explicit
 // guide/traveler completion lifecycle is introduced. Keep the service
 // registered because existing application code may still resolve it.
+builder.Services.AddHostedService<BookingCompletionWorker>();
+builder.Services.AddHostedService<NotificationOutboxWorker>();
 
 // ── Survey Service ────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SurveyService>();
@@ -305,6 +346,7 @@ if (!app.Environment.IsDevelopment())
 app.UseMiddleware<TripMate_Webapi.Middlewares.AutoRefreshMiddleware>();
 app.UseSession();          // Phải trước UseAuthentication để Session sẵn sàng
 app.UseAuthentication();   // phải trước UseAuthorization
+app.UseRateLimiter();
 app.UseAuthorization();
 app.MapControllers(); // Map API controllers
 app.MapHub<NotificationHub>("/hubs/notifications");
