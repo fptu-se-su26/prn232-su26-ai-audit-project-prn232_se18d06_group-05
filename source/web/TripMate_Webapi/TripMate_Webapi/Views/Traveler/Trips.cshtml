@@ -78,6 +78,37 @@
                     </div>
                 </div>
 
+                <!-- Advanced Filters for Bookings -->
+                <div x-data="{ showAdvBookingFilters: false }" class="mb-6">
+                    <button @@click="showAdvBookingFilters = !showAdvBookingFilters" class="flex items-center gap-2 text-sm font-bold text-primary hover:underline">
+                        <span class="material-symbols-outlined text-lg">tune</span>
+                        <span x-text="showAdvBookingFilters ? 'Hide Advanced Filters' : 'Show Advanced Filters'"></span>
+                    </button>
+                    <div x-show="showAdvBookingFilters" x-collapse x-cloak class="mt-4 p-4 bg-white border border-outline-variant/30 rounded-xl grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Price Range (VND)</label>
+                            <div class="flex items-center gap-2">
+                                <input type="number" id="booking-min-price" placeholder="Min" class="w-full px-3 py-2 bg-surface-variant/50 border border-outline-variant/30 rounded-lg text-sm focus:outline-none focus:border-primary" oninput="filterBookings()">
+                                <span class="text-on-surface-variant">-</span>
+                                <input type="number" id="booking-max-price" placeholder="Max" class="w-full px-3 py-2 bg-surface-variant/50 border border-outline-variant/30 rounded-lg text-sm focus:outline-none focus:border-primary" oninput="filterBookings()">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-on-surface-variant uppercase mb-1">Date Range</label>
+                            <div class="flex items-center gap-2">
+                                <input type="date" id="booking-start-date" class="w-full px-3 py-2 bg-surface-variant/50 border border-outline-variant/30 rounded-lg text-sm focus:outline-none focus:border-primary" onchange="filterBookings()">
+                                <span class="text-on-surface-variant">-</span>
+                                <input type="date" id="booking-end-date" class="w-full px-3 py-2 bg-surface-variant/50 border border-outline-variant/30 rounded-lg text-sm focus:outline-none focus:border-primary" onchange="filterBookings()">
+                            </div>
+                        </div>
+                        <div class="flex items-end">
+                            <button type="button" onclick="document.getElementById('booking-min-price').value=''; document.getElementById('booking-max-price').value=''; document.getElementById('booking-start-date').value=''; document.getElementById('booking-end-date').value=''; filterBookings();" class="text-sm font-bold text-on-surface-variant hover:text-on-surface hover:underline">
+                                Clear Advanced Filters
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="bookings-loading" class="text-center py-16">
                     <div class="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                     <p class="text-on-surface-variant">Loading your bookings...</p>
@@ -245,9 +276,30 @@
         const items = document.querySelectorAll('.booking-item');
         let visibleCount = 0;
 
+        const minPriceVal = document.getElementById('booking-min-price').value;
+        const maxPriceVal = document.getElementById('booking-max-price').value;
+        const minPrice = minPriceVal ? parseFloat(minPriceVal) : null;
+        const maxPrice = maxPriceVal ? parseFloat(maxPriceVal) : null;
+        
+        const startDateVal = document.getElementById('booking-start-date').value;
+        const endDateVal = document.getElementById('booking-end-date').value;
+        const startDate = startDateVal ? new Date(startDateVal) : null;
+        const endDate = endDateVal ? new Date(endDateVal) : null;
+
         items.forEach(item => {
             const status = item.getAttribute('data-status');
             const searchData = item.getAttribute('data-search').toLowerCase();
+            const price = parseFloat(item.getAttribute('data-price')) || 0;
+            const dateStr = item.getAttribute('data-date');
+            
+            // Format DD/MM/YYYY to JS Date
+            let itemDate = null;
+            if (dateStr) {
+                const parts = dateStr.split('/');
+                if (parts.length === 3) {
+                    itemDate = new Date(parts[2], parts[1] - 1, parts[0]);
+                }
+            }
 
             // Match filter
             let matchFilter = false;
@@ -260,8 +312,20 @@
 
             // Match search
             const matchSearch = searchTerm === '' || searchData.includes(searchTerm);
+            
+            // Match Advanced Price
+            let matchPrice = true;
+            if (minPrice !== null && price < minPrice) matchPrice = false;
+            if (maxPrice !== null && price > maxPrice) matchPrice = false;
+            
+            // Match Advanced Date
+            let matchDate = true;
+            if (itemDate) {
+                if (startDate !== null && itemDate < startDate) matchDate = false;
+                if (endDate !== null && itemDate > endDate) matchDate = false;
+            }
 
-            if (matchFilter && matchSearch) {
+            if (matchFilter && matchSearch && matchPrice && matchDate) {
                 item.classList.remove('hidden');
                 visibleCount++;
             } else {
@@ -339,7 +403,9 @@
                 return `
                     <div class="booking-item bg-white rounded-2xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row gap-6 items-start ${opacityClass}" 
                          data-status="${filterStatus}" 
-                         data-search="${searchString}">
+                         data-search="${searchString}"
+                         data-price="${b.totalAmount || 0}"
+                         data-date="${b.bookingDate}">
                         <div class="w-14 h-14 rounded-full bg-primary-container flex items-center justify-center shrink-0">
                             ${b.guideAvatar ? `<img src="${b.guideAvatar}" class="w-14 h-14 rounded-full object-cover">` : `<span class="material-symbols-outlined text-primary text-2xl">person</span>`}
                         </div>
@@ -367,7 +433,20 @@
                                 </a>
                                 ${b.status === 0 || b.status === -1 ? `
                                 <button onclick="cancelBooking('${b.id}')" class="text-red-500 text-sm font-bold flex items-center gap-1 hover:underline ml-auto" title="Cancel Booking">
-                                    <span class="material-symbols-outlined text-[16px]">delete</span> Cancel
+                                    <span class="material-symbols-outlined text-[16px]">cancel</span> Cancel
+                                </button>
+                                ` : ''}
+                                ${(b.status === 1 && b.amountPaid >= b.totalAmount) ? `
+                                <button onclick="completeTour('${b.id}')" class="bg-green-100 text-green-700 text-sm font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-green-200 transition-colors ml-2">
+                                    <span class="material-symbols-outlined text-[16px]">task_alt</span> Mark Completed
+                                </button>
+                                <button onclick="reportGuide('${b.id}')" class="text-orange-500 bg-orange-50 text-sm font-bold flex items-center gap-1.5 px-3 py-1.5 rounded-xl hover:bg-orange-100 transition-colors ml-2">
+                                    <span class="material-symbols-outlined text-[16px]">report</span> Report Guide
+                                </button>
+                                ` : ''}
+                                ${b.status === 3 ? `
+                                <button onclick="deleteBooking('${b.id}')" class="text-red-600 bg-red-50 text-sm font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-red-100 transition-colors ml-auto" title="Delete Booking">
+                                    <span class="material-symbols-outlined text-[16px]">delete</span> Delete
                                 </button>
                                 ` : ''}
                             </div>
@@ -381,6 +460,87 @@
 
         } catch (err) {
             console.error('Failed to load bookings:', err);
+        }
+    }
+
+    async function deleteBooking(id) {
+        if (!confirm('Are you sure you want to delete this cancelled booking from your history?')) return;
+        
+        try {
+            const res = await fetch(`/Traveler/DeleteBookingAjax?id=${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) {
+                showToast('Booking deleted.', true);
+                loadBookings();
+            } else {
+                showToast('Failed to delete booking.', false);
+            }
+        } catch(err) {
+            console.error(err);
+            showToast('Connection error.', false);
+        }
+    }
+
+    async function completeTour(id) {
+        if (!confirm('Are you sure you want to mark this tour as completed? This will release the payment to the guide.')) return;
+        
+        try {
+            const res = await fetch(`/Traveler/CompleteTourAjax?id=${id}`, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) {
+                showToast('Tour marked as completed!', true);
+                loadBookings();
+            } else {
+                showToast('Failed to complete tour.', false);
+            }
+        } catch(err) {
+            console.error(err);
+            showToast('Connection error.', false);
+        }
+    }
+
+    async function reportGuide(bookingId) {
+        const { value: reason } = await Swal.fire({
+            title: 'Report Guide',
+            input: 'textarea',
+            inputLabel: 'Why are you reporting this guide?',
+            inputPlaceholder: 'Type your reason here...',
+            inputAttributes: {
+                'aria-label': 'Type your reason here'
+            },
+            showCancelButton: true,
+            confirmButtonColor: '#ff7a00',
+            inputValidator: (value) => {
+                if (!value) {
+                    return 'You need to write something!'
+                }
+            }
+        });
+
+        if (reason) {
+            try {
+                const res = await fetch('/Traveler/ReportGuideAjax', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ bookingId, reason })
+                });
+
+                if (res.ok) {
+                    Swal.fire('Reported!', 'Your report has been submitted to the admin team.', 'success');
+                } else {
+                    Swal.fire('Error', 'Failed to submit report.', 'error');
+                }
+            } catch(err) {
+                console.error(err);
+                Swal.fire('Error', 'Connection error.', 'error');
+            }
         }
     }
 
@@ -515,7 +675,14 @@
                     } else if (o.status === 'accepted') {
                         actionsHtml = `<div class="mt-4 sm:mt-0 sm:ml-auto shrink-0"><span class="bg-green-100 text-green-700 font-bold px-3 py-1 rounded-full text-xs">Accepted</span></div>`;
                     } else if (o.status === 'rejected') {
-                        actionsHtml = `<div class="mt-4 sm:mt-0 sm:ml-auto shrink-0"><span class="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full text-xs">Rejected</span></div>`;
+                        actionsHtml = `
+                            <div class="flex items-center gap-3 mt-4 sm:mt-0 sm:ml-auto shrink-0">
+                                <span class="bg-red-100 text-red-700 font-bold px-3 py-1 rounded-full text-xs">Rejected</span>
+                                <button onclick="deleteOffer('${o.id}', '${tripId}')" class="text-red-600 bg-red-50 p-2 rounded-full hover:bg-red-100 transition-colors" title="Delete Offer">
+                                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                                </button>
+                            </div>
+                        `;
                     }
 
                     html += `
@@ -597,6 +764,60 @@
         } catch (err) {
             showAlert('Connection error.', 'error');
         }
+    }
+
+    async function deleteOffer(offerId, tripId) {
+        if (!confirm('Are you sure you want to delete this rejected offer?')) return;
+        try {
+            const res = await fetch('/Traveler/DeleteOfferAjax/' + offerId, {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            if (res.ok) {
+                showAlert('Offer deleted.');
+                loadOffers(tripId); // Reload offers for this trip
+            } else {
+                showAlert('Failed to delete offer.', 'error');
+            }
+        } catch (err) {
+            showAlert('Connection error.', 'error');
+        }
+    }
+
+    async function deleteBooking(bookingId) {
+        Swal.fire({
+            title: 'Delete Booking?',
+            text: "Are you sure you want to permanently delete this cancelled booking?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, delete it!'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                if (!token) return;
+                try {
+                    const res = await fetch('/Traveler/DeleteBookingAjax/' + bookingId, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (res.ok) {
+                        Swal.fire({
+                            title: 'Deleted!', 
+                            text: 'The booking has been permanently removed.', 
+                            icon: 'success',
+                            customClass: { popup: 'swal-top-fix' }
+                        });
+                        loadBookings();
+                    } else {
+                        const err = await res.json();
+                        Swal.fire('Error', err.error || 'Failed to delete booking', 'error');
+                    }
+                } catch (err) {
+                    Swal.fire('Error', 'Connection error.', 'error');
+                }
+            }
+        });
     }
 
     async function leaveReview(id) {

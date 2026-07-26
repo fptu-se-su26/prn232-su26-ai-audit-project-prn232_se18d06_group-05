@@ -24,9 +24,15 @@
         }
 
         <!-- Welcome -->
-        <div class="mb-8">
-            <h1 class="text-3xl font-extrabold text-on-surface mb-1" data-welcome>Welcome back, @(ViewBag.TravelerName ?? "Traveler")!</h1>
-            <p class="text-on-surface-variant">Here's a quick overview of your travel activity.</p>
+        <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-3xl font-extrabold text-on-surface mb-1" data-welcome>Welcome back, @(ViewBag.TravelerName ?? "Traveler")!</h1>
+                <p class="text-on-surface-variant">Here's a quick overview of your travel activity.</p>
+            </div>
+            <button onclick="submitFeedback()" class="bg-primary/10 text-primary hover:bg-primary/20 px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 transition-colors">
+                <span class="material-symbols-outlined text-[20px]">feedback</span>
+                Give Feedback
+            </button>
         </div>
 
         <div x-data="dashboardApp()">
@@ -397,4 +403,61 @@
             }
         }));
     });
+    
+    async function submitFeedback() {
+        const token = localStorage.getItem('accessToken');
+        if (!token) return;
+
+        const { value: formValues } = await Swal.fire({
+            title: 'System Feedback',
+            html: `
+                <div class="space-y-4 text-left">
+                    <p class="text-sm text-gray-600">How do you like TripMate? Please rate and share your thoughts.</p>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Rating (1-5 Stars)</label>
+                        <input id="swal-rating" type="number" min="1" max="5" value="5" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Your Feedback</label>
+                        <textarea id="swal-comment" rows="3" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-primary resize-none" placeholder="What can we improve?"></textarea>
+                    </div>
+                </div>
+            `,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonColor: '#ff7a00',
+            preConfirm: () => {
+                return {
+                    rating: document.getElementById('swal-rating').value,
+                    comment: document.getElementById('swal-comment').value
+                }
+            }
+        });
+
+        if (formValues) {
+            if (!formValues.comment) {
+                Swal.fire('Notice', 'Please write a comment.', 'info');
+                return;
+            }
+
+            try {
+                const res = await fetch('/Traveler/SubmitFeedbackAjax', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formValues)
+                });
+
+                if (res.ok) {
+                    Swal.fire('Thank you!', 'Your feedback helps us improve TripMate.', 'success');
+                } else {
+                    Swal.fire('Error', 'Failed to submit feedback.', 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'Connection error.', 'error');
+            }
+        }
+    }
 </script>

@@ -156,8 +156,26 @@
                     {
                         foreach (var pkg in packages)
                         {
+
+                            var tourModalPayload = System.Text.Json.JsonSerializer.Serialize(new
+                            {
+                                id = pkg.Id ?? "",
+                                title = pkg.Title ?? "",
+                                description = pkg.Description ?? "",
+                                duration = pkg.DurationHours,
+                                pricePerSession = pkg.PricePerSession,
+                                pricePerPerson = pkg.PricePerPerson ?? 0,
+                                includedGuestCount = pkg.IncludedGuestCount,
+                                maxGroup = pkg.MaxGroupSize,
+                                includedItems = pkg.IncludedItems ?? new List<string>(),
+                                guideId = pkg.GuideProfileId ?? "",
+                                coverImageUrl = pkg.CoverImageUrl ?? "",
+                                cityArea = Model.CityArea ?? "Vietnam",
+                                timeline = pkg.TimelineJson ?? new object()
+                            });
                             <div class="bg-white rounded-3xl p-6 shadow-sm border border-outline-variant/30 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:shadow-md transition-shadow cursor-pointer group"
-                                 @@click="openTourModal('@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Id ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Title ?? "")', `@System.Web.HttpUtility.JavaScriptStringEncode(pkg.Description ?? "")`, @pkg.DurationHours, @pkg.PricePerSession, @(pkg.PricePerPerson ?? 0), @pkg.MaxGroupSize, '@System.Web.HttpUtility.JavaScriptStringEncode(string.Join(",", pkg.IncludedItems ?? new List<string>()))')">
+                                 data-tour-modal="@tourModalPayload"
+                                 @@click="openTourModal(JSON.parse($event.currentTarget.dataset.tourModal))">
                                 <div class="flex-1">
                                     <div class="flex justify-between items-start mb-2">
                                         <h3 class="text-xl font-bold text-on-surface group-hover:text-primary transition-colors">@pkg.Title</h3>
@@ -252,90 +270,8 @@
     </div>
 
     <!-- ═══ Tour Detail Modal ═══ -->
-    <div x-show="showModal" x-transition.opacity class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" style="display: none;" @@click.self="showModal = false">
-        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" @@click.stop x-transition.scale.95>
-            <!-- Modal Header -->
-            <div class="sticky top-0 bg-white border-b border-outline-variant/30 p-6 rounded-t-3xl flex items-center justify-between z-10">
-                <h2 class="text-2xl font-bold text-on-surface" x-text="modal.title"></h2>
-                <button @@click="showModal = false" class="w-10 h-10 rounded-full hover:bg-surface-variant flex items-center justify-center transition-colors">
-                    <span class="material-symbols-outlined">close</span>
-                </button>
-            </div>
-
-            <div class="p-6 md:p-8 space-y-6">
-                <!-- Tour Meta -->
-                <div class="flex flex-wrap gap-4">
-                    <div class="flex items-center gap-2 bg-primary-container/50 px-4 py-2 rounded-xl">
-                        <span class="material-symbols-outlined text-primary text-sm">schedule</span>
-                        <span class="font-bold text-sm" x-text="modal.duration + ' hours'"></span>
-                    </div>
-                    <div class="flex items-center gap-2 bg-surface-variant px-4 py-2 rounded-xl">
-                        <span class="material-symbols-outlined text-on-surface-variant text-sm">group</span>
-                        <span class="font-bold text-sm" x-text="'Max ' + modal.maxGroup + ' people'"></span>
-                    </div>
-                </div>
-
-                <!-- Description / Itinerary -->
-                <div>
-                    <h3 class="text-lg font-bold text-on-surface mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary text-xl">route</span> Tour Description
-                    </h3>
-                    <p class="text-on-surface-variant leading-relaxed whitespace-pre-line" x-text="modal.description"></p>
-                </div>
-
-                <!-- Included Items -->
-                <div x-show="modal.includedItems.length > 0">
-                    <h3 class="text-lg font-bold text-on-surface mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-primary text-xl">check_circle</span> What's Included
-                    </h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        <template x-for="item in modal.includedItems" :key="item">
-                            <div class="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-2 rounded-lg">
-                                <span class="material-symbols-outlined text-green-600 text-sm">check</span>
-                                <span class="text-sm text-green-800 font-medium" x-text="item"></span>
-                            </div>
-                        </template>
-                    </div>
-                </div>
-
-                <!-- Guide Info -->
-                <div class="bg-surface-variant/50 rounded-2xl p-5 flex items-center gap-4">
-                    <div class="w-14 h-14 rounded-full overflow-hidden border-2 border-primary/20 shrink-0 bg-gray-100">
-                        @if (!string.IsNullOrEmpty(Model.Profile?.AvatarUrl))
-                        {
-                            <img src="@Model.Profile.AvatarUrl" alt="@Model.Profile.FullName" class="w-full h-full object-cover" />
-                        }
-                        else
-                        {
-                            <span class="material-symbols-outlined text-3xl text-gray-400 mt-2 block text-center">person</span>
-                        }
-                    </div>
-                    <div>
-                        <p class="text-sm text-on-surface-variant">Created by</p>
-                        <p class="font-bold text-on-surface text-lg">@Model.Profile?.FullName</p>
-                        <div class="flex items-center gap-1 text-sm">
-                            <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
-                            <span class="font-bold">@(Model.AverageRating?.ToString("0.0") ?? "0.0")</span>
-                            <span class="text-on-surface-variant">(@(Model.TotalReviews ?? 0) reviews)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Price & Book -->
-                <div class="bg-white border-2 border-primary/30 rounded-2xl p-6 flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-on-surface-variant">Price</p>
-                        <p class="text-3xl font-extrabold text-primary" x-text="modal.priceLabel"></p>
-                    </div>
-                    <button @@click="startTourBooking(modal.id)"
-                            class="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
-                        <span class="material-symbols-outlined">lock</span>
-                        Book This Tour
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <partial name="_TravelerTourModal" />
+    <partial name="_TravelerBookingModal" />
 
     <!-- ═══ Booking Wizard Modal ═══ -->
     <div x-show="showWizard"
@@ -493,7 +429,6 @@
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('guideProfilePage', () => ({
-            showModal: false,
             showWizard: false,
             wizardStep: 1,
             bookingType: '',
@@ -502,17 +437,46 @@
             bookingGuests: 1,
             bookingNotes: '',
             selectedMethod: 'Credit Card',
+            showModal: false,
+            showBooking: false,
+            bookingInProgress: false,
+            bookingError: '',
             
-            basePrice: @(Model.PricePerHour ?? 500000),
+            get minimumBookingDate() {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const year = tomorrow.getFullYear();
+                const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                const day = String(tomorrow.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            },
+            get bookingTotal() {
+                const included = Math.max(1, Number(this.modal.includedGuestCount) || 1);
+                const guests = Math.max(1, Number(this.bookingGuests) || 1);
+                const extraGuests = Math.max(0, guests - included);
+                const tourPrice = Math.max(0, Number(this.modal.pricePerSession) || 0);
+                const extraGuestPrice = Math.max(0, Number(this.modal.pricePerPerson) || 0);
+                return tourPrice + (extraGuests * extraGuestPrice);
+            },
+            get bookingDeposit() {
+                return this.bookingTotal * 0.3;
+            },
+            formatCurrency(amount) {
+                return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount || 0);
+            },
+            
+            basePrice: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PricePerHour ?? 500000)),
             
             get computedTotal() {
                 if (this.bookingType === 'tour' && this.modal.pricePerSession > 0) {
-                    return this.modal.pricePerSession;
-                } else if (this.bookingType === 'tour' && this.modal.pricePerPerson > 0) {
-                    return this.modal.pricePerPerson * this.bookingGuests;
-                } else {
-                    return this.basePrice * this.bookingGuests;
+                    const included = Math.max(1, this.modal.includedGuestCount);
+                    const guests = Math.max(1, Number(this.bookingGuests) || 1);
+                    const extraGuests = Math.max(0, guests - included);
+                    return this.modal.pricePerSession
+                        + extraGuests * Math.max(0, this.modal.pricePerPerson);
                 }
+
+                return this.basePrice * this.bookingGuests;
             },
             get platformFee() {
                 return Math.round(this.computedTotal * 0.15);
@@ -525,8 +489,10 @@
             isSaved: false,
             modal: {
                 id: '', title: '', description: '', duration: 0,
-                pricePerSession: 0, pricePerPerson: 0, maxGroup: 6,
-                includedItems: [], priceLabel: ''
+                pricePerSession: 0, pricePerPerson: 0, includedGuestCount: 1, maxGroup: 6,
+                includedItems: [], priceLabel: '',
+                guideName: '', guideAvatar: '', guideId: '',
+                coverImageUrl: '', cityArea: '', timeline: []
             },
 
             async init() {
@@ -578,25 +544,130 @@
                 }
             },
 
-            openTourModal(id, title, description, duration, pricePerSession, pricePerPerson, maxGroup, includedItemsStr) {
-                this.modal.id = id;
-                this.modal.title = title;
-                this.modal.description = description;
-                this.modal.duration = duration;
+            openTourModal(tour) {
+                const pricePerSession = Number(tour?.pricePerSession) || 0;
+                const pricePerPerson = Number(tour?.pricePerPerson) || 0;
+                this.modal.id = tour?.id || '';
+                this.modal.title = tour?.title || '';
+                this.modal.description = tour?.description || '';
+                this.modal.duration = Number(tour?.duration) || 0;
                 this.modal.pricePerSession = pricePerSession;
                 this.modal.pricePerPerson = pricePerPerson;
-                this.modal.maxGroup = maxGroup;
-                this.modal.includedItems = includedItemsStr ? includedItemsStr.split(',').map(s => s.trim()).filter(s => s) : [];
+                this.modal.includedGuestCount = Math.max(1, Number(tour?.includedGuestCount) || 1);
+                this.modal.maxGroup = Number(tour?.maxGroup) || 1;
+                this.modal.includedItems = Array.isArray(tour?.includedItems)
+                    ? tour.includedItems.filter(item => typeof item === 'string' && item.trim())
+                    : [];
+                this.modal.guideName = tour?.guideName || '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(Model.Profile?.FullName ?? "Local Guide"))';
+                this.modal.guideAvatar = tour?.guideAvatar || '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(Model.Profile?.AvatarUrl ?? ""))';
+                this.modal.guideId = tour?.guideId || '@Html.Raw(System.Web.HttpUtility.JavaScriptStringEncode(Model.Id ?? ""))';
+                this.modal.coverImageUrl = tour?.coverImageUrl || '';
+                this.modal.cityArea = tour?.cityArea || '';
+                this.modal.timeline = Array.isArray(tour?.timeline) ? tour.timeline : [];
 
                 const fmt = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
                 if (pricePerSession > 0) {
-                    this.modal.priceLabel = fmt.format(pricePerSession) + '/session';
-                } else if (pricePerPerson > 0) {
-                    this.modal.priceLabel = fmt.format(pricePerPerson) + '/person';
+                    this.modal.priceLabel = fmt.format(pricePerSession) + '/tour';
                 } else {
                     this.modal.priceLabel = 'Contact';
                 }
+                this.bookingDate = '';
+                this.bookingGuests = 1;
+                this.bookingNotes = '';
                 this.showModal = true;
+
+                // Fetch blocked dates and init flatpickr
+                fetch(`/Traveler/GetGuideAvailability?guideId=${this.modal.guideId}`)
+                    .then(r => r.json())
+                    .then(blockedDates => {
+                        if(this._fp) this._fp.destroy();
+                        this.$nextTick(() => {
+                            this._fp = flatpickr(this.$refs.datePicker, {
+                                minDate: this.minimumBookingDate,
+                                disable: Array.isArray(blockedDates) ? blockedDates : [],
+                                onChange: (selectedDates, dateStr) => {
+                                    this.bookingDate = dateStr;
+                                }
+                            });
+                        });
+                    }).catch(err => console.error('Error fetching availability', err));
+            },
+
+            startTourBooking() {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                
+                this.bookingDate = this.minimumBookingDate;
+                this.bookingGuests = 1;
+                this.bookingNotes = '';
+                this.bookingError = '';
+                this.showModal = false;
+                this.showBooking = true;
+                this.$nextTick(() => this._fp?.setDate(this.bookingDate, false));
+            },
+
+            closeBooking() {
+                if (this.bookingInProgress) return;
+                this.showBooking = false;
+                this.bookingError = '';
+            },
+
+            async submitTourBooking() {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                
+                this.bookingError = '';
+                const guests = Number(this.bookingGuests);
+                if (!this.bookingDate || this.bookingDate < this.minimumBookingDate) {
+                    this.bookingError = 'Please select a future trip date.';
+                    return;
+                }
+                if (!Number.isInteger(guests) || guests < 1 || guests > this.modal.maxGroup) {
+                    this.bookingError = `Guest count must be between 1 and ${this.modal.maxGroup}.`;
+                    return;
+                }
+
+                if (this.bookingInProgress) return;
+                this.bookingInProgress = true;
+
+                try {
+                    const formData = new FormData();
+                    formData.append('guideId', this.modal.guideId);
+                    formData.append('packageId', this.modal.id);
+                    formData.append('date', this.bookingDate);
+                    formData.append('guests', this.bookingGuests.toString());
+                    if (this.bookingNotes) formData.append('notes', this.bookingNotes);
+
+                    const res = await fetch('/Traveler/BookTour', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + token },
+                        body: formData
+                    });
+
+                    if (res.ok) {
+                        const data = await res.json();
+                        if (data.paymentUrl) {
+                            window.location.href = data.paymentUrl;
+                            return;
+                        }
+                    } else if (res.status === 400) {
+                        const errorData = await res.json();
+                        Swal.fire({ title: 'Notice', text: errorData.error || 'Booking failed.', icon: 'info' });
+                    } else {
+                        Swal.fire({ title: 'Error', text: 'Booking failed. Please try again.', icon: 'error' });
+                    }
+                } catch(err) {
+                    console.error('Booking error:', err);
+                    Swal.fire('Error', 'Connection error. Please try again.', 'error');
+                } finally {
+                    this.bookingInProgress = false;
+                }
             },
 
             startCustomBooking() {
@@ -610,18 +681,7 @@
                 this.showWizard = true;
             },
 
-            startTourBooking(packageId) {
-                const token = localStorage.getItem('accessToken');
-                if (!token) {
-                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
-                    return;
-                }
-                this.bookingType = 'tour';
-                this.bookingPackageId = packageId;
-                this.wizardStep = 1;
-                this.showWizard = true;
-                this.showModal = false; // close tour modal
-            },
+
 
             nextStep() {
                 if (this.wizardStep < 3) this.wizardStep++;

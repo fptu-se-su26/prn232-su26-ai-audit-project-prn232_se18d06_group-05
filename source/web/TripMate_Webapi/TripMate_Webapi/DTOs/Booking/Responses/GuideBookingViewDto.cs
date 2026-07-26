@@ -29,5 +29,15 @@ public record GuideBookingViewDto(
     int SecondsRemaining,
     
     // Sort logic
-    DateTime CreatedAt
+    DateTime CreatedAt,
+
+    // Guide completion workflow
+    DateTime? ScheduledEndAt,
+    string CompletionState,
+    DateTime? GuideCompletedAt,
+    DateTime? TravelerConfirmationDueAt,
+    decimal AmountPaid,
+    string PaymentStatus,
+    string PayoutStatus,
+    bool CanMarkComplete
 );

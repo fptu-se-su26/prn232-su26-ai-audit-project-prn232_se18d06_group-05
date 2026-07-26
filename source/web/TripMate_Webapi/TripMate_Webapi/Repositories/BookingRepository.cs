@@ -44,7 +44,7 @@ namespace TripMate_Webapi.Repositories
             
             using var http = new System.Net.Http.HttpClient();
             var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Post, $"{supabaseUrl}/rest/v1/bookings");
-            req.Headers.Add("apikey", anonKey);
+            req.Headers.Add("apikey", _apiKey);
             req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenToUse);
             req.Headers.Add("Prefer", "return=representation");
             
@@ -54,12 +54,20 @@ namespace TripMate_Webapi.Repositories
                 { "traveler_id", booking.TravelerId },
                 { "guide_profile_id", booking.GuideProfileId },
                 { "booking_date", booking.BookingDate.ToString("yyyy-MM-dd") },
-                { "start_time", booking.StartTime.ToString("HH:mm:ssZ") },
+                // Legacy column is time with time zone. TripMate currently uses
+                // Asia/Ho_Chi_Minh for booking-facing clock values; lifecycle
+                // decisions use the immutable UTC schedule fields below.
+                { "start_time", booking.StartTime.ToString("HH:mm:ss") + "+07:00" },
                 { "guest_count", booking.GuestCount },
                 { "total_amount", booking.TotalAmount },
                 { "platform_fee", booking.PlatformFee },
                 { "guide_earnings", booking.GuideEarnings },
                 { "status", booking.Status },
+                { "amount_paid", booking.AmountPaid },
+                { "payment_status", booking.PaymentStatus },
+                { "scheduled_start_at", booking.ScheduledStartAt?.ToString("O") },
+                { "scheduled_end_at", booking.ScheduledEndAt?.ToString("O") },
+                { "payment_reference", booking.PaymentReference },
                 { "traveler_notes", booking.TravelerNotes },
                 { "experience_package_id", booking.ExperiencePackageId }
             };
@@ -106,7 +114,7 @@ namespace TripMate_Webapi.Repositories
             
             using var http = new System.Net.Http.HttpClient();
             var req = new System.Net.Http.HttpRequestMessage(System.Net.Http.HttpMethod.Patch, $"{supabaseUrl}/rest/v1/bookings?id=eq.{booking.Id}");
-            req.Headers.Add("apikey", anonKey);
+            req.Headers.Add("apikey", _apiKey);
             req.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", tokenToUse);
             req.Headers.Add("Prefer", "return=representation");
             
@@ -114,6 +122,7 @@ namespace TripMate_Webapi.Repositories
             {
                 { "status", booking.Status },
                 { "amount_paid", booking.AmountPaid },
+                { "payment_reference", booking.PaymentReference },
                 { "updated_at", DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ") }
                 // Only send the fields we actually update during PaymentCallback/Updates
                 // If we need to update other fields later, we add them here.
@@ -130,6 +139,35 @@ namespace TripMate_Webapi.Repositories
                 throw new Exception($"Failed to update booking: {error}");
             }
             return booking;
+        }
+
+        public async Task UpdatePaymentReferenceAsync(string bookingId, string paymentReference)
+        {
+            var anonKey = _config["Supabase:AnonKey"] ?? Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
+            var serviceKey = _config["Supabase:ServiceRoleKey"] ?? Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+            var tokenToUse = serviceKey ?? anonKey;
+
+            using var http = new HttpClient();
+            using var request = new HttpRequestMessage(
+                HttpMethod.Patch,
+                $"{_supabaseUrl}/rest/v1/bookings?id=eq.{Uri.EscapeDataString(bookingId)}");
+            request.Headers.Add("apikey", _apiKey);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenToUse);
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(new
+                {
+                    payment_reference = paymentReference,
+                    updated_at = DateTime.UtcNow.ToString("O")
+                }),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            using var response = await http.SendAsync(request);
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                throw new InvalidOperationException($"Failed to update booking payment reference: {error}");
+            }
         }
 
         public async Task<int> GetPendingBookingsCountAsync(string guideProfileId)
@@ -239,6 +277,49 @@ namespace TripMate_Webapi.Repositories
                 var error = await response.Content.ReadAsStringAsync();
                 throw new Exception($"Failed to update booking status: {error}");
             }
+        }
+
+        public async Task<bool> MarkGuideCompletionAsync(
+            string bookingId,
+            string guideProfileId,
+            DateTime eligibleEndAtUtc,
+            DateTime completedAtUtc,
+            DateTime confirmationDueAtUtc)
+        {
+            var url = $"{_supabaseUrl}/rest/v1/bookings" +
+                      $"?id=eq.{Uri.EscapeDataString(bookingId)}" +
+                      $"&guide_profile_id=eq.{Uri.EscapeDataString(guideProfileId)}" +
+                      "&status=eq.1" +
+                      "&completion_state=in.(not_started,awaiting_guide)" +
+                      $"&scheduled_end_at=lte.{Uri.EscapeDataString(eligibleEndAtUtc.ToString("O"))}" +
+                      "&select=id";
+
+            using var request = new HttpRequestMessage(HttpMethod.Patch, url);
+            request.Headers.Add("apikey", _apiKey);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _apiKey);
+            request.Headers.Add("Prefer", "return=representation");
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(new
+                {
+                    completion_state = "awaiting_traveler",
+                    guide_completed_at = completedAtUtc.ToString("O"),
+                    traveler_confirmation_due_at = confirmationDueAtUtc.ToString("O"),
+                    updated_at = completedAtUtc.ToString("O")
+                }),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            var client = _httpClientFactory.CreateClient();
+            using var response = await client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"Failed to submit Guide completion: {content}");
+            }
+
+            using var document = JsonDocument.Parse(content);
+            return document.RootElement.ValueKind == JsonValueKind.Array &&
+                   document.RootElement.GetArrayLength() == 1;
         }
 
         public async Task DeleteBookingAsync(string id)
