@@ -107,9 +107,6 @@
                         ? string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:C0}", tour.PricePerSession) + "/session"
                         : (tour.PricePerPerson > 0 ? string.Format(new System.Globalization.CultureInfo("vi-VN"), "{0:C0}", tour.PricePerPerson) + "/person" : "Contact");
                     var timelineStr = tour.TimelineJson != null ? System.Text.Json.JsonSerializer.Serialize(tour.TimelineJson) : "[]";
-
-                    <div class="bg-white rounded-3xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 cursor-pointer flex flex-col"
-                         @@click="openTourModal('@System.Web.HttpUtility.JavaScriptStringEncode(tour.Id ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(tour.Title ?? "")', `@System.Web.HttpUtility.JavaScriptStringEncode(tour.Description ?? "")`, @tour.DurationHours, @tour.PricePerSession, @(tour.PricePerPerson ?? 0), @tour.MaxGroupSize, '@System.Web.HttpUtility.JavaScriptStringEncode(string.Join(",", tour.IncludedItems ?? new List<string>()))', '@System.Web.HttpUtility.JavaScriptStringEncode(guideName)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideAvatar)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideId)', '@System.Web.HttpUtility.JavaScriptStringEncode(tourCover)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideCityArea)', '@System.Web.HttpUtility.JavaScriptStringEncode(timelineStr)')">
                     var tourModalPayload = System.Text.Json.JsonSerializer.Serialize(new
                     {
                         id = tour.Id ?? "",
@@ -214,15 +211,35 @@
         Alpine.data('toursBrowse', () => ({
             showFilters: false,
             showModal: false,
+            showBooking: false,
             bookingInProgress: false,
             showWizard: false,
             wizardStep: 1,
             bookingPackageId: '',
-            bookingDate: new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0],
+            bookingDate: '',
             bookingGuests: 1,
             bookingNotes: '',
+            bookingError: '',
             selectedMethod: 'Credit Card',
             
+            get minimumBookingDate() {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                return tomorrow.toISOString().split('T')[0];
+            },
+            get bookingTotal() {
+                const included = Math.max(1, this.modal.includedGuestCount || 1);
+                const guests = Math.max(1, Number(this.bookingGuests) || 1);
+                const extraGuests = Math.max(0, guests - included);
+                return Math.max(0, this.modal.pricePerSession) + (extraGuests * Math.max(0, this.modal.pricePerPerson));
+            },
+            get bookingDeposit() {
+                return this.bookingTotal * 0.3;
+            },
+            formatCurrency(amount) {
+                return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(amount || 0);
+            },
+
             get computedTotal() {
                 const included = Math.max(1, this.modal.includedGuestCount);
                 const guests = Math.max(1, Number(this.bookingGuests) || 1);
@@ -247,25 +264,6 @@
                 bookingDate: '', bookingGuests: 1
             },
 
-            openTourModal(id, title, description, duration, pricePerSession, pricePerPerson, maxGroup, includedItemsStr, guideName, guideAvatar, guideId, coverImageUrl, cityArea, timelineJsonStr) {
-                this.modal.id = id;
-                this.modal.title = title;
-                this.modal.description = description;
-                this.modal.duration = duration;
-                this.modal.pricePerSession = pricePerSession;
-                this.modal.pricePerPerson = pricePerPerson;
-                this.modal.maxGroup = maxGroup;
-                this.modal.includedItems = includedItemsStr ? includedItemsStr.split(',').map(s => s.trim()).filter(s => s) : [];
-                this.modal.guideName = guideName || 'Local Guide';
-                this.modal.guideAvatar = guideAvatar || '';
-                this.modal.guideId = guideId || '';
-                this.modal.coverImageUrl = coverImageUrl || '';
-                this.modal.cityArea = cityArea || '';
-                try {
-                    this.modal.timeline = JSON.parse(timelineJsonStr || '[]');
-                } catch(e) {
-                    this.modal.timeline = [];
-                }
             openTourModal(tour) {
                 const pricePerSession = Number(tour?.pricePerSession) || 0;
                 const pricePerPerson = Number(tour?.pricePerPerson) || 0;
@@ -283,6 +281,9 @@
                 this.modal.guideName = tour?.guideName || 'Local Guide';
                 this.modal.guideAvatar = tour?.guideAvatar || '';
                 this.modal.guideId = tour?.guideId || '';
+                this.modal.coverImageUrl = tour?.coverImageUrl || '';
+                this.modal.cityArea = tour?.cityArea || '';
+                this.modal.timeline = Array.isArray(tour?.timeline) ? tour.timeline : [];
 
                 const fmt = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
                 this.modal.priceLabel = pricePerSession > 0
@@ -294,7 +295,7 @@
                 this.showModal = true;
 
                 // Fetch blocked dates and init flatpickr
-                fetch(`/Traveler/GetGuideAvailability?guideId=${guideId}`)
+                fetch(`/Traveler/GetGuideAvailability?guideId=${this.modal.guideId}`)
                     .then(r => r.json())
                     .then(blockedDates => {
                         if(this._fp) this._fp.destroy();
@@ -303,28 +304,61 @@
                                 minDate: "today",
                                 disable: blockedDates,
                                 onChange: (selectedDates, dateStr) => {
-                                    this.modal.bookingDate = dateStr;
+                                    this.bookingDate = dateStr;
                                 }
                             });
                         });
                     }).catch(err => console.error('Error fetching availability', err));
             },
 
-            async startTourBooking(packageId, guideId) {
+            startTourBooking() {
                 const token = localStorage.getItem('accessToken');
                 if (!token) {
-                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.href);
                     return;
                 }
+                
+                this.bookingDate = this.minimumBookingDate;
+                this.bookingGuests = 1;
+                this.bookingNotes = '';
+                this.bookingError = '';
+                this.showModal = false;
+                this.showBooking = true;
+            },
+
+            closeBooking() {
+                if (this.bookingInProgress) return;
+                this.showBooking = false;
+                this.bookingError = '';
+            },
+
+            async submitTourBooking() {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.href);
+                    return;
+                }
+                
+                this.bookingError = '';
+                const guests = Number(this.bookingGuests);
+                if (!this.bookingDate || this.bookingDate < this.minimumBookingDate) {
+                    this.bookingError = 'Please select a future trip date.';
+                    return;
+                }
+                if (!Number.isInteger(guests) || guests < 1 || guests > this.modal.maxGroup) {
+                    this.bookingError = `Guest count must be between 1 and ${this.modal.maxGroup}.`;
+                    return;
+                }
+
                 if (this.bookingInProgress) return;
                 this.bookingInProgress = true;
 
                 try {
                     const formData = new FormData();
-                    formData.append('guideId', guideId);
-                    formData.append('packageId', packageId);
-                    formData.append('date', this.modal.bookingDate);
-                    formData.append('guests', this.modal.bookingGuests.toString());
+                    formData.append('guideId', this.modal.guideId);
+                    formData.append('packageId', this.modal.id);
+                    formData.append('date', this.bookingDate);
+                    formData.append('guests', this.bookingGuests.toString());
                     
                     const res = await fetch('/Traveler/BookTour', {
                         method: 'POST',

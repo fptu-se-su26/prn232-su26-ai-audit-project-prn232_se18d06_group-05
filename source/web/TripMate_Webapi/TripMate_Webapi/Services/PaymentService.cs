@@ -101,7 +101,8 @@ public sealed class PaymentService : IPaymentService
     public async Task<PaymentReturnStatus> GetReturnStatusAsync(
         string travelerId,
         string bookingId,
-        string? orderCode)
+        string? orderCode,
+        string? cancel = null)
     {
         var booking = await _bookings.GetBookingByIdAsync(bookingId);
         if (booking == null || booking.TravelerId != travelerId)
@@ -122,24 +123,32 @@ public sealed class PaymentService : IPaymentService
 
         if (string.Equals(payment.Status, "pending", StringComparison.OrdinalIgnoreCase))
         {
-            try
+            if (string.Equals(cancel, "true", StringComparison.OrdinalIgnoreCase))
             {
-                var reconciliation = await TryReconcilePaidPaymentAsync(payment);
-                if (reconciliation is { Processed: true } or { AlreadyProcessed: true })
-                {
-                    payment = await _payments.GetByOrderCodeAsync(payment.ProviderOrderCode!) ?? payment;
-                    booking = await _bookings.GetBookingByIdAsync(bookingId) ?? booking;
-                }
+                await _payments.MarkCancelledAsync(payment.Id);
+                payment.Status = "cancelled";
             }
-            catch (Exception ex)
+            else
             {
-                // A provider lookup is a resilient fallback for delayed/unreachable
-                // webhooks. The callback must still remain usable when PayOS is
-                // temporarily unavailable.
-                _logger.LogWarning(
-                    ex,
-                    "Could not reconcile PayOS order {OrderCode} during payment return.",
-                    payment.ProviderOrderCode);
+                try
+                {
+                    var reconciliation = await TryReconcilePaidPaymentAsync(payment);
+                    if (reconciliation is { Processed: true } or { AlreadyProcessed: true })
+                    {
+                        payment = await _payments.GetByOrderCodeAsync(payment.ProviderOrderCode!) ?? payment;
+                        booking = await _bookings.GetBookingByIdAsync(bookingId) ?? booking;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // A provider lookup is a resilient fallback for delayed/unreachable
+                    // webhooks. The callback must still remain usable when PayOS is
+                    // temporarily unavailable.
+                    _logger.LogWarning(
+                        ex,
+                        "Could not reconcile PayOS order {OrderCode} during payment return.",
+                        payment.ProviderOrderCode);
+                }
             }
         }
 

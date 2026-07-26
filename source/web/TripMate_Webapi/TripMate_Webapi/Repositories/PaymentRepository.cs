@@ -79,6 +79,17 @@ public sealed class PaymentRepository : IPaymentRepository
         });
     }
 
+    public async Task MarkCancelledAsync(string paymentId)
+    {
+        await PatchAsync(paymentId, new
+        {
+            status = "cancelled",
+            failure_reason = "Cancelled by user",
+            processed_at = DateTime.UtcNow.ToString("O"),
+            updated_at = DateTime.UtcNow.ToString("O")
+        });
+    }
+
     public async Task<PaymentEntity?> GetByOrderCodeAsync(string orderCode)
     {
         return await _supabase.From<PaymentEntity>()
