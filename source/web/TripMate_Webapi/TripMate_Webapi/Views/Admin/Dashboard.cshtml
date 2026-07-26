@@ -149,11 +149,21 @@
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm text-gray-600 mb-2">Total Revenue</p>
-                        <h3 class="text-5xl font-bold text-primary mb-2">$@Model.TotalRevenue.ToString("N0")</h3>
-                        <p class="text-green-600 font-medium flex items-center gap-1">
-                            <span class="material-symbols-outlined text-sm">trending_up</span>
-                            +@Model.RevenueGrowth% from last month
-                        </p>
+                        <h3 class="text-5xl font-bold text-primary mb-2">@Model.TotalRevenue.ToString("N0")₫</h3>
+                        @if (Model.RevenueGrowth >= 0)
+                        {
+                            <p class="text-green-600 font-medium flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">trending_up</span>
+                                +@Model.RevenueGrowth% from last month
+                            </p>
+                        }
+                        else
+                        {
+                            <p class="text-red-600 font-medium flex items-center gap-1">
+                                <span class="material-symbols-outlined text-sm">trending_down</span>
+                                @Model.RevenueGrowth% from last month
+                            </p>
+                        }
                     </div>
                     <div class="w-48 h-24 bg-orange-50 rounded-lg relative overflow-hidden">
                         <svg class="absolute bottom-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 40">
@@ -184,10 +194,25 @@
                 <p class="text-sm text-gray-600">Active Users</p>
                 <h3 class="text-4xl font-bold text-gray-900 mt-2">@Model.ActiveUsers</h3>
                 <div class="flex -space-x-2 mt-4">
-                    <div class="w-8 h-8 rounded-full bg-orange-200 border-2 border-white"></div>
-                    <div class="w-8 h-8 rounded-full bg-blue-200 border-2 border-white"></div>
-                    <div class="w-8 h-8 rounded-full bg-green-200 border-2 border-white"></div>
-                    <div class="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs font-bold">+2k</div>
+                    @if (Model.ActiveUserAvatars != null && Model.ActiveUserAvatars.Any())
+                    {
+                        @foreach (var avatar in Model.ActiveUserAvatars)
+                        {
+                            <img class="w-8 h-8 rounded-full border-2 border-white object-cover" src="@avatar" alt="User" onerror="this.src='/images/AVATAR.png'; this.onerror=null;" />
+                        }
+                        @if (Model.ActiveUsersCount > Model.ActiveUserAvatars.Count)
+                        {
+                            <div class="w-8 h-8 rounded-full border-2 border-white bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
+                                +@(Model.ActiveUsersCount - Model.ActiveUserAvatars.Count)
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="w-8 h-8 rounded-full bg-orange-200 border-2 border-white"></div>
+                        <div class="w-8 h-8 rounded-full bg-blue-200 border-2 border-white"></div>
+                        <div class="w-8 h-8 rounded-full bg-green-200 border-2 border-white"></div>
+                    }
                 </div>
             </div>
         </div>

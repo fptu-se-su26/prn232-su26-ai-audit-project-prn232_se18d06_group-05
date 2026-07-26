@@ -53,8 +53,15 @@ namespace TripMate_Webapi.Controllers
                 // Compute real numbers from DB
                 var realTotalRevenue = kpis.PlatformRevenue; 
                 var realNewBookings = bookings.Count;
-                var realActiveUsers = users.Count(u => u.IsActive).ToString(); 
+                var activeUsersList = users.Where(u => u.IsActive).ToList();
+                var realActiveUsers = activeUsersList.Count.ToString(); 
                 var realBookingProgress = (int)Math.Min(100, (realNewBookings * 100.0) / 50.0); // Target: 50 bookings
+
+                var activeUserAvatars = activeUsersList
+                    .Where(u => !string.IsNullOrEmpty(u.AvatarUrl))
+                    .Select(u => u.AvatarUrl!)
+                    .Take(4)
+                    .ToList();
 
                 // Compute revenue growth dynamically (This month platform fee vs last month)
                 var now = DateTime.UtcNow;
@@ -87,6 +94,8 @@ namespace TripMate_Webapi.Controllers
                     NewBookings = realNewBookings,
                     BookingProgress = realBookingProgress, 
                     ActiveUsers = realActiveUsers,
+                    ActiveUserAvatars = activeUserAvatars,
+                    ActiveUsersCount = activeUsersList.Count,
                     PendingCount = pendingGuidesCount,
                     PendingGuidesCount = pendingGuidesCount,
                     PendingTours = tours.Take(3).ToList(),
@@ -1006,6 +1015,8 @@ namespace TripMate_Webapi.Controllers
         public int NewBookings { get; set; }
         public int BookingProgress { get; set; }
         public string ActiveUsers { get; set; } = "0";
+        public List<string> ActiveUserAvatars { get; set; } = new();
+        public int ActiveUsersCount { get; set; }
         public int PendingCount { get; set; }
         public int PendingGuidesCount { get; set; }
         public List<ExperiencePackageRow> PendingTours { get; set; } = new();
