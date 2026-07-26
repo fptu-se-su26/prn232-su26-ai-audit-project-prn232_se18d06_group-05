@@ -55,7 +55,11 @@
                             <h4 class="font-bold text-gray-900 text-sm truncate pr-2" :class="{'text-primary': t.UnreadCount > 0}" x-text="t.TravelerName"></h4>
                             <span class="text-[11px] text-gray-400 whitespace-nowrap" :class="{'text-primary font-bold': t.UnreadCount > 0}" x-text="t.TimeAgo"></span>
                         </div>
-                        
+
+                        <div x-show="t.TourName" class="mb-0.5 flex items-center gap-1 text-[11px] font-medium text-primary">
+                            <span class="material-symbols-outlined text-[13px]">tour</span>
+                            <span class="truncate" x-text="t.TourName"></span>
+                        </div>
                         <p class="text-xs text-gray-500 truncate" :class="{'font-bold text-gray-800': t.UnreadCount > 0}" x-text="getThreadPreview(t)"></p>
                     </div>
                 </button>
@@ -273,48 +277,13 @@
                     this.clearPendingFiles();
                 },
                 normalizeMessage(raw) {
-                    if (!raw) return null;
-                    return {
-                        Id: raw.id ?? raw.Id,
-                        BookingId: raw.bookingId ?? raw.BookingId,
-                        SenderId: raw.senderId ?? raw.SenderId ?? '',
-                        ReceiverId: raw.receiverId ?? raw.ReceiverId ?? '',
-                        Text: raw.messageText ?? raw.MessageText ?? raw.Text ?? '',
-                        SentAt: raw.sentAt ?? raw.SentAt,
-                        IsRead: !!(raw.isRead ?? raw.IsRead)
-                    };
+                    return TripMateChatCommon.normalizeMessage(raw);
                 },
                 toDisplayMessage(message) {
-                    const userId = localStorage.getItem('userId');
-                    return {
-                        Id: message.Id,
-                        Text: message.Text,
-                        SentAt: message.SentAt,
-                        SenderId: message.SenderId,
-                        ReceiverId: message.ReceiverId,
-                        IsMine: message.SenderId === userId,
-                        Time: new Date(message.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-                        IsRead: message.IsRead
-                    };
+                    return TripMateChatCommon.toDisplayMessage(message, 'vi-VN');
                 },
                 appendMessageIfMissing(thread, raw) {
-                    const message = this.normalizeMessage(raw);
-                    if (!message || message.Id == null) return false;
-                    thread.Messages ||= [];
-                    const displayMessage = this.toDisplayMessage(message);
-                    const existing = thread.Messages.find(item => String(item.Id) === String(message.Id));
-                    if (existing) {
-                        existing.Text = displayMessage.Text;
-                        existing.SentAt = displayMessage.SentAt;
-                        existing.SenderId = displayMessage.SenderId;
-                        existing.ReceiverId = displayMessage.ReceiverId;
-                        existing.IsMine = displayMessage.IsMine;
-                        existing.Time = displayMessage.Time;
-                        existing.IsRead = displayMessage.IsRead;
-                        return false;
-                    }
-                    thread.Messages.push(displayMessage);
-                    return true;
+                    return TripMateChatCommon.appendMessageIfMissing(thread, raw, 'vi-VN');
                 },
                 async handleRealtimeMessage(raw) {
                     const message = this.normalizeMessage(raw);
@@ -411,16 +380,7 @@
                     } catch (e) { return url; }
                 },
                 getFileType(url) {
-                    if (!this.isUrl(url)) return '';
-                    const m = url.match(/\.([a-z0-9]+)(\?|$)/i);
-                    if (!m) return 'file';
-                    const ext = m[1].toLowerCase();
-                    if (['jpg','jpeg','png','gif','webp','bmp'].includes(ext)) return 'image';
-                    if (['pdf'].includes(ext)) return 'pdf';
-                    if (['mp4','mov','webm','mkv'].includes(ext)) return 'video';
-                    if (['mp3','wav','m4a','flac'].includes(ext)) return 'audio';
-                    if (['doc','docx','txt','rtf'].includes(ext)) return 'document';
-                    return ext;
+                    return TripMateChatCommon.fileType(url);
                 },
                 fileIconForUrl(url) {
                     const t = this.getFileType(url);
@@ -434,11 +394,10 @@
                     }
                 },
                 isUrl(s) {
-                    return !!(s && typeof s === 'string' && (s.startsWith('http://') || s.startsWith('https://')));
+                    return TripMateChatCommon.isUrl(s);
                 },
                 isImageUrl(s) {
-                    if (!this.isUrl(s)) return false;
-                    return (s.match(/\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i) != null);
+                    return TripMateChatCommon.isImageUrl(s);
                 },
                 truncateText(s, n = 80) {
                     if (!s) return '';
@@ -461,25 +420,16 @@
                     return this.truncateText(m, 80);
                 },
                 getParticipantId(thread) {
-                    return thread?.ParticipantId || thread?.OtherId || thread?.TravelerId || '';
+                    return TripMateChatCommon.getParticipantId(thread);
                 },
                 getMessageParticipantId(message) {
-                    const userId = localStorage.getItem('userId');
-                    return String(message?.SenderId) === String(userId)
-                        ? message?.ReceiverId
-                        : message?.SenderId;
+                    return TripMateChatCommon.getMessageParticipantId(message);
                 },
                 getMessagesUrl(thread) {
-                    const participantId = this.getParticipantId(thread);
-                    return participantId
-                        ? `/api/chat/conversations/participants/${encodeURIComponent(participantId)}/messages`
-                        : `/api/chat/conversations/${encodeURIComponent(thread?.BookingId || '')}/messages`;
+                    return TripMateChatCommon.messagesUrl(thread);
                 },
                 getMarkReadUrl(thread) {
-                    const participantId = this.getParticipantId(thread);
-                    return participantId
-                        ? `/api/chat/conversations/participants/${encodeURIComponent(participantId)}/mark-read`
-                        : `/api/chat/conversations/${encodeURIComponent(thread?.BookingId || '')}/mark-read`;
+                    return TripMateChatCommon.markReadUrl(thread);
                 },
 
                 get canSend() {
@@ -488,6 +438,11 @@
                 queueAttachments(event) {
                     const files = Array.from(event.target.files || []);
                     for (const file of files) {
+                        const validationError = TripMateChatCommon.validateAttachment(file);
+                        if (validationError) {
+                            showToast('warning', validationError);
+                            continue;
+                        }
                         this.pendingFiles.push({
                             Id: `pending-${Date.now()}-${this._pendingFileSequence++}`,
                             File: file,
@@ -509,11 +464,7 @@
                     this.pendingFiles = [];
                 },
                 formatFileSize(bytes) {
-                    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
-                    const units = ['B', 'KB', 'MB', 'GB'];
-                    const unit = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-                    const value = bytes / Math.pow(1024, unit);
-                    return `${value >= 10 || unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit]}`;
+                    return TripMateChatCommon.formatFileSize(bytes);
                 },
                 async uploadPendingAttachment(file) {
                     const token = localStorage.getItem('accessToken');
@@ -589,7 +540,10 @@
                 get filteredThreads() {
                     if (!this.searchQuery) return this.threads;
                     const q = this.searchQuery.toLowerCase();
-                    return this.threads.filter(t => (t.TravelerName || '').toLowerCase().includes(q));
+                    return this.threads.filter(t =>
+                        (t.TravelerName || '').toLowerCase().includes(q)
+                        || (t.TourName || '').toLowerCase().includes(q)
+                        || (t.LastMessage || '').toLowerCase().includes(q));
                 },
 
                 async loadConversations() {
@@ -608,60 +562,12 @@
                         const data = await res.json();
                         const convs = data?.conversations || [];
 
-                        const threads = [];
-                        for (const c of convs) {
-                            const bookingId = c.bookingId || c.BookingId;
-                            const travelerId = c.travelerId || c.TravelerId || '';
-                            const guideId = c.guideId || c.GuideId || '';
-                            const otherId = (travelerId === userId) ? guideId : travelerId;
-
-                            // Fetch the permanent participant-pair history for the preview.
-                            const mres = await fetch(this.getMessagesUrl({ ParticipantId: otherId, BookingId: bookingId }), {
-                                headers: { 'Authorization': 'Bearer ' + token }
-                            });
-                            const mdata = await mres.json();
-                            const rows = mdata?.messages || [];
-
-                            const messages = rows.map(r => ({
-                                Id: r.id || r.Id,
-                                Text: r.messageText || r.MessageText || '',
-                                SenderId: r.senderId || r.SenderId || '',
-                                ReceiverId: r.receiverId || r.ReceiverId || '',
-                                IsRead: !!(r.isRead || r.IsRead),
-                                SentAt: r.sentAt || r.SentAt
-                            }));
-
-                            // The API returns newest-first. Keep that item for the sidebar
-                            // preview, but reverse the collection used by the chat window.
-                            const newest = messages.length ? messages[0] : null;
-                            const chronologicalMessages = messages.slice().reverse();
-
-                            threads.push({
-                                Id: bookingId,
-                                BookingId: bookingId,
-                                BookingIds: [bookingId],
-                                TravelerId: travelerId,
-                                GuideId: guideId,
-                                ParticipantId: otherId,
-                                TravelerName: otherId || (travelerId || guideId) || 'User',
-                                TravelerAvatar: '/images/AVATAR.png',
-                                Messages: chronologicalMessages.map(m => ({
-                                    Id: m.Id,
-                                    Text: m.Text,
-                                    SentAt: m.SentAt,
-                                    IsMine: m.SenderId === userId,
-                                    Time: new Date(m.SentAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-                                    IsRead: m.IsRead
-                                })),
-                                LastMessage: newest ? newest.Text : 'Không có tin nhắn',
-                                TimeAgo: newest ? this.formatTimeAgo(newest.SentAt) : '',
-                                Date: newest ? new Date(newest.SentAt).toLocaleDateString('vi-VN') : '',
-                                LastMessageAt: newest ? newest.SentAt : null,
-                                UnreadCount: messages.filter(m => !m.IsRead && m.ReceiverId === userId).length,
-                                IsLocked: true,
-                                OtherId: otherId
-                            });
-                        }
+                        const threads = convs.map(c => TripMateChatCommon.createThreadFromConversation(c, {
+                            userId,
+                            locale: 'vi-VN',
+                            isGuide: true,
+                            formatTimeAgo: value => this.formatTimeAgo(value)
+                        }));
 
                         // Sort threads by most recent message
                         threads.sort((a, b) => {
@@ -742,6 +648,10 @@
                                 const time = thread?.LastMessageAt ? new Date(thread.LastMessageAt).getTime() : 0;
                                 return Number.isNaN(time) ? 0 : time;
                             };
+                            const getBookingTime = thread => {
+                                const time = thread?.BookingDate ? new Date(thread.BookingDate).getTime() : 0;
+                                return Number.isNaN(time) ? 0 : time;
+                            };
                             for (const th of this.threads) {
                                 const participantId = th.ParticipantId || th.OtherId || th.TravelerId;
                                 const bookingId = th.BookingId || th.Id || '';
@@ -780,10 +690,12 @@
                                 const requestedConfirmed = confirmedThreads.find(item =>
                                     requestedBookingId && String(item.ConfirmedBookingId) === String(requestedBookingId));
                                 const confirmedThread = requestedConfirmed || confirmedThreads
-                                    .sort((a, b) => getThreadTime(b) - getThreadTime(a))[0];
+                                    .sort((a, b) => getBookingTime(b) - getBookingTime(a))[0];
 
                                 winner.BookingIds = bookingIds;
                                 winner.ConfirmedBookingId = confirmedThread?.ConfirmedBookingId || null;
+                                winner.TourName = confirmedThread?.TourName || winner.TourName || '';
+                                winner.BookingDate = confirmedThread?.BookingDate || winner.BookingDate;
                                 winner.IsLocked = !winner.ConfirmedBookingId;
                                 if (winner.ConfirmedBookingId) winner.BookingId = winner.ConfirmedBookingId;
                                 map.set(key, winner);
@@ -793,6 +705,7 @@
 
                         // Fetch profiles (avatar + full name) for each thread's other participant
                         for (const th of this.threads) {
+                            if (th.HasParticipantProfile) continue;
                             const other = th.ParticipantId || th.OtherId || th.TravelerId || th.GuideId;
                             if (!other) continue;
                             fetch(`/api/chat/profiles/${encodeURIComponent(other)}`, {

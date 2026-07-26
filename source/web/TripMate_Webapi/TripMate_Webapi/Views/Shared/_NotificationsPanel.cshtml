@@ -168,6 +168,7 @@
     document.addEventListener('tripmate:notification', event => {
         state.items.unshift(event.detail); render();
     });
+    document.addEventListener('tripmate:notifications-reconnected', () => load(false));
     load();
 })();
 </script>
