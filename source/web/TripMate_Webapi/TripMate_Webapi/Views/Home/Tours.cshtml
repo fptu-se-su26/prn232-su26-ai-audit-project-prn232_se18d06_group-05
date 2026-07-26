@@ -204,6 +204,7 @@
 
     <!-- ═══ Tour Detail Modal ═══ -->
     <partial name="_TravelerTourModal" />
+    <partial name="_TravelerBookingModal" />
 </div>
 
 <script>
@@ -225,13 +226,18 @@
             get minimumBookingDate() {
                 const tomorrow = new Date();
                 tomorrow.setDate(tomorrow.getDate() + 1);
-                return tomorrow.toISOString().split('T')[0];
+                const year = tomorrow.getFullYear();
+                const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                const day = String(tomorrow.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
             },
             get bookingTotal() {
-                const included = Math.max(1, this.modal.includedGuestCount || 1);
+                const included = Math.max(1, Number(this.modal.includedGuestCount) || 1);
                 const guests = Math.max(1, Number(this.bookingGuests) || 1);
                 const extraGuests = Math.max(0, guests - included);
-                return Math.max(0, this.modal.pricePerSession) + (extraGuests * Math.max(0, this.modal.pricePerPerson));
+                const tourPrice = Math.max(0, Number(this.modal.pricePerSession) || 0);
+                const extraGuestPrice = Math.max(0, Number(this.modal.pricePerPerson) || 0);
+                return tourPrice + (extraGuests * extraGuestPrice);
             },
             get bookingDeposit() {
                 return this.bookingTotal * 0.3;
@@ -260,8 +266,7 @@
                 pricePerSession: 0, pricePerPerson: 0, includedGuestCount: 1, maxGroup: 6,
                 includedItems: [], priceLabel: '',
                 guideName: '', guideAvatar: '', guideId: '',
-                coverImageUrl: '', cityArea: '', timeline: [],
-                bookingDate: '', bookingGuests: 1
+                coverImageUrl: '', cityArea: '', timeline: []
             },
 
             openTourModal(tour) {
@@ -290,8 +295,9 @@
                     ? fmt.format(pricePerSession) + '/tour'
                     : 'Contact';
 
-                this.modal.bookingDate = '';
-                this.modal.bookingGuests = 1;
+                this.bookingDate = '';
+                this.bookingGuests = 1;
+                this.bookingNotes = '';
                 this.showModal = true;
 
                 // Fetch blocked dates and init flatpickr
@@ -301,8 +307,8 @@
                         if(this._fp) this._fp.destroy();
                         this.$nextTick(() => {
                             this._fp = flatpickr(this.$refs.datePicker, {
-                                minDate: "today",
-                                disable: blockedDates,
+                                minDate: this.minimumBookingDate,
+                                disable: Array.isArray(blockedDates) ? blockedDates : [],
                                 onChange: (selectedDates, dateStr) => {
                                     this.bookingDate = dateStr;
                                 }
@@ -324,6 +330,7 @@
                 this.bookingError = '';
                 this.showModal = false;
                 this.showBooking = true;
+                this.$nextTick(() => this._fp?.setDate(this.bookingDate, false));
             },
 
             closeBooking() {
@@ -359,6 +366,7 @@
                     formData.append('packageId', this.modal.id);
                     formData.append('date', this.bookingDate);
                     formData.append('guests', this.bookingGuests.toString());
+                    if (this.bookingNotes) formData.append('notes', this.bookingNotes);
                     
                     const res = await fetch('/Traveler/BookTour', {
                         method: 'POST',

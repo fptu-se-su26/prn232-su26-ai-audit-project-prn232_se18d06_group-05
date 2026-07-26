@@ -412,13 +412,38 @@
             bookingGuests: 1,
             bookingNotes: '',
             bookingError: '',
+            get minimumBookingDate() {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const year = tomorrow.getFullYear();
+                const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                const day = String(tomorrow.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            },
+            get bookingTotal() {
+                const includedGuests = Math.max(1, Number(this.modal.includedGuestCount) || 1);
+                const guests = Math.max(1, Number(this.bookingGuests) || 1);
+                const extraGuests = Math.max(0, guests - includedGuests);
+                const tourPrice = Math.max(0, Number(this.modal.pricePerSession) || 0);
+                const extraGuestPrice = Math.max(0, Number(this.modal.pricePerPerson) || 0);
+                return tourPrice + (extraGuests * extraGuestPrice);
+            },
+            get bookingDeposit() {
+                return this.bookingTotal * 0.3;
+            },
+            formatCurrency(amount) {
+                return new Intl.NumberFormat('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND',
+                    maximumFractionDigits: 0
+                }).format(Number(amount) || 0);
+            },
             modal: {
                 id: '', title: '', description: '', duration: 0,
                 pricePerSession: 0, pricePerPerson: 0, includedGuestCount: 1, maxGroup: 6,
                 includedItems: [], priceLabel: '',
                 guideName: '', guideAvatar: '', guideId: '',
-                coverImageUrl: '', cityArea: '', timeline: [],
-                bookingDate: '', bookingGuests: 1
+                coverImageUrl: '', cityArea: '', timeline: []
             },
 
             toggleSave(id) {
@@ -455,8 +480,9 @@
                     ? fmt.format(pricePerSession) + '/tour'
                     : 'Contact';
 
-                this.modal.bookingDate = '';
-                this.modal.bookingGuests = 1;
+                this.bookingDate = '';
+                this.bookingGuests = 1;
+                this.bookingNotes = '';
                 this.showModal = true;
 
                 // Fetch blocked dates and init flatpickr
@@ -466,10 +492,10 @@
                         if(this._fp) this._fp.destroy();
                         this.$nextTick(() => {
                             this._fp = flatpickr(this.$refs.datePicker, {
-                                minDate: "today",
-                                disable: blockedDates,
+                                minDate: this.minimumBookingDate,
+                                disable: Array.isArray(blockedDates) ? blockedDates : [],
                                 onChange: (selectedDates, dateStr) => {
-                                    this.modal.bookingDate = dateStr;
+                                    this.bookingDate = dateStr;
                                 }
                             });
                         });
@@ -489,6 +515,7 @@
                 this.bookingError = '';
                 this.showModal = false;
                 this.showBooking = true;
+                this.$nextTick(() => this._fp?.setDate(this.bookingDate, false));
             },
 
             closeBooking() {
@@ -522,8 +549,9 @@
                     const formData = new FormData();
                     formData.append('guideId', this.modal.guideId);
                     formData.append('packageId', this.modal.id);
-                    formData.append('date', this.modal.bookingDate);
-                    formData.append('guests', this.modal.bookingGuests.toString());
+                    formData.append('date', this.bookingDate);
+                    formData.append('guests', this.bookingGuests.toString());
+                    if (this.bookingNotes) formData.append('notes', this.bookingNotes);
 
                     const res = await fetch('/Traveler/BookTour', {
                         method: 'POST',
