@@ -23,6 +23,7 @@ namespace TripMate_Webapi.Repositories
             DateTime eligibleEndAtUtc,
             DateTime completedAtUtc,
             DateTime confirmationDueAtUtc);
+        Task<bool> MarkTravelerCompletionAsync(string bookingId, string travelerId);
         Task DeleteBookingAsync(string id);
     }
 }

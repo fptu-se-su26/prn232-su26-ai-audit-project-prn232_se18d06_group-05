@@ -322,6 +322,48 @@ namespace TripMate_Webapi.Repositories
                    document.RootElement.GetArrayLength() == 1;
         }
 
+        public async Task<bool> MarkTravelerCompletionAsync(string bookingId, string travelerId)
+        {
+            var anonKey = _config["Supabase:AnonKey"] ?? Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
+            var serviceKey = _config["Supabase:ServiceRoleKey"] ?? Environment.GetEnvironmentVariable("SUPABASE_SERVICE_ROLE_KEY");
+            var tokenToUse = serviceKey ?? anonKey;
+
+            var url = $"{_supabaseUrl}/rest/v1/bookings" +
+                      $"?id=eq.{Uri.EscapeDataString(bookingId)}" +
+                      $"&traveler_id=eq.{Uri.EscapeDataString(travelerId)}" +
+                      "&status=eq.1" +
+                      "&completion_state=eq.awaiting_traveler" +
+                      "&select=id";
+
+            using var request = new HttpRequestMessage(HttpMethod.Patch, url);
+            request.Headers.Add("apikey", _apiKey);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenToUse);
+            request.Headers.Add("Prefer", "return=representation");
+            
+            var completedAtUtc = DateTime.UtcNow;
+            request.Content = new StringContent(
+                JsonSerializer.Serialize(new
+                {
+                    completion_state = "confirmed",
+                    status = 2,
+                    updated_at = completedAtUtc.ToString("O")
+                }),
+                System.Text.Encoding.UTF8,
+                "application/json");
+
+            var client = _httpClientFactory.CreateClient();
+            using var response = await client.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+            if (!response.IsSuccessStatusCode)
+            {
+                throw new InvalidOperationException($"Failed to submit Traveler completion: {content}");
+            }
+
+            using var document = JsonDocument.Parse(content);
+            return document.RootElement.ValueKind == JsonValueKind.Array &&
+                   document.RootElement.GetArrayLength() == 1;
+        }
+
         public async Task DeleteBookingAsync(string id)
         {
             await _supabase.From<BookingEntity>()

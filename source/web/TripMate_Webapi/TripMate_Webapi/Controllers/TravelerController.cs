@@ -747,7 +747,8 @@ namespace TripMate_Webapi.Controllers
                     packageTitle = b.ExperiencePackage?.Title ?? "Custom Tour",
                     guestCount = b.GuestCount,
                     paymentReference = b.PaymentReference ?? "",
-                    hasReviewed = hasReviewed
+                    hasReviewed = hasReviewed,
+                    completionState = b.CompletionState
                 });
             }
 
@@ -1011,7 +1012,7 @@ namespace TripMate_Webapi.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> CompleteTourAjax(string id)
+        public async Task<IActionResult> CompleteTourAjax(string id, [FromServices] INotificationService _notificationService)
         {
             var travelerId = GetCurrentUserId();
             if (string.IsNullOrEmpty(travelerId))
@@ -1028,17 +1029,52 @@ namespace TripMate_Webapi.Controllers
                 if (booking.Status != 1) // Only confirmed tours can be completed
                     return BadRequest(new { error = "Only confirmed bookings can be completed." });
 
-                // Set status to Completed (2)
-                await _bookingRepository.UpdateBookingStatusAsync(id, 2);
+                if (booking.CompletionState != "awaiting_traveler")
+                    return BadRequest(new { error = "Tour must be marked as completed by the guide first." });
+
+                // Set status to Completed (2) and completion_state to completed
+                var success = await _bookingRepository.MarkTravelerCompletionAsync(id, travelerId);
+                if (!success)
+                {
+                    return BadRequest(new { error = "Could not update the booking completion state." });
+                }
                 
                 // M4: (Optional) Initiate payout logic via admin panel or automatic here.
+                
+                // Notify admin and guide about completion
+                await _notificationService.SendToRoleAsync(
+                    "admin",
+                    "tour_completed",
+                    "Tour Completed & Payment Requested",
+                    $"Booking {id} has been fully confirmed as completed by the traveler. Please review and proceed with guide payment.",
+                    new { bookingId = id },
+                    $"/Admin/Bookings/Details/{id}",
+                    $"admin-tour-completed:{id}"
+                );
+                
+                if (!string.IsNullOrEmpty(booking.GuideProfileId))
+                {
+                    var guide = await _guideRepository.GetGuideByProfileIdAsync(booking.GuideProfileId);
+                    if (guide != null && !string.IsNullOrEmpty(guide.UserId))
+                    {
+                        await _notificationService.SendAsync(
+                            guide.UserId,
+                            "tour_completed",
+                            "Tour Completed Confirmed",
+                            "The traveler has confirmed the tour completion. Admin has been requested to process your payment.",
+                            new { bookingId = id },
+                            $"/Guide/Dashboard/Bookings/{id}",
+                            $"guide-tour-completed:{id}"
+                        );
+                    }
+                }
                 
                 return Json(new { success = true });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error completing tour {BookingId}", id);
-                return StatusCode(500, new { error = "Internal server error" });
+                return StatusCode(500, new { error = $"Internal server error: {ex.Message} \n {ex.StackTrace}" });
             }
         }
 
