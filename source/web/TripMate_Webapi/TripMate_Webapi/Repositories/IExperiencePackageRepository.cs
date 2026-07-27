@@ -8,6 +8,7 @@ namespace TripMate_Webapi.Repositories
     {
         Task<ExperiencePackageEntity> CreatePackageAsync(ExperiencePackageEntity entity);
         Task<ExperiencePackageEntity> UpdatePackageAsync(ExperiencePackageEntity entity);
+        Task<ExperiencePackageEntity?> GetPackageByIdAsync(string id);
         Task<ExperiencePackageEntity?> GetPackageByIdAsync(string id, string guideId);
         Task<List<ExperiencePackageEntity>> GetPackagesByGuideIdAsync(string guideId);
         Task<bool> TogglePackageStatusAsync(string id, string guideId);

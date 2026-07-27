@@ -36,7 +36,7 @@ public class TourService
     {
         var query = $"{_supabaseUrl}/rest/v1/experience_packages" +
                     $"?is_active=eq.true&order=created_at.desc" +
-                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,profiles(full_name))";
+                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,cover_photo_url,profiles(full_name,avatar_url))";
 
         if (!string.IsNullOrWhiteSpace(search))
             query += $"&or=(title.ilike.*{Uri.EscapeDataString(search)}*,description.ilike.*{Uri.EscapeDataString(search)}*)";
@@ -51,7 +51,7 @@ public class TourService
     {
         var query = $"{_supabaseUrl}/rest/v1/experience_packages" +
                     $"?id=eq.{id}" +
-                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,profiles(full_name))";
+                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,cover_photo_url,profiles(full_name,avatar_url))";
 
         var rows = await GetAsync<List<ExperiencePackageRow>>(query);
         return rows?.FirstOrDefault();
@@ -64,7 +64,7 @@ public class TourService
         var query = $"{_supabaseUrl}/rest/v1/experience_packages" +
                     $"?guide_profile_id=eq.{guideProfileId}" +
                     $"&order=created_at.desc" +
-                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,profiles(full_name))";
+                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,cover_photo_url,profiles(full_name,avatar_url))";
 
         var results = await GetAsync<List<ExperiencePackageRow>>(query) ?? new List<ExperiencePackageRow>();
         return results.Where(r => r.Id != "00000000-0000-0000-0000-000000000000").ToList();
@@ -242,6 +242,10 @@ public class ExperiencePackageRow
     [JsonPropertyName("included_items")]    public List<string>? IncludedItems { get; set; }
     [JsonPropertyName("tags")]              public List<string>? Tags { get; set; }
     [JsonPropertyName("is_active")]         public bool IsActive { get; set; } = true;
+    [JsonPropertyName("city")]              public string? City { get; set; }
+    [JsonPropertyName("cover_image_url")]   public string? CoverImageUrl { get; set; }
+    [JsonPropertyName("gallery_image_urls")]public List<string>? GalleryImageUrls { get; set; }
+    [JsonPropertyName("timeline_json")]     public List<Dictionary<string, string>>? TimelineJson { get; set; }
     [JsonPropertyName("created_at")]        public DateTime CreatedAt { get; set; }
 
     // Joined from guide_profiles

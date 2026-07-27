@@ -49,6 +49,10 @@
                                     <h4 class="font-bold text-on-surface truncate" x-text="t.OtherName"></h4>
                                     <span class="text-xs text-on-surface-variant" x-text="t.TimeAgo"></span>
                                 </div>
+                                <div x-show="t.TourName" class="mb-0.5 flex items-center gap-1 text-xs font-medium text-primary">
+                                    <span class="material-symbols-outlined text-[14px]">tour</span>
+                                    <span class="truncate" x-text="t.TourName"></span>
+                                </div>
                                 <p class="text-sm text-on-surface-variant truncate" x-text="getThreadPreview(t)"></p>
                             </div>
                         </button>
@@ -225,48 +229,13 @@
                     this.clearPendingFiles();
                 },
                 normalizeMessage(raw) {
-                    if (!raw) return null;
-                    return {
-                        Id: raw.id ?? raw.Id,
-                        BookingId: raw.bookingId ?? raw.BookingId,
-                        SenderId: raw.senderId ?? raw.SenderId ?? '',
-                        ReceiverId: raw.receiverId ?? raw.ReceiverId ?? '',
-                        Text: raw.messageText ?? raw.MessageText ?? raw.Text ?? '',
-                        SentAt: raw.sentAt ?? raw.SentAt,
-                        IsRead: !!(raw.isRead ?? raw.IsRead)
-                    };
+                    return TripMateChatCommon.normalizeMessage(raw);
                 },
                 toDisplayMessage(message) {
-                    const userId = localStorage.getItem('userId');
-                    return {
-                        Id: message.Id,
-                        Text: message.Text,
-                        SentAt: message.SentAt,
-                        SenderId: message.SenderId,
-                        ReceiverId: message.ReceiverId,
-                        IsMine: message.SenderId === userId,
-                        Time: new Date(message.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-                        IsRead: message.IsRead
-                    };
+                    return TripMateChatCommon.toDisplayMessage(message, 'en-US');
                 },
                 appendMessageIfMissing(thread, raw) {
-                    const message = this.normalizeMessage(raw);
-                    if (!message || message.Id == null) return false;
-                    thread.Messages ||= [];
-                    const displayMessage = this.toDisplayMessage(message);
-                    const existing = thread.Messages.find(item => String(item.Id) === String(message.Id));
-                    if (existing) {
-                        existing.Text = displayMessage.Text;
-                        existing.SentAt = displayMessage.SentAt;
-                        existing.SenderId = displayMessage.SenderId;
-                        existing.ReceiverId = displayMessage.ReceiverId;
-                        existing.IsMine = displayMessage.IsMine;
-                        existing.Time = displayMessage.Time;
-                        existing.IsRead = displayMessage.IsRead;
-                        return false;
-                    }
-                    thread.Messages.push(displayMessage);
-                    return true;
+                    return TripMateChatCommon.appendMessageIfMissing(thread, raw, 'en-US');
                 },
                 async handleRealtimeMessage(raw) {
                     const message = this.normalizeMessage(raw);
@@ -364,16 +333,7 @@
                     } catch (e) { return url; }
                 },
                 getFileType(url) {
-                    if (!this.isUrl(url)) return '';
-                    const m = url.match(/\.([a-z0-9]+)(\?|$)/i);
-                    if (!m) return 'file';
-                    const ext = m[1].toLowerCase();
-                    if (['jpg','jpeg','png','gif','webp','bmp'].includes(ext)) return 'image';
-                    if (['pdf'].includes(ext)) return 'pdf';
-                    if (['mp4','mov','webm','mkv'].includes(ext)) return 'video';
-                    if (['mp3','wav','m4a','flac'].includes(ext)) return 'audio';
-                    if (['doc','docx','txt','rtf'].includes(ext)) return 'document';
-                    return ext;
+                    return TripMateChatCommon.fileType(url);
                 },
                 fileIconForUrl(url) {
                     const t = this.getFileType(url);
@@ -388,11 +348,10 @@
                 },
 
                 isUrl(s) {
-                    return !!(s && typeof s === 'string' && (s.startsWith('http://') || s.startsWith('https://')));
+                    return TripMateChatCommon.isUrl(s);
                 },
                 isImageUrl(s) {
-                    if (!this.isUrl(s)) return false;
-                    return (s.match(/\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/i) != null);
+                    return TripMateChatCommon.isImageUrl(s);
                 },
                 truncateText(s, n = 80) {
                     if (!s) return '';
@@ -421,6 +380,11 @@
                 queueAttachments(event) {
                     const files = Array.from(event.target.files || []);
                     for (const file of files) {
+                        const validationError = TripMateChatCommon.validateAttachment(file);
+                        if (validationError) {
+                            showToast('warning', validationError);
+                            continue;
+                        }
                         this.pendingFiles.push({
                             Id: `pending-${Date.now()}-${this._pendingFileSequence++}`,
                             File: file,
@@ -442,11 +406,7 @@
                     this.pendingFiles = [];
                 },
                 formatFileSize(bytes) {
-                    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
-                    const units = ['B', 'KB', 'MB', 'GB'];
-                    const unit = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
-                    const value = bytes / Math.pow(1024, unit);
-                    return `${value >= 10 || unit === 0 ? value.toFixed(0) : value.toFixed(1)} ${units[unit]}`;
+                    return TripMateChatCommon.formatFileSize(bytes);
                 },
                 async uploadPendingAttachment(file) {
                     const token = localStorage.getItem('accessToken');
@@ -476,28 +436,22 @@
                 get filteredThreads() {
                     if (!this.searchQuery) return this.threads;
                     const q = this.searchQuery.toLowerCase();
-                    return this.threads.filter(t => (t.OtherName || '').toLowerCase().includes(q) || (t.LastMessage || '').toLowerCase().includes(q));
+                    return this.threads.filter(t =>
+                        (t.OtherName || '').toLowerCase().includes(q)
+                        || (t.TourName || '').toLowerCase().includes(q)
+                        || (t.LastMessage || '').toLowerCase().includes(q));
                 },
                 getParticipantId(thread) {
-                    return thread?.ParticipantId || thread?.OtherId || '';
+                    return TripMateChatCommon.getParticipantId(thread);
                 },
                 getMessageParticipantId(message) {
-                    const userId = localStorage.getItem('userId');
-                    return String(message?.SenderId) === String(userId)
-                        ? message?.ReceiverId
-                        : message?.SenderId;
+                    return TripMateChatCommon.getMessageParticipantId(message);
                 },
                 getMessagesUrl(thread) {
-                    const participantId = this.getParticipantId(thread);
-                    return participantId
-                        ? `/api/chat/conversations/participants/${encodeURIComponent(participantId)}/messages`
-                        : `/api/chat/conversations/${encodeURIComponent(thread?.BookingId || '')}/messages`;
+                    return TripMateChatCommon.messagesUrl(thread);
                 },
                 getMarkReadUrl(thread) {
-                    const participantId = this.getParticipantId(thread);
-                    return participantId
-                        ? `/api/chat/conversations/participants/${encodeURIComponent(participantId)}/mark-read`
-                        : `/api/chat/conversations/${encodeURIComponent(thread?.BookingId || '')}/mark-read`;
+                    return TripMateChatCommon.markReadUrl(thread);
                 },
 
                 async loadConversations() {
@@ -510,54 +464,11 @@
                         const data = await res.json();
                         const convs = data?.conversations || [];
 
-                        const threads = [];
-                        for (const c of convs) {
-                            const bookingId = c.bookingId || c.BookingId;
-                            const travelerId = c.travelerId || c.TravelerId || '';
-                            const guideId = c.guideId || c.GuideId || '';
-                            const otherId = (travelerId === userId) ? guideId : travelerId;
-
-                            // Get messages preview
-                            const mres = await fetch(this.getMessagesUrl({ ParticipantId: otherId, BookingId: bookingId }), { headers: { 'Authorization': 'Bearer ' + token } });
-                            const mdata = await mres.json();
-                            const rows = mdata?.messages || [];
-                            const messages = rows.map(r => ({
-                                Id: r.id || r.Id,
-                                Text: r.messageText || r.MessageText || '',
-                                SenderId: r.senderId || r.SenderId || '',
-                                ReceiverId: r.receiverId || r.ReceiverId || '',
-                                IsRead: !!(r.isRead || r.IsRead),
-                                SentAt: r.sentAt || r.SentAt
-                            }));
-                            // Message pages are returned newest-first. The preview uses
-                            // the first row while the message pane remains chronological.
-                            const newest = messages.length ? messages[0] : null;
-                            const chronologicalMessages = messages.slice().reverse();
-
-                            threads.push({
-                                Id: bookingId,
-                                BookingId: bookingId,
-                                BookingIds: [bookingId],
-                                ParticipantId: otherId,
-                                OtherId: otherId,
-                                OtherName: otherId,
-                                OtherAvatar: '/images/AVATAR.png',
-                                Messages: chronologicalMessages.map(m => ({
-                                    Id: m.Id,
-                                    Text: m.Text,
-                                    SentAt: m.SentAt,
-                                    IsMine: m.SenderId === userId,
-                                    Time: new Date(m.SentAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-                                    IsRead: m.IsRead
-                                })),
-                                LastMessage: newest ? newest.Text : 'No messages yet',
-                                TimeAgo: newest ? this.formatTimeAgo(newest.SentAt) : '',
-                                Date: newest ? new Date(newest.SentAt).toLocaleDateString('en-US') : '',
-                                LastMessageAt: newest ? newest.SentAt : null,
-                                UnreadCount: messages.filter(m => !m.IsRead && m.ReceiverId === userId).length,
-                                IsLocked: true
-                            });
-                        }
+                        const threads = convs.map(c => TripMateChatCommon.createThreadFromConversation(c, {
+                            userId,
+                            locale: 'en-US',
+                            formatTimeAgo: value => this.formatTimeAgo(value)
+                        }));
 
                         this.threads = threads;
 
@@ -573,6 +484,7 @@
                                 const otherId = ab.guideUserId || ab.GuideUserId || gp?.userId || gp?.UserId || gp?.Id || gp?.id || (gp?.profile?.id || gp?.Profile?.Id);
                                 const otherName = ab.guideName || ab.GuideName || gp?.profile?.fullName || gp?.Profile?.FullName || gp?.profile?.Full_Name || (ab.TourName || 'Guide');
                                 const otherAvatar = ab.guideAvatar || ab.GuideAvatar || gp?.profile?.avatarUrl || gp?.Profile?.AvatarUrl || gp?.profile?.avatar_url || '/images/AVATAR.png';
+                                const tourName = ab.tourName || ab.TourName || '';
                                 const bookingDate = ab.bookingDate || ab.BookingDate || '';
                                 const bookingStatus = Number(ab.status ?? ab.Status);
                                 const confirmedBookingId = bookingStatus === 1 ? bid : null;
@@ -583,6 +495,7 @@
                                     existing.OtherId = otherId || existing.OtherId;
                                     existing.OtherName = otherName || existing.OtherName;
                                     existing.OtherAvatar = otherAvatar || existing.OtherAvatar;
+                                    existing.TourName = tourName || existing.TourName;
                                     existing.BookingDate = bookingDate || existing.BookingDate;
                                     existing.BookingStatus = bookingStatus;
                                     existing.BookingIds = Array.from(new Set([...(existing.BookingIds || [existing.BookingId]), bid]));
@@ -600,6 +513,7 @@
                                         OtherId: otherId || '',
                                         OtherName: otherName || 'Guide',
                                         OtherAvatar: otherAvatar,
+                                        TourName: tourName,
                                         BookingDate: bookingDate,
                                         Messages: [],
                                         LastMessage: 'No messages yet',
@@ -625,6 +539,10 @@
                             };
                             const getMessageTime = thread => {
                                 const time = thread?.LastMessageAt ? new Date(thread.LastMessageAt).getTime() : 0;
+                                return Number.isNaN(time) ? 0 : time;
+                            };
+                            const getBookingTime = thread => {
+                                const time = thread?.BookingDate ? new Date(thread.BookingDate).getTime() : 0;
                                 return Number.isNaN(time) ? 0 : time;
                             };
                             for (const th of this.threads) {
@@ -665,10 +583,12 @@
                                 const requestedConfirmed = confirmedThreads.find(item =>
                                     requestedBookingId && String(item.ConfirmedBookingId) === String(requestedBookingId));
                                 const confirmedThread = requestedConfirmed || confirmedThreads
-                                    .sort((a, b) => getThreadTime(b) - getThreadTime(a))[0];
+                                    .sort((a, b) => getBookingTime(b) - getBookingTime(a))[0];
 
                                 winner.BookingIds = bookingIds;
                                 winner.ConfirmedBookingId = confirmedThread?.ConfirmedBookingId || null;
+                                winner.TourName = confirmedThread?.TourName || winner.TourName || '';
+                                winner.BookingDate = confirmedThread?.BookingDate || winner.BookingDate;
                                 winner.IsLocked = !winner.ConfirmedBookingId;
                                 if (winner.ConfirmedBookingId) winner.BookingId = winner.ConfirmedBookingId;
                                 map.set(key, winner);
@@ -690,6 +610,7 @@
 
                         // fetch profiles for display
                         for (const th of this.threads) {
+                            if (th.HasParticipantProfile) continue;
                             if (!th.OtherId) continue;
                             fetch(`/api/chat/profiles/${encodeURIComponent(th.OtherId)}`, { headers: { 'Authorization': 'Bearer ' + localStorage.getItem('accessToken') } })
                                 .then(r => r.ok ? r.json() : null)

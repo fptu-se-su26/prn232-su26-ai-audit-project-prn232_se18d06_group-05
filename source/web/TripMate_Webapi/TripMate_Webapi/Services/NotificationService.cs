@@ -45,6 +45,8 @@ public interface INotificationService
     Task<bool> MarkAsReadAsync(string notificationId, string userId, string userToken);
     Task<bool> MarkAllAsReadAsync(string userId, string userToken);
     Task<bool> DeleteAsync(string notificationId, string userId, string userToken);
+    Task<string> GetTripNameAsync(string bookingId, string fallback = "TripMate trip");
+    Task ProcessPendingOutboxAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed class NotificationService : INotificationService
@@ -97,65 +99,184 @@ public sealed class NotificationService : INotificationService
             return;
         }
 
+        title = NotificationTextFormatter.NormalizeVisibleText(title);
+        message = NotificationTextFormatter.NormalizeVisibleText(message);
+
+        var item = new NotificationOutboxItem
+        {
+            Id = CreateNotificationId(userId, dedupeKey),
+            UserId = userId,
+            Type = type,
+            Title = title,
+            Message = message,
+            Data = data,
+            ActionUrl = actionUrl,
+            DedupeKey = dedupeKey,
+            SendEmail = sendEmail,
+            CreatedAt = DateTime.UtcNow
+        };
+
+        var queued = await TryEnqueueOutboxAsync(item);
         try
         {
-            var notificationId = CreateNotificationId(userId, dedupeKey);
-            var payload = new
-            {
-                id = notificationId,
-                user_id = userId,
-                type,
-                title,
-                message,
-                link_url = actionUrl,
-                is_read = false,
-                created_at = DateTime.UtcNow
-            };
-
-            // The existing notifications table has no dedupe_key column. A stable
-            // primary key preserves idempotency for events that provide a dedupe key.
-            var url = $"{_supabaseUrl}/rest/v1/notifications?on_conflict=id";
-            using var request = BuildServiceRequest(HttpMethod.Post, url);
-            request.Headers.Add("Prefer", "resolution=ignore-duplicates,return=representation");
-            request.Content = JsonContent(payload);
-
-            using var response = await _http.SendAsync(request);
-            var content = await response.Content.ReadAsStringAsync();
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogError("Failed to persist {Type} notification for {UserId}: {Content}", type, userId, content);
-                return;
-            }
-
-            var rows = JsonSerializer.Deserialize<List<NotificationDto>>(content, JsonOptions) ?? [];
-            var created = rows.FirstOrDefault();
-            if (created is null)
-            {
-                _logger.LogDebug("Deduplicated {Type} notification for {UserId} with key {DedupeKey}", type, userId, dedupeKey);
-                return;
-            }
-
-            await _hub.Clients.User(userId).SendAsync("NotificationReceived", created);
-
-            if (sendEmail)
-            {
-                var recipient = await GetProfileAsync(userId);
-                if (!string.IsNullOrWhiteSpace(recipient?.Email))
-                {
-                    await _emailService.SendNotificationEmailAsync(
-                        recipient.Email,
-                        recipient.FullName ?? "TripMate user",
-                        title,
-                        message,
-                        actionUrl);
-                }
-            }
+            await DeliverOutboxItemAsync(item);
+            if (queued) await MarkOutboxProcessedAsync(item.Id);
         }
         catch (Exception ex)
         {
-            // Notifications must not roll back the business operation that emitted them.
+            // The business operation remains independent, while the durable outbox
+            // retries delivery when its migration has been installed.
             _logger.LogError(ex, "Error delivering {Type} notification to {UserId}", type, userId);
+            if (queued) await ScheduleOutboxRetryAsync(item, ex.Message);
         }
+    }
+
+    public async Task ProcessPendingOutboxAsync(CancellationToken cancellationToken = default)
+    {
+        var now = Uri.EscapeDataString(DateTime.UtcNow.ToString("O"));
+        var url = $"{_supabaseUrl}/rest/v1/notification_outbox" +
+                  $"?processed_at=is.null&next_attempt_at=lte.{now}" +
+                  "&order=created_at.asc&limit=25&select=*";
+        using var request = BuildServiceRequest(HttpMethod.Get, url);
+        using var response = await _http.SendAsync(request, cancellationToken);
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound) return;
+        EnsureSuccess(response, content, "load notification outbox");
+
+        var pending = JsonSerializer.Deserialize<List<NotificationOutboxItem>>(content, JsonOptions) ?? [];
+        foreach (var item in pending)
+        {
+            try
+            {
+                await DeliverOutboxItemAsync(item, cancellationToken);
+                await MarkOutboxProcessedAsync(item.Id, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Notification outbox retry {Attempt} failed for {OutboxId}", item.AttemptCount + 1, item.Id);
+                await ScheduleOutboxRetryAsync(item, ex.Message, cancellationToken);
+            }
+        }
+    }
+
+    private async Task DeliverOutboxItemAsync(
+        NotificationOutboxItem item,
+        CancellationToken cancellationToken = default)
+    {
+        var payload = new
+        {
+            id = item.Id,
+            user_id = item.UserId,
+            type = item.Type,
+            title = item.Title,
+            message = item.Message,
+            link_url = item.ActionUrl,
+            is_read = false,
+            created_at = item.CreatedAt
+        };
+
+        var url = $"{_supabaseUrl}/rest/v1/notifications?on_conflict=id";
+        using var request = BuildServiceRequest(HttpMethod.Post, url);
+        request.Headers.Add("Prefer", "resolution=ignore-duplicates,return=representation");
+        request.Content = JsonContent(payload);
+        using var response = await _http.SendAsync(request, cancellationToken);
+        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        EnsureSuccess(response, content, $"persist {item.Type} notification");
+
+        var created = (JsonSerializer.Deserialize<List<NotificationDto>>(content, JsonOptions) ?? [])
+            .FirstOrDefault();
+        if (created is null)
+        {
+            _logger.LogDebug("Deduplicated {Type} notification for {UserId}", item.Type, item.UserId);
+        }
+        else
+        {
+            await _hub.Clients.User(item.UserId)
+                .SendAsync("NotificationReceived", created, cancellationToken);
+        }
+
+        if (item.SendEmail)
+        {
+            var recipient = await GetProfileAsync(item.UserId);
+            if (!string.IsNullOrWhiteSpace(recipient?.Email))
+            {
+                await _emailService.SendNotificationEmailAsync(
+                    recipient.Email,
+                    recipient.FullName ?? "TripMate user",
+                    item.Title,
+                    item.Message,
+                    item.ActionUrl);
+            }
+        }
+    }
+
+    private async Task<bool> TryEnqueueOutboxAsync(NotificationOutboxItem item)
+    {
+        try
+        {
+            var url = $"{_supabaseUrl}/rest/v1/notification_outbox?on_conflict=id";
+            using var request = BuildServiceRequest(HttpMethod.Post, url);
+            request.Headers.Add("Prefer", "resolution=ignore-duplicates");
+            request.Content = JsonContent(new
+            {
+                id = item.Id,
+                user_id = item.UserId,
+                type = item.Type,
+                title = item.Title,
+                message = item.Message,
+                data = item.Data,
+                action_url = item.ActionUrl,
+                dedupe_key = item.DedupeKey,
+                send_email = item.SendEmail,
+                created_at = item.CreatedAt,
+                next_attempt_at = DateTime.UtcNow
+            });
+            using var response = await _http.SendAsync(request);
+            if (response.IsSuccessStatusCode) return true;
+
+            _logger.LogWarning(
+                "Notification outbox is unavailable ({StatusCode}); delivering inline. Apply Infrastructure/Sql/notification_outbox.sql.",
+                response.StatusCode);
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not enqueue notification outbox item; delivering inline");
+            return false;
+        }
+    }
+
+    private async Task MarkOutboxProcessedAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        using var request = BuildServiceRequest(
+            HttpMethod.Patch,
+            $"{_supabaseUrl}/rest/v1/notification_outbox?id=eq.{id}");
+        request.Content = JsonContent(new { processed_at = DateTime.UtcNow, last_error = (string?)null });
+        using var response = await _http.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            _logger.LogWarning("Could not mark notification outbox item {OutboxId} processed", id);
+    }
+
+    private async Task ScheduleOutboxRetryAsync(
+        NotificationOutboxItem item,
+        string error,
+        CancellationToken cancellationToken = default)
+    {
+        var attempts = item.AttemptCount + 1;
+        var delayMinutes = Math.Min(Math.Pow(2, Math.Min(attempts, 8)), 360);
+        using var request = BuildServiceRequest(
+            HttpMethod.Patch,
+            $"{_supabaseUrl}/rest/v1/notification_outbox?id=eq.{item.Id}");
+        request.Content = JsonContent(new
+        {
+            attempt_count = attempts,
+            next_attempt_at = DateTime.UtcNow.AddMinutes(delayMinutes),
+            last_error = error.Length > 1_000 ? error[..1_000] : error
+        });
+        using var response = await _http.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            _logger.LogWarning("Could not schedule notification outbox retry for {OutboxId}", item.Id);
     }
 
     private static Guid CreateNotificationId(string userId, string? dedupeKey)
@@ -213,7 +334,8 @@ public sealed class NotificationService : INotificationService
         bool unreadOnly = false)
     {
         limit = Math.Clamp(limit, 1, 100);
-        var filters = new StringBuilder($"&user_id=eq.{Uri.EscapeDataString(userId)}");
+        var filters = new StringBuilder(
+            $"&user_id=eq.{Uri.EscapeDataString(userId)}&type=neq.booking.cancelled&type=neq.booking_cancelled");
         if (unreadOnly) filters.Append("&is_read=eq.false");
         if (DateTimeOffset.TryParse(before, out var cursor))
             filters.Append($"&created_at=lt.{Uri.EscapeDataString(cursor.UtcDateTime.ToString("O"))}");
@@ -227,6 +349,11 @@ public sealed class NotificationService : INotificationService
         var rows = JsonSerializer.Deserialize<List<NotificationDto>>(content, JsonOptions) ?? [];
         var hasMore = rows.Count > limit;
         var items = rows.Take(limit).ToList();
+        foreach (var item in items)
+        {
+            item.Title = NotificationTextFormatter.NormalizeVisibleText(item.Title);
+            item.Message = NotificationTextFormatter.NormalizeVisibleText(item.Message);
+        }
         var nextCursor = hasMore ? items.LastOrDefault()?.CreatedAt?.ToUniversalTime().ToString("O") : null;
         var unreadCount = await GetUnreadCountAsync(userId, userToken);
         return new NotificationPageDto(items, unreadCount, nextCursor);
@@ -234,7 +361,7 @@ public sealed class NotificationService : INotificationService
 
     public async Task<int> GetUnreadCountAsync(string userId, string userToken)
     {
-        var url = $"{_supabaseUrl}/rest/v1/notifications?select=id&user_id=eq.{Uri.EscapeDataString(userId)}&is_read=eq.false&limit=1";
+        var url = $"{_supabaseUrl}/rest/v1/notifications?select=id&user_id=eq.{Uri.EscapeDataString(userId)}&is_read=eq.false&type=neq.booking.cancelled&type=neq.booking_cancelled&limit=1";
         using var request = BuildUserRequest(HttpMethod.Get, url, userToken);
         request.Headers.Add("Prefer", "count=exact");
         using var response = await _http.SendAsync(request);
@@ -299,6 +426,44 @@ public sealed class NotificationService : INotificationService
         if (response.IsSuccessStatusCode) return true;
         _logger.LogError("Failed to delete notification {NotificationId}: {Content}", notificationId, await response.Content.ReadAsStringAsync());
         return false;
+    }
+
+    public async Task<string> GetTripNameAsync(string bookingId, string fallback = "TripMate trip")
+    {
+        if (string.IsNullOrWhiteSpace(bookingId)) return fallback;
+
+        try
+        {
+            var url = $"{_supabaseUrl}/rest/v1/bookings" +
+                      $"?id=eq.{Uri.EscapeDataString(bookingId)}" +
+                      "&select=experience_package_id,experience_packages(title)&limit=1";
+            using var request = BuildServiceRequest(HttpMethod.Get, url);
+            using var response = await _http.SendAsync(request);
+            var content = await response.Content.ReadAsStringAsync();
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Could not resolve the trip name for booking {BookingId}: {Content}", bookingId, content);
+                return fallback;
+            }
+
+            var booking = (JsonSerializer.Deserialize<List<BookingTripNameRow>>(content, JsonOptions) ?? [])
+                .FirstOrDefault();
+            var title = booking?.ExperiencePackage?.Title?.Trim();
+            if (!string.IsNullOrWhiteSpace(title)) return title;
+
+            return string.Equals(
+                booking?.ExperiencePackageId,
+                "00000000-0000-0000-0000-000000000000",
+                StringComparison.OrdinalIgnoreCase)
+                ? "Custom trip"
+                : fallback;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not resolve the trip name for booking {BookingId}", bookingId);
+            return fallback;
+        }
     }
 
     public async Task NotifyAdminNewGuideApplicationAsync(string guideId, string guideName, string guideEmail)
@@ -468,5 +633,31 @@ public sealed class NotificationService : INotificationService
         [JsonPropertyName("id")] public string? Id { get; set; }
         [JsonPropertyName("email")] public string? Email { get; set; }
         [JsonPropertyName("full_name")] public string? FullName { get; set; }
+    }
+
+    private sealed class BookingTripNameRow
+    {
+        [JsonPropertyName("experience_package_id")] public string? ExperiencePackageId { get; set; }
+        [JsonPropertyName("experience_packages")] public TripNameRow? ExperiencePackage { get; set; }
+    }
+
+    private sealed class TripNameRow
+    {
+        [JsonPropertyName("title")] public string? Title { get; set; }
+    }
+
+    private sealed class NotificationOutboxItem
+    {
+        [JsonPropertyName("id")] public Guid Id { get; set; }
+        [JsonPropertyName("user_id")] public string UserId { get; set; } = string.Empty;
+        [JsonPropertyName("type")] public string Type { get; set; } = string.Empty;
+        [JsonPropertyName("title")] public string Title { get; set; } = string.Empty;
+        [JsonPropertyName("message")] public string Message { get; set; } = string.Empty;
+        [JsonPropertyName("data")] public object? Data { get; set; }
+        [JsonPropertyName("action_url")] public string? ActionUrl { get; set; }
+        [JsonPropertyName("dedupe_key")] public string? DedupeKey { get; set; }
+        [JsonPropertyName("send_email")] public bool SendEmail { get; set; }
+        [JsonPropertyName("attempt_count")] public int AttemptCount { get; set; }
+        [JsonPropertyName("created_at")] public DateTime CreatedAt { get; set; }
     }
 }

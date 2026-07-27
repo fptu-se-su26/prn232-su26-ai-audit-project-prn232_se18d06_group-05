@@ -87,10 +87,13 @@ public sealed class BookingCompletionService
 
     public async Task CompleteEligibleBookingsAsync(CancellationToken cancellationToken = default)
     {
-        // Query all bookings that are Confirmed (status=1) with booking_date before today
-        var today = DateTime.UtcNow.Date.ToString("yyyy-MM-dd");
+        // Query all bookings that are Confirmed (status=1) and awaiting_traveler confirmation
+        // where traveler_confirmation_due_at is today or in the past
+        var now = DateTime.UtcNow.ToString("O");
         var url = $"{_supabaseUrl}/rest/v1/bookings" +
-                  $"?status=eq.1&booking_date=lt.{today}" +
+                  $"?status=eq.1" +
+                  "&completion_state=eq.awaiting_traveler" +
+                  $"&traveler_confirmation_due_at=lte.{Uri.EscapeDataString(now)}" +
                   "&select=id,traveler_id,guide_profile_id,booking_date,total_amount,amount_paid," +
                   "experience_packages(title)";
 
@@ -120,34 +123,79 @@ public sealed class BookingCompletionService
         {
             try
             {
-                await UpdateBookingStatusAsync(booking.Id!, 2, cancellationToken);
-                _logger.LogInformation("[BookingCompletion] Booking {BookingId} → Completed", booking.Id);
+                await UpdateBookingStatusAsync(booking.Id!, cancellationToken);
+                _logger.LogInformation("[BookingCompletion] Booking {BookingId} → Auto-Confirmed", booking.Id);
 
-                // Notify traveler that the trip is completed and they can leave a review
                 var tourTitle = booking.Package?.Title ?? "your TripMate tour";
+
+                // Notify traveler
                 await _notifications.SendAsync(
                     booking.TravelerId ?? string.Empty,
                     NotificationTypes.BookingCompleted,
-                    "Trip completed! How was it?",
-                    $"Your trip \"{tourTitle}\" is now marked as completed. Leave a review to help future travelers!",
+                    "Trip auto-confirmed! How was it?",
+                    $"Your trip \"{tourTitle}\" was auto-confirmed as you did not respond within 7 days. Leave a review to help future travelers!",
                     new { bookingId = booking.Id },
                     $"/Traveler/Review/{booking.Id}",
                     $"booking-completed:{booking.Id}");
+
+                // Notify admin
+                await _notifications.SendToRoleAsync(
+                    "admin",
+                    "tour_completed",
+                    "Tour Auto-Completed & Payment Requested",
+                    $"Booking {booking.Id} has been auto-confirmed after 7 days. Please review and proceed with guide payment.",
+                    new { bookingId = booking.Id },
+                    $"/Admin/Bookings/Details/{booking.Id}",
+                    $"admin-tour-completed:{booking.Id}"
+                );
+
+                // We don't inject IGuideRepository to keep it simple, we can fetch Guide UserId by using profiles table or just rely on Admin payout.
+                // Wait, if we want to notify Guide without injecting IGuideRepository, we can query profiles directly using Supabase REST API,
+                // or just skip guide notification since the Admin will pay them anyway.
+                // Actually, let's just query the guide's UserId manually to avoid messing with DI circular dependencies.
+                if (!string.IsNullOrEmpty(booking.GuideProfileId))
+                {
+                    var guideUrl = $"{_supabaseUrl}/rest/v1/guide_profiles?id=eq.{Uri.EscapeDataString(booking.GuideProfileId)}&select=user_id";
+                    using var guideReq = BuildRequest(HttpMethod.Get, guideUrl);
+                    using var guideRes = await _http.SendAsync(guideReq, cancellationToken);
+                    if (guideRes.IsSuccessStatusCode)
+                    {
+                        var guideContent = await guideRes.Content.ReadAsStringAsync(cancellationToken);
+                        var guideDocs = JsonSerializer.Deserialize<List<Dictionary<string, JsonElement>>>(guideContent);
+                        if (guideDocs != null && guideDocs.Count > 0 && guideDocs[0].TryGetValue("user_id", out var userIdEl))
+                        {
+                            var userId = userIdEl.GetString();
+                            if (!string.IsNullOrEmpty(userId))
+                            {
+                                await _notifications.SendAsync(
+                                    userId,
+                                    "tour_completed",
+                                    "Tour Auto-Completed",
+                                    "The traveler did not respond within 7 days. The tour has been auto-confirmed and Admin has been requested to process your payment.",
+                                    new { bookingId = booking.Id },
+                                    $"/Guide/Dashboard/Bookings/{booking.Id}",
+                                    $"guide-tour-completed:{booking.Id}"
+                                );
+                            }
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[BookingCompletion] Failed to complete booking {BookingId}", booking.Id);
+                _logger.LogError(ex, "[BookingCompletion] Failed to auto-complete booking {BookingId}", booking.Id);
             }
         }
     }
 
-    private async Task UpdateBookingStatusAsync(string bookingId, int status, CancellationToken cancellationToken)
+    private async Task UpdateBookingStatusAsync(string bookingId, CancellationToken cancellationToken)
     {
         var url = $"{_supabaseUrl}/rest/v1/bookings?id=eq.{Uri.EscapeDataString(bookingId)}";
         var body = JsonSerializer.Serialize(new
         {
-            status,
-            updated_at = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ")
+            status = 2,
+            completion_state = "confirmed",
+            updated_at = DateTime.UtcNow.ToString("O")
         });
 
         using var request = BuildRequest(HttpMethod.Patch, url);

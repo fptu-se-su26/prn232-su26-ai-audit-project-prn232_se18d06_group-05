@@ -456,11 +456,12 @@
                             if (this.form.FullName) {
                                 localStorage.setItem('userName', this.form.FullName);
                                 document.querySelectorAll('.guide-display-name').forEach(el => el.textContent = this.form.FullName);
+                                const headerAvatar = document.getElementById('guideHeaderAvatar');
+                                if (headerAvatar) {
+                                    headerAvatar.dataset.avatarInitial = this.form.FullName.trim().charAt(0).toUpperCase() || 'G';
+                                }
                             }
-                            const container = document.getElementById('guideHeaderAvatar');
-                            if (this.form.AvatarUrl && container) {
-                                container.innerHTML = `<img src="${this.form.AvatarUrl}" class="w-full h-full object-cover" />`;
-                            }
+                            window.updateGuideHeaderAvatar?.(this.form.AvatarUrl);
                             if (data.coverUrl) this.form.CoverUrl = data.coverUrl;
                             window.initialProfile = JSON.parse(JSON.stringify(this.form));
                             this.pendingAvatarFile = null;

@@ -160,16 +160,38 @@
                     foreach (var tour in Model.AllTours.Take(4))
                     {
                         var guideName = tour.GuideProfile?.Profile?.FullName ?? "Local Guide";
-                        var guideCover = tour.GuideProfile?.CoverPhotoUrl ?? "";
+                        var tourCover = tour.CoverImageUrl ?? "";
                         var guideAvatar = tour.GuideProfile?.Profile?.AvatarUrl ?? "";
                         var guideCity = tour.GuideProfile?.CityArea ?? "Vietnam";
                         var guideProfileId = tour.GuideProfileId ?? "";
+                        var timelineStr = tour.TimelineJson != null ? System.Text.Json.JsonSerializer.Serialize(tour.TimelineJson) : "[]";
 
-                        <div style="cursor: pointer;" @@click="openTourModal('@System.Web.HttpUtility.JavaScriptStringEncode(tour.Id ?? "")', '@System.Web.HttpUtility.JavaScriptStringEncode(tour.Title ?? "")', `@System.Web.HttpUtility.JavaScriptStringEncode(tour.Description ?? "")`, @tour.DurationHours, @tour.PricePerSession, @(tour.PricePerPerson ?? 0), @tour.MaxGroupSize, '@System.Web.HttpUtility.JavaScriptStringEncode(string.Join(",", tour.IncludedItems ?? new List<string>()))', '@System.Web.HttpUtility.JavaScriptStringEncode(guideName)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideAvatar)', '@System.Web.HttpUtility.JavaScriptStringEncode(guideProfileId)')" class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col">
+                        var tourModalPayload = System.Text.Json.JsonSerializer.Serialize(new
+                        {
+                            id = tour.Id ?? "",
+                            title = tour.Title ?? "",
+                            description = tour.Description ?? "",
+                            duration = tour.DurationHours,
+                            pricePerSession = tour.PricePerSession,
+                            pricePerPerson = tour.PricePerPerson ?? 0,
+                            includedGuestCount = tour.IncludedGuestCount,
+                            maxGroup = tour.MaxGroupSize,
+                            includedItems = tour.IncludedItems ?? new List<string>(),
+                            guideName,
+                            guideAvatar,
+                            guideId = guideProfileId,
+                            coverImageUrl = tourCover,
+                            cityArea = guideCity,
+                            timeline = tour.TimelineJson ?? new object()
+                        });
+
+                        <div style="cursor: pointer;" data-tour-modal="@tourModalPayload"
+                             @@click="openTourModal(JSON.parse($event.currentTarget.dataset.tourModal))"
+                             class="bg-surface rounded-2xl overflow-hidden shadow-sm border border-outline-variant/30 group hover:shadow-xl transition-all duration-300 hover:-translate-y-1 flex flex-col">
                             <div class="h-44 overflow-hidden relative">
-                                @if (!string.IsNullOrEmpty(guideCover))
+                                @if (!string.IsNullOrEmpty(tourCover))
                                 {
-                                    <img src="@guideCover" alt="@tour.Title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                                    <img src="@tourCover" alt="@tour.Title" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
                                 }
                                 else
                                 {
@@ -353,88 +375,8 @@
     </section>
 
     <!-- Tour Detail Modal -->
-    <div x-show="showModal" style="display: none;" class="fixed inset-0 z-50 flex items-center justify-center p-4" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <!-- Background Overlay -->
-        <div x-show="showModal" x-transition:enter="ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-black/60 backdrop-blur-sm" @@click="showModal = false"></div>
-
-            <!-- Modal Panel -->
-            <div x-show="showModal" 
-                 x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100" 
-                 x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95" 
-                 class="relative bg-surface rounded-3xl text-left overflow-hidden shadow-2xl transform transition-all max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-white/20 z-10">
-                
-                <!-- Modal Header -->
-                <div class="bg-primary/5 px-6 py-4 md:px-8 md:py-6 border-b border-outline-variant/30 flex justify-between items-start">
-                    <div>
-                        <h2 class="text-2xl md:text-3xl font-extrabold text-on-surface" x-text="modal.title"></h2>
-                    </div>
-                    <button @@click="showModal = false" class="text-on-surface-variant hover:text-red-500 transition-colors bg-white rounded-full p-1 shadow-sm border border-outline-variant/20">
-                        <span class="material-symbols-outlined block">close</span>
-                    </button>
-                </div>
-
-                <!-- Modal Body -->
-                <div class="p-6 md:p-8 space-y-6">
-                    <div class="flex flex-wrap gap-4">
-                        <div class="flex items-center gap-2 bg-primary-container/50 px-4 py-2 rounded-xl">
-                            <span class="material-symbols-outlined text-primary text-sm">schedule</span>
-                            <span class="font-bold text-sm" x-text="modal.duration + ' hours'"></span>
-                        </div>
-                        <div class="flex items-center gap-2 bg-surface-variant px-4 py-2 rounded-xl">
-                            <span class="material-symbols-outlined text-on-surface-variant text-sm">group</span>
-                            <span class="font-bold text-sm" x-text="'Max ' + modal.maxGroup + ' people'"></span>
-                        </div>
-                    </div>
-
-                    <div>
-                        <h3 class="text-lg font-bold text-on-surface mb-3 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary text-xl">route</span> Tour Description
-                        </h3>
-                        <p class="text-on-surface-variant leading-relaxed whitespace-pre-line" x-text="modal.description"></p>
-                    </div>
-
-                    <div x-show="modal.includedItems.length > 0">
-                        <h3 class="text-lg font-bold text-on-surface mb-3 flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary text-xl">check_circle</span> What's Included
-                        </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <template x-for="item in modal.includedItems" :key="item">
-                                <div class="flex items-center gap-2 bg-green-50 border border-green-100 px-3 py-2 rounded-lg">
-                                    <span class="material-symbols-outlined text-green-600 text-sm">check</span>
-                                    <span class="text-sm text-green-800 font-medium" x-text="item"></span>
-                                </div>
-                            </template>
-                        </div>
-                    </div>
-
-                    <!-- Guide Info -->
-                    <a :href="'/Traveler/GuideProfile/' + modal.guideId" class="bg-surface-variant/50 rounded-2xl p-5 flex items-center gap-4 hover:bg-surface-variant transition-colors group/guide">
-                        <div class="w-14 h-14 rounded-full overflow-hidden border-2 border-primary/20 shrink-0 bg-gray-100">
-                            <img x-show="modal.guideAvatar" :src="modal.guideAvatar" class="w-full h-full object-cover" />
-                            <span x-show="!modal.guideAvatar" class="material-symbols-outlined text-3xl text-gray-400 mt-2 block text-center">person</span>
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm text-on-surface-variant">Created by</p>
-                            <p class="font-bold text-on-surface text-lg group-hover/guide:text-primary transition-colors" x-text="modal.guideName"></p>
-                        </div>
-                        <span class="material-symbols-outlined text-on-surface-variant group-hover/guide:text-primary transition-colors">arrow_forward</span>
-                    </a>
-
-                    <!-- Price & Book -->
-                    <div class="bg-white border-2 border-primary/30 rounded-2xl p-6 flex items-center justify-between">
-                        <div>
-                            <p class="text-sm text-on-surface-variant">Price</p>
-                            <p class="text-3xl font-extrabold text-primary" x-text="modal.priceLabel"></p>
-                        </div>
-                        <button @@click="bookTour(modal.id, modal.guideId)"
-                                class="bg-primary hover:bg-primary/90 text-white px-8 py-4 rounded-xl font-bold text-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
-                            <span class="material-symbols-outlined">lock</span>
-                            Book This Tour
-                        </button>
-                    </div>
-                </div>
-        </div>
-    </div>
+    <partial name="_TravelerTourModal" />
+    <partial name="_TravelerBookingModal" />
 </div>
 
 <style>
@@ -464,12 +406,44 @@
         Alpine.data('travelerHome', () => ({
             savedGuides: [], 
             showModal: false,
+            showBooking: false,
             bookingInProgress: false,
+            bookingDate: '',
+            bookingGuests: 1,
+            bookingNotes: '',
+            bookingError: '',
+            get minimumBookingDate() {
+                const tomorrow = new Date();
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                const year = tomorrow.getFullYear();
+                const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+                const day = String(tomorrow.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            },
+            get bookingTotal() {
+                const includedGuests = Math.max(1, Number(this.modal.includedGuestCount) || 1);
+                const guests = Math.max(1, Number(this.bookingGuests) || 1);
+                const extraGuests = Math.max(0, guests - includedGuests);
+                const tourPrice = Math.max(0, Number(this.modal.pricePerSession) || 0);
+                const extraGuestPrice = Math.max(0, Number(this.modal.pricePerPerson) || 0);
+                return tourPrice + (extraGuests * extraGuestPrice);
+            },
+            get bookingDeposit() {
+                return this.bookingTotal * 0.3;
+            },
+            formatCurrency(amount) {
+                return new Intl.NumberFormat('vi-VN', {
+                    style: 'currency',
+                    currency: 'VND',
+                    maximumFractionDigits: 0
+                }).format(Number(amount) || 0);
+            },
             modal: {
                 id: '', title: '', description: '', duration: 0,
-                pricePerSession: 0, pricePerPerson: 0, maxGroup: 6,
+                pricePerSession: 0, pricePerPerson: 0, includedGuestCount: 1, maxGroup: 6,
                 includedItems: [], priceLabel: '',
-                guideName: '', guideAvatar: '', guideId: ''
+                guideName: '', guideAvatar: '', guideId: '',
+                coverImageUrl: '', cityArea: '', timeline: []
             },
 
             toggleSave(id) {
@@ -480,42 +454,104 @@
                 }
             },
 
-            openTourModal(id, title, description, duration, pricePerSession, pricePerPerson, maxGroup, includedItemsStr, guideName, guideAvatar, guideId) {
-                this.modal.id = id;
-                this.modal.title = title;
-                this.modal.description = description;
-                this.modal.duration = duration;
+            openTourModal(tour) {
+                const pricePerSession = Number(tour?.pricePerSession) || 0;
+                const pricePerPerson = Number(tour?.pricePerPerson) || 0;
+                this.modal.id = tour?.id || '';
+                this.modal.title = tour?.title || '';
+                this.modal.description = tour?.description || '';
+                this.modal.duration = Number(tour?.duration) || 0;
                 this.modal.pricePerSession = pricePerSession;
                 this.modal.pricePerPerson = pricePerPerson;
-                this.modal.maxGroup = maxGroup;
-                this.modal.includedItems = includedItemsStr ? includedItemsStr.split(',').map(s => s.trim()).filter(s => s) : [];
-                this.modal.guideName = guideName || 'Local Guide';
-                this.modal.guideAvatar = guideAvatar || '';
-                this.modal.guideId = guideId || '';
+                this.modal.includedGuestCount = Math.max(1, Number(tour?.includedGuestCount) || 1);
+                this.modal.maxGroup = Number(tour?.maxGroup) || 1;
+                this.modal.includedItems = Array.isArray(tour?.includedItems)
+                    ? tour.includedItems.filter(item => typeof item === 'string' && item.trim())
+                    : [];
+                this.modal.guideName = tour?.guideName || 'Local Guide';
+                this.modal.guideAvatar = tour?.guideAvatar || '';
+                this.modal.guideId = tour?.guideId || '';
+                this.modal.coverImageUrl = tour?.coverImageUrl || '';
+                this.modal.cityArea = tour?.cityArea || '';
+                this.modal.timeline = Array.isArray(tour?.timeline) ? tour.timeline : [];
 
                 const fmt = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 });
                 this.modal.priceLabel = pricePerSession > 0
-                    ? fmt.format(pricePerSession) + '/session'
-                    : (pricePerPerson > 0 ? fmt.format(pricePerPerson) + '/person' : 'Contact');
+                    ? fmt.format(pricePerSession) + '/tour'
+                    : 'Contact';
 
+                this.bookingDate = '';
+                this.bookingGuests = 1;
+                this.bookingNotes = '';
                 this.showModal = true;
+
+                // Fetch blocked dates and init flatpickr
+                fetch(`/Traveler/GetGuideAvailability?guideId=${this.modal.guideId}`)
+                    .then(r => r.json())
+                    .then(blockedDates => {
+                        if(this._fp) this._fp.destroy();
+                        this.$nextTick(() => {
+                            this._fp = flatpickr(this.$refs.datePicker, {
+                                minDate: this.minimumBookingDate,
+                                disable: Array.isArray(blockedDates) ? blockedDates : [],
+                                onChange: (selectedDates, dateStr) => {
+                                    this.bookingDate = dateStr;
+                                }
+                            });
+                        });
+                    }).catch(err => console.error('Error fetching availability', err));
             },
 
-            async bookTour(packageId, guideId) {
+            startTourBooking() {
                 const token = localStorage.getItem('accessToken');
                 if (!token) {
                     window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.href);
                     return;
                 }
+                
+                this.bookingDate = this.minimumBookingDate;
+                this.bookingGuests = 1;
+                this.bookingNotes = '';
+                this.bookingError = '';
+                this.showModal = false;
+                this.showBooking = true;
+                this.$nextTick(() => this._fp?.setDate(this.bookingDate, false));
+            },
+
+            closeBooking() {
                 if (this.bookingInProgress) return;
+                this.showBooking = false;
+                this.bookingError = '';
+            },
+
+            async submitTourBooking() {
+                const token = localStorage.getItem('accessToken');
+                if (!token) {
+                    window.location.href = '/Auth/Login?returnUrl=' + encodeURIComponent(window.location.href);
+                    return;
+                }
+                this.bookingError = '';
+                const guests = Number(this.bookingGuests);
+                if (!this.bookingDate || this.bookingDate < this.minimumBookingDate) {
+                    this.bookingError = 'Please select a future trip date.';
+                    return;
+                }
+                if (!Number.isInteger(guests) || guests < 1 || guests > this.modal.maxGroup) {
+                    this.bookingError = `Guest count must be between 1 and ${this.modal.maxGroup}.`;
+                    return;
+                }
+                
+                if (this.bookingInProgress) return;
+
                 this.bookingInProgress = true;
 
                 try {
                     const formData = new FormData();
-                    formData.append('guideId', guideId);
-                    formData.append('packageId', packageId);
-                    formData.append('date', new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0]);
-                    formData.append('guests', '1');
+                    formData.append('guideId', this.modal.guideId);
+                    formData.append('packageId', this.modal.id);
+                    formData.append('date', this.bookingDate);
+                    formData.append('guests', this.bookingGuests.toString());
+                    if (this.bookingNotes) formData.append('notes', this.bookingNotes);
 
                     const res = await fetch('/Traveler/BookTour', {
                         method: 'POST',
@@ -531,13 +567,13 @@
                         }
                     } else if (res.status === 400) {
                         const errorData = await res.json();
-                        Swal.fire({ title: 'Notice', text: errorData.error || 'Booking failed.', icon: 'info', customClass: { popup: 'swal-top-fix' } });
+                        Swal.fire({ title: 'Notice', text: errorData.error || 'Booking failed.', icon: 'info' });
                     } else {
-                        Swal.fire({ title: 'Error', text: 'Booking failed. Please try again.', icon: 'error', customClass: { popup: 'swal-top-fix' } });
+                        Swal.fire({ title: 'Error', text: 'Booking failed. Please try again.', icon: 'error' });
                     }
                 } catch(err) {
                     console.error('BookTour error:', err);
-                    Swal.fire({ title: 'Error', text: 'Connection error. Please try again.', icon: 'error', customClass: { popup: 'swal-top-fix' } });
+                    Swal.fire({ title: 'Error', text: 'Connection error. Please try again.', icon: 'error' });
                 } finally {
                     this.bookingInProgress = false;
                 }

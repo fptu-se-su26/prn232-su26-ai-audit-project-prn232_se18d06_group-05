@@ -6,8 +6,8 @@ public static class NotificationTypes
     public const string BookingAwaitingGuide = "booking.awaiting_guide";
     public const string BookingConfirmed = "booking.confirmed";
     public const string BookingDeclined = "booking.declined";
-    public const string BookingCancelled = "booking.cancelled";
     public const string BookingReminder = "booking.reminder";
+    public const string CompletionRequested = "booking.completion_requested";
     public const string BookingCompleted = "booking.completed";
     public const string PaymentSucceeded = "payment.succeeded";
     public const string RefundProcessed = "refund.processed";

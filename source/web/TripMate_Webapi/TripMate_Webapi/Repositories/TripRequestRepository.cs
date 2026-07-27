@@ -147,6 +147,10 @@ namespace TripMate_Webapi.Repositories
         {
             await _supabase.From<TripOfferEntity>().Where(x => x.Id == offer.Id).Update(offer);
         }
+        public async Task DeleteTripOfferAsync(string offerId)
+        {
+            await _supabase.From<TripOfferEntity>().Where(x => x.Id == offerId).Delete();
+        }
 
         public async Task UpdateTripRequestAsync(TripRequestEntity request)
         {
