@@ -561,7 +561,7 @@ namespace TripMate_Webapi.Controllers
             if (string.IsNullOrEmpty(travelerId))
                 return Redirect($"{LOGIN_URL}?returnUrl=/Traveler/Review/{id}");
 
-            var result = await _reviewService.SubmitReviewAsync(id, travelerId, rating, comment);
+            var result = await _reviewService.SubmitReviewAsync(travelerId, id, rating, comment);
             
             if (result.Success)
             {
@@ -771,7 +771,11 @@ namespace TripMate_Webapi.Controllers
 
             try
             {
-                await _reviewService.SubmitReviewAsync(req.BookingId, travelerId, req.Rating, req.Comment);
+                var result = await _reviewService.SubmitReviewAsync(travelerId, req.BookingId, req.Rating, req.Comment);
+                if (!result.Success)
+                {
+                    return BadRequest(new { error = $"Traveler: '{travelerId}', Booking: '{req.BookingId}', Result: {result.Message}" });
+                }
                 return Json(new { success = true });
             }
             catch (Exception ex)
@@ -983,7 +987,7 @@ namespace TripMate_Webapi.Controllers
         }
 
         // POST: /Traveler/DeleteBookingAjax/{id}
-        [HttpDelete]
+        [HttpPost("Traveler/DeleteBookingAjax/{id}")]
         public async Task<IActionResult> DeleteBookingAjax(string id)
         {
             var travelerId = GetCurrentUserId();
