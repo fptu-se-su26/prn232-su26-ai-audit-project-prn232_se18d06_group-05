@@ -581,15 +581,17 @@
                                         <!-- Single Release -->
                                         <button @@click="releaseSingle(b.id)" 
                                                 x-show="isBookingReleaseable(b)"
-                                                class="p-1 text-green-600 hover:bg-green-50 rounded" title="Release escrow">
-                                            <span class="material-symbols-outlined text-lg">check_circle</span>
+                                                class="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1.5 text-xs font-bold text-green-700 transition-colors hover:bg-green-100"
+                                                title="Release Guide payout">
+                                            <span class="material-symbols-outlined text-base">payments</span>
+                                            Release payout
                                         </button>
                                         <!-- Override Platform Fee -->
                                         <button @@click="openOverride(b)"
                                                 x-show="!b.escrow_released"
                                                 class="p-1 text-primary hover:bg-orange-50 rounded" title="Adjust commission">
                                             <span class="material-symbols-outlined text-lg">edit</span>
-                                        </button>                           </button>
+                                        </button>
                                         <!-- Cancellation approval -->
                                         <template x-if="b.status === 3 && b.cancel_reason">
                                             <div class="flex gap-1 border-l pl-2 border-gray-200">
