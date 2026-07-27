@@ -24,21 +24,7 @@
             <p class="text-lg text-on-surface-variant">Manage your profile, travel preferences, and personality details.</p>
         </div>
 
-        <!-- Success/Error TempData Messages -->
-        @if (TempData["SuccessMessage"] != null)
-        {
-            <div class="mb-6 bg-green-100 border border-green-200 text-green-800 px-6 py-4 rounded-xl flex items-center gap-3 animate-fade-in">
-                <span class="material-symbols-outlined text-green-600">check_circle</span>
-                <span class="font-bold">@TempData["SuccessMessage"]</span>
-            </div>
-        }
-        @if (TempData["ErrorMessage"] != null)
-        {
-            <div class="mb-6 bg-red-100 border border-red-200 text-red-800 px-6 py-4 rounded-xl flex items-center gap-3">
-                <span class="material-symbols-outlined text-red-600">error</span>
-                <span class="font-bold">@TempData["ErrorMessage"]</span>
-            </div>
-        }
+
 
         <!-- Save Success Toast (JS) -->
         <div id="saveToast" class="hidden fixed bottom-6 right-6 bg-green-600 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-2 z-50 font-bold">

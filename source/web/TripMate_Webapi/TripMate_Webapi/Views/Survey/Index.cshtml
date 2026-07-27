@@ -1,140 +1,220 @@
 @{
-    ViewData["Title"] = "Trip Preferences";
+    ViewData["Title"] = "Find Your Experience";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<div class="min-h-screen bg-surface flex flex-col justify-center items-center py-12 px-4" x-data="tripQuiz()">
-    <div class="w-full max-w-3xl bg-white shadow-2xl rounded-3xl overflow-hidden tonal-elevation">
-        <!-- Progress Bar -->
-        <div class="w-full bg-gray-200 h-2">
-            <div class="bg-primary h-2 transition-all duration-500" :style="`width: ${(step / totalSteps) * 100}%`"></div>
+<style>
+    [x-cloak] { display: none !important; }
+</style>
+
+<main class="min-h-[calc(100vh-72px)] bg-surface px-4 py-8 sm:px-6 lg:py-12" x-data="tripQuiz()" x-cloak>
+    <div class="mx-auto max-w-6xl">
+        <div class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+                <div class="mb-2 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary">
+                    <span class="material-symbols-outlined text-lg">travel_explore</span>
+                    Smart tour matching
+                </div>
+                <h1 class="text-3xl font-extrabold tracking-tight text-on-surface sm:text-4xl">Plan a trip that fits you</h1>
+                <p class="mt-2 max-w-2xl text-on-surface-variant">Four quick choices help us check real tour prices, capacity, and guide availability.</p>
+            </div>
+            <a href="/Home/Tours" class="inline-flex items-center gap-2 text-sm font-semibold text-on-surface-variant transition-colors hover:text-primary">
+                Skip and browse all tours
+                <span class="material-symbols-outlined text-lg">arrow_forward</span>
+            </a>
         </div>
 
-        <div class="p-10 md:p-16">
-            <!-- Header -->
-            <div class="mb-10 text-center">
-                <span class="text-primary font-bold tracking-widest uppercase text-sm mb-2 block" x-text="`STEP ${step} OF ${totalSteps}`"></span>
-                <h2 class="text-4xl font-extrabold text-on-surface mb-4" x-text="getStepTitle()"></h2>
-                <p class="text-on-surface-variant text-lg" x-text="getStepDescription()"></p>
-            </div>
-
-            <!-- Step 1: Destination -->
-            <div x-show="step === 1" x-transition.opacity class="space-y-4">
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <template x-for="dest in destinations" :key="dest">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="destination" :value="dest" x-model="answers.destination" class="peer sr-only">
-                            <div class="h-32 rounded-xl border-2 border-outline-variant/30 flex flex-col items-center justify-center gap-2 hover:bg-primary-container hover:border-primary transition-all peer-checked:bg-primary-container peer-checked:border-primary peer-checked:text-primary">
-                                <span class="material-symbols-outlined text-4xl" x-text="dest === 'Other' ? 'add_circle' : 'location_city'"></span>
-                                <span class="font-bold" x-text="dest"></span>
-                            </div>
-                        </label>
-                    </template>
-                </div>
-                <!-- Custom Destination Input -->
-                <div x-show="answers.destination === 'Other'" x-transition class="mt-4">
-                    <input type="text" list="vietnam_locations" x-model="answers.customDestination" placeholder="Type your destination..." class="w-full bg-white border-outline-variant/50 rounded-lg p-4 text-on-surface focus:ring-primary focus:border-primary">
-                </div>
-            </div>
-
-            <!-- Step 2: Vibe -->
-            <div x-show="step === 2" x-transition.opacity class="space-y-4" style="display: none;">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <template x-for="v in vibes" :key="v.name">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="vibe" :value="v.name" x-model="answers.vibe" class="peer sr-only">
-                            <div class="p-6 rounded-xl border-2 border-outline-variant/30 flex items-center gap-4 hover:bg-primary-container hover:border-primary transition-all peer-checked:bg-primary-container peer-checked:border-primary peer-checked:text-primary">
-                                <div class="w-12 h-12 bg-gray-100 peer-checked:bg-primary/10 rounded-full flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-2xl" x-text="v.icon"></span>
-                                </div>
-                                <div>
-                                    <h4 class="font-bold text-lg" x-text="v.name"></h4>
-                                    <p class="text-sm text-on-surface-variant" x-text="v.desc"></p>
+        <div class="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
+            <aside class="hidden lg:block">
+                <div class="sticky top-24 rounded-2xl border border-outline-variant/30 bg-white p-5 shadow-sm">
+                    <p class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Your trip</p>
+                    <div class="mt-5 space-y-4">
+                        <template x-for="item in summaryItems" :key="item.label">
+                            <div class="flex gap-3">
+                                <span class="material-symbols-outlined mt-0.5 text-xl text-primary" x-text="item.icon"></span>
+                                <div class="min-w-0">
+                                    <p class="text-xs font-medium text-on-surface-variant" x-text="item.label"></p>
+                                    <p class="truncate text-sm font-bold text-on-surface" x-text="item.value"></p>
                                 </div>
                             </div>
-                        </label>
-                    </template>
-                </div>
-                <!-- Custom Vibe Input -->
-                <div x-show="answers.vibe === 'Other'" x-transition class="mt-4">
-                    <input type="text" x-model="answers.customVibe" placeholder="What kind of experience are you looking for?" class="w-full bg-white border-outline-variant/50 rounded-lg p-4 text-on-surface focus:ring-primary focus:border-primary">
-                </div>
-            </div>
-
-            <!-- Step 3: Dates -->
-            <div x-show="step === 3" x-transition.opacity class="space-y-6" style="display: none;">
-                <div class="bg-gray-50 p-6 rounded-xl border border-outline-variant/30">
-                    <label class="block text-sm font-bold text-on-surface mb-4">When are you traveling?</label>
-                        <div class="col-span-1 md:col-span-2">
-                            <label class="block text-xs font-bold text-on-surface-variant mb-1 uppercase tracking-wider">Travel Dates</label>
-                            <input type="text" x-model="answers.dateRange" placeholder="Select your travel dates..." class="date-picker cursor-pointer w-full bg-white border-outline-variant/50 rounded-lg p-3 text-on-surface focus:ring-primary focus:border-primary">
+                        </template>
+                    </div>
+                    <div class="mt-6 rounded-xl bg-primary-container/40 p-4">
+                        <div class="flex items-start gap-2">
+                            <span class="material-symbols-outlined text-lg text-primary">verified_user</span>
+                            <p class="text-xs leading-5 text-on-surface-variant">Results use published tours and exclude guides who are unavailable for your selected dates.</p>
                         </div>
-                </div>
-                <div class="bg-gray-50 p-6 rounded-xl border border-outline-variant/30">
-                    <label class="block text-sm font-bold text-on-surface mb-2">How many people?</label>
-                    <div class="flex items-center gap-4">
-                        <button type="button" x-on:click="if(answers.guests > 1) answers.guests--" class="w-10 h-10 rounded-full border border-primary text-primary flex items-center justify-center hover:bg-primary-container">-</button>
-                        <span class="text-xl font-bold w-8 text-center" x-text="answers.guests"></span>
-                        <button type="button" x-on:click="answers.guests++" class="w-10 h-10 rounded-full border border-primary text-primary flex items-center justify-center hover:bg-primary-container">+</button>
                     </div>
                 </div>
-            </div>
+            </aside>
 
-            <!-- Step 4: Budget -->
-            <div x-show="step === 4" x-transition.opacity class="space-y-4" style="display: none;">
-                <div class="grid grid-cols-1 gap-4">
-                    <template x-for="b in budgets" :key="b.label">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="budget" :value="b.label" x-model="answers.budget" class="peer sr-only">
-                            <div class="p-5 rounded-xl border-2 border-outline-variant/30 flex justify-between items-center hover:bg-primary-container hover:border-primary transition-all peer-checked:bg-primary-container peer-checked:border-primary peer-checked:text-primary">
-                                <span class="font-bold text-lg" x-text="b.label"></span>
-                                <span class="text-on-surface-variant peer-checked:text-primary font-medium" x-text="b.price"></span>
-                            </div>
-                        </label>
-                    </template>
+            <section class="overflow-hidden rounded-2xl border border-outline-variant/30 bg-white shadow-sm">
+                <div class="border-b border-outline-variant/30 px-5 py-5 sm:px-8">
+                    <div class="grid grid-cols-4 gap-2" aria-label="Matching progress">
+                        <template x-for="item in steps" :key="item.id">
+                            <button type="button"
+                                    x-on:click="if (item.id <= step) step = item.id"
+                                    :disabled="item.id > step"
+                                    class="group min-w-0 text-left disabled:cursor-default">
+                                <div class="mb-2 h-1.5 overflow-hidden rounded-full bg-surface-variant">
+                                    <div class="h-full rounded-full bg-primary transition-all duration-300"
+                                         :class="item.id <= step ? 'w-full' : 'w-0'"></div>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors"
+                                          :class="item.id < step ? 'bg-green-100 text-green-700' : item.id === step ? 'bg-primary text-white' : 'bg-surface-variant text-on-surface-variant'">
+                                        <span x-show="item.id >= step" x-text="item.id"></span>
+                                        <span x-show="item.id < step" class="material-symbols-outlined text-sm">check</span>
+                                    </span>
+                                    <span class="hidden truncate text-xs font-semibold sm:block"
+                                          :class="item.id === step ? 'text-on-surface' : 'text-on-surface-variant'"
+                                          x-text="item.label"></span>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Navigation Buttons -->
-            <div class="mt-12 flex justify-between items-center">
-                <button 
-                    x-show="step > 1" 
-                    x-on:click="step--"
-                    class="px-6 py-3 rounded-full font-bold text-on-surface-variant hover:bg-gray-100 transition-all flex items-center gap-2">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                    Back
-                </button>
-                <div x-show="step === 1"></div> <!-- Spacer -->
+                <div class="px-5 py-7 sm:px-8 sm:py-9">
+                    <div class="mb-7">
+                        <p class="mb-1 text-sm font-bold text-primary" x-text="`Step ${step} of ${totalSteps}`"></p>
+                        <h2 class="text-2xl font-extrabold text-on-surface sm:text-3xl" x-text="getStepTitle()"></h2>
+                        <p class="mt-2 text-sm leading-6 text-on-surface-variant sm:text-base" x-text="getStepDescription()"></p>
+                    </div>
 
-                <button 
-                    x-show="step < totalSteps" 
-                    x-on:click="nextStep()"
-                    :disabled="!canProceed()"
-                    class="px-8 py-3 rounded-full font-bold text-on-primary bg-primary hover:bg-primary/90 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                    Next
-                    <span class="material-symbols-outlined">arrow_forward</span>
-                </button>
+                    <fieldset x-show="step === 1" x-transition.opacity class="space-y-4">
+                        <legend class="sr-only">Choose a destination</legend>
+                        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            <template x-for="dest in destinations" :key="dest.name">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="destination" :value="dest.name" x-model="answers.destination" class="peer sr-only">
+                                    <span class="flex min-h-20 items-center gap-3 rounded-xl border border-outline-variant/50 px-4 py-3 transition-all hover:border-primary/50 hover:bg-primary-container/20 peer-checked:border-primary peer-checked:bg-primary-container/50 peer-focus-visible:ring-2 peer-focus-visible:ring-primary">
+                                        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-variant text-on-surface-variant peer-checked:text-primary">
+                                            <span class="material-symbols-outlined" x-text="dest.icon"></span>
+                                        </span>
+                                        <span class="font-bold text-on-surface" x-text="dest.name"></span>
+                                        <span x-show="answers.destination === dest.name" class="material-symbols-outlined ml-auto text-xl text-primary">check_circle</span>
+                                    </span>
+                                </label>
+                            </template>
+                        </div>
+                        <div x-show="answers.destination === 'Other'" x-transition>
+                            <label for="customDestination" class="mb-2 block text-sm font-bold text-on-surface">Destination</label>
+                            <input id="customDestination" type="text" list="vietnam_locations" x-model="answers.customDestination"
+                                   placeholder="Enter a city or province"
+                                   class="w-full rounded-xl border-outline-variant/50 bg-white px-4 py-3 text-on-surface focus:border-primary focus:ring-primary">
+                        </div>
+                    </fieldset>
 
-                <button 
-                    x-show="step === totalSteps" 
-                    x-on:click="submitSurvey()"
-                    :disabled="!canProceed()"
-                    class="px-8 py-3 rounded-full font-bold text-on-primary bg-primary hover:bg-primary/90 transition-all flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
-                    Find My Guide
-                    <span class="material-symbols-outlined">magic_button</span>
-                </button>
-            </div>
+                    <fieldset x-show="step === 2" x-transition.opacity class="space-y-4" style="display:none">
+                        <legend class="sr-only">Choose your preferred experience</legend>
+                        <div class="grid gap-3 sm:grid-cols-2">
+                            <template x-for="vibe in vibes" :key="vibe.name">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="vibe" :value="vibe.name" x-model="answers.vibe" class="peer sr-only">
+                                    <span class="flex min-h-24 items-center gap-4 rounded-xl border border-outline-variant/50 p-4 transition-all hover:border-primary/50 hover:bg-primary-container/20 peer-checked:border-primary peer-checked:bg-primary-container/50 peer-focus-visible:ring-2 peer-focus-visible:ring-primary">
+                                        <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-surface-variant text-primary">
+                                            <span class="material-symbols-outlined" x-text="vibe.icon"></span>
+                                        </span>
+                                        <span class="min-w-0">
+                                            <span class="block font-bold text-on-surface" x-text="vibe.name"></span>
+                                            <span class="mt-1 block text-xs leading-5 text-on-surface-variant" x-text="vibe.desc"></span>
+                                        </span>
+                                        <span x-show="answers.vibe === vibe.name" class="material-symbols-outlined ml-auto shrink-0 text-xl text-primary">check_circle</span>
+                                    </span>
+                                </label>
+                            </template>
+                        </div>
+                        <div x-show="answers.vibe === 'Other'" x-transition>
+                            <label for="customVibe" class="mb-2 block text-sm font-bold text-on-surface">Describe your ideal experience</label>
+                            <input id="customVibe" type="text" x-model="answers.customVibe"
+                                   placeholder="For example: photography and quiet local neighborhoods"
+                                   class="w-full rounded-xl border-outline-variant/50 bg-white px-4 py-3 text-on-surface focus:border-primary focus:ring-primary">
+                        </div>
+                    </fieldset>
+
+                    <div x-show="step === 3" x-transition.opacity class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_220px]" style="display:none">
+                        <div class="rounded-xl border border-outline-variant/50 p-5">
+                            <label for="travelDates" class="mb-2 block text-sm font-bold text-on-surface">Travel dates</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant">date_range</span>
+                                <input id="travelDates" type="text" x-model="answers.dateRange" placeholder="Select a date range"
+                                       class="date-picker w-full cursor-pointer rounded-xl border-outline-variant/50 bg-white py-3 pl-11 pr-4 text-on-surface focus:border-primary focus:ring-primary">
+                            </div>
+                            <p class="mt-2 text-xs text-on-surface-variant">Multi-day tours must fit entirely within this range.</p>
+                        </div>
+                        <div class="rounded-xl border border-outline-variant/50 p-5">
+                            <label class="mb-3 block text-sm font-bold text-on-surface">Travelers</label>
+                            <div class="flex items-center justify-between rounded-xl bg-surface-variant/70 p-1.5">
+                                <button type="button" x-on:click="if (answers.guests > 1) answers.guests--"
+                                        :disabled="answers.guests <= 1"
+                                        class="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-on-surface shadow-sm transition hover:text-primary disabled:opacity-40">
+                                    <span class="material-symbols-outlined">remove</span>
+                                </button>
+                                <div class="text-center">
+                                    <span class="block text-xl font-extrabold text-on-surface" x-text="answers.guests"></span>
+                                    <span class="block text-[10px] font-semibold uppercase tracking-wide text-on-surface-variant">guests</span>
+                                </div>
+                                <button type="button" x-on:click="if (answers.guests < 50) answers.guests++"
+                                        :disabled="answers.guests >= 50"
+                                        class="flex h-10 w-10 items-center justify-center rounded-lg bg-white text-on-surface shadow-sm transition hover:text-primary disabled:opacity-40">
+                                    <span class="material-symbols-outlined">add</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <fieldset x-show="step === 4" x-transition.opacity class="space-y-3" style="display:none">
+                        <legend class="sr-only">Choose your total tour budget</legend>
+                        <template x-for="budget in budgets" :key="budget.label">
+                            <label class="block cursor-pointer">
+                                <input type="radio" name="budget" :value="budget.label" x-model="answers.budget" class="peer sr-only">
+                                <span class="flex items-center gap-4 rounded-xl border border-outline-variant/50 p-4 transition-all hover:border-primary/50 hover:bg-primary-container/20 peer-checked:border-primary peer-checked:bg-primary-container/50 peer-focus-visible:ring-2 peer-focus-visible:ring-primary">
+                                    <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-surface-variant text-primary">
+                                        <span class="material-symbols-outlined" x-text="budget.icon"></span>
+                                    </span>
+                                    <span>
+                                        <span class="block font-bold text-on-surface" x-text="budget.label"></span>
+                                        <span class="block text-sm text-on-surface-variant" x-text="budget.price"></span>
+                                    </span>
+                                    <span x-show="answers.budget === budget.label" class="material-symbols-outlined ml-auto text-primary">check_circle</span>
+                                </span>
+                            </label>
+                        </template>
+                    </fieldset>
+                </div>
+
+                <div class="flex items-center justify-between border-t border-outline-variant/30 bg-white px-5 py-4 sm:px-8">
+                    <button type="button" x-on:click="step--" x-show="step > 1"
+                            class="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold text-on-surface-variant transition hover:bg-surface-variant hover:text-on-surface">
+                        <span class="material-symbols-outlined text-lg">arrow_back</span>
+                        Back
+                    </button>
+                    <span x-show="step === 1"></span>
+
+                    <button type="button" x-on:click="nextStep()" x-show="step < totalSteps" :disabled="!canProceed()"
+                            class="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40">
+                        Continue
+                        <span class="material-symbols-outlined text-lg">arrow_forward</span>
+                    </button>
+
+                    <button type="button" x-on:click="submitSurvey()" x-show="step === totalSteps" :disabled="!canProceed() || isSubmitting"
+                            class="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-40">
+                        <span class="material-symbols-outlined text-lg" :class="isSubmitting ? 'animate-spin' : ''" x-text="isSubmitting ? 'progress_activity' : 'travel_explore'"></span>
+                        <span x-text="isSubmitting ? 'Finding tours...' : 'See my matches'"></span>
+                    </button>
+                </div>
+            </section>
         </div>
     </div>
-</div>
-
-<!-- Alpine.js is included in _Layout.cshtml -->
+</main>
 
 <script>
     document.addEventListener('alpine:init', () => {
         Alpine.data('tripQuiz', () => ({
             step: 1,
             totalSteps: 4,
+            isSubmitting: false,
             answers: {
                 destination: '',
                 customDestination: '',
@@ -144,82 +224,108 @@
                 guests: 1,
                 budget: ''
             },
-            destinations: ['Hanoi', 'Ho Chi Minh', 'Da Nang', 'Hoi An', 'Da Lat', 'Other'],
+            steps: [
+                { id: 1, label: 'Destination' },
+                { id: 2, label: 'Style' },
+                { id: 3, label: 'Dates' },
+                { id: 4, label: 'Budget' }
+            ],
+            destinations: [
+                { name: 'Hanoi', icon: 'location_city' },
+                { name: 'Ho Chi Minh', icon: 'apartment' },
+                { name: 'Da Nang', icon: 'beach_access' },
+                { name: 'Hoi An', icon: 'temple_buddhist' },
+                { name: 'Da Lat', icon: 'landscape' },
+                { name: 'Other', icon: 'add_location_alt' }
+            ],
             vibes: [
-                { name: 'Chill & Relax', desc: 'Coffee shops, spas, gentle walks.', icon: 'coffee' },
-                { name: 'Adventure', desc: 'Trekking, motorbiking, nature.', icon: 'hiking' },
-                { name: 'Cultural Deep-dive', desc: 'Museums, history, local life.', icon: 'temple_buddhist' },
-                { name: 'Foodie Tour', desc: 'Street food, local specialties.', icon: 'restaurant' },
-                { name: 'Other', desc: 'I have something else in mind.', icon: 'add_circle' }
+                { name: 'Chill & Relax', desc: 'Coffee shops, spas, and gentle walks.', icon: 'coffee' },
+                { name: 'Adventure', desc: 'Trekking, motorbiking, and the outdoors.', icon: 'hiking' },
+                { name: 'Cultural Deep-dive', desc: 'Heritage, history, and local life.', icon: 'museum' },
+                { name: 'Foodie Tour', desc: 'Street food and local specialties.', icon: 'restaurant' },
+                { name: 'Other', desc: 'Describe the experience you have in mind.', icon: 'tune' }
             ],
             budgets: [
-                { label: 'Budget-friendly', price: '~$20 - $40 / day' },
-                { label: 'Standard', price: '~$50 - $80 / day' },
-                { label: 'Premium', price: '~$100+ / day' }
+                { label: 'Budget-friendly', price: 'Up to 1,000,000 ₫ total', icon: 'savings' },
+                { label: 'Standard', price: 'Up to 2,000,000 ₫ total', icon: 'account_balance_wallet' },
+                { label: 'Premium', price: 'Up to 5,000,000 ₫ total', icon: 'diamond' }
             ],
 
-            getStepTitle() {
-                const titles = [
-                    "Where are you heading?",
-                    "What's your preferred vibe?",
-                    "When are you traveling?",
-                    "What's your daily budget?"
+            init() {
+                try {
+                    const saved = JSON.parse(localStorage.getItem('tripPreferences') || 'null');
+                    if (saved) this.answers = { ...this.answers, ...saved };
+                } catch (error) {
+                    console.warn('[Smart Matching] Could not restore saved preferences.', error);
+                }
+            },
+
+            get summaryItems() {
+                return [
+                    { label: 'Destination', value: this.destinationLabel || 'Not selected', icon: 'location_on' },
+                    { label: 'Experience', value: this.vibeLabel || 'Not selected', icon: 'interests' },
+                    { label: 'Dates', value: this.answers.dateRange || 'Not selected', icon: 'date_range' },
+                    { label: 'Group', value: `${this.answers.guests} guest${this.answers.guests === 1 ? '' : 's'}`, icon: 'group' },
+                    { label: 'Budget', value: this.answers.budget || 'Not selected', icon: 'payments' }
                 ];
-                return titles[this.step - 1];
+            },
+
+            get destinationLabel() {
+                return this.answers.destination === 'Other' ? this.answers.customDestination : this.answers.destination;
+            },
+
+            get vibeLabel() {
+                return this.answers.vibe === 'Other' ? this.answers.customVibe : this.answers.vibe;
+            },
+
+            getStepTitle() {
+                return [
+                    'Where do you want to explore?',
+                    'What kind of experience feels right?',
+                    'When are you going?',
+                    'What is your total tour budget?'
+                ][this.step - 1];
             },
 
             getStepDescription() {
-                const descriptions = [
-                    "Choose a city you want to explore with a local guide.",
-                    "Let us know what kind of activities you enjoy the most.",
-                    "Tell us your timeline so we can find available guides.",
-                    "This helps us suggest experiences that match your comfort level."
-                ];
-                return descriptions[this.step - 1];
+                return [
+                    'Choose one destination so we can find local, published tours.',
+                    'Your preferred style has the strongest influence on the match score.',
+                    'We will check guide availability, booking conflicts, and tour capacity.',
+                    'The estimate includes your whole group and any extra guest fees.'
+                ][this.step - 1];
             },
 
             canProceed() {
-                if (this.step === 1) {
-                    if (this.answers.destination === 'Other') return this.answers.customDestination.trim() !== '';
-                    return this.answers.destination !== '';
-                }
-                if (this.step === 2) {
-                    if (this.answers.vibe === 'Other') return this.answers.customVibe.trim() !== '';
-                    return this.answers.vibe !== '';
-                }
-                if (this.step === 3) return this.answers.dateRange !== '';
-                if (this.step === 4) return this.answers.budget !== '';
-                return true;
+                if (this.step === 1) return Boolean(this.destinationLabel?.trim());
+                if (this.step === 2) return Boolean(this.vibeLabel?.trim());
+                if (this.step === 3) return Boolean(this.answers.dateRange);
+                if (this.step === 4) return Boolean(this.answers.budget);
+                return false;
             },
 
             nextStep() {
-                if (this.canProceed() && this.step < this.totalSteps) {
-                    this.step++;
-                }
+                if (this.canProceed() && this.step < this.totalSteps) this.step++;
             },
 
-            submitSurvey() {
-                if (this.canProceed()) {
-                    // 1. Lưu vào localStorage (fallback UX cho trình duyệt hiện tại)
-                    localStorage.setItem('tripPreferences', JSON.stringify(this.answers));
-                    
-                    // 2. M2: Đồng bộ lên Server Session để không mất sau khi đăng nhập
-                    // Dùng sendBeacon để đảm bảo request được gửi ngay cả khi đang redirect
-                    const payload = JSON.stringify(this.answers);
-                    
-                    // Thử dùng fetch async, nếu lỗi vẫn chuyển trang
-                    const saveToSession = fetch('/Survey/SavePreferences', {
+            async submitSurvey() {
+                if (!this.canProceed() || this.isSubmitting) return;
+                this.isSubmitting = true;
+                localStorage.setItem('tripPreferences', JSON.stringify(this.answers));
+
+                try {
+                    const response = await fetch('/Survey/SavePreferences', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: payload
-                    }).catch(err => console.warn('[Quiz] Could not sync to server session:', err));
-                    
-                    // Chuyển trang sau 100ms để fetch có thời gian bắt đầu
-                    setTimeout(() => {
-                        window.location.href = '/Survey/Matches';
-                    }, 100);
+                        body: JSON.stringify(this.answers)
+                    });
+                    if (!response.ok) console.warn('[Smart Matching] Preferences were only saved locally.');
+                } catch (error) {
+                    console.warn('[Smart Matching] Could not sync preferences.', error);
+                } finally {
+                    window.location.href = '/Survey/Matches';
                 }
             }
-        }))
-    })
+        }));
+    });
 </script>

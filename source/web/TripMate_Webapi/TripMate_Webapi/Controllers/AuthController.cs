@@ -15,19 +15,22 @@ namespace TripMate_Webapi.Controllers
         private readonly ISupabasePasswordResetService _passwordResetService;
         private readonly ILogger<AuthController> _logger;
         private readonly IConfiguration _configuration;
+        private readonly INotificationService _notificationService;
 
         public AuthController(
             SupabaseAuthService authService,
             IGoogleAuthService googleAuthService,
             ISupabasePasswordResetService passwordResetService,
             ILogger<AuthController> logger, 
-            IConfiguration configuration)
+            IConfiguration configuration,
+            INotificationService notificationService)
         {
             _authService = authService;
             _googleAuthService = googleAuthService;
             _passwordResetService = passwordResetService;
             _logger = logger;
             _configuration = configuration;
+            _notificationService = notificationService;
         }
 
         // 👱‍♀️ ponytail: merged MVC views
@@ -88,8 +91,21 @@ namespace TripMate_Webapi.Controllers
 
         private void ClearAuthCookies()
         {
+            // 1. Delete with Strict & Secure=true (matching login cookie options)
+            Response.Cookies.Delete("access_token", new CookieOptions { Path = "/", Secure = true, SameSite = SameSiteMode.Strict });
+            Response.Cookies.Delete("refresh_token", new CookieOptions { Path = "/", Secure = true, SameSite = SameSiteMode.Strict });
+
+            // 2. Delete with Lax & Secure=false (matching refresh middleware options)
+            Response.Cookies.Delete("access_token", new CookieOptions { Path = "/", Secure = false, SameSite = SameSiteMode.Lax });
+            Response.Cookies.Delete("refresh_token", new CookieOptions { Path = "/", Secure = false, SameSite = SameSiteMode.Lax });
+
+            // 3. Delete with default path option
             Response.Cookies.Delete("access_token", new CookieOptions { Path = "/" });
             Response.Cookies.Delete("refresh_token", new CookieOptions { Path = "/" });
+
+            // 4. Default delete
+            Response.Cookies.Delete("access_token");
+            Response.Cookies.Delete("refresh_token");
         }
 
         /// <summary>
@@ -223,8 +239,8 @@ namespace TripMate_Webapi.Controllers
                     
                     using (var stream = request.Certificate.OpenReadStream())
                     {
-                        // Upload PDF as a raw file
-                        var uploadParams = new CloudinaryDotNet.Actions.RawUploadParams()
+                        // Upload PDF as an image resource to allow inline viewing
+                        var uploadParams = new CloudinaryDotNet.Actions.ImageUploadParams()
                         {
                             File = new CloudinaryDotNet.FileDescription(request.Certificate.FileName, stream),
                             Folder = "tripmate_certificates"
@@ -263,7 +279,27 @@ namespace TripMate_Webapi.Controllers
 
                 _logger.LogInformation("Registration successful for email: {Email}", request.Email);
 
-                // Return with token for auto-login (except for guides who need approval)
+                // Handle email confirmation or guide approval
+                if (string.IsNullOrEmpty(result.AccessToken))
+                {
+                    if (request.Role == "guide")
+                    {
+                        return Ok(new
+                        {
+                            message = "Đăng ký thành công! Tài khoản hướng dẫn viên của bạn đang được xem xét.",
+                            requiresApproval = true
+                        });
+                    }
+                    else
+                    {
+                        return Ok(new
+                        {
+                            message = "Đăng ký thành công nhưng yêu cầu xác thực email. Vui lòng kiểm tra hộp thư của bạn.",
+                            requiresEmailConfirmation = true
+                        });
+                    }
+                }
+
                 if (request.Role == "guide")
                 {
                     return Ok(new

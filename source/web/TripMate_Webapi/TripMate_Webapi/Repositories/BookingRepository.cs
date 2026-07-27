@@ -249,6 +249,18 @@ namespace TripMate_Webapi.Repositories
             return response.Models;
         }
 
+        public async Task<List<BookingEntity>> GetConfirmedBookingsInRangeAsync(
+            string start,
+            string endExclusive)
+        {
+            var response = await _supabase.From<BookingEntity>()
+                .Where(b => b.Status == 1)
+                .Filter("booking_date", Postgrest.Constants.Operator.GreaterThanOrEqual, start)
+                .Filter("booking_date", Postgrest.Constants.Operator.LessThan, endExclusive)
+                .Get();
+            return response.Models;
+        }
+
         public async Task UpdateBookingStatusAsync(string bookingId, int status)
         {
             var supabaseUrl = _supabaseUrl;
@@ -333,6 +345,7 @@ namespace TripMate_Webapi.Repositories
                       $"&traveler_id=eq.{Uri.EscapeDataString(travelerId)}" +
                       "&status=eq.1" +
                       "&completion_state=eq.awaiting_traveler" +
+                      "&payment_status=eq.paid" +
                       "&select=id";
 
             using var request = new HttpRequestMessage(HttpMethod.Patch, url);
@@ -346,6 +359,10 @@ namespace TripMate_Webapi.Repositories
                 {
                     completion_state = "confirmed",
                     status = 2,
+                    traveler_completed_at = completedAtUtc.ToString("O"),
+                    payout_status = "eligible",
+                    payout_eligible_at = completedAtUtc.ToString("O"),
+                    payout_failure_reason = (string?)null,
                     updated_at = completedAtUtc.ToString("O")
                 }),
                 System.Text.Encoding.UTF8,

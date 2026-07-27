@@ -76,6 +76,15 @@ namespace TripMate_Webapi.Repositories
             return response.Models;
         }
 
+        public async Task<List<GuideAvailabilityEntity>> GetBlockedDatesInRangeAsync(string start, string end)
+        {
+            var response = await _supabase.From<GuideAvailabilityEntity>()
+                .Filter("unavailable_date", Postgrest.Constants.Operator.GreaterThanOrEqual, start)
+                .Filter("unavailable_date", Postgrest.Constants.Operator.LessThan, end)
+                .Get();
+            return response.Models;
+        }
+
         public async Task DeleteBlockedDatesAsync(
             string guideProfileId,
             IReadOnlyCollection<string> dates)

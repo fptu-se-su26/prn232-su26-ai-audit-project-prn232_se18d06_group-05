@@ -21,7 +21,7 @@
         <div class="flex items-center gap-3">
             <!-- Date Filter -->
             <div class="relative">
-                <input type="date" x-model="filterDate" class="bg-white border border-gray-200 text-gray-700 pl-10 pr-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary h-[38px]">
+                <input type="date" x-model="filterDate" @@change="goToPage(1, false)" class="bg-white border border-gray-200 text-gray-700 pl-10 pr-4 py-2 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-primary h-[38px]">
                 <span class="material-symbols-outlined text-[18px] text-gray-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">calendar_today</span>
             </div>
             
@@ -88,7 +88,7 @@
         <!-- Tabs -->
         <div class="flex flex-wrap xl:flex-nowrap xl:overflow-x-auto hide-scrollbar gap-1 p-1 w-full xl:w-auto">
             <template x-for="tab in tabs" :key="tab.id">
-                <button @@click="currentTab = tab.id"
+                <button type="button" @@click="selectTab(tab.id)"
                         :class="currentTab === tab.id ? 'bg-primary text-white font-bold shadow-sm' : 'text-gray-600 hover:bg-gray-100 font-medium'"
                         class="px-5 py-2.5 rounded-xl text-sm whitespace-nowrap transition-all flex items-center justify-center gap-2 flex-shrink-0">
                     <span x-text="tab.label"></span>
@@ -104,32 +104,32 @@
         <!-- Search -->
         <div class="relative w-full xl:w-auto flex-grow p-1">
             <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-[20px]">search</span>
-            <input type="text" x-model="searchQuery" placeholder="Search traveler name or booking ID..."
+            <input type="search" x-model.debounce.300ms="searchQuery" @@input.debounce.300ms="goToPage(1, false)" placeholder="Search traveler name, tour, or booking ID..."
                    class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-xl py-2.5 pl-12 pr-4 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all">
         </div>
     </div>
 
     <!-- Booking List -->
-    <div class="space-y-4">
+    <div x-ref="bookingList" class="space-y-4">
         <template x-if="filteredBookings.length === 0">
             <div class="bg-white rounded-2xl p-16 shadow-sm border border-gray-100 text-center flex flex-col items-center justify-center">
                 <div class="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-5 text-gray-400">
-                    <span class="material-symbols-outlined text-[40px]" x-text="currentTab === 'Pending' ? 'schedule' : (currentTab === 'Confirmed' ? 'check_circle' : (currentTab === 'Completed' ? 'done_all' : (currentTab === 'Cancelled' ? 'cancel' : (currentTab === 'Expired' ? 'timer_off' : 'inbox'))))"></span>
+                    <span class="material-symbols-outlined text-[40px]" x-text="hasActiveFilters ? 'filter_list_off' : 'inbox'"></span>
                 </div>
-                <h3 class="text-xl font-bold text-gray-900 mb-2" x-text="currentTab === 'all' ? 'No bookings yet' : 'No matching bookings'"></h3>
-                <p class="text-gray-500 max-w-md mx-auto mb-6" x-text="currentTab === 'all' ? 'Your profile is active and ready for travelers. You can review your schedule while waiting for a booking.' : 'No bookings match this status or search term.'"></p>
-                <a x-show="currentTab === 'all'" href="/Guide/Calendar" class="inline-flex items-center gap-2 bg-primary text-white font-bold px-6 py-3 rounded-xl hover:bg-primary-dark transition-colors shadow-sm">
+                <h3 class="text-xl font-bold text-gray-900 mb-2" x-text="hasActiveFilters ? 'No matching bookings' : 'No bookings yet'"></h3>
+                <p class="text-gray-500 max-w-md mx-auto mb-6" x-text="hasActiveFilters ? 'No bookings match the selected status, date, or search term.' : 'Your profile is active and ready for travelers. You can review your schedule while waiting for a booking.'"></p>
+                <a x-show="!hasActiveFilters" href="/Guide/Calendar" class="inline-flex items-center gap-2 bg-primary text-white font-bold px-6 py-3 rounded-xl hover:bg-primary-dark transition-colors shadow-sm">
                     <span class="material-symbols-outlined text-[20px]">calendar_month</span>
                     View Calendar
                 </a>
-                <button x-show="currentTab !== 'all'" @@click="currentTab = 'all'; searchQuery = ''" class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 font-bold px-6 py-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
+                <button type="button" x-show="hasActiveFilters" @@click="clearFilters()" class="inline-flex items-center gap-2 bg-white border border-gray-200 text-gray-700 font-bold px-6 py-3 rounded-xl hover:bg-gray-50 transition-colors shadow-sm">
                     <span class="material-symbols-outlined text-[20px]">filter_list_off</span>
                     Clear Filters
                 </button>
             </div>
         </template>
 
-        <template x-for="b in filteredBookings" :key="b.Id">
+        <template x-for="b in pagedBookings" :key="b.Id">
             <!-- Booking Card -->
             <div class="rounded-2xl shadow-sm border overflow-hidden transition-all relative"
                  :class="b.Status === 'Expired' ? 'border-gray-200 bg-gray-50/70' : 'border-gray-100 bg-white hover:border-primary/30 hover:shadow-md'">
@@ -291,16 +291,57 @@
     </div>
 
     <!-- Paginator -->
-    <div class="mt-8 flex justify-center items-center gap-2" x-show="filteredBookings.length > 0">
-        <button class="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50 disabled:opacity-50">
-            <span class="material-symbols-outlined">chevron_left</span>
-        </button>
-        <button class="w-10 h-10 rounded-xl bg-primary text-white font-bold shadow-sm">1</button>
-        <button class="w-10 h-10 rounded-xl border border-gray-200 font-medium text-gray-700 hover:bg-gray-50">2</button>
-        <button class="w-10 h-10 rounded-xl border border-gray-200 font-medium text-gray-700 hover:bg-gray-50">3</button>
-        <button class="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50">
-            <span class="material-symbols-outlined">chevron_right</span>
-        </button>
+    <div class="mt-8 flex flex-col gap-4 rounded-2xl border border-gray-100 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+         x-show="filteredBookings.length > 0">
+        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
+            <p aria-live="polite">
+                Showing
+                <span class="font-bold text-gray-900" x-text="pageStart"></span>
+                to
+                <span class="font-bold text-gray-900" x-text="pageEnd"></span>
+                of
+                <span class="font-bold text-gray-900" x-text="filteredBookings.length"></span>
+                bookings
+            </p>
+            <label class="flex items-center gap-2">
+                <span>Per page</span>
+                <select x-model.number="pageSize" @@change="changePageSize($event.target.value)"
+                        class="rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 font-semibold text-gray-700 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/30">
+                    <template x-for="size in pageSizes" :key="size">
+                        <option :value="size" x-text="size"></option>
+                    </template>
+                </select>
+            </label>
+        </div>
+
+        <nav class="flex w-full items-center justify-start gap-1 overflow-x-auto pb-1 sm:w-auto sm:justify-center sm:pb-0" aria-label="Booking pagination">
+            <button type="button" @@click="goToPage(activePage - 1)" :disabled="activePage <= 1"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="Previous page">
+                <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+
+            <template x-for="item in paginationItems" :key="item.key">
+                <button type="button"
+                        @@click="item.page && goToPage(item.page)"
+                        :disabled="!item.page"
+                        :aria-current="item.page === activePage ? 'page' : null"
+                        :aria-label="item.page ? 'Page ' + item.page : 'More pages'"
+                        :class="item.page === activePage
+                            ? 'border-primary bg-primary text-white shadow-sm'
+                            : item.page
+                                ? 'border-gray-200 bg-white text-gray-700 hover:border-primary/30 hover:bg-primary/5 hover:text-primary'
+                                : 'cursor-default border-transparent bg-transparent text-gray-400'"
+                        class="inline-flex h-10 min-w-10 items-center justify-center rounded-xl border px-2 text-sm font-bold transition-colors"
+                        x-text="item.label"></button>
+            </template>
+
+            <button type="button" @@click="goToPage(activePage + 1)" :disabled="activePage >= totalPages"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 text-gray-600 transition-colors hover:border-primary/30 hover:bg-primary/5 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="Next page">
+                <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+        </nav>
     </div>
 
     <!-- Slide-over Detail Modal -->
@@ -587,6 +628,9 @@
                 searchQuery: '',
                 filterDate: '',
                 sortOrder: 'desc',
+                currentPage: 1,
+                pageSize: 5,
+                pageSizes: [5, 10, 20],
                 isDetailOpen: false,
                 selectedBooking: null,
                 isCompletionModalOpen: false,
@@ -597,6 +641,19 @@
 
                 toggleSort() {
                     this.sortOrder = this.sortOrder === 'desc' ? 'asc' : 'desc';
+                    this.goToPage(1, false);
+                },
+
+                selectTab(tabId) {
+                    this.currentTab = tabId;
+                    this.goToPage(1, false);
+                },
+
+                clearFilters() {
+                    this.currentTab = 'all';
+                    this.searchQuery = '';
+                    this.filterDate = '';
+                    this.goToPage(1, false);
                 },
 
                 get tabs() {
@@ -618,6 +675,12 @@
                         .filter(b => b.Status === 'Completed')
                         .reduce((sum, b) => sum + (b.NetEarnings || 0), 0);
                     return { total, pending, confirmed, revenue };
+                },
+
+                get hasActiveFilters() {
+                    return this.currentTab !== 'all'
+                        || Boolean(this.searchQuery?.trim())
+                        || Boolean(this.filterDate);
                 },
 
                 get filteredBookings() {
@@ -656,6 +719,98 @@
                     return result;
                 },
 
+                get totalPages() {
+                    return Math.ceil(this.filteredBookings.length / this.pageSize);
+                },
+
+                get activePage() {
+                    if (this.totalPages === 0) return 1;
+                    return Math.min(Math.max(1, Number(this.currentPage) || 1), this.totalPages);
+                },
+
+                get pagedBookings() {
+                    const start = (this.activePage - 1) * this.pageSize;
+                    return this.filteredBookings.slice(start, start + this.pageSize);
+                },
+
+                get pageStart() {
+                    return this.filteredBookings.length === 0
+                        ? 0
+                        : ((this.activePage - 1) * this.pageSize) + 1;
+                },
+
+                get pageEnd() {
+                    return Math.min(this.activePage * this.pageSize, this.filteredBookings.length);
+                },
+
+                get paginationItems() {
+                    const total = this.totalPages;
+                    const current = this.activePage;
+                    if (total <= 7) {
+                        return Array.from({ length: total }, (_, index) => ({
+                            key: `page-${index + 1}`,
+                            page: index + 1,
+                            label: String(index + 1)
+                        }));
+                    }
+
+                    let pages;
+                    if (current <= 4) {
+                        pages = [1, 2, 3, 4, 5, null, total];
+                    } else if (current >= total - 3) {
+                        pages = [1, null, total - 4, total - 3, total - 2, total - 1, total];
+                    } else {
+                        pages = [1, null, current - 1, current, current + 1, null, total];
+                    }
+
+                    let ellipsisIndex = 0;
+                    return pages.map(page => page === null
+                        ? { key: `ellipsis-${ellipsisIndex++}`, page: null, label: '…' }
+                        : { key: `page-${page}`, page, label: String(page) });
+                },
+
+                goToPage(page, shouldScroll = true) {
+                    const lastPage = Math.max(1, this.totalPages);
+                    const targetPage = Math.min(Math.max(1, Number(page) || 1), lastPage);
+                    const pageChanged = targetPage !== this.currentPage;
+                    this.currentPage = targetPage;
+                    this.syncPaginationUrl();
+
+                    if (shouldScroll && pageChanged) {
+                        this.$nextTick(() => {
+                            this.$refs.bookingList?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        });
+                    }
+                },
+
+                changePageSize(value) {
+                    const requestedSize = Number(value);
+                    this.pageSize = this.pageSizes.includes(requestedSize) ? requestedSize : 5;
+                    this.goToPage(1, false);
+                },
+
+                ensureValidPage() {
+                    if (this.currentPage !== this.activePage) {
+                        this.currentPage = this.activePage;
+                        this.syncPaginationUrl();
+                    }
+                },
+
+                syncPaginationUrl() {
+                    const url = new URL(window.location.href);
+                    if (this.currentPage > 1) {
+                        url.searchParams.set('page', String(this.currentPage));
+                    } else {
+                        url.searchParams.delete('page');
+                    }
+                    if (this.pageSize !== 5) {
+                        url.searchParams.set('pageSize', String(this.pageSize));
+                    } else {
+                        url.searchParams.delete('pageSize');
+                    }
+                    window.history.replaceState({}, '', url);
+                },
+
                 init() {
                     // Normalize stale pending records immediately, then keep the UI in sync
                     // when an active response window reaches zero while the page is open.
@@ -667,7 +822,15 @@
                     });
                     this.updateSidebarBadge();
 
-                    const requestedBookingId = new URLSearchParams(window.location.search).get('bookingId');
+                    const query = new URLSearchParams(window.location.search);
+                    const requestedPageSize = Number(query.get('pageSize'));
+                    if (this.pageSizes.includes(requestedPageSize)) {
+                        this.pageSize = requestedPageSize;
+                    }
+                    this.currentPage = Math.max(1, Number(query.get('page')) || 1);
+                    this.ensureValidPage();
+
+                    const requestedBookingId = query.get('bookingId');
                     if (requestedBookingId) {
                         const requestedBooking = this.bookings.find(booking =>
                             String(booking.Id) === String(requestedBookingId));
@@ -687,7 +850,10 @@
                             this.refreshCompletionAvailability(b);
                         });
 
-                        if (pendingCountChanged) this.updateSidebarBadge();
+                        if (pendingCountChanged) {
+                            this.updateSidebarBadge();
+                            this.ensureValidPage();
+                        }
                     }, 1000);
                 },
 
@@ -913,6 +1079,7 @@
                     if (!this.isBookingActionable(booking)) {
                         this.markBookingExpired(booking);
                         this.updateSidebarBadge();
+                        this.ensureValidPage();
                         showToast('warning', 'The 24-hour booking response window has expired.');
                         return;
                     }
@@ -930,6 +1097,7 @@
                                 booking.Status = 'Confirmed';
                                 this.refreshCompletionAvailability(booking);
                                 this.updateSidebarBadge();
+                                this.ensureValidPage();
                                 showToast('success', 'Booking confirmed successfully. The chat channel is now open.');
                                 if (this.selectedBooking && this.selectedBooking.Id === id) {
                                     this.selectedBooking.Status = 'Confirmed';
@@ -938,6 +1106,7 @@
                                 if ((result.message || '').toLowerCase().includes('expired')) {
                                     this.markBookingExpired(booking);
                                     this.updateSidebarBadge();
+                                    this.ensureValidPage();
                                 }
                                 showToast('error', result.message || 'Something went wrong.');
                             }
@@ -952,6 +1121,7 @@
                     if (!this.isBookingActionable(booking)) {
                         this.markBookingExpired(booking);
                         this.updateSidebarBadge();
+                        this.ensureValidPage();
                         showToast('warning', 'The 24-hour booking response window has expired.');
                         return;
                     }
@@ -969,6 +1139,7 @@
                                 if (result.success) {
                                     booking.Status = 'Cancelled';
                                     this.updateSidebarBadge();
+                                    this.ensureValidPage();
                                     showToast('info', 'Booking rejected.');
                                     if (this.selectedBooking && this.selectedBooking.Id === id) {
                                         this.selectedBooking.Status = 'Cancelled';
@@ -977,6 +1148,7 @@
                                     if ((result.message || '').toLowerCase().includes('expired')) {
                                         this.markBookingExpired(booking);
                                         this.updateSidebarBadge();
+                                        this.ensureValidPage();
                                     }
                                     showToast('error', result.message || 'Something went wrong.');
                                 }

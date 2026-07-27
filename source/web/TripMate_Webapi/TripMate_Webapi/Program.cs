@@ -107,6 +107,7 @@ builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<ITravelerBookingService, TravelerBookingService>();
 builder.Services.AddScoped<BookingCreationService>();
+builder.Services.AddScoped<IMatchingService, MatchingService>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();
@@ -178,6 +179,7 @@ builder.Services.AddScoped<BookingCompletionService>();
 // registered because existing application code may still resolve it.
 builder.Services.AddHostedService<BookingCompletionWorker>();
 builder.Services.AddHostedService<NotificationOutboxWorker>();
+builder.Services.AddHostedService<EscrowReleaseWorker>();
 
 // ── Survey Service ────────────────────────────────────────────────────────────
 builder.Services.AddHttpClient<SurveyService>();

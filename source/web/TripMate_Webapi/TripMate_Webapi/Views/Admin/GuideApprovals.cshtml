@@ -24,6 +24,8 @@
         })();
     </script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+    <script src="/notifications.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
@@ -52,10 +54,14 @@
             border: 1px solid rgba(226, 232, 240, 0.5);
         }
     </style>
+    <script>
+        window.initialApplications = @Html.Raw(JsonSerializer.Serialize(Model.PendingApplications));
+        window.initialSelectedId = '@(Model.PendingApplications.FirstOrDefault()?.Id ?? "")';
+    </script>
 </head>
 <body class="bg-gray-50 flex" x-data="{
-    applications: @Html.Raw(JsonSerializer.Serialize(Model.PendingApplications)),
-    selectedId: '@(Model.PendingApplications.FirstOrDefault()?.Id ?? "")',
+    applications: window.initialApplications,
+    selectedId: window.initialSelectedId,
     approveComment: '',
     rejectReason: '',
     showApproveModal: false,
@@ -183,6 +189,11 @@
             <a id="nav-analytics" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200" href="/Admin/Analytics">
                 <span class="material-symbols-outlined">insights</span>
                 <span>Analytics</span>
+            </a>
+            <a id="nav-notifications" class="flex items-center gap-4 px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-r-full my-1 font-medium transition-all duration-200 relative" href="/Admin/Notifications">
+                <span class="material-symbols-outlined">notifications</span>
+                <span>Notifications</span>
+                <span data-notification-count class="hidden ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full px-2 py-0.5"></span>
             </a>
         </nav>
 
@@ -454,7 +465,6 @@
             setInterval(loadPendingGuideCount, 30000);
         });
 
-        // Logout function
         window.logout = function() {
             if (confirm('Are you sure you want to log out?')) {
                 localStorage.removeItem('accessToken');
@@ -462,7 +472,10 @@
                 localStorage.removeItem('userEmail');
                 localStorage.removeItem('userId');
                 localStorage.removeItem('userRole');
-                window.location.href = '/Auth/Login';
+                fetch('/api/auth/logout', { method: 'POST' })
+                    .finally(() => {
+                        window.location.href = '/Auth/Login';
+                    });
             }
         }
 
