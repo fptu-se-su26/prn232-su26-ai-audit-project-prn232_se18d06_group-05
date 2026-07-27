@@ -8,20 +8,7 @@
 
     <main class="flex-1 p-8 md:p-10 overflow-y-auto h-[calc(100vh-80px)]">
 
-        @if (TempData["SuccessMessage"] != null)
-        {
-            <div class="mb-6 bg-green-50 border border-green-200 text-green-800 px-5 py-4 rounded-2xl flex items-center gap-3 animate-fade-in">
-                <span class="material-symbols-outlined text-green-600">check_circle</span>
-                <span class="font-bold">@TempData["SuccessMessage"]</span>
-            </div>
-        }
-        @if (TempData["ErrorMessage"] != null)
-        {
-            <div class="mb-6 bg-red-50 border border-red-200 text-red-800 px-5 py-4 rounded-2xl flex items-center gap-3 animate-fade-in">
-                <span class="material-symbols-outlined text-red-600">error</span>
-                <span class="font-bold">@TempData["ErrorMessage"]</span>
-            </div>
-        }
+
 
         <!-- Welcome -->
         <div class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
