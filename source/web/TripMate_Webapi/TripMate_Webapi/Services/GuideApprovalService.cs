@@ -173,7 +173,7 @@ namespace TripMate_WebAPI.Services
                 var res1 = await _http.SendAsync(req1);
                 if (!res1.IsSuccessStatusCode) return false;
 
-                // 2. Update profiles role to 'guide'
+                // 2. Update profiles role to 'guide' and is_active to true
                 if (!string.IsNullOrEmpty(application.UserId))
                 {
                     var req2 = new HttpRequestMessage(
@@ -181,7 +181,7 @@ namespace TripMate_WebAPI.Services
                         $"{_supabaseUrl}/rest/v1/profiles?id=eq.{application.UserId}");
                     req2.Headers.Add("apikey", _anonKey);
                     req2.Headers.Authorization = new AuthenticationHeaderValue("Bearer", _serviceRoleKey);
-                    req2.Content = new StringContent(JsonSerializer.Serialize(new { role = "guide" }), Encoding.UTF8, "application/json");
+                    req2.Content = new StringContent(JsonSerializer.Serialize(new { role = "guide", is_active = true }), Encoding.UTF8, "application/json");
                     await _http.SendAsync(req2);
                 }
 
