@@ -54,10 +54,14 @@
             border: 1px solid rgba(226, 232, 240, 0.5);
         }
     </style>
+    <script>
+        window.initialApplications = @Html.Raw(JsonSerializer.Serialize(Model.PendingApplications));
+        window.initialSelectedId = '@(Model.PendingApplications.FirstOrDefault()?.Id ?? "")';
+    </script>
 </head>
 <body class="bg-gray-50 flex" x-data="{
-    applications: @Html.Raw(JsonSerializer.Serialize(Model.PendingApplications)),
-    selectedId: '@(Model.PendingApplications.FirstOrDefault()?.Id ?? "")',
+    applications: window.initialApplications,
+    selectedId: window.initialSelectedId,
     approveComment: '',
     rejectReason: '',
     showApproveModal: false,
