@@ -107,6 +107,7 @@ builder.Services.AddScoped<IReviewService, ReviewService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddScoped<ITravelerBookingService, TravelerBookingService>();
 builder.Services.AddScoped<BookingCreationService>();
+builder.Services.AddScoped<IMatchingService, MatchingService>();
 
 // ── Guide Approval Service ────────────────────────────────────────────────────
 builder.Services.AddHttpClient<GuideApprovalService>();
