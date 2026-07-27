@@ -319,7 +319,7 @@ namespace TripMate_Webapi.Controllers
                 var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "")
                             ?? Request.Cookies["access_token"];
                 var application = await _guideApprovalService.GetApplicationByIdAsync(request.GuideId);
-                var success = await _guideApprovalService.ApproveGuideAsync(request.GuideId, request.Comment ?? "", token);
+                var success = await _guideApprovalService.ApproveGuideAsync(request.GuideId, request.Comment ?? "");
                 
                 if (success)
                 {
@@ -373,7 +373,7 @@ namespace TripMate_Webapi.Controllers
                 var token = Request.Headers["Authorization"].FirstOrDefault()?.Replace("Bearer ", "")
                             ?? Request.Cookies["access_token"];
                 var application = await _guideApprovalService.GetApplicationByIdAsync(request.GuideId);
-                var success = await _guideApprovalService.RejectGuideAsync(request.GuideId, request.Comment, token);
+                var success = await _guideApprovalService.RejectGuideAsync(request.GuideId, request.Comment);
                 
                 if (success)
                 {
@@ -586,7 +586,7 @@ namespace TripMate_Webapi.Controllers
                 var application = await _guideApprovalService.GetApplicationByIdAsync(id);
                 if (application == null) return NotFound(new { message = "Guide profile not found" });
 
-                var success = await _guideApprovalService.ApproveGuideAsync(id, body?.Comment ?? "", token);
+                var success = await _guideApprovalService.ApproveGuideAsync(id, body?.Comment ?? "");
                 if (success)
                 {
                     if (!string.IsNullOrEmpty(application.Email))
@@ -638,7 +638,7 @@ namespace TripMate_Webapi.Controllers
                 var application = await _guideApprovalService.GetApplicationByIdAsync(id);
                 if (application == null) return NotFound(new { message = "Guide profile not found" });
 
-                var success = await _guideApprovalService.RejectGuideAsync(id, body.Comment, token);
+                var success = await _guideApprovalService.RejectGuideAsync(id, body.Comment);
                 if (success)
                 {
                     if (!string.IsNullOrEmpty(application.Email))
