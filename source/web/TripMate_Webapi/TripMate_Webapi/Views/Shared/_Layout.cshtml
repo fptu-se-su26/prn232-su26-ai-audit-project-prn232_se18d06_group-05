@@ -712,5 +712,39 @@
             }
         });
     </script>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'success',
+                    title: '@Html.Raw(TempData["SuccessMessage"]?.ToString()?.Replace("'", "\\'").Replace("\r", "").Replace("\n", " "))',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+            });
+        </script>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                Swal.fire({
+                    toast: true,
+                    position: 'top-end',
+                    icon: 'error',
+                    title: '@Html.Raw(TempData["ErrorMessage"]?.ToString()?.Replace("'", "\\'").Replace("\r", "").Replace("\n", " "))',
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true
+                });
+            });
+        </script>
+    }
 </body>
 </html>
