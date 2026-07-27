@@ -1036,14 +1036,19 @@ namespace TripMate_Webapi.Controllers
                 if (booking.CompletionState != "awaiting_traveler")
                     return BadRequest(new { error = "Tour must be marked as completed by the guide first." });
 
-                // Set status to Completed (2) and completion_state to completed
+                if (booking.AmountPaid < booking.TotalAmount ||
+                    !string.Equals(booking.PaymentStatus, "paid", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new { error = "The booking must be fully paid before completion can be confirmed." });
+                }
+
+                // Complete the two-party workflow and make the held Guide earnings
+                // eligible for Admin payout review.
                 var success = await _bookingRepository.MarkTravelerCompletionAsync(id, travelerId);
                 if (!success)
                 {
                     return BadRequest(new { error = "Could not update the booking completion state." });
                 }
-                
-                // M4: (Optional) Initiate payout logic via admin panel or automatic here.
                 
                 // Notify admin and guide about completion
                 await _notificationService.SendToRoleAsync(
@@ -1052,7 +1057,7 @@ namespace TripMate_Webapi.Controllers
                     "Tour Completed & Payment Requested",
                     $"Booking {id} has been fully confirmed as completed by the traveler. Please review and proceed with guide payment.",
                     new { bookingId = id },
-                    $"/Admin/Bookings/Details/{id}",
+                    $"/Admin/Escrow?bookingId={id}",
                     $"admin-tour-completed:{id}"
                 );
                 
@@ -1067,7 +1072,7 @@ namespace TripMate_Webapi.Controllers
                             "Tour Completed Confirmed",
                             "The traveler has confirmed the tour completion. Admin has been requested to process your payment.",
                             new { bookingId = id },
-                            $"/Guide/Dashboard/Bookings/{id}",
+                            $"/Guide/Bookings?bookingId={id}",
                             $"guide-tour-completed:{id}"
                         );
                     }
