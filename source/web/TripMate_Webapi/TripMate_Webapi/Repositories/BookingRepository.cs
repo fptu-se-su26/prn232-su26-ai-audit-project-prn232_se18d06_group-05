@@ -249,6 +249,18 @@ namespace TripMate_Webapi.Repositories
             return response.Models;
         }
 
+        public async Task<List<BookingEntity>> GetConfirmedBookingsInRangeAsync(
+            string start,
+            string endExclusive)
+        {
+            var response = await _supabase.From<BookingEntity>()
+                .Where(b => b.Status == 1)
+                .Filter("booking_date", Postgrest.Constants.Operator.GreaterThanOrEqual, start)
+                .Filter("booking_date", Postgrest.Constants.Operator.LessThan, endExclusive)
+                .Get();
+            return response.Models;
+        }
+
         public async Task UpdateBookingStatusAsync(string bookingId, int status)
         {
             var supabaseUrl = _supabaseUrl;

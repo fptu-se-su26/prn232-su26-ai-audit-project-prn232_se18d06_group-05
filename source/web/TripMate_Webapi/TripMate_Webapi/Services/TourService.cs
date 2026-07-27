@@ -36,10 +36,24 @@ public class TourService
     {
         var query = $"{_supabaseUrl}/rest/v1/experience_packages" +
                     $"?is_active=eq.true&order=created_at.desc" +
-                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,cover_photo_url,profiles(full_name,avatar_url))";
+                    $"&select=*,guide_profiles(id,user_id,bio,languages,specialties,city_area,is_verified,average_rating,total_reviews,cover_photo_url,profiles(full_name,avatar_url,is_active))";
 
         if (!string.IsNullOrWhiteSpace(search))
             query += $"&or=(title.ilike.*{Uri.EscapeDataString(search)}*,description.ilike.*{Uri.EscapeDataString(search)}*)";
+
+        var results = await GetAsync<List<ExperiencePackageRow>>(query) ?? new List<ExperiencePackageRow>();
+        return results.Where(r => r.Id != "00000000-0000-0000-0000-000000000000").ToList();
+    }
+
+    /// <summary>
+    /// Returns only tours that are eligible to appear in traveler matching.
+    /// Admin and management screens intentionally keep using the broader query.
+    /// </summary>
+    public async Task<List<ExperiencePackageRow>> GetMatchableToursAsync()
+    {
+        var query = $"{_supabaseUrl}/rest/v1/experience_packages" +
+                    $"?is_active=eq.true&publication_status=eq.published&order=created_at.desc" +
+                    $"&select=*,guide_profiles(id,user_id,bio,languages,specialties,city_area,is_verified,average_rating,total_reviews,cover_photo_url,profiles(full_name,avatar_url,is_active))";
 
         var results = await GetAsync<List<ExperiencePackageRow>>(query) ?? new List<ExperiencePackageRow>();
         return results.Where(r => r.Id != "00000000-0000-0000-0000-000000000000").ToList();
@@ -51,7 +65,7 @@ public class TourService
     {
         var query = $"{_supabaseUrl}/rest/v1/experience_packages" +
                     $"?id=eq.{id}" +
-                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,cover_photo_url,profiles(full_name,avatar_url))";
+                    $"&select=*,guide_profiles(id,user_id,bio,languages,specialties,city_area,is_verified,average_rating,total_reviews,cover_photo_url,profiles(full_name,avatar_url,is_active))";
 
         var rows = await GetAsync<List<ExperiencePackageRow>>(query);
         return rows?.FirstOrDefault();
@@ -64,7 +78,7 @@ public class TourService
         var query = $"{_supabaseUrl}/rest/v1/experience_packages" +
                     $"?guide_profile_id=eq.{guideProfileId}" +
                     $"&order=created_at.desc" +
-                    $"&select=*,guide_profiles(id,user_id,bio,city_area,average_rating,total_reviews,cover_photo_url,profiles(full_name,avatar_url))";
+                    $"&select=*,guide_profiles(id,user_id,bio,languages,specialties,city_area,is_verified,average_rating,total_reviews,cover_photo_url,profiles(full_name,avatar_url,is_active))";
 
         var results = await GetAsync<List<ExperiencePackageRow>>(query) ?? new List<ExperiencePackageRow>();
         return results.Where(r => r.Id != "00000000-0000-0000-0000-000000000000").ToList();
@@ -235,13 +249,21 @@ public class ExperiencePackageRow
     [JsonPropertyName("title")]             public string? Title { get; set; }
     [JsonPropertyName("description")]       public string? Description { get; set; }
     [JsonPropertyName("duration_hours")]    public decimal DurationHours { get; set; }
+    [JsonPropertyName("duration_type")]     public string DurationType { get; set; } = "same_day";
+    [JsonPropertyName("duration_minutes")]  public int? DurationMinutes { get; set; }
+    [JsonPropertyName("duration_days")]     public int DurationDays { get; set; } = 1;
+    [JsonPropertyName("default_start_time")] public string? DefaultStartTime { get; set; }
+    [JsonPropertyName("default_end_time")]  public string? DefaultEndTime { get; set; }
+    [JsonPropertyName("time_zone")]         public string TimeZone { get; set; } = "Asia/Ho_Chi_Minh";
     [JsonPropertyName("price_per_session")] public decimal PricePerSession { get; set; }
     [JsonPropertyName("price_per_person")]  public decimal? PricePerPerson { get; set; }
     [JsonPropertyName("included_guest_count")] public int IncludedGuestCount { get; set; } = 1;
     [JsonPropertyName("max_group_size")]    public int MaxGroupSize { get; set; } = 6;
     [JsonPropertyName("included_items")]    public List<string>? IncludedItems { get; set; }
     [JsonPropertyName("tags")]              public List<string>? Tags { get; set; }
+    [JsonPropertyName("languages")]         public List<string>? Languages { get; set; }
     [JsonPropertyName("is_active")]         public bool IsActive { get; set; } = true;
+    [JsonPropertyName("publication_status")] public string PublicationStatus { get; set; } = "published";
     [JsonPropertyName("city")]              public string? City { get; set; }
     [JsonPropertyName("cover_image_url")]   public string? CoverImageUrl { get; set; }
     [JsonPropertyName("gallery_image_urls")]public List<string>? GalleryImageUrls { get; set; }

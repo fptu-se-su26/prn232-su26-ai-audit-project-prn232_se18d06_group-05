@@ -16,6 +16,7 @@ namespace TripMate_Webapi.Repositories
         Task<string?> GetAnyTravelerProfileIdAsync();
         Task<List<CalendarBookingRecord>> GetGuideCalendarBookingsInRangeAsync(string guideProfileId, string start, string endExclusive);
         Task<List<BookingEntity>> GetBookingsForGuideAsync(string guideProfileId);
+        Task<List<BookingEntity>> GetConfirmedBookingsInRangeAsync(string start, string endExclusive);
         Task UpdateBookingStatusAsync(string bookingId, int status);
         Task<bool> MarkGuideCompletionAsync(
             string bookingId,
